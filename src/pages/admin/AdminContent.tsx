@@ -33,7 +33,7 @@ const blockTypes = [
   { value: "cta", label: "Call to Action" },
 ];
 
-const pages = ["home", "contact", "about"];
+const pages = ["home", "contact", "about", "products", "faq", "shipping-info", "returns"];
 
 const emptyBlock = {
   page: "home",

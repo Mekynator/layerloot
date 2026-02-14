@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Plus, Pencil, Trash2, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -213,6 +214,9 @@ const AdminProducts = () => {
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
+                    <Link to={`/admin/products/${p.id}/variants`}>
+                      <Button variant="ghost" size="icon" title="Manage Variants"><Layers className="h-4 w-4" /></Button>
+                    </Link>
                     <Button variant="ghost" size="icon" onClick={() => editProduct(p)}><Pencil className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => deleteProduct(p.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                   </TableCell>

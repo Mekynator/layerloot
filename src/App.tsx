@@ -25,6 +25,7 @@ import AdminReviews from "./pages/admin/AdminReviews";
 import AdminContent from "./pages/admin/AdminContent";
 import AdminSettings from "./pages/admin/AdminSettings";
 import NotFound from "./pages/NotFound";
+import ChatWidget from "./components/ChatWidget";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +60,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Layout>
+            <ChatWidget />
           </BrowserRouter>
         </CartProvider>
       </AuthProvider>

@@ -75,11 +75,11 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="flex min-h-[calc(100vh-4rem)]">
       {/* Mobile top bar */}
-      <div className="fixed left-0 right-0 top-16 z-40 flex h-12 items-center border-b border-border bg-secondary px-4 lg:hidden">
-        <Button variant="ghost" size="icon" onClick={() => setMobileOpen(!mobileOpen)}>
+      <div className="fixed left-0 right-0 top-16 z-40 flex h-12 items-center border-b border-sidebar-border bg-sidebar px-4 lg:hidden">
+        <Button variant="ghost" size="icon" onClick={() => setMobileOpen(!mobileOpen)} className="text-sidebar-foreground hover:text-sidebar-primary">
           <Menu className="h-5 w-5" />
         </Button>
-        <span className="ml-2 font-display text-sm font-bold uppercase tracking-wider text-secondary-foreground">
+        <span className="ml-2 font-display text-sm font-bold uppercase tracking-wider text-sidebar-foreground">
           {sidebarLinks.find(l => l.to === location.pathname)?.label || "Admin"}
         </span>
       </div>

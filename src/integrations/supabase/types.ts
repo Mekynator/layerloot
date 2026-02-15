@@ -55,6 +55,48 @@ export type Database = {
           },
         ]
       }
+      custom_orders: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          description: string
+          email: string
+          id: string
+          model_filename: string
+          model_url: string
+          name: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          description: string
+          email: string
+          id?: string
+          model_filename: string
+          model_url: string
+          name: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          description?: string
+          email?: string
+          id?: string
+          model_filename?: string
+          model_url?: string
+          name?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       loyalty_points: {
         Row: {
           created_at: string
@@ -331,6 +373,7 @@ export type Database = {
           images: string[] | null
           is_active: boolean
           is_featured: boolean
+          model_url: string | null
           name: string
           price: number
           slug: string
@@ -346,6 +389,7 @@ export type Database = {
           images?: string[] | null
           is_active?: boolean
           is_featured?: boolean
+          model_url?: string | null
           name: string
           price?: number
           slug: string
@@ -361,6 +405,7 @@ export type Database = {
           images?: string[] | null
           is_active?: boolean
           is_featured?: boolean
+          model_url?: string | null
           name?: string
           price?: number
           slug?: string

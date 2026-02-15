@@ -58,7 +58,7 @@ const Header = () => {
 
           {isAdmin && (
             <Link to="/admin/editor">
-              <Button variant="ghost" size="icon" className="text-secondary-foreground hover:text-primary">
+                <Button variant="ghost" size="icon" className="text-secondary-foreground hover:text-foreground">
                 <Shield className="h-5 w-5" />
               </Button>
             </Link>

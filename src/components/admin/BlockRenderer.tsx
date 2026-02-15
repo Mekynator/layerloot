@@ -198,11 +198,11 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
             <>
               <Button variant="ghost" size="icon" className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background"
                 onClick={() => setCurrent((p) => (p - 1 + images.length) % images.length)}>
-                <ChevronLeft className="h-10 w-10 text-primary" />
+                <ChevronLeft className="h-[45px] w-[45px] text-primary" />
               </Button>
               <Button variant="ghost" size="icon" className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background"
                 onClick={() => setCurrent((p) => (p + 1) % images.length)}>
-                <ChevronRight className="h-10 w-10 text-primary" />
+                <ChevronRight className="h-[45px] w-[45px] text-primary" />
               </Button>
               <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
                 {images.map((_, i) => (

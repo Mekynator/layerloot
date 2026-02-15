@@ -71,7 +71,7 @@ const NavLinkEditor = () => {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="outline" size="sm" className="font-display text-xs uppercase tracking-wider">
+        <Button variant="outline" size="sm" className="font-display text-xs uppercase tracking-wider text-foreground hover:text-primary-foreground">
           Edit Nav Links
         </Button>
       </SheetTrigger>

@@ -4,6 +4,7 @@ import { ShoppingCart, User, Menu, X, Layers, LogOut, Shield } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavLinks } from "@/components/admin/NavLinkEditor";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,17 +13,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const navLinks = [
-  { to: "/", label: "Home" },
-  { to: "/products", label: "Products" },
-  { to: "/contact", label: "Contact" },
-];
-
 const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const { totalItems } = useCart();
   const { user, isAdmin, signOut } = useAuth();
+  const navLinks = useNavLinks();
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-secondary">

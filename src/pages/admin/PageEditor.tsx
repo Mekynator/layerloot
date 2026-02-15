@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, X, Trash2, ArrowLeft, FileText, Square, Type, Image, Columns, PlayCircle, MousePointer, Link2 } from "lucide-react";
+import { Plus, X, Trash2, ArrowLeft, FileText, Square, Type, Image, Columns, PlayCircle, MousePointer, Link2, Code, Globe, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 import EditableBlockWrapper from "@/components/admin/EditableBlockWrapper";
 import BlockEditorPanel from "@/components/admin/BlockEditorPanel";
+import NavLinkEditor from "@/components/admin/NavLinkEditor";
 
 const defaultPages = ["home", "products", "contact", "about", "faq", "shipping-info", "returns"];
 
@@ -25,7 +26,9 @@ const blockTypes = [
   { value: "cta", label: "Call to Action", icon: MousePointer },
   { value: "button", label: "Button with Link", icon: Link2 },
   { value: "spacer", label: "Spacer", icon: Square },
-  { value: "html", label: "Custom HTML", icon: Type },
+  { value: "html", label: "Custom HTML", icon: Code },
+  { value: "embed", label: "Embed / iFrame", icon: Globe },
+  { value: "newsletter", label: "Newsletter Form", icon: Mail },
 ];
 
 const PageEditor = () => {
@@ -201,6 +204,7 @@ const PageEditor = () => {
             )}
           </div>
           <div className="flex items-center gap-2">
+            <NavLinkEditor />
             <Button size="sm" onClick={() => { setInsertAtIndex(null); setAddBlockOpen(true); }} className="font-display text-xs uppercase tracking-wider">
               <Plus className="mr-1 h-3.5 w-3.5" /> Add Block
             </Button>

@@ -60,6 +60,14 @@ const Header = () => {
             </Button>
           </Link>
 
+          {isAdmin && (
+            <Link to="/admin/editor">
+              <Button variant="ghost" size="icon" className="text-secondary-foreground hover:text-primary">
+                <Shield className="h-5 w-5" />
+              </Button>
+            </Link>
+          )}
+
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

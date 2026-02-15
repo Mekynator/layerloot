@@ -11,7 +11,7 @@ const sidebarLinks = [
   { to: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { to: "/admin/clients", label: "Clients", icon: Users },
   { to: "/admin/reviews", label: "Reviews", icon: Star },
-  { to: "/admin/content", label: "Page Editor", icon: FileText },
+  { to: "/admin/editor", label: "Page Editor", icon: FileText },
   { to: "/admin/shipping", label: "Shipping", icon: Truck },
   { to: "/admin/settings", label: "Settings", icon: Settings },
 ];

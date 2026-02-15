@@ -12,6 +12,14 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
 
+interface OrderItem {
+  id: string;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+}
+
 interface Order {
   id: string;
   user_id: string | null;
@@ -40,9 +48,13 @@ const AdminOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filterStatus, setFilterStatus] = useState("all");
   const [detailOrder, setDetailOrder] = useState<Order | null>(null);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [trackingNumber, setTrackingNumber] = useState("");
   const [trackingUrl, setTrackingUrl] = useState("");
   const [statusNote, setStatusNote] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [editShipping, setEditShipping] = useState("");
+  const [editTotal, setEditTotal] = useState("");
   const { toast } = useToast();
 
   const fetchOrders = async () => {
@@ -58,26 +70,35 @@ const AdminOrders = () => {
   const updateStatus = async (id: string, status: string) => {
     const { error } = await supabase.from("orders").update({ status }).eq("id", id);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-    // Add to status history
-    await supabase.from("order_status_history").insert({
-      order_id: id, status, note: statusNote || null,
-    });
+    await supabase.from("order_status_history").insert({ order_id: id, status, note: statusNote || null });
     toast({ title: `Order updated to ${status}` });
     setStatusNote("");
     fetchOrders();
   };
 
-  const updateTracking = async (id: string) => {
-    await supabase.from("orders").update({ tracking_number: trackingNumber || null, tracking_url: trackingUrl || null }).eq("id", id);
-    toast({ title: "Tracking info updated" });
-    setDetailOrder(null);
-    fetchOrders();
-  };
-
-  const openDetail = (o: Order) => {
+  const openDetail = async (o: Order) => {
     setDetailOrder(o);
     setTrackingNumber(o.tracking_number ?? "");
     setTrackingUrl(o.tracking_url ?? "");
+    setEditNotes(o.notes ?? "");
+    setEditShipping(String(o.shipping_cost));
+    setEditTotal(String(o.total));
+    const { data } = await supabase.from("order_items").select("*").eq("order_id", o.id);
+    setOrderItems((data as OrderItem[]) ?? []);
+  };
+
+  const saveOrderDetails = async () => {
+    if (!detailOrder) return;
+    await supabase.from("orders").update({
+      tracking_number: trackingNumber || null,
+      tracking_url: trackingUrl || null,
+      notes: editNotes || null,
+      shipping_cost: parseFloat(editShipping) || 0,
+      total: parseFloat(editTotal) || detailOrder.total,
+    }).eq("id", detailOrder.id);
+    toast({ title: "Order details saved" });
+    setDetailOrder(null);
+    fetchOrders();
   };
 
   const filtered = filterStatus === "all" ? orders : orders.filter((o) => o.status === filterStatus);
@@ -126,9 +147,7 @@ const AdminOrders = () => {
                   <TableCell>
                     {o.tracking_number ? (
                       <Badge variant="outline" className="font-mono text-xs">{o.tracking_number}</Badge>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
+                    ) : <span className="text-xs text-muted-foreground">—</span>}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right">
@@ -144,25 +163,43 @@ const AdminOrders = () => {
         </CardContent>
       </Card>
 
-      {/* Order Detail Dialog */}
       <Dialog open={!!detailOrder} onOpenChange={(v) => !v && setDetailOrder(null)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader><DialogTitle className="font-display uppercase">Order #{detailOrder?.id.slice(0, 8)}</DialogTitle></DialogHeader>
           {detailOrder && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><span className="text-muted-foreground">Customer:</span> <span className="font-semibold">{detailOrder.profiles?.full_name || "Guest"}</span></div>
-                <div><span className="text-muted-foreground">Total:</span> <span className="font-bold text-primary">{Number(detailOrder.total).toFixed(2)} kr</span></div>
                 <div><span className="text-muted-foreground">Status:</span> <Badge className={statusColors[detailOrder.status]}>{detailOrder.status}</Badge></div>
                 <div><span className="text-muted-foreground">Date:</span> {new Date(detailOrder.created_at).toLocaleDateString()}</div>
+                <div><span className="text-muted-foreground">Subtotal:</span> {Number(detailOrder.subtotal).toFixed(2)} kr</div>
               </div>
+
+              {/* Order Items */}
+              {orderItems.length > 0 && (
+                <div className="border-t border-border pt-3">
+                  <p className="mb-2 font-display text-sm font-semibold uppercase">Items</p>
+                  <div className="space-y-1 text-sm">
+                    {orderItems.map((item) => (
+                      <div key={item.id} className="flex justify-between">
+                        <span>{item.product_name} × {item.quantity}</span>
+                        <span className="font-bold">{Number(item.total_price).toFixed(2)} kr</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Editable fields */}
               <div className="border-t border-border pt-4 space-y-3">
-                <div><Label>Tracking Number</Label><Input value={trackingNumber} onChange={(e) => setTrackingNumber(e.target.value)} placeholder="Enter tracking number" /></div>
-                <div><Label>Tracking URL</Label><Input value={trackingUrl} onChange={(e) => setTrackingUrl(e.target.value)} placeholder="https://..." /></div>
-                <Button onClick={() => updateTracking(detailOrder.id)} className="w-full font-display uppercase tracking-wider text-xs">Save Tracking</Button>
-              </div>
-              <div className="border-t border-border pt-4 space-y-3">
-                <div><Label>Status Note (optional)</Label><Textarea value={statusNote} onChange={(e) => setStatusNote(e.target.value)} placeholder="Add a note for the customer..." rows={2} /></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label>Shipping Cost</Label><Input value={editShipping} onChange={(e) => setEditShipping(e.target.value)} /></div>
+                  <div><Label>Total</Label><Input value={editTotal} onChange={(e) => setEditTotal(e.target.value)} /></div>
+                </div>
+                <div><Label>Tracking Number</Label><Input value={trackingNumber} onChange={(e) => setTrackingNumber(e.target.value)} /></div>
+                <div><Label>Tracking URL</Label><Input value={trackingUrl} onChange={(e) => setTrackingUrl(e.target.value)} /></div>
+                <div><Label>Notes</Label><Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={2} /></div>
+                <Button onClick={saveOrderDetails} className="w-full font-display uppercase tracking-wider text-xs">Save All Changes</Button>
               </div>
             </div>
           )}

@@ -1,55 +1,88 @@
 import { useEffect, useState } from "react";
-import { DollarSign, Package, ShoppingCart, Users, Download, TrendingUp } from "lucide-react";
+import { DollarSign, Package, ShoppingCart, Users, Download, TrendingUp, Calendar, Eye } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, PieChart, Pie, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, PieChart, Pie, Cell, AreaChart, Area } from "recharts";
 
 const COLORS = ["hsl(25,95%,53%)", "hsl(220,10%,45%)", "hsl(25,80%,70%)", "hsl(220,15%,30%)", "hsl(0,84%,60%)"];
+
+type Period = "7d" | "30d" | "90d" | "all";
 
 const Dashboard = () => {
   const [stats, setStats] = useState({ revenue: 0, orders: 0, products: 0, clients: 0 });
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
-  const [revenueByMonth, setRevenueByMonth] = useState<any[]>([]);
+  const [revenueByPeriod, setRevenueByPeriod] = useState<any[]>([]);
   const [ordersByStatus, setOrdersByStatus] = useState<any[]>([]);
-  const [dailyOrders, setDailyOrders] = useState<any[]>([]);
+  const [ordersTrend, setOrdersTrend] = useState<any[]>([]);
+  const [period, setPeriod] = useState<Period>("30d");
+  const [topProducts, setTopProducts] = useState<any[]>([]);
+
+  const getDateThreshold = (p: Period) => {
+    if (p === "all") return null;
+    const d = new Date();
+    if (p === "7d") d.setDate(d.getDate() - 7);
+    else if (p === "30d") d.setDate(d.getDate() - 30);
+    else if (p === "90d") d.setDate(d.getDate() - 90);
+    return d.toISOString();
+  };
 
   useEffect(() => {
-    const fetchStats = async () => {
-      const [ordersRes, productsRes, profilesRes] = await Promise.all([
-        supabase.from("orders").select("total, status, created_at"),
+    const fetchAll = async () => {
+      const threshold = getDateThreshold(period);
+
+      // Fetch orders
+      let query = supabase.from("orders").select("total, status, created_at");
+      if (threshold) query = query.gte("created_at", threshold);
+      const { data: orders } = await query;
+      const allOrders = orders ?? [];
+
+      // Counts (always full)
+      const [productsRes, profilesRes] = await Promise.all([
         supabase.from("products").select("id", { count: "exact", head: true }),
         supabase.from("profiles").select("id", { count: "exact", head: true }),
       ]);
-      const orders = ordersRes.data ?? [];
-      const revenue = orders.reduce((s, o) => s + Number(o.total), 0);
-      setStats({ revenue, orders: orders.length, products: productsRes.count ?? 0, clients: profilesRes.count ?? 0 });
 
-      // Revenue by month
-      const monthMap: Record<string, number> = {};
-      const dayMap: Record<string, number> = {};
+      const revenue = allOrders.reduce((s, o) => s + Number(o.total), 0);
+      setStats({ revenue, orders: allOrders.length, products: productsRes.count ?? 0, clients: profilesRes.count ?? 0 });
+
+      // Group by day for trend
+      const dayMap: Record<string, { revenue: number; orders: number }> = {};
       const statusMap: Record<string, number> = {};
-      orders.forEach((o) => {
+      allOrders.forEach((o) => {
         const d = new Date(o.created_at);
-        const monthKey = d.toLocaleString("en", { month: "short", year: "2-digit" });
-        monthMap[monthKey] = (monthMap[monthKey] || 0) + Number(o.total);
         const dayKey = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
-        dayMap[dayKey] = (dayMap[dayKey] || 0) + 1;
+        if (!dayMap[dayKey]) dayMap[dayKey] = { revenue: 0, orders: 0 };
+        dayMap[dayKey].revenue += Number(o.total);
+        dayMap[dayKey].orders += 1;
         statusMap[o.status] = (statusMap[o.status] || 0) + 1;
       });
-      setRevenueByMonth(Object.entries(monthMap).map(([name, revenue]) => ({ name, revenue })));
-      setDailyOrders(Object.entries(dayMap).slice(-14).map(([name, orders]) => ({ name, orders })));
+      const trendData = Object.entries(dayMap).map(([name, v]) => ({ name, ...v }));
+      setRevenueByPeriod(trendData);
+      setOrdersTrend(trendData);
       setOrdersByStatus(Object.entries(statusMap).map(([name, value]) => ({ name, value })));
+
+      // Top products
+      let itemsQuery = supabase.from("order_items").select("product_name, quantity, total_price");
+      const { data: items } = await itemsQuery;
+      const prodMap: Record<string, { qty: number; rev: number }> = {};
+      (items ?? []).forEach((i) => {
+        if (!prodMap[i.product_name]) prodMap[i.product_name] = { qty: 0, rev: 0 };
+        prodMap[i.product_name].qty += i.quantity;
+        prodMap[i.product_name].rev += Number(i.total_price);
+      });
+      setTopProducts(Object.entries(prodMap).sort((a, b) => b[1].rev - a[1].rev).slice(0, 5).map(([name, v]) => ({ name, ...v })));
     };
 
     const fetchRecent = async () => {
       const { data } = await supabase.from("orders").select("id, total, status, created_at, profiles!orders_user_id_fkey(full_name)").order("created_at", { ascending: false }).limit(5);
       setRecentOrders(data ?? []);
     };
-    fetchStats();
+    fetchAll();
     fetchRecent();
-  }, []);
+  }, [period]);
 
   const exportCSV = () => {
     const rows = [["Order ID", "Total", "Status", "Date"]];
@@ -62,25 +95,40 @@ const Dashboard = () => {
     a.click();
   };
 
+  const avgOrderValue = stats.orders > 0 ? (stats.revenue / stats.orders).toFixed(2) : "0.00";
+
   const cards = [
-    { label: "Revenue", value: `${stats.revenue.toFixed(2)} kr`, icon: DollarSign, trend: "+12%" },
-    { label: "Orders", value: stats.orders, icon: ShoppingCart, trend: "+8%" },
-    { label: "Products", value: stats.products, icon: Package, trend: "" },
-    { label: "Clients", value: stats.clients, icon: Users, trend: "+5%" },
+    { label: "Revenue", value: `${stats.revenue.toFixed(2)} kr`, icon: DollarSign, sub: `Avg: ${avgOrderValue} kr` },
+    { label: "Orders", value: stats.orders, icon: ShoppingCart, sub: `Period: ${period}` },
+    { label: "Products", value: stats.products, icon: Package, sub: "Active catalog" },
+    { label: "Clients", value: stats.clients, icon: Users, sub: "Registered users" },
   ];
 
   return (
     <AdminLayout>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-3xl font-bold uppercase text-foreground">Dashboard</h1>
-        <Button variant="outline" onClick={exportCSV} className="font-display text-xs uppercase tracking-wider">
-          <Download className="mr-1 h-4 w-4" /> Export CSV
-        </Button>
+        <div className="flex gap-2">
+          <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
+            <SelectTrigger className="w-36">
+              <Calendar className="mr-1 h-4 w-4" /><SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7d">Last 7 days</SelectItem>
+              <SelectItem value="30d">Last 30 days</SelectItem>
+              <SelectItem value="90d">Last 90 days</SelectItem>
+              <SelectItem value="all">All time</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" onClick={exportCSV} className="font-display text-xs uppercase tracking-wider">
+            <Download className="mr-1 h-4 w-4" /> Export CSV
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {cards.map(({ label, value, icon: Icon, trend }) => (
+        {cards.map(({ label, value, icon: Icon, sub }) => (
           <Card key={label}>
             <CardContent className="flex items-center gap-4 p-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
@@ -89,7 +137,7 @@ const Dashboard = () => {
               <div>
                 <p className="text-sm text-muted-foreground">{label}</p>
                 <p className="font-display text-2xl font-bold text-card-foreground">{value}</p>
-                {trend && <p className="flex items-center text-xs text-green-600"><TrendingUp className="mr-1 h-3 w-3" />{trend}</p>}
+                <p className="text-xs text-muted-foreground">{sub}</p>
               </div>
             </CardContent>
           </Card>
@@ -99,31 +147,31 @@ const Dashboard = () => {
       {/* Charts Row */}
       <div className="mb-8 grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle className="font-display uppercase">Revenue Overview</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="font-display uppercase">Revenue Trend</CardTitle></CardHeader>
           <CardContent>
-            {revenueByMonth.length > 0 ? (
+            {revenueByPeriod.length > 0 ? (
               <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={revenueByMonth}>
+                <AreaChart data={revenueByPeriod}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(220,10%,85%)" />
-                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip formatter={(v: number) => `${v.toFixed(2)} kr`} />
-                  <Bar dataKey="revenue" fill="hsl(25,95%,53%)" radius={[4, 4, 0, 0]} />
-                </BarChart>
+                  <Area type="monotone" dataKey="revenue" fill="hsl(25,95%,53%)" fillOpacity={0.15} stroke="hsl(25,95%,53%)" strokeWidth={2} />
+                </AreaChart>
               </ResponsiveContainer>
             ) : <p className="py-12 text-center text-sm text-muted-foreground">No revenue data yet.</p>}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="font-display uppercase">Daily Orders (Last 14 days)</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="font-display uppercase">Orders Trend</CardTitle></CardHeader>
           <CardContent>
-            {dailyOrders.length > 0 ? (
+            {ordersTrend.length > 0 ? (
               <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={dailyOrders}>
+                <LineChart data={ordersTrend}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(220,10%,85%)" />
-                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                   <Tooltip />
                   <Line type="monotone" dataKey="orders" stroke="hsl(25,95%,53%)" strokeWidth={2} dot={{ fill: "hsl(25,95%,53%)" }} />
                 </LineChart>
@@ -133,8 +181,8 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Bottom Row: Pie + Recent Orders */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      {/* Bottom Row */}
+      <div className="mb-8 grid gap-6 lg:grid-cols-3">
         <Card>
           <CardHeader><CardTitle className="font-display uppercase">Orders by Status</CardTitle></CardHeader>
           <CardContent>
@@ -151,7 +199,23 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card>
+          <CardHeader><CardTitle className="font-display uppercase">Top Products</CardTitle></CardHeader>
+          <CardContent>
+            {topProducts.length > 0 ? (
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={topProducts} layout="vertical">
+                  <XAxis type="number" tick={{ fontSize: 11 }} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={100} />
+                  <Tooltip formatter={(v: number) => `${v.toFixed(2)} kr`} />
+                  <Bar dataKey="rev" fill="hsl(25,95%,53%)" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : <p className="py-12 text-center text-sm text-muted-foreground">No product data yet.</p>}
+          </CardContent>
+        </Card>
+
+        <Card>
           <CardHeader><CardTitle className="font-display uppercase">Recent Orders</CardTitle></CardHeader>
           <CardContent>
             {recentOrders.length === 0 ? (

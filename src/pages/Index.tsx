@@ -62,7 +62,7 @@ const Index = () => {
                 <p className="mt-2 text-muted-foreground">​</p>
               </div>
               <Link to="/products">
-                <Button variant="ghost" className="font-display uppercase tracking-wider text-primary hover:text-foreground">
+                <Button variant="ghost" className="font-display uppercase tracking-wider text-primary hover:text-primary/80">
                   View All <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
               </Link>
@@ -104,7 +104,7 @@ const Index = () => {
             { icon: Star, title: "Loyalty Rewards", desc: "Earn points on every purchase" }].
             map(({ icon: Icon, title, desc }, i) =>
             <motion.div key={title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.15 }}
-            className="flex items-center gap-4 rounded-lg border border-border bg-card p-6 transition-all hover:border-primary hover:shadow-md">
+            className="flex items-center gap-4 border border-border bg-card p-6 transition-all hover:border-primary hover:shadow-md rounded-md">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                   <Icon className="h-6 w-6 text-primary" />
                 </div>

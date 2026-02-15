@@ -62,7 +62,7 @@ const Index = () => {
                 <p className="mt-2 text-muted-foreground">​</p>
               </div>
               <Link to="/products">
-                <Button variant="ghost" className="font-display uppercase tracking-wider text-primary hover:text-primary/80">
+                <Button variant="ghost" className="font-display uppercase tracking-wider text-primary hover:text-foreground">
                   View All <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
               </Link>

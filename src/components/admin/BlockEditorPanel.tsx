@@ -223,6 +223,19 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
             {t === "html" && (
               <div><Label>HTML Code</Label><Textarea value={form.content.html ?? ""} onChange={(e) => updateContent("html", e.target.value)} rows={8} className="font-mono text-xs" /></div>
             )}
+            {t === "embed" && (
+              <div className="space-y-3">
+                <div><Label>Heading (optional)</Label><Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} /></div>
+                <div><Label>Embed URL</Label><Input value={form.content.embed_url ?? ""} onChange={(e) => updateContent("embed_url", e.target.value)} placeholder="https://..." /></div>
+                <div><Label>Height (px)</Label><Input type="number" value={form.content.height ?? 400} onChange={(e) => updateContent("height", parseInt(e.target.value) || 400)} /></div>
+              </div>
+            )}
+            {t === "newsletter" && (
+              <div className="space-y-3">
+                <div><Label>Heading</Label><Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} placeholder="Stay Updated" /></div>
+                <div><Label>Subheading</Label><Input value={form.content.subheading ?? ""} onChange={(e) => updateContent("subheading", e.target.value)} placeholder="Subscribe to our newsletter..." /></div>
+              </div>
+            )}
 
             <Button onClick={handleSave} disabled={saving || uploading} className="w-full font-display uppercase tracking-wider">
               {saving ? "Saving..." : uploading ? "Uploading..." : "Save Changes"}

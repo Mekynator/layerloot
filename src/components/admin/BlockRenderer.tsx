@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Truck, Shield, Star, Printer, Play, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
         <section className="relative overflow-hidden bg-secondary py-20 lg:py-32">
           {c.bg_image && (
             <div className="absolute inset-0">
-              <img src={c.bg_image} alt="" className="h-full w-full object-cover opacity-30" />
+              <img src={c.bg_image} alt="" className="h-full w-full object-contain opacity-30" />
             </div>
           )}
           <div className="absolute inset-0 opacity-5">
@@ -85,7 +85,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
         <section className="py-16">
           <div className="container">
             {c.image_url ? (
-              <img src={c.image_url} alt={c.alt || ""} className="w-full rounded-lg object-cover" />
+              <img src={c.image_url} alt={c.alt || ""} className="w-full rounded-lg object-contain max-h-[600px] mx-auto" />
             ) : (
               <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted text-muted-foreground">No image set</div>
             )}
@@ -146,6 +146,25 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
         </section>
       );
 
+    case "embed":
+      return (
+        <section className="py-8">
+          <div className="container">
+            {c.heading && <h2 className="mb-4 font-display text-2xl font-bold uppercase text-foreground text-center">{c.heading}</h2>}
+            {c.embed_url ? (
+              <div className="overflow-hidden rounded-lg border border-border" style={{ height: `${c.height || 400}px` }}>
+                <iframe src={c.embed_url} className="h-full w-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+              </div>
+            ) : (
+              <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted text-muted-foreground">No embed URL set</div>
+            )}
+          </div>
+        </section>
+      );
+
+    case "newsletter":
+      return <NewsletterBlock block={block} />;
+
     default:
       return <div className="py-8 text-center text-muted-foreground">Unknown block: {block.block_type}</div>;
   }
@@ -167,7 +186,7 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
                 key={current}
                 src={images[current]}
                 alt=""
-                className="h-full w-full object-cover"
+               className="h-full w-full object-contain"
                 initial={{ opacity: 0, x: 50 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -50 }}
@@ -238,6 +257,38 @@ const VideoBlock = ({ block }: { block: SiteBlock }) => {
         {block.content?.caption && (
           <p className="mt-4 text-center text-muted-foreground">{block.content.caption}</p>
         )}
+      </div>
+    </section>
+  );
+};
+
+const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const c = block.content || {};
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    const { supabase: client } = await import("@/integrations/supabase/client");
+    const { error } = await client.from("newsletter_subscribers" as any).insert({ email } as any);
+    setStatus(error ? "error" : "success");
+    if (!error) setEmail("");
+  };
+  return (
+    <section className="bg-secondary py-16">
+      <div className="container max-w-xl text-center">
+        <h2 className="mb-2 font-display text-2xl font-bold uppercase text-secondary-foreground">{c.heading || "Stay Updated"}</h2>
+        <p className="mb-6 text-muted-foreground">{c.subheading || "Subscribe to our newsletter for the latest updates."}</p>
+        {status === "success" ? (
+          <p className="font-display text-primary">Thanks for subscribing!</p>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex gap-2">
+            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="your@email.com"
+              className="flex-1 rounded-md border border-border bg-background px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
+            <button type="submit" className="rounded-md bg-primary px-6 py-2 font-display text-sm uppercase tracking-wider text-primary-foreground hover:bg-primary/90">Subscribe</button>
+          </form>
+        )}
+        {status === "error" && <p className="mt-2 text-sm text-destructive">Already subscribed or error occurred.</p>}
       </div>
     </section>
   );

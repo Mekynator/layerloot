@@ -90,6 +90,27 @@ export type Database = {
           },
         ]
       }
+      newsletter_subscribers: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          is_active: boolean
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          is_active?: boolean
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          is_active?: boolean
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           id: string
@@ -400,6 +421,48 @@ export type Database = {
           flat_rate?: number
           free_shipping_threshold?: number
           id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      shipping_providers: {
+        Row: {
+          base_cost: number
+          cost_per_kg: number
+          created_at: string
+          description: string | null
+          estimated_days: string | null
+          free_threshold: number | null
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          base_cost?: number
+          cost_per_kg?: number
+          created_at?: string
+          description?: string | null
+          estimated_days?: string | null
+          free_threshold?: number | null
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          base_cost?: number
+          cost_per_kg?: number
+          created_at?: string
+          description?: string | null
+          estimated_days?: string | null
+          free_threshold?: number | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
           updated_at?: string
         }
         Relationships: []

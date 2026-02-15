@@ -77,7 +77,7 @@ const Dashboard = () => {
     };
 
     const fetchRecent = async () => {
-      const { data } = await supabase.from("orders").select("id, total, status, created_at, profiles!orders_user_id_fkey(full_name)").order("created_at", { ascending: false }).limit(5);
+      const { data } = await supabase.from("orders").select("id, total, status, created_at").order("created_at", { ascending: false }).limit(5);
       setRecentOrders(data ?? []);
     };
     fetchAll();

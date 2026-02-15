@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
+import ModelViewer from "@/components/ModelViewer";
 
 interface Product {
   id: string;
@@ -23,6 +24,7 @@ interface Product {
   stock: number;
   is_active: boolean;
   category_id: string | null;
+  model_url: string | null;
 }
 
 interface Variant {
@@ -54,6 +56,7 @@ const ProductDetail = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
   const [currentImage, setCurrentImage] = useState(0);
+  const [show3D, setShow3D] = useState(false);
   const [reviewForm, setReviewForm] = useState({ rating: 5, title: "", comment: "" });
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -143,47 +146,58 @@ const ProductDetail = () => {
         </Link>
 
         <div className="grid gap-8 lg:grid-cols-2">
-          {/* Image Gallery */}
+          {/* Image Gallery / 3D Viewer */}
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
-            <div className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted">
-              <AnimatePresence mode="wait">
-                <motion.img
-                  key={currentImage}
-                  src={images[currentImage]}
-                  alt={product.name}
-                  className="h-full w-full object-cover"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                />
-              </AnimatePresence>
-              {images.length > 1 && (
-                <>
-                  <Button variant="ghost" size="icon" className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80"
-                    onClick={() => setCurrentImage((p) => (p - 1 + images.length) % images.length)}>
-                    <ChevronLeft className="h-5 w-5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80"
-                    onClick={() => setCurrentImage((p) => (p + 1) % images.length)}>
-                    <ChevronRight className="h-5 w-5" />
-                  </Button>
-                </>
-              )}
-              {product.compare_at_price && (
-                <Badge className="absolute left-3 top-3 bg-primary font-display uppercase">Sale</Badge>
-              )}
-            </div>
-            {images.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto">
-                {images.map((img, i) => (
-                  <button key={i} onClick={() => setCurrentImage(i)}
-                    className={`h-16 w-16 shrink-0 overflow-hidden rounded border-2 transition-colors ${i === currentImage ? "border-primary" : "border-border"}`}>
-                    <img src={img} alt="" className="h-full w-full object-cover" />
-                  </button>
-                ))}
+            {show3D && product.model_url ? (
+              <ModelViewer url={product.model_url} className="aspect-square" />
+            ) : (
+              <div className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted">
+                <AnimatePresence mode="wait">
+                  <motion.img
+                    key={currentImage}
+                    src={images[currentImage]}
+                    alt={product.name}
+                    className="h-full w-full object-cover"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </AnimatePresence>
+                {images.length > 1 && (
+                  <>
+                    <Button variant="ghost" size="icon" className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80"
+                      onClick={() => setCurrentImage((p) => (p - 1 + images.length) % images.length)}>
+                      <ChevronLeft className="h-5 w-5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80"
+                      onClick={() => setCurrentImage((p) => (p + 1) % images.length)}>
+                      <ChevronRight className="h-5 w-5" />
+                    </Button>
+                  </>
+                )}
+                {product.compare_at_price && (
+                  <Badge className="absolute left-3 top-3 bg-primary font-display uppercase">Sale</Badge>
+                )}
               </div>
             )}
+            <div className="flex gap-2 overflow-x-auto">
+              {images.map((img, i) => (
+                <button key={i} onClick={() => { setCurrentImage(i); setShow3D(false); }}
+                  className={`h-16 w-16 shrink-0 overflow-hidden rounded border-2 transition-colors ${!show3D && i === currentImage ? "border-primary" : "border-border"}`}>
+                  <img src={img} alt="" className="h-full w-full object-cover" />
+                </button>
+              ))}
+              {product.model_url && (
+                <button
+                  onClick={() => setShow3D(true)}
+                  className={`flex h-16 w-16 shrink-0 items-center justify-center rounded border-2 transition-colors ${show3D ? "border-primary bg-primary/10" : "border-border hover:border-primary"}`}
+                  title="View 3D Model"
+                >
+                  <span className="font-display text-xs font-bold uppercase text-primary">3D</span>
+                </button>
+              )}
+            </div>
           </motion.div>
 
           {/* Product Info */}

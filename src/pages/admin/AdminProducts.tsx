@@ -45,6 +45,7 @@ const AdminProducts = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [modelFile, setModelFile] = useState<File | null>(null);
   const { toast } = useToast();
 
   const fetchProducts = async () => {
@@ -71,10 +72,24 @@ const AdminProducts = () => {
     return data.publicUrl;
   };
 
+  const uploadModel = async (): Promise<string | null> => {
+    if (!modelFile) return null;
+    const ext = modelFile.name.split(".").pop();
+    const path = `${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("3d-models").upload(path, modelFile);
+    if (error) { toast({ title: "Model upload failed", description: error.message, variant: "destructive" }); return null; }
+    const { data } = supabase.storage.from("3d-models").getPublicUrl(path);
+    return data.publicUrl;
+  };
+
   const handleSubmit = async () => {
     let images = form.images;
     const uploadedUrl = await uploadImage();
     if (uploadedUrl) images = [...images, uploadedUrl];
+
+    let model_url = (form as any).model_url || null;
+    const uploadedModelUrl = await uploadModel();
+    if (uploadedModelUrl) model_url = uploadedModelUrl;
 
     const payload = {
       name: form.name,
@@ -87,6 +102,7 @@ const AdminProducts = () => {
       stock: form.stock,
       is_featured: form.is_featured,
       is_active: form.is_active,
+      model_url,
     };
 
     if (editingId) {
@@ -102,16 +118,17 @@ const AdminProducts = () => {
     setForm(emptyProduct);
     setEditingId(null);
     setImageFile(null);
+    setModelFile(null);
     fetchProducts();
   };
 
-  const editProduct = (p: Product) => {
+  const editProduct = (p: Product & { model_url?: string | null }) => {
     setForm({
       name: p.name, slug: p.slug, description: p.description ?? "",
       price: Number(p.price), compare_at_price: p.compare_at_price ? Number(p.compare_at_price) : null,
       category_id: p.category_id, images: p.images ?? [], stock: p.stock,
-      is_featured: p.is_featured, is_active: p.is_active,
-    });
+      is_featured: p.is_featured, is_active: p.is_active, model_url: (p as any).model_url ?? null,
+    } as any);
     setEditingId(p.id);
     setOpen(true);
   };
@@ -126,7 +143,7 @@ const AdminProducts = () => {
     <AdminLayout>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="font-display text-3xl font-bold uppercase text-foreground">Products</h1>
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(emptyProduct); setEditingId(null); setImageFile(null); } }}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(emptyProduct); setEditingId(null); setImageFile(null); setModelFile(null); } }}>
           <DialogTrigger asChild>
             <Button className="font-display uppercase tracking-wider"><Plus className="mr-1 h-4 w-4" /> Add Product</Button>
           </DialogTrigger>
@@ -165,6 +182,11 @@ const AdminProducts = () => {
               <div>
                 <Label>Product Image</Label>
                 <Input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] ?? null)} />
+              </div>
+              <div>
+                <Label>3D Model (STL, OBJ, 3MF)</Label>
+                <Input type="file" accept=".stl,.obj,.3mf" onChange={(e) => setModelFile(e.target.files?.[0] ?? null)} />
+                {(form as any).model_url && <p className="mt-1 text-xs text-muted-foreground">Current model uploaded ✓</p>}
               </div>
               <div className="flex gap-6">
                 <label className="flex items-center gap-2 text-sm">

@@ -82,6 +82,18 @@ const AdminProducts = () => {
     return data.publicUrl;
   };
 
+  const deleteOldModel = async (oldUrl: string) => {
+    try {
+      const bucketBase = supabase.storage.from("3d-models").getPublicUrl("").data.publicUrl;
+      const path = oldUrl.replace(bucketBase, "");
+      if (path) {
+        await supabase.storage.from("3d-models").remove([path]);
+      }
+    } catch (e) {
+      console.warn("Could not delete old model file:", e);
+    }
+  };
+
   const handleSubmit = async () => {
     let images = form.images;
     const uploadedUrl = await uploadImage();
@@ -89,7 +101,13 @@ const AdminProducts = () => {
 
     let model_url = (form as any).model_url || null;
     const uploadedModelUrl = await uploadModel();
-    if (uploadedModelUrl) model_url = uploadedModelUrl;
+    if (uploadedModelUrl) {
+      // Delete old model file if replacing
+      if (model_url) {
+        await deleteOldModel(model_url);
+      }
+      model_url = uploadedModelUrl;
+    }
 
     const payload = {
       name: form.name,

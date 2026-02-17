@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Package, FolderTree, ShoppingCart, Users, Truck, Layers, ArrowLeft, Star, FileText, Settings, Menu, X } from "lucide-react";
+import { LayoutDashboard, Package, FolderTree, ShoppingCart, Users, Truck, Layers, ArrowLeft, Star, FileText, Settings, Menu, X, Box } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 
@@ -9,6 +9,7 @@ const sidebarLinks = [
   { to: "/admin/products", label: "Products", icon: Package },
   { to: "/admin/categories", label: "Categories", icon: FolderTree },
   { to: "/admin/orders", label: "Orders", icon: ShoppingCart },
+  { to: "/admin/custom-orders", label: "Custom Orders", icon: Box },
   { to: "/admin/clients", label: "Clients", icon: Users },
   { to: "/admin/reviews", label: "Reviews", icon: Star },
   { to: "/admin/editor", label: "Page Editor", icon: FileText },

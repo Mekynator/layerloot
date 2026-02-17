@@ -24,6 +24,7 @@ import AdminShipping from "./pages/admin/AdminShipping";
 import AdminReviews from "./pages/admin/AdminReviews";
 import AdminContent from "./pages/admin/AdminContent";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminCustomOrders from "./pages/admin/AdminCustomOrders";
 import PageEditor from "./pages/admin/PageEditor";
 import DynamicPage from "./pages/DynamicPage";
 import CustomOrder from "./pages/CustomOrder";
@@ -58,6 +59,7 @@ const App = () => (
                 <Route path="/admin/orders" element={<AdminOrders />} />
                 <Route path="/admin/clients" element={<AdminClients />} />
                 <Route path="/admin/shipping" element={<AdminShipping />} />
+                <Route path="/admin/custom-orders" element={<AdminCustomOrders />} />
                 <Route path="/admin/reviews" element={<AdminReviews />} />
                 <Route path="/admin/content" element={<AdminContent />} />
                 <Route path="/admin/settings" element={<AdminSettings />} />

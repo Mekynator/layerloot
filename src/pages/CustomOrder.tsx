@@ -41,7 +41,7 @@ const COLORS = [
 const QUALITIES = [
   { value: "draft", label: "Draft", desc: "0.3mm – Fast, lower detail" },
   { value: "standard", label: "Standard", desc: "0.2mm – Balanced" },
-  { value: "high", label: "High", desc: "0.1mm – Fine detail" },
+  { value: "high", label: "High", desc: "0.2mm – Fine detail" },
   { value: "ultra", label: "Ultra", desc: "0.1mm – Maximum detail" },
 ];
 

@@ -14,6 +14,21 @@ function getFileExtension(url: string): string {
   return clean.split(".").pop()?.toLowerCase() ?? "";
 }
 
+function normalizeObject(obj: THREE.Object3D, targetSize = 3) {
+  const box = new THREE.Box3().setFromObject(obj);
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  const maxDim = Math.max(size.x, size.y, size.z);
+  if (maxDim === 0) return;
+  const scale = targetSize / maxDim;
+  obj.scale.multiplyScalar(scale);
+  // Re-center after scaling
+  const newBox = new THREE.Box3().setFromObject(obj);
+  const center = new THREE.Vector3();
+  newBox.getCenter(center);
+  obj.position.sub(center);
+}
+
 function ModelMesh({ url, autoRotate }: { url: string; autoRotate: boolean }) {
   const meshRef = useRef<THREE.Group>(null);
   const [object, setObject] = useState<THREE.Object3D | null>(null);
@@ -35,6 +50,7 @@ function ModelMesh({ url, autoRotate }: { url: string; autoRotate: boolean }) {
         const mesh = new THREE.Mesh(geometry, material);
         const group = new THREE.Group();
         group.add(mesh);
+        normalizeObject(group);
         setObject(group);
       });
     } else if (ext === "obj") {
@@ -49,11 +65,13 @@ function ModelMesh({ url, autoRotate }: { url: string; autoRotate: boolean }) {
             });
           }
         });
+        normalizeObject(obj);
         setObject(obj);
       });
     } else if (ext === "3mf") {
       const loader = new ThreeMFLoader(manager);
       loader.load(url, (obj) => {
+        normalizeObject(obj);
         setObject(obj);
       });
     }

@@ -51,7 +51,7 @@ const Footer = () => {
             <ul className="space-y-3 text-sm text-muted-foreground">
               <li className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-primary" />
-                hello@layerloot.com
+                <a href="mailto:support@layerloot.lovable.app" className="hover:text-primary">support@layerloot.lovable.app</a>
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="h-4 w-4 text-primary" />

@@ -10,7 +10,7 @@ import { motion } from "framer-motion";
 const Contact = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [contact, setContact] = useState({ email: "info@layerloot.com", phone: "+45 00 00 00 00", address: "Copenhagen, Denmark", social: { instagram: "", facebook: "", youtube: "" } });
+  const [contact, setContact] = useState({ email: "support@layerloot.lovable.app", phone: "+45 00 00 00 00", address: "Copenhagen, Denmark", social: { instagram: "", facebook: "", youtube: "" } });
 
   useEffect(() => {
     supabase.from("site_settings").select("value").eq("key", "contact").maybeSingle().then(({ data }) => {

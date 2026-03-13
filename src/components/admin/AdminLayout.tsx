@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Package, FolderTree, ShoppingCart, Users, Truck, Layers, ArrowLeft, Star, FileText, Settings, Menu, X, Box } from "lucide-react";
+import { LayoutDashboard, Package, FolderTree, ShoppingCart, Users, Truck, Layers, ArrowLeft, Star, FileText, Settings, Menu, X, Box, Calculator } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 

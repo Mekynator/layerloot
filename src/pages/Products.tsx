@@ -3,9 +3,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { motion } from "framer-motion";
+import ProductCard from "@/components/ProductCard";
 
 interface Product {
   id: string;
@@ -16,6 +15,8 @@ interface Product {
   images: string[] | null;
   is_featured: boolean;
   category_id: string | null;
+  model_url: string | null;
+  created_at: string;
 }
 
 interface Category {
@@ -36,7 +37,7 @@ const Products = () => {
   useEffect(() => {
     const fetchData = async () => {
       const [prodRes, catRes] = await Promise.all([
-        supabase.from("products").select("id, name, slug, price, compare_at_price, images, is_featured, category_id").eq("is_active", true).order("created_at", { ascending: false }),
+        supabase.from("products").select("id, name, slug, price, compare_at_price, images, is_featured, category_id, model_url, created_at").eq("is_active", true).order("created_at", { ascending: false }),
         supabase.from("categories").select("id, name, slug, parent_id").order("sort_order"),
       ]);
       setProducts((prodRes.data as Product[]) ?? []);
@@ -70,7 +71,7 @@ const Products = () => {
             <nav className="flex flex-row flex-wrap gap-2 lg:flex-col lg:gap-1">
               <button
                 onClick={() => setSearchParams({})}
-                className={`rounded-md px-3 py-2 text-left font-display text-sm uppercase tracking-wider transition-colors ${
+                className={`rounded-md px-3 py-2 text-left font-display text-sm uppercase tracking-wider transition-all duration-200 ${
                   activeCategory === "all" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
@@ -82,7 +83,7 @@ const Products = () => {
                   <div key={cat.id}>
                     <button
                       onClick={() => setSearchParams({ category: cat.slug })}
-                      className={`w-full rounded-md px-3 py-2 text-left font-display text-sm uppercase tracking-wider transition-colors ${
+                      className={`w-full rounded-md px-3 py-2 text-left font-display text-sm uppercase tracking-wider transition-all duration-200 ${
                         activeCategory === cat.slug ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       }`}
                     >
@@ -92,7 +93,7 @@ const Products = () => {
                       <button
                         key={sub.id}
                         onClick={() => setSearchParams({ category: sub.slug })}
-                        className={`ml-4 w-full rounded-md px-3 py-1.5 text-left font-display text-xs uppercase tracking-wider transition-colors ${
+                        className={`ml-4 w-full rounded-md px-3 py-1.5 text-left font-display text-xs uppercase tracking-wider transition-all duration-200 ${
                           activeCategory === sub.slug ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                         }`}
                       >
@@ -120,33 +121,7 @@ const Products = () => {
             ) : (
               <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                 {filtered.map((product, i) => (
-                  <motion.div
-                    key={product.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: i * 0.05 }}
-                  >
-                    <Link
-                      to={`/products/${product.slug}`}
-                      className="group block overflow-hidden rounded-lg border border-border bg-card transition-all hover:border-primary hover:shadow-lg"
-                    >
-                      <div className="relative aspect-square overflow-hidden bg-muted">
-                        <img src={product.images?.[0] || "/placeholder.svg"} alt={product.name} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
-                        {product.compare_at_price && (
-                          <Badge className="absolute left-3 top-3 bg-primary font-display uppercase">Sale</Badge>
-                        )}
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-display text-sm font-semibold uppercase text-card-foreground">{product.name}</h3>
-                        <div className="mt-2 flex items-center gap-2">
-                          <span className="font-display text-lg font-bold text-primary">{Number(product.price).toFixed(2)} kr</span>
-                          {product.compare_at_price && (
-                            <span className="text-sm text-muted-foreground line-through">{Number(product.compare_at_price).toFixed(2)} kr</span>
-                          )}
-                        </div>
-                      </div>
-                    </Link>
-                  </motion.div>
+                  <ProductCard key={product.id} product={product} index={i} />
                 ))}
                 {filtered.length === 0 && !loading && (
                   <div className="col-span-full py-12 text-center text-muted-foreground">No products found.</div>

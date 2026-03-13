@@ -369,48 +369,63 @@ export type Database = {
           compare_at_price: number | null
           created_at: string
           description: string | null
+          dimensions_cm: Json | null
+          finish_type: string | null
           id: string
           images: string[] | null
           is_active: boolean
           is_featured: boolean
+          material_type: string | null
           model_url: string | null
           name: string
           price: number
+          print_time_hours: number | null
           slug: string
           stock: number
           updated_at: string
+          weight_grams: number | null
         }
         Insert: {
           category_id?: string | null
           compare_at_price?: number | null
           created_at?: string
           description?: string | null
+          dimensions_cm?: Json | null
+          finish_type?: string | null
           id?: string
           images?: string[] | null
           is_active?: boolean
           is_featured?: boolean
+          material_type?: string | null
           model_url?: string | null
           name: string
           price?: number
+          print_time_hours?: number | null
           slug: string
           stock?: number
           updated_at?: string
+          weight_grams?: number | null
         }
         Update: {
           category_id?: string | null
           compare_at_price?: number | null
           created_at?: string
           description?: string | null
+          dimensions_cm?: Json | null
+          finish_type?: string | null
           id?: string
           images?: string[] | null
           is_active?: boolean
           is_featured?: boolean
+          material_type?: string | null
           model_url?: string | null
           name?: string
           price?: number
+          print_time_hours?: number | null
           slug?: string
           stock?: number
           updated_at?: string
+          weight_grams?: number | null
         }
         Relationships: [
           {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Pencil, Trash2, Layers } from "lucide-react";
+import { Plus, Pencil, Trash2, Layers, Calculator } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,10 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
+import PricingCalculator from "@/components/admin/PricingCalculator";
 
 interface Product {
   id: string;
@@ -26,6 +29,12 @@ interface Product {
   stock: number;
   is_featured: boolean;
   is_active: boolean;
+  model_url?: string | null;
+  print_time_hours?: number | null;
+  dimensions_cm?: any;
+  weight_grams?: number | null;
+  finish_type?: string | null;
+  material_type?: string | null;
 }
 
 interface Category {
@@ -36,6 +45,12 @@ interface Category {
 const emptyProduct = {
   name: "", slug: "", description: "", price: 0, compare_at_price: null as number | null,
   category_id: null as string | null, images: [] as string[], stock: 0, is_featured: false, is_active: true,
+  model_url: null as string | null,
+  print_time_hours: null as number | null,
+  dimensions_cm: null as any,
+  weight_grams: null as number | null,
+  finish_type: null as string | null,
+  material_type: null as string | null,
 };
 
 const AdminProducts = () => {
@@ -46,6 +61,8 @@ const AdminProducts = () => {
   const [open, setOpen] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [modelFile, setModelFile] = useState<File | null>(null);
+  const [pricingOpen, setPricingOpen] = useState(false);
+  const [pricingProductId, setPricingProductId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchProducts = async () => {
@@ -86,9 +103,7 @@ const AdminProducts = () => {
     try {
       const bucketBase = supabase.storage.from("3d-models").getPublicUrl("").data.publicUrl;
       const path = oldUrl.replace(bucketBase, "");
-      if (path) {
-        await supabase.storage.from("3d-models").remove([path]);
-      }
+      if (path) await supabase.storage.from("3d-models").remove([path]);
     } catch (e) {
       console.warn("Could not delete old model file:", e);
     }
@@ -99,13 +114,10 @@ const AdminProducts = () => {
     const uploadedUrl = await uploadImage();
     if (uploadedUrl) images = [...images, uploadedUrl];
 
-    let model_url = (form as any).model_url || null;
+    let model_url = form.model_url || null;
     const uploadedModelUrl = await uploadModel();
     if (uploadedModelUrl) {
-      // Delete old model file if replacing
-      if (model_url) {
-        await deleteOldModel(model_url);
-      }
+      if (model_url) await deleteOldModel(model_url);
       model_url = uploadedModelUrl;
     }
 
@@ -121,6 +133,11 @@ const AdminProducts = () => {
       is_featured: form.is_featured,
       is_active: form.is_active,
       model_url,
+      print_time_hours: form.print_time_hours || null,
+      dimensions_cm: form.dimensions_cm || null,
+      weight_grams: form.weight_grams || null,
+      finish_type: form.finish_type || null,
+      material_type: form.material_type || null,
     };
 
     if (editingId) {
@@ -140,13 +157,19 @@ const AdminProducts = () => {
     fetchProducts();
   };
 
-  const editProduct = (p: Product & { model_url?: string | null }) => {
+  const editProduct = (p: Product) => {
     setForm({
       name: p.name, slug: p.slug, description: p.description ?? "",
       price: Number(p.price), compare_at_price: p.compare_at_price ? Number(p.compare_at_price) : null,
       category_id: p.category_id, images: p.images ?? [], stock: p.stock,
-      is_featured: p.is_featured, is_active: p.is_active, model_url: (p as any).model_url ?? null,
-    } as any);
+      is_featured: p.is_featured, is_active: p.is_active,
+      model_url: p.model_url ?? null,
+      print_time_hours: p.print_time_hours ? Number(p.print_time_hours) : null,
+      dimensions_cm: p.dimensions_cm ?? null,
+      weight_grams: p.weight_grams ? Number(p.weight_grams) : null,
+      finish_type: p.finish_type ?? null,
+      material_type: p.material_type ?? null,
+    });
     setEditingId(p.id);
     setOpen(true);
   };
@@ -155,6 +178,11 @@ const AdminProducts = () => {
     await supabase.from("products").delete().eq("id", id);
     toast({ title: "Product deleted" });
     fetchProducts();
+  };
+
+  const openPricing = (productId: string) => {
+    setPricingProductId(productId);
+    setPricingOpen(true);
   };
 
   return (
@@ -167,57 +195,122 @@ const AdminProducts = () => {
           </DialogTrigger>
           <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
             <DialogHeader><DialogTitle className="font-display uppercase">{editingId ? "Edit" : "Add"} Product</DialogTitle></DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Name</Label>
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: generateSlug(e.target.value) })} />
-              </div>
-              <div>
-                <Label>Slug</Label>
-                <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
-              </div>
-              <div>
-                <Label>Description</Label>
-                <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><Label>Price ($)</Label><Input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) || 0 })} /></div>
-                <div><Label>Compare Price ($)</Label><Input type="number" step="0.01" value={form.compare_at_price ?? ""} onChange={(e) => setForm({ ...form, compare_at_price: parseFloat(e.target.value) || null })} /></div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><Label>Stock</Label><Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: parseInt(e.target.value) || 0 })} /></div>
+            <Tabs defaultValue="general" className="space-y-4">
+              <TabsList className="w-full">
+                <TabsTrigger value="general" className="flex-1">General</TabsTrigger>
+                <TabsTrigger value="print" className="flex-1">Print Info</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="general" className="space-y-4">
                 <div>
-                  <Label>Category</Label>
-                  <Select value={form.category_id ?? "none"} onValueChange={(v) => setForm({ ...form, category_id: v === "none" ? null : v })}>
-                    <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                  <Label>Name</Label>
+                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: generateSlug(e.target.value) })} />
+                </div>
+                <div>
+                  <Label>Slug</Label>
+                  <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Description</Label>
+                  <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><Label>Price (kr)</Label><Input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) || 0 })} /></div>
+                  <div><Label>Compare Price (kr)</Label><Input type="number" step="0.01" value={form.compare_at_price ?? ""} onChange={(e) => setForm({ ...form, compare_at_price: parseFloat(e.target.value) || null })} /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><Label>Stock</Label><Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: parseInt(e.target.value) || 0 })} /></div>
+                  <div>
+                    <Label>Category</Label>
+                    <Select value={form.category_id ?? "none"} onValueChange={(v) => setForm({ ...form, category_id: v === "none" ? null : v })}>
+                      <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <Label>Product Image</Label>
+                  <Input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] ?? null)} />
+                </div>
+                <div>
+                  <Label>3D Model (STL, OBJ, 3MF)</Label>
+                  <Input type="file" accept=".stl,.obj,.3mf" onChange={(e) => setModelFile(e.target.files?.[0] ?? null)} />
+                  {form.model_url && <p className="mt-1 text-xs text-muted-foreground">Current model uploaded ✓</p>}
+                </div>
+                <div className="flex gap-6">
+                  <label className="flex items-center gap-2 text-sm">
+                    <Switch checked={form.is_featured} onCheckedChange={(v) => setForm({ ...form, is_featured: v })} /> Featured
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} /> Active
+                  </label>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="print" className="space-y-4">
+                <p className="text-xs text-muted-foreground">These details show on the product page as craftsmanship indicators.</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Print Time (hours)</Label>
+                    <Input type="number" step="0.5" value={form.print_time_hours ?? ""} onChange={(e) => setForm({ ...form, print_time_hours: parseFloat(e.target.value) || null })} />
+                  </div>
+                  <div>
+                    <Label>Weight (grams)</Label>
+                    <Input type="number" step="1" value={form.weight_grams ?? ""} onChange={(e) => setForm({ ...form, weight_grams: parseFloat(e.target.value) || null })} />
+                  </div>
+                </div>
+                <div>
+                  <Label>Material Type</Label>
+                  <Select value={form.material_type ?? "none"} onValueChange={(v) => setForm({ ...form, material_type: v === "none" ? null : v })}>
+                    <SelectTrigger><SelectValue placeholder="Select material" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      <SelectItem value="none">Not specified</SelectItem>
+                      <SelectItem value="PLA">PLA</SelectItem>
+                      <SelectItem value="PLA Silk">PLA Silk</SelectItem>
+                      <SelectItem value="PETG">PETG</SelectItem>
+                      <SelectItem value="Resin">Resin</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              <div>
-                <Label>Product Image</Label>
-                <Input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] ?? null)} />
-              </div>
-              <div>
-                <Label>3D Model (STL, OBJ, 3MF)</Label>
-                <Input type="file" accept=".stl,.obj,.3mf" onChange={(e) => setModelFile(e.target.files?.[0] ?? null)} />
-                {(form as any).model_url && <p className="mt-1 text-xs text-muted-foreground">Current model uploaded ✓</p>}
-              </div>
-              <div className="flex gap-6">
-                <label className="flex items-center gap-2 text-sm">
-                  <Switch checked={form.is_featured} onCheckedChange={(v) => setForm({ ...form, is_featured: v })} /> Featured
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} /> Active
-                </label>
-              </div>
-              <Button onClick={handleSubmit} className="w-full font-display uppercase tracking-wider">
-                {editingId ? "Update" : "Create"} Product
-              </Button>
-            </div>
+                <div>
+                  <Label>Finish Type</Label>
+                  <Select value={form.finish_type ?? "none"} onValueChange={(v) => setForm({ ...form, finish_type: v === "none" ? null : v })}>
+                    <SelectTrigger><SelectValue placeholder="Select finish" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Not specified</SelectItem>
+                      <SelectItem value="raw">Raw</SelectItem>
+                      <SelectItem value="cleaned">Cleaned</SelectItem>
+                      <SelectItem value="painted">Painted</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Separator />
+                <div>
+                  <Label>Dimensions (cm)</Label>
+                  <div className="mt-1 grid grid-cols-3 gap-2">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Length</Label>
+                      <Input type="number" step="0.1" value={form.dimensions_cm?.length ?? ""} onChange={(e) => setForm({ ...form, dimensions_cm: { ...(form.dimensions_cm || {}), length: parseFloat(e.target.value) || undefined } })} />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Width</Label>
+                      <Input type="number" step="0.1" value={form.dimensions_cm?.width ?? ""} onChange={(e) => setForm({ ...form, dimensions_cm: { ...(form.dimensions_cm || {}), width: parseFloat(e.target.value) || undefined } })} />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Height</Label>
+                      <Input type="number" step="0.1" value={form.dimensions_cm?.height ?? ""} onChange={(e) => setForm({ ...form, dimensions_cm: { ...(form.dimensions_cm || {}), height: parseFloat(e.target.value) || undefined } })} />
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            <Button onClick={handleSubmit} className="w-full font-display uppercase tracking-wider">
+              {editingId ? "Update" : "Create"} Product
+            </Button>
           </DialogContent>
         </Dialog>
       </div>
@@ -246,7 +339,7 @@ const AdminProducts = () => {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="font-display font-bold text-primary">${Number(p.price).toFixed(2)}</TableCell>
+                  <TableCell className="font-display font-bold text-primary">{Number(p.price).toFixed(2)} kr</TableCell>
                   <TableCell>{p.stock}</TableCell>
                   <TableCell>
                     <span className={`font-display text-xs uppercase ${p.is_active ? "text-green-500" : "text-muted-foreground"}`}>
@@ -254,6 +347,9 @@ const AdminProducts = () => {
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => openPricing(p.id)} title="Pricing Calculator">
+                      <Calculator className="h-4 w-4" />
+                    </Button>
                     <Link to={`/admin/products/${p.id}/variants`}>
                       <Button variant="ghost" size="icon" title="Manage Variants"><Layers className="h-4 w-4" /></Button>
                     </Link>
@@ -269,6 +365,21 @@ const AdminProducts = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Pricing Calculator Dialog */}
+      <Dialog open={pricingOpen} onOpenChange={setPricingOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-display uppercase">Product Pricing Calculator</DialogTitle>
+          </DialogHeader>
+          <PricingCalculator
+            productId={pricingProductId}
+            onPriceCalculated={(price) => {
+              // Optionally update product price
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };

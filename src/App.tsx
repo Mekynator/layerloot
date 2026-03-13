@@ -26,6 +26,7 @@ import AdminContent from "./pages/admin/AdminContent";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminCustomOrders from "./pages/admin/AdminCustomOrders";
 import PageEditor from "./pages/admin/PageEditor";
+import AdminPricing from "./pages/admin/AdminPricing";
 import DynamicPage from "./pages/DynamicPage";
 import CustomOrder from "./pages/CustomOrder";
 import NotFound from "./pages/NotFound";
@@ -63,6 +64,7 @@ const App = () => (
                 <Route path="/admin/reviews" element={<AdminReviews />} />
                 <Route path="/admin/content" element={<AdminContent />} />
                 <Route path="/admin/settings" element={<AdminSettings />} />
+                <Route path="/admin/pricing" element={<AdminPricing />} />
                 <Route path="/admin/editor" element={<PageEditor />} />
                 <Route path="/pages/:slug" element={<DynamicPage />} />
                 <Route path="*" element={<NotFound />} />

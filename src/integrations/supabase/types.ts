@@ -275,6 +275,84 @@ export type Database = {
         }
         Relationships: []
       }
+      price_calculations: {
+        Row: {
+          admin_user_id: string
+          created_at: string
+          custom_order_id: string | null
+          electricity_cost: number
+          failure_buffer: number
+          final_price: number | null
+          finishing_difficulty: string
+          id: string
+          machine_wear_factor: number
+          margin_percentage: number
+          material_cost_per_kg: number
+          notes: string | null
+          object_weight_grams: number
+          packaging_cost: number
+          print_time_hours: number
+          product_id: string | null
+          production_cost: number
+          suggested_price: number
+        }
+        Insert: {
+          admin_user_id: string
+          created_at?: string
+          custom_order_id?: string | null
+          electricity_cost?: number
+          failure_buffer?: number
+          final_price?: number | null
+          finishing_difficulty?: string
+          id?: string
+          machine_wear_factor?: number
+          margin_percentage?: number
+          material_cost_per_kg?: number
+          notes?: string | null
+          object_weight_grams?: number
+          packaging_cost?: number
+          print_time_hours?: number
+          product_id?: string | null
+          production_cost?: number
+          suggested_price?: number
+        }
+        Update: {
+          admin_user_id?: string
+          created_at?: string
+          custom_order_id?: string | null
+          electricity_cost?: number
+          failure_buffer?: number
+          final_price?: number | null
+          finishing_difficulty?: string
+          id?: string
+          machine_wear_factor?: number
+          margin_percentage?: number
+          material_cost_per_kg?: number
+          notes?: string | null
+          object_weight_grams?: number
+          packaging_cost?: number
+          print_time_hours?: number
+          product_id?: string | null
+          production_cost?: number
+          suggested_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_calculations_custom_order_id_fkey"
+            columns: ["custom_order_id"]
+            isOneToOne: false
+            referencedRelation: "custom_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_calculations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_reviews: {
         Row: {
           comment: string | null

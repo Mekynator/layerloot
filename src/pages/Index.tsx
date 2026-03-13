@@ -114,10 +114,10 @@ const Index = () => {
               },
               {
                 icon: Palette,
-                title: "Customize",
-                desc: "Choose your material, color, and finish. Make any product truly yours.",
-                link: "/products",
-                cta: "Start Customizing",
+                title: "Create Your Own",
+                desc: "Design custom text signs, lithophanes, find gifts, or use our AI designer.",
+                link: "/create",
+                cta: "Start Creating",
               },
               {
                 icon: Upload,

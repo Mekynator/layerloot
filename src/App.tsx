@@ -64,6 +64,7 @@ const App = () => (
                 <Route path="/admin/reviews" element={<AdminReviews />} />
                 <Route path="/admin/content" element={<AdminContent />} />
                 <Route path="/admin/settings" element={<AdminSettings />} />
+                <Route path="/admin/pricing" element={<AdminPricing />} />
                 <Route path="/admin/editor" element={<PageEditor />} />
                 <Route path="/pages/:slug" element={<DynamicPage />} />
                 <Route path="*" element={<NotFound />} />

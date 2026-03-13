@@ -10,6 +10,7 @@ const sidebarLinks = [
   { to: "/admin/categories", label: "Categories", icon: FolderTree },
   { to: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { to: "/admin/custom-orders", label: "Custom Orders", icon: Box },
+  { to: "/admin/pricing", label: "Pricing", icon: Calculator },
   { to: "/admin/clients", label: "Clients", icon: Users },
   { to: "/admin/reviews", label: "Reviews", icon: Star },
   { to: "/admin/editor", label: "Page Editor", icon: FileText },

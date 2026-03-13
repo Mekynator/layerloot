@@ -25,9 +25,11 @@ const Footer = () => {
               Quick Links
             </h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link to="/products" className="hover:text-primary">Products</Link></li>
-              <li><Link to="/contact" className="hover:text-primary">Contact</Link></li>
-              <li><Link to="/cart" className="hover:text-primary">Cart</Link></li>
+              <li><Link to="/products" className="hover:text-primary">Shop</Link></li>
+              <li><Link to="/create" className="hover:text-primary">Create Your Own</Link></li>
+              <li><Link to="/custom-order" className="hover:text-primary">Custom Orders</Link></li>
+              <li><Link to="/gallery" className="hover:text-primary">Gallery</Link></li>
+              <li><Link to="/about" className="hover:text-primary">About</Link></li>
             </ul>
           </div>
 

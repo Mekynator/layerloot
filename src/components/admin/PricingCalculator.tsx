@@ -259,7 +259,7 @@ function Row({ label, value, bold, primary }: { label: string; value: number; bo
     <div className="flex justify-between">
       <span className={bold ? "font-semibold text-foreground" : "text-muted-foreground"}>{label}</span>
       <span className={`font-display ${bold ? "font-bold" : ""} ${primary ? "text-primary text-lg" : "text-foreground"}`}>
-        {value.toFixed(2)} kr
+        {value.toFixed(2)} DKK
       </span>
     </div>
   );

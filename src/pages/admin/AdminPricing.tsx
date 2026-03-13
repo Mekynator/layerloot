@@ -110,13 +110,13 @@ const AdminPricing = () => {
                       <TableCell className="text-sm">{row.print_time_hours}h</TableCell>
                       <TableCell className="text-xs uppercase">{row.finishing_difficulty}</TableCell>
                       <TableCell className="font-display text-sm font-semibold">
-                        {Number(row.production_cost).toFixed(2)} kr
+                        {Number(row.production_cost).toFixed(2)} DKK
                       </TableCell>
                       <TableCell className="font-display text-sm">
-                        {Number(row.suggested_price).toFixed(2)} kr
+                        {Number(row.suggested_price).toFixed(2)} DKK
                       </TableCell>
                       <TableCell className="font-display text-sm font-bold text-primary">
-                        {row.final_price ? `${Number(row.final_price).toFixed(2)} kr` : "—"}
+                        {row.final_price ? `${Number(row.final_price).toFixed(2)} DKK` : "—"}
                       </TableCell>
                     </TableRow>
                   ))}

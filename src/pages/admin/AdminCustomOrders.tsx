@@ -313,7 +313,7 @@ const AdminCustomOrders = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Price (kr)</Label>
+                <Label>Price (DKK)</Label>
                 <Input type="number" step="1" value={convertForm.price}
                   onChange={(e) => setConvertForm({ ...convertForm, price: parseFloat(e.target.value) || 0 })} />
               </div>

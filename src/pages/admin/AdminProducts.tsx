@@ -339,7 +339,7 @@ const AdminProducts = () => {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="font-display font-bold text-primary">{Number(p.price).toFixed(2)} kr</TableCell>
+                  <TableCell className="font-display font-bold text-primary">{Number(p.price).toFixed(2)} DKK</TableCell>
                   <TableCell>{p.stock}</TableCell>
                   <TableCell>
                     <span className={`font-display text-xs uppercase ${p.is_active ? "text-green-500" : "text-muted-foreground"}`}>

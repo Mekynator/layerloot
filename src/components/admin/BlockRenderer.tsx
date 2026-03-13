@@ -1,8 +1,16 @@
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Truck, Shield, Star, Printer, Play, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  ArrowRight, Truck, Shield, Star, Printer, Play, ChevronLeft, ChevronRight,
+  Upload, Palette, ShoppingBag, Package, HelpCircle
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
+import ProductCard from "@/components/ProductCard";
+import {
+  Accordion, AccordionContent, AccordionItem, AccordionTrigger,
+} from "@/components/ui/accordion";
 
 export interface SiteBlock {
   id: string;
@@ -20,10 +28,12 @@ const fadeUp = {
   transition: { duration: 0.5 },
 };
 
+const stagger = {
+  animate: { transition: { staggerChildren: 0.1 } },
+};
+
 export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
   const c = block.content || {};
-  const Wrapper = disableAnimations ? "div" : motion.div;
-  const wrapperProps = disableAnimations ? {} : { ...fadeUp };
 
   switch (block.block_type) {
     case "hero":
@@ -59,7 +69,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
                     {c.button_text || "Shop Now"} <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
-                <Link to="/contact">
+                <Link to="/custom-order">
                   <Button size="lg" variant="outline" className="font-display uppercase tracking-wider border-muted-foreground/30 text-secondary-foreground hover:border-primary hover:text-primary">
                     Custom Order
                   </Button>
@@ -69,6 +79,36 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
           </div>
         </section>
       );
+
+    case "shipping_banner":
+      return (
+        <section className="bg-primary py-3">
+          <div className="container flex items-center justify-center gap-2 text-primary-foreground">
+            <Truck className="h-5 w-5" />
+            <span className="font-display text-sm uppercase tracking-widest">
+              {c.text || "Free shipping on orders over 75 kr"}
+            </span>
+          </div>
+        </section>
+      );
+
+    case "entry_cards":
+      return <EntryCardsBlock block={block} disableAnimations={disableAnimations} />;
+
+    case "categories":
+      return <CategoriesBlock block={block} disableAnimations={disableAnimations} />;
+
+    case "featured_products":
+      return <FeaturedProductsBlock block={block} disableAnimations={disableAnimations} />;
+
+    case "how_it_works":
+      return <HowItWorksBlock block={block} disableAnimations={disableAnimations} />;
+
+    case "faq":
+      return <FaqBlock block={block} disableAnimations={disableAnimations} />;
+
+    case "trust_badges":
+      return <TrustBadgesBlock block={block} disableAnimations={disableAnimations} />;
 
     case "text":
       return (
@@ -170,6 +210,275 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
   }
 };
 
+/* ─── Entry Cards Block ─── */
+const EntryCardsBlock = ({ block, disableAnimations }: { block: SiteBlock; disableAnimations: boolean }) => {
+  const cards = [
+    { icon: ShoppingBag, title: "Shop Products", desc: "Browse our curated collection of 3D printed items, filaments, and accessories.", link: "/products", cta: "Browse Shop" },
+    { icon: Palette, title: "Customize", desc: "Choose your material, color, and finish. Make any product truly yours.", link: "/products", cta: "Start Customizing" },
+    { icon: Upload, title: "Upload Your Idea", desc: "Got a 3D model? Upload it and we'll print it for you with professional quality.", link: "/custom-order", cta: "Upload Model" },
+  ];
+
+  const Wrap = disableAnimations ? "div" : motion.div;
+
+  return (
+    <section className="py-16 lg:py-24">
+      <div className="container">
+        <div className="grid gap-6 md:grid-cols-3">
+          {cards.map(({ icon: Icon, title, desc, link, cta }, i) => (
+            <div key={title}>
+              <Link
+                to={link}
+                className="group flex flex-col items-center rounded-lg border border-border bg-card p-8 text-center transition-all duration-300 hover:border-primary hover:shadow-xl hover:-translate-y-1"
+              >
+                <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-xl bg-primary/10 transition-colors group-hover:bg-primary/20">
+                  <Icon className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="mb-2 font-display text-lg font-bold uppercase text-card-foreground">{title}</h3>
+                <p className="mb-4 text-sm text-muted-foreground">{desc}</p>
+                <span className="font-display text-sm uppercase tracking-wider text-primary transition-all group-hover:tracking-[0.2em]">
+                  {cta} <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
+                </span>
+              </Link>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/* ─── Categories Block (fetches real data) ─── */
+const CategoriesBlock = ({ block, disableAnimations }: { block: SiteBlock; disableAnimations: boolean }) => {
+  const [categories, setCategories] = useState<any[]>([]);
+  const c = block.content || {};
+
+  useEffect(() => {
+    supabase
+      .from("categories")
+      .select("id, name, slug, image_url")
+      .is("parent_id", null)
+      .order("sort_order")
+      .limit(c.limit || 6)
+      .then(({ data }) => setCategories(data ?? []));
+  }, []);
+
+  if (categories.length === 0) {
+    return (
+      <section className="bg-secondary py-16 lg:py-24">
+        <div className="container text-center">
+          <h2 className="font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">
+            {c.heading || "Shop by Category"}
+          </h2>
+          <p className="mt-2 text-muted-foreground">{c.subheading || "Find exactly what you need"}</p>
+          <p className="mt-8 text-sm text-muted-foreground italic">No categories yet — add some in the admin panel.</p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="bg-secondary py-16 lg:py-24">
+      <div className="container">
+        <div className="mb-12 text-center">
+          <h2 className="font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">
+            {c.heading || "Shop by Category"}
+          </h2>
+          <p className="mt-2 text-muted-foreground">{c.subheading || "Find exactly what you need"}</p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {categories.map((cat) => (
+            <div key={cat.id}>
+              <Link
+                to={`/products?category=${cat.slug}`}
+                className="group relative flex h-40 items-end overflow-hidden rounded-lg border border-border p-6 transition-all duration-300 hover:border-primary hover:-translate-y-1"
+              >
+                {cat.image_url && (
+                  <img src={cat.image_url} alt={cat.name} className="absolute inset-0 h-full w-full object-cover opacity-30 transition-all duration-500 group-hover:scale-110 group-hover:opacity-40" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-secondary via-secondary/60 to-transparent" />
+                <h3 className="relative font-display text-xl font-bold uppercase text-secondary-foreground transition-colors group-hover:text-primary">
+                  {cat.name}
+                </h3>
+              </Link>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/* ─── Featured Products Block (fetches real data) ─── */
+const FeaturedProductsBlock = ({ block, disableAnimations }: { block: SiteBlock; disableAnimations: boolean }) => {
+  const [products, setProducts] = useState<any[]>([]);
+  const c = block.content || {};
+
+  useEffect(() => {
+    supabase
+      .from("products")
+      .select("id, name, slug, price, compare_at_price, images, is_featured, model_url, created_at")
+      .eq("is_active", true)
+      .eq("is_featured", true)
+      .limit(c.limit || 8)
+      .then(({ data }) => setProducts(data ?? []));
+  }, []);
+
+  if (products.length === 0) {
+    return (
+      <section className="py-16 lg:py-24">
+        <div className="container text-center">
+          <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
+            {c.heading || "Best Sellers"}
+          </h2>
+          <p className="mt-2 text-muted-foreground">{c.subheading || "Our most popular 3D printed items"}</p>
+          <p className="mt-8 text-sm text-muted-foreground italic">No featured products yet — mark products as featured in the admin panel.</p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="py-16 lg:py-24">
+      <div className="container">
+        <div className="mb-12 flex items-end justify-between">
+          <div>
+            <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
+              {c.heading || "Best Sellers"}
+            </h2>
+            <p className="mt-2 text-muted-foreground">{c.subheading || "Our most popular 3D printed items"}</p>
+          </div>
+          <Link to="/products">
+            <Button variant="ghost" className="font-display uppercase tracking-wider text-primary hover:text-primary/80">
+              View All <ArrowRight className="ml-1 h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {products.map((product, i) => (
+            <ProductCard key={product.id} product={product} index={i} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/* ─── How It Works Block ─── */
+const HowItWorksBlock = ({ block, disableAnimations }: { block: SiteBlock; disableAnimations: boolean }) => {
+  const c = block.content || {};
+  const steps = c.steps || [
+    { icon: "ShoppingBag", step: "01", title: "Choose", desc: "Browse products or upload your own 3D model" },
+    { icon: "Palette", step: "02", title: "Customize", desc: "Select material, color, size, and finish" },
+    { icon: "Printer", step: "03", title: "We Print", desc: "Your item is 3D printed with precision" },
+    { icon: "Package", step: "04", title: "Delivered", desc: "Packed safely and shipped to your door" },
+  ];
+
+  const iconMap: Record<string, any> = { ShoppingBag, Palette, Printer, Package };
+
+  return (
+    <section className="bg-muted/50 py-16 lg:py-24">
+      <div className="container">
+        <div className="mb-12 text-center">
+          <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
+            {c.heading || "How It Works"}
+          </h2>
+          <p className="mt-2 text-muted-foreground">{c.subheading || "From idea to your doorstep in 4 simple steps"}</p>
+        </div>
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          {steps.map((s: any) => {
+            const Icon = iconMap[s.icon] || Package;
+            return (
+              <div key={s.step} className="relative text-center">
+                <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full border-2 border-primary/20 bg-card transition-all hover:border-primary hover:shadow-lg">
+                  <Icon className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="mb-1 font-display text-lg font-bold uppercase text-foreground">{s.title}</h3>
+                <p className="text-sm text-muted-foreground">{s.desc}</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/* ─── FAQ Block ─── */
+const FaqBlock = ({ block, disableAnimations }: { block: SiteBlock; disableAnimations: boolean }) => {
+  const c = block.content || {};
+  const items = c.items || [
+    { q: "What materials do you offer?", a: "We offer PLA, PLA Silk, PETG, and Resin. Each material has unique properties suited for different applications — from decorative items to functional parts." },
+    { q: "How long does printing take?", a: "Depending on size and complexity, prints typically take 2-24 hours. Custom orders usually ship within 3-5 business days." },
+    { q: "Can I upload my own 3D model?", a: "Absolutely! We accept STL, OBJ, and 3MF files. Upload your model through our Custom Order page and choose your preferred material and finish." },
+    { q: "What finishes are available?", a: "We offer Raw (straight from the printer), Cleaned (support marks removed and sanded), and Painted (hand-painted with your choice of colors)." },
+    { q: "Do you offer international shipping?", a: "Yes! We ship worldwide. Orders over 75 kr qualify for free shipping within our primary shipping zones." },
+    { q: "What if my print arrives damaged?", a: "We stand behind our work. If your item arrives damaged, contact us within 48 hours and we'll reprint and reship at no extra cost." },
+  ];
+
+  return (
+    <section className="py-16 lg:py-24">
+      <div className="container max-w-3xl">
+        <div className="mb-12 text-center">
+          <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
+            {c.heading || "Frequently Asked Questions"}
+          </h2>
+        </div>
+        <Accordion type="single" collapsible className="space-y-2">
+          {items.map((item: any, i: number) => (
+            <AccordionItem key={i} value={`faq-${i}`} className="rounded-lg border border-border bg-card px-6">
+              <AccordionTrigger className="font-display text-sm uppercase tracking-wider text-card-foreground hover:no-underline hover:text-primary">
+                {item.q}
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground">
+                {item.a}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </div>
+    </section>
+  );
+};
+
+/* ─── Trust Badges Block ─── */
+const TrustBadgesBlock = ({ block, disableAnimations }: { block: SiteBlock; disableAnimations: boolean }) => {
+  const c = block.content || {};
+  const badges = c.badges || [
+    { icon: "Truck", title: "Free Shipping", desc: "On orders over 75 kr" },
+    { icon: "Shield", title: "Secure Checkout", desc: "Stripe & PayPal protected" },
+    { icon: "Star", title: "Loyalty Rewards", desc: "Earn points on every purchase" },
+  ];
+
+  const iconMap: Record<string, any> = { Truck, Shield, Star };
+
+  return (
+    <section className="py-16">
+      <div className="container">
+        <div className="grid gap-8 sm:grid-cols-3">
+          {badges.map((badge: any) => {
+            const Icon = iconMap[badge.icon] || Shield;
+            return (
+              <div
+                key={badge.title}
+                className="flex items-center gap-4 rounded-md border border-border bg-card p-6 transition-all duration-300 hover:border-primary hover:shadow-md hover:-translate-y-0.5"
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                  <Icon className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-display text-sm font-semibold uppercase text-card-foreground">{badge.title}</h3>
+                  <p className="text-sm text-muted-foreground">{badge.desc}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/* ─── Carousel Block ─── */
 const CarouselBlock = ({ block }: { block: SiteBlock }) => {
   const [current, setCurrent] = useState(0);
   const images: string[] = block.content?.images || [];
@@ -186,7 +495,7 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
                 key={current}
                 src={images[current]}
                 alt=""
-               className="h-full w-full object-contain"
+                className="h-full w-full object-contain"
                 initial={{ opacity: 0, x: 50 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -50 }}
@@ -218,6 +527,7 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
   );
 };
 
+/* ─── Video Block ─── */
 const VideoBlock = ({ block }: { block: SiteBlock }) => {
   const url = block.content?.video_url;
   if (!url) return null;
@@ -262,6 +572,7 @@ const VideoBlock = ({ block }: { block: SiteBlock }) => {
   );
 };
 
+/* ─── Newsletter Block ─── */
 const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
@@ -269,8 +580,7 @@ const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!email) return;
-    const { supabase: client } = await import("@/integrations/supabase/client");
-    const { error } = await client.from("newsletter_subscribers" as any).insert({ email } as any);
+    const { error } = await supabase.from("newsletter_subscribers").insert({ email } as any);
     setStatus(error ? "error" : "success");
     if (!error) setEmail("");
   };

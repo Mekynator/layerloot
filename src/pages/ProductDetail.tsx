@@ -12,6 +12,9 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import ModelViewer from "@/components/ModelViewer";
+import ProductConfigurator from "@/components/ProductConfigurator";
+import PrintInfo from "@/components/PrintInfo";
+import SizePreview from "@/components/SizePreview";
 
 interface Product {
   id: string;
@@ -25,6 +28,11 @@ interface Product {
   is_active: boolean;
   category_id: string | null;
   model_url: string | null;
+  print_time_hours: number | null;
+  dimensions_cm: { length?: number; width?: number; height?: number } | null;
+  weight_grams: number | null;
+  finish_type: string | null;
+  material_type: string | null;
 }
 
 interface Variant {
@@ -43,7 +51,6 @@ interface Review {
   comment: string | null;
   created_at: string;
   user_id: string;
-  profiles?: { full_name: string | null } | null;
 }
 
 const ProductDetail = () => {
@@ -70,16 +77,19 @@ const ProductDetail = () => {
         .eq("slug", slug)
         .maybeSingle();
       if (data) {
-        setProduct(data as Product);
-        // Fetch variants
+        setProduct(data as unknown as Product);
         const { data: vars } = await supabase
           .from("product_variants")
           .select("*")
           .eq("product_id", data.id)
           .eq("is_active", true)
           .order("sort_order");
-        setVariants((vars as Variant[]) ?? []);
-        // Fetch approved reviews
+        const typedVars = (vars as unknown as Variant[]) ?? [];
+        setVariants(typedVars);
+        // Auto-select first variant if configurator attributes exist
+        if (typedVars.length > 0 && Object.keys(typedVars[0].attributes || {}).length > 0) {
+          setSelectedVariant(typedVars[0]);
+        }
         const { data: revs } = await supabase
           .from("product_reviews")
           .select("id, rating, title, comment, created_at, user_id")
@@ -130,6 +140,10 @@ const ProductDetail = () => {
   const activeStock = selectedVariant ? selectedVariant.stock : product?.stock ?? 0;
   const images = product?.images?.length ? product.images : ["/placeholder.svg"];
 
+  // Check if variants use attributes (configurator) vs simple named variants
+  const hasConfiguratorAttrs = variants.length > 0 && variants.some((v) => Object.keys(v.attributes || {}).length > 0);
+  const hasSimpleVariants = variants.length > 0 && !hasConfiguratorAttrs;
+
   if (loading) return <div className="flex items-center justify-center py-24 text-muted-foreground">Loading...</div>;
   if (!product) return (
     <div className="flex flex-col items-center justify-center py-24">
@@ -141,7 +155,7 @@ const ProductDetail = () => {
   return (
     <div className="py-8">
       <div className="container">
-        <Link to="/products" className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
+        <Link to="/products" className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors">
           <ArrowLeft className="h-4 w-4" /> Back to Products
         </Link>
 
@@ -166,11 +180,11 @@ const ProductDetail = () => {
                 </AnimatePresence>
                 {images.length > 1 && (
                   <>
-                    <Button variant="ghost" size="icon" className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80"
+                    <Button variant="ghost" size="icon" className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background"
                       onClick={() => setCurrentImage((p) => (p - 1 + images.length) % images.length)}>
                       <ChevronLeft className="h-5 w-5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80"
+                    <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background"
                       onClick={() => setCurrentImage((p) => (p + 1) % images.length)}>
                       <ChevronRight className="h-5 w-5" />
                     </Button>
@@ -184,14 +198,14 @@ const ProductDetail = () => {
             <div className="flex gap-2 overflow-x-auto">
               {images.map((img, i) => (
                 <button key={i} onClick={() => { setCurrentImage(i); setShow3D(false); }}
-                  className={`h-16 w-16 shrink-0 overflow-hidden rounded border-2 transition-colors ${!show3D && i === currentImage ? "border-primary" : "border-border"}`}>
+                  className={`h-16 w-16 shrink-0 overflow-hidden rounded border-2 transition-all duration-200 ${!show3D && i === currentImage ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-muted-foreground"}`}>
                   <img src={img} alt="" className="h-full w-full object-cover" />
                 </button>
               ))}
               {product.model_url && (
                 <button
                   onClick={() => setShow3D(true)}
-                  className={`flex h-16 w-16 shrink-0 items-center justify-center rounded border-2 transition-colors ${show3D ? "border-primary bg-primary/10" : "border-border hover:border-primary"}`}
+                  className={`flex h-16 w-16 shrink-0 items-center justify-center rounded border-2 transition-all duration-200 ${show3D ? "border-primary bg-primary/10 ring-2 ring-primary/20" : "border-border hover:border-primary"}`}
                   title="View 3D Model"
                 >
                   <span className="font-display text-xs font-bold uppercase text-primary">3D</span>
@@ -227,20 +241,29 @@ const ProductDetail = () => {
               <p className="text-muted-foreground leading-relaxed">{product.description}</p>
             )}
 
-            {/* Variants */}
-            {variants.length > 0 && (
+            {/* Configurator (attribute-based variants) */}
+            {hasConfiguratorAttrs && (
+              <ProductConfigurator
+                variants={variants}
+                selectedVariant={selectedVariant}
+                onSelectVariant={setSelectedVariant}
+              />
+            )}
+
+            {/* Simple Variants (no attributes) */}
+            {hasSimpleVariants && (
               <div className="space-y-3">
-                <p className="font-display text-sm font-semibold uppercase tracking-wider text-foreground">Options</p>
+                <p className="font-display text-xs font-semibold uppercase tracking-widest text-muted-foreground">Options</p>
                 <div className="flex flex-wrap gap-2">
                   {variants.map((v) => (
                     <button
                       key={v.id}
                       onClick={() => setSelectedVariant(selectedVariant?.id === v.id ? null : v)}
-                      className={`rounded-md border px-4 py-2 font-display text-sm uppercase transition-all ${
+                      className={`rounded-md border px-4 py-2 font-display text-sm uppercase transition-all duration-200 ${
                         selectedVariant?.id === v.id
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border text-foreground hover:border-primary"
-                      } ${v.stock <= 0 ? "opacity-50" : ""}`}
+                          ? "border-primary bg-primary text-primary-foreground shadow-md"
+                          : "border-border text-foreground hover:border-primary/50"
+                      } ${v.stock <= 0 ? "opacity-40 cursor-not-allowed" : ""}`}
                       disabled={v.stock <= 0}
                     >
                       {v.name}
@@ -251,15 +274,27 @@ const ProductDetail = () => {
               </div>
             )}
 
+            {/* Print Info */}
+            <PrintInfo
+              printTimeHours={product.print_time_hours}
+              dimensionsCm={product.dimensions_cm}
+              weightGrams={product.weight_grams}
+              finishType={product.finish_type}
+              materialType={product.material_type}
+            />
+
+            {/* Size Preview */}
+            <SizePreview dimensionsCm={product.dimensions_cm} />
+
             <div className="flex items-center gap-3">
-              <span className={`text-sm ${activeStock > 0 ? "text-green-500" : "text-destructive"}`}>
+              <span className={`text-sm font-medium ${activeStock > 0 ? "text-green-500" : "text-destructive"}`}>
                 {activeStock > 0 ? `${activeStock} in stock` : "Out of stock"}
               </span>
             </div>
 
             <Button
               size="lg"
-              className="w-full font-display uppercase tracking-wider"
+              className="w-full font-display uppercase tracking-wider transition-shadow hover:shadow-lg"
               onClick={handleAddToCart}
               disabled={activeStock <= 0 || (variants.length > 0 && !selectedVariant)}
             >
@@ -275,7 +310,6 @@ const ProductDetail = () => {
             Customer Reviews {reviews.length > 0 && `(${reviews.length})`}
           </h2>
 
-          {/* Submit Review */}
           {user ? (
             <Card className="mb-8">
               <CardContent className="p-6">
@@ -315,7 +349,6 @@ const ProductDetail = () => {
             </Card>
           )}
 
-          {/* Reviews List */}
           <div className="space-y-4">
             {reviews.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">No reviews yet. Be the first!</p>

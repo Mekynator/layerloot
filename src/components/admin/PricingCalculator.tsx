@@ -138,7 +138,7 @@ const PricingCalculator = ({
     <div className={compact ? "space-y-4" : "space-y-6"}>
       <div className={`grid gap-4 ${compact ? "grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
         <div>
-          <Label className="text-xs">Material Cost (kr/kg)</Label>
+          <Label className="text-xs">Material Cost (DKK/kg)</Label>
           <Input type="number" step="1" value={inputs.materialCostPerKg}
             onChange={(e) => update("materialCostPerKg", parseFloat(e.target.value) || 0)} />
         </div>
@@ -153,12 +153,12 @@ const PricingCalculator = ({
             onChange={(e) => update("printTimeHours", parseFloat(e.target.value) || 0)} />
         </div>
         <div>
-          <Label className="text-xs">Electricity Cost (kr/hour)</Label>
+          <Label className="text-xs">Electricity Cost (DKK/hour)</Label>
           <Input type="number" step="0.1" value={inputs.electricityCostPerHour}
             onChange={(e) => update("electricityCostPerHour", parseFloat(e.target.value) || 0)} />
         </div>
         <div>
-          <Label className="text-xs">Packaging Cost (kr)</Label>
+          <Label className="text-xs">Packaging Cost (DKK)</Label>
           <Input type="number" step="1" value={inputs.packagingCost}
             onChange={(e) => update("packagingCost", parseFloat(e.target.value) || 0)} />
         </div>
@@ -219,7 +219,7 @@ const PricingCalculator = ({
 
             <div className="mt-4 space-y-3">
               <div>
-                <Label className="text-xs">Final Price (override)</Label>
+                <Label className="text-xs">Final Price DKK (override)</Label>
                 <Input
                   type="number"
                   step="1"
@@ -259,7 +259,7 @@ function Row({ label, value, bold, primary }: { label: string; value: number; bo
     <div className="flex justify-between">
       <span className={bold ? "font-semibold text-foreground" : "text-muted-foreground"}>{label}</span>
       <span className={`font-display ${bold ? "font-bold" : ""} ${primary ? "text-primary text-lg" : "text-foreground"}`}>
-        {value.toFixed(2)} kr
+        {value.toFixed(2)} DKK
       </span>
     </div>
   );

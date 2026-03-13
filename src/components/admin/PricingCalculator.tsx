@@ -219,7 +219,7 @@ const PricingCalculator = ({
 
             <div className="mt-4 space-y-3">
               <div>
-                <Label className="text-xs">Final Price (override)</Label>
+                <Label className="text-xs">Final Price DKK (override)</Label>
                 <Input
                   type="number"
                   step="1"

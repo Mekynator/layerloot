@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import {
   Plus, X, Trash2, ArrowLeft, FileText, Square, Type, Image, Columns,
   PlayCircle, MousePointer, Link2, Code, Globe, Mail, LayoutGrid, Eye, EyeOff,
-  GripVertical, PanelLeft, PanelLeftClose, ChevronRight
+  GripVertical, PanelLeft, PanelLeftClose, Truck, Star, HelpCircle, ShieldCheck,
+  Layers, Package, FolderTree
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -23,6 +24,13 @@ const defaultPages = ["home", "products", "contact", "about", "faq", "shipping-i
 
 const blockTypes = [
   { value: "hero", label: "Hero Banner", icon: Square },
+  { value: "shipping_banner", label: "Shipping Banner", icon: Truck },
+  { value: "entry_cards", label: "Entry Cards", icon: Layers },
+  { value: "categories", label: "Categories Grid", icon: FolderTree },
+  { value: "featured_products", label: "Featured Products", icon: Star },
+  { value: "how_it_works", label: "How It Works", icon: Package },
+  { value: "faq", label: "FAQ Section", icon: HelpCircle },
+  { value: "trust_badges", label: "Trust Badges", icon: ShieldCheck },
   { value: "text", label: "Text Block", icon: Type },
   { value: "image", label: "Image Block", icon: Image },
   { value: "carousel", label: "Image Carousel", icon: Columns },
@@ -38,6 +46,13 @@ const blockTypes = [
 
 const BLOCK_COLORS: Record<string, string> = {
   hero: "border-l-primary bg-primary/5",
+  shipping_banner: "border-l-amber-500 bg-amber-500/5",
+  entry_cards: "border-l-cyan-500 bg-cyan-500/5",
+  categories: "border-l-violet-500 bg-violet-500/5",
+  featured_products: "border-l-yellow-500 bg-yellow-500/5",
+  how_it_works: "border-l-teal-500 bg-teal-500/5",
+  faq: "border-l-sky-500 bg-sky-500/5",
+  trust_badges: "border-l-emerald-500 bg-emerald-500/5",
   text: "border-l-blue-500 bg-blue-500/5",
   image: "border-l-green-500 bg-green-500/5",
   carousel: "border-l-purple-500 bg-purple-500/5",
@@ -69,7 +84,6 @@ const PageEditor = () => {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
-  // Structure panel drag state
   const [sDragIndex, setSDragIndex] = useState<number | null>(null);
   const [sDragOverIndex, setSDragOverIndex] = useState<number | null>(null);
 
@@ -97,7 +111,6 @@ const PageEditor = () => {
   const pageBlocks = blocks.filter(b => b.page === activePage).sort((a, b) => a.sort_order - b.sort_order);
   const selectedBlock = pageBlocks.find(b => b.id === selectedBlockId) || null;
 
-  // CRUD
   const addBlock = async (type: string) => {
     const sortOrder = insertAtIndex !== null
       ? insertAtIndex
@@ -110,11 +123,21 @@ const PageEditor = () => {
       ));
     }
 
+    // Set sensible default content for new data-driven blocks
+    let defaultContent: any = {};
+    switch (type) {
+      case "categories": defaultContent = { heading: "Shop by Category", subheading: "Find exactly what you need", limit: 6 }; break;
+      case "featured_products": defaultContent = { heading: "Best Sellers", subheading: "Our most popular 3D printed items", limit: 8 }; break;
+      case "how_it_works": defaultContent = { heading: "How It Works", subheading: "From idea to your doorstep in 4 simple steps" }; break;
+      case "faq": defaultContent = { heading: "Frequently Asked Questions" }; break;
+      case "shipping_banner": defaultContent = { text: "Free shipping on orders over 75 kr" }; break;
+    }
+
     const { error } = await supabase.from("site_blocks").insert({
       page: activePage,
       block_type: type,
-      title: type.charAt(0).toUpperCase() + type.slice(1),
-      content: {},
+      title: blockTypes.find(bt => bt.value === type)?.label || type.charAt(0).toUpperCase() + type.slice(1),
+      content: defaultContent,
       sort_order: sortOrder,
       is_active: true,
     });
@@ -160,7 +183,6 @@ const PageEditor = () => {
     fetchBlocks();
   };
 
-  // Canvas drag & drop
   const handleDragEnd = async () => {
     if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
       const reordered = [...pageBlocks];
@@ -175,7 +197,6 @@ const PageEditor = () => {
     setDragOverIndex(null);
   };
 
-  // Structure panel drag & drop
   const handleStructureDragEnd = async () => {
     if (sDragIndex !== null && sDragOverIndex !== null && sDragIndex !== sDragOverIndex) {
       const reordered = [...pageBlocks];
@@ -191,7 +212,6 @@ const PageEditor = () => {
     setSDragOverIndex(null);
   };
 
-  // Page management
   const createPage = async () => {
     const slug = newPageSlug.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-");
     if (!slug) return;
@@ -261,9 +281,9 @@ const PageEditor = () => {
         </div>
       </div>
 
-      {/* ─── Split View: Structure Panel + Live Canvas ─── */}
+      {/* ─── Split View ─── */}
       <div className="flex flex-1 overflow-hidden">
-        {/* ── Structure Panel (left) ── */}
+        {/* ── Structure Panel ── */}
         <aside className={`shrink-0 border-r border-border bg-card transition-all duration-300 overflow-y-auto ${panelCollapsed ? "w-0 overflow-hidden" : "w-72 lg:w-80"}`}>
           <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-4 py-3">
             <div className="flex items-center gap-2">
@@ -284,8 +304,8 @@ const PageEditor = () => {
           ) : (
             <div className="space-y-1 p-2">
               {pageBlocks.map((block, index) => {
-                const blockType = blockTypes.find(bt => bt.value === block.block_type);
-                const Icon = blockType?.icon ?? Square;
+                const bt = blockTypes.find(b => b.value === block.block_type);
+                const Icon = bt?.icon ?? Square;
                 const colorClass = BLOCK_COLORS[block.block_type] ?? "border-l-muted-foreground bg-muted/30";
                 const isSelected = selectedBlockId === block.id;
 
@@ -311,33 +331,21 @@ const PageEditor = () => {
                       <Icon className="h-3.5 w-3.5 shrink-0 text-foreground/60" />
                       <div className="min-w-0 flex-1">
                         <span className="block truncate font-display text-[11px] font-semibold uppercase tracking-wider text-foreground">
-                          {blockType?.label ?? block.block_type}
+                          {bt?.label ?? block.block_type}
                         </span>
-                        {block.title && block.title !== (block.block_type.charAt(0).toUpperCase() + block.block_type.slice(1)) && (
+                        {block.title && block.title !== (bt?.label) && (
                           <span className="block truncate text-[10px] text-muted-foreground">{block.title}</span>
                         )}
                       </div>
-                      {!block.is_active && (
-                        <EyeOff className="h-3 w-3 shrink-0 text-muted-foreground" />
-                      )}
-                      {/* Quick actions on hover */}
+                      {!block.is_active && <EyeOff className="h-3 w-3 shrink-0 text-muted-foreground" />}
                       <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); toggleActive(block.id, !(block.is_active ?? true)); }}
-                          className="rounded p-1 text-muted-foreground hover:text-foreground"
-                        >
+                        <button onClick={(e) => { e.stopPropagation(); toggleActive(block.id, !(block.is_active ?? true)); }} className="rounded p-1 text-muted-foreground hover:text-foreground">
                           {block.is_active ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
                         </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setSelectedBlockId(block.id); setEditPanelOpen(true); }}
-                          className="rounded p-1 text-muted-foreground hover:text-foreground"
-                        >
+                        <button onClick={(e) => { e.stopPropagation(); setSelectedBlockId(block.id); setEditPanelOpen(true); }} className="rounded p-1 text-muted-foreground hover:text-foreground">
                           <PanelLeft className="h-3 w-3" />
                         </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); deleteBlock(block.id); }}
-                          className="rounded p-1 text-muted-foreground hover:text-destructive"
-                        >
+                        <button onClick={(e) => { e.stopPropagation(); deleteBlock(block.id); }} className="rounded p-1 text-muted-foreground hover:text-destructive">
                           <Trash2 className="h-3 w-3" />
                         </button>
                       </div>
@@ -346,13 +354,8 @@ const PageEditor = () => {
                 );
               })}
 
-              {sDragOverIndex === pageBlocks.length && (
-                <div className="mx-2 h-0.5 rounded bg-primary" />
-              )}
-              <div
-                onDragOver={(e) => { e.preventDefault(); setSDragOverIndex(pageBlocks.length); }}
-                className="h-2"
-              />
+              {sDragOverIndex === pageBlocks.length && <div className="mx-2 h-0.5 rounded bg-primary" />}
+              <div onDragOver={(e) => { e.preventDefault(); setSDragOverIndex(pageBlocks.length); }} className="h-2" />
 
               <button
                 onClick={() => { setInsertAtIndex(null); setAddBlockOpen(true); }}
@@ -362,31 +365,19 @@ const PageEditor = () => {
                 <span className="font-display text-[10px] uppercase tracking-wider">Add Section</span>
               </button>
 
-              {/* Page Summary */}
               <div className="mt-4 rounded-md border border-border bg-muted/30 p-3">
-                <h3 className="mb-2 font-display text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  Summary
-                </h3>
+                <h3 className="mb-2 font-display text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Summary</h3>
                 <div className="grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <p className="font-display text-lg font-bold text-foreground">{pageBlocks.length}</p>
-                    <p className="text-[10px] text-muted-foreground">Total</p>
-                  </div>
-                  <div>
-                    <p className="font-display text-lg font-bold text-primary">{pageBlocks.filter(b => b.is_active).length}</p>
-                    <p className="text-[10px] text-muted-foreground">Visible</p>
-                  </div>
-                  <div>
-                    <p className="font-display text-lg font-bold text-muted-foreground">{pageBlocks.filter(b => !b.is_active).length}</p>
-                    <p className="text-[10px] text-muted-foreground">Hidden</p>
-                  </div>
+                  <div><p className="font-display text-lg font-bold text-foreground">{pageBlocks.length}</p><p className="text-[10px] text-muted-foreground">Total</p></div>
+                  <div><p className="font-display text-lg font-bold text-primary">{pageBlocks.filter(b => b.is_active).length}</p><p className="text-[10px] text-muted-foreground">Visible</p></div>
+                  <div><p className="font-display text-lg font-bold text-muted-foreground">{pageBlocks.filter(b => !b.is_active).length}</p><p className="text-[10px] text-muted-foreground">Hidden</p></div>
                 </div>
               </div>
             </div>
           )}
         </aside>
 
-        {/* ── Live Canvas (right) ── */}
+        {/* ── Live Canvas ── */}
         <main className="flex-1 overflow-y-auto bg-background">
           {pageBlocks.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-32">
@@ -424,7 +415,6 @@ const PageEditor = () => {
                 </div>
               ))}
 
-              {/* Add block at end */}
               <div
                 className="flex h-12 items-center justify-center opacity-0 transition-opacity hover:opacity-100"
                 onClick={() => { setInsertAtIndex(null); setAddBlockOpen(true); }}
@@ -440,24 +430,17 @@ const PageEditor = () => {
         </main>
       </div>
 
-      {/* ─── Block Editor Side Panel ─── */}
-      <BlockEditorPanel
-        block={selectedBlock}
-        open={editPanelOpen}
-        onClose={() => setEditPanelOpen(false)}
-        onSave={() => { setEditPanelOpen(false); fetchBlocks(); }}
-        pages={allPages}
-      />
+      {/* Panels & Dialogs */}
+      <BlockEditorPanel block={selectedBlock} open={editPanelOpen} onClose={() => setEditPanelOpen(false)} onSave={() => { setEditPanelOpen(false); fetchBlocks(); }} pages={allPages} />
 
-      {/* ─── Add Block Dialog ─── */}
       <Dialog open={addBlockOpen} onOpenChange={setAddBlockOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader><DialogTitle className="font-display uppercase">Add Section</DialogTitle></DialogHeader>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {blockTypes.map(({ value, label, icon: Icon }) => (
               <Button key={value} variant="outline" onClick={() => addBlock(value)}
-                className="h-auto flex-col gap-2 py-4 font-display text-xs uppercase tracking-wider">
-                <Icon className="h-6 w-6" />
+                className="h-auto flex-col gap-2 py-3 font-display text-[10px] uppercase tracking-wider">
+                <Icon className="h-5 w-5" />
                 {label}
               </Button>
             ))}
@@ -465,7 +448,6 @@ const PageEditor = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ─── Create Page Dialog ─── */}
       <Dialog open={newPageOpen} onOpenChange={setNewPageOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader><DialogTitle className="font-display uppercase">Create Page</DialogTitle></DialogHeader>
@@ -476,7 +458,6 @@ const PageEditor = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ─── Delete Page Dialog ─── */}
       <Dialog open={deletePageOpen} onOpenChange={setDeletePageOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader><DialogTitle className="font-display uppercase">Delete Page</DialogTitle></DialogHeader>

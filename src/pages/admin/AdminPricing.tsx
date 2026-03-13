@@ -69,7 +69,7 @@ const AdminPricing = () => {
             <CardHeader>
               <CardTitle className="font-display uppercase">Price Estimator</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Calculate production costs and suggested retail prices for 3D printed items.
+                Calculate production costs and suggested retail prices in DKK for 3D printed items.
               </p>
             </CardHeader>
             <CardContent>

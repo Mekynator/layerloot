@@ -14,9 +14,11 @@ export interface NavItem {
 
 const defaultNav: NavItem[] = [
   { label: "Home", to: "/" },
-  { label: "Products", to: "/products" },
-  { label: "Custom Order", to: "/custom-order" },
-  { label: "Contact", to: "/contact" },
+  { label: "Shop", to: "/products" },
+  { label: "Create Your Own", to: "/create" },
+  { label: "Custom Orders", to: "/custom-order" },
+  { label: "Gallery", to: "/gallery" },
+  { label: "About", to: "/about" },
 ];
 
 export const useNavLinks = () => {

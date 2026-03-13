@@ -55,6 +55,51 @@ export type Database = {
           },
         ]
       }
+      creator_submissions: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          creator_name: string
+          description: string
+          email: string
+          id: string
+          model_filename: string
+          model_url: string
+          portfolio_url: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          creator_name: string
+          description: string
+          email: string
+          id?: string
+          model_filename: string
+          model_url: string
+          portfolio_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          creator_name?: string
+          description?: string
+          email?: string
+          id?: string
+          model_filename?: string
+          model_url?: string
+          portfolio_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       custom_orders: {
         Row: {
           admin_notes: string | null
@@ -96,6 +141,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      gallery_posts: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          image_url: string
+          is_approved: boolean
+          product_id: string | null
+          product_name: string
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          image_url: string
+          is_approved?: boolean
+          product_id?: string | null
+          product_name: string
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string
+          is_approved?: boolean
+          product_id?: string | null
+          product_name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gallery_posts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       loyalty_points: {
         Row: {

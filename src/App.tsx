@@ -29,6 +29,10 @@ import PageEditor from "./pages/admin/PageEditor";
 import AdminPricing from "./pages/admin/AdminPricing";
 import DynamicPage from "./pages/DynamicPage";
 import CustomOrder from "./pages/CustomOrder";
+import CreateYourOwn from "./pages/CreateYourOwn";
+import Gallery from "./pages/Gallery";
+import About from "./pages/About";
+import SubmitDesign from "./pages/SubmitDesign";
 import NotFound from "./pages/NotFound";
 import ChatWidget from "./components/ChatWidget";
 
@@ -53,6 +57,10 @@ const App = () => (
                 <Route path="/account" element={<Account />} />
                 <Route path="/orders/:orderId" element={<OrderTracking />} />
                 <Route path="/custom-order" element={<CustomOrder />} />
+                <Route path="/create" element={<CreateYourOwn />} />
+                <Route path="/gallery" element={<Gallery />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/submit-design" element={<SubmitDesign />} />
                 <Route path="/admin" element={<Dashboard />} />
                 <Route path="/admin/products" element={<AdminProducts />} />
                 <Route path="/admin/products/:productId/variants" element={<AdminVariants />} />

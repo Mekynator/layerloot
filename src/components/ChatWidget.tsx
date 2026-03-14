@@ -630,4 +630,80 @@ const ChatWidget = () => {
 
             <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
               {messages.map((msg) => (
-                <div key={msg.id} className={`flex gap-2 
+                <div
+                  key={msg.id}
+                  className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
+                >
+                  <div
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs ${
+                      msg.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {msg.role === "user" ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
+                  </div>
+
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                      msg.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-foreground"
+                    }`}
+                  >
+                    {msg.payload?.status && !msg.content ? (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
+                        {msg.payload.status}
+                      </div>
+                    ) : (
+                      <span className="whitespace-pre-wrap">{msg.content}</span>
+                    )}
+                    {msg.role === "assistant" && <AssistantExtras payload={msg.payload} />}
+                  </div>
+                </div>
+              ))}
+
+              {loading && messages[messages.length - 1]?.role !== "assistant" && (
+                <div className="flex gap-2">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground text-xs">
+                    <Bot className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="rounded-2xl bg-muted px-4 py-2.5 text-sm">
+                    <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                send();
+              }}
+              className="flex items-center gap-2 border-t border-border bg-card px-4 py-3"
+            >
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask me anything…"
+                className="flex-1 rounded-full border-border bg-muted text-sm"
+                disabled={loading}
+              />
+              <Button
+                type="submit"
+                size="icon"
+                className="h-9 w-9 shrink-0 rounded-full"
+                disabled={loading || !input.trim()}
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+};
+
+export default ChatWidget;

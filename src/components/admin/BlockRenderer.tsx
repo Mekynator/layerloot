@@ -504,7 +504,7 @@ const FaqBlock = ({ block, disableAnimations }: { block: SiteBlock; disableAnima
     },
     {
       q: "Do you offer international shipping?",
-      a: "Yes! We ship worldwide. Orders over 75 kr qualify for free shipping within our primary shipping zones.",
+      a: "Yes! We ship worldwide. Orders over 500 kr qualify for free shipping within our primary shipping zones.",
     },
     {
       q: "What if my print arrives damaged?",
@@ -539,7 +539,7 @@ const FaqBlock = ({ block, disableAnimations }: { block: SiteBlock; disableAnima
 const TrustBadgesBlock = ({ block, disableAnimations }: { block: SiteBlock; disableAnimations: boolean }) => {
   const c = block.content || {};
   const badges = c.badges || [
-    { icon: "Truck", title: "Free Shipping", desc: "On orders over 75 kr" },
+    { icon: "Truck", title: "Free Shipping", desc: "On orders over 500 kr" },
     { icon: "Shield", title: "Secure Checkout", desc: "Stripe & PayPal protected" },
     { icon: "Star", title: "Loyalty Rewards", desc: "Earn points on every purchase" },
   ];

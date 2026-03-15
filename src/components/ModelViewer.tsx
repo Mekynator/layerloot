@@ -235,30 +235,16 @@ const ViewerCanvas = ({
       <directionalLight position={[-3, 3, -3]} intensity={isFullscreen ? 0.35 : 0.22} />
 
       <Suspense fallback={<LoadingFallback />}>
-        <ModelMesh
-          url={url}
-          autoRotate={autoRotate}
-          selectedColor={selectedColor}
-        />
+        <ModelMesh url={url} autoRotate={autoRotate} selectedColor={selectedColor} />
         {isFullscreen && <Environment preset="studio" />}
       </Suspense>
 
-      <OrbitControls
-        enablePan={false}
-        enableZoom
-        enableRotate
-        dampingFactor={0.1}
-      />
+      <OrbitControls enablePan={false} enableZoom enableRotate dampingFactor={0.1} />
     </Canvas>
   );
 };
 
-const ModelViewer = ({
-  url,
-  className = "",
-  showFullscreen = true,
-  selectedColor = "#b0b0b0",
-}: ModelViewerProps) => {
+const ModelViewer = ({ url, className = "", showFullscreen = true, selectedColor = "#b0b0b0" }: ModelViewerProps) => {
   const [autoRotate, setAutoRotate] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
 
@@ -267,12 +253,7 @@ const ModelViewer = ({
       <div
         className={`relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-muted to-background ${className}`}
       >
-        <ViewerCanvas
-          url={url}
-          autoRotate={autoRotate}
-          selectedColor={selectedColor}
-          isFullscreen={false}
-        />
+        <ViewerCanvas url={url} autoRotate={autoRotate} selectedColor={selectedColor} isFullscreen={false} />
 
         {showFullscreen && (
           <div className="absolute right-2 top-2">
@@ -312,12 +293,7 @@ const ModelViewer = ({
         <Dialog open={fullscreen} onOpenChange={setFullscreen}>
           <DialogContent className="h-[85vh] max-w-[90vw] p-0">
             <div className="h-full w-full bg-gradient-to-br from-muted to-background">
-              <ViewerCanvas
-                url={url}
-                autoRotate={autoRotate}
-                selectedColor={selectedColor}
-                isFullscreen
-              />
+              <ViewerCanvas url={url} autoRotate={autoRotate} selectedColor={selectedColor} isFullscreen />
             </div>
           </DialogContent>
         </Dialog>

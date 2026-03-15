@@ -64,9 +64,9 @@ const QUALITIES = [
 
 type ToolReview = {
   id: string;
-  reviewer_name: string | null;
+  title: string | null;
+  comment: string | null;
   rating: number;
-  review_text: string;
   created_at: string;
 };
 

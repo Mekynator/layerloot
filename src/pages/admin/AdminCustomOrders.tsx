@@ -602,7 +602,7 @@ const AdminCustomOrders = () => {
                         <SelectContent>
                           {PAYMENT_STATUSES.map((s) => (
                             <SelectItem key={s} value={s}>
-                              {s.replaceAll("_", " ")}
+                              {s.replace(/_/g, " ")}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -621,7 +621,7 @@ const AdminCustomOrders = () => {
                         <SelectContent>
                           {PRODUCTION_STATUSES.map((s) => (
                             <SelectItem key={s} value={s}>
-                              {s.replaceAll("_", " ")}
+                              {s.replace(/_/g, " ")}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -681,7 +681,7 @@ const AdminCustomOrders = () => {
                         </p>
                         <p>
                           <span className="text-muted-foreground">Customer Response:</span>{" "}
-                          {selectedOrder.customer_response_status.replaceAll("_", " ")}
+                          {selectedOrder.customer_response_status.replace(/_/g, " ")}
                         </p>
                       </div>
                     </div>
@@ -820,7 +820,7 @@ const AdminCustomOrders = () => {
                               {msg.sender_role}
                             </Badge>
                             <Badge variant="outline" className="text-[10px] uppercase">
-                              {msg.message_type.replaceAll("_", " ")}
+                              {msg.message_type.replace(/_/g, " ")}
                             </Badge>
                             {msg.proposed_price !== null && (
                               <Badge variant="outline" className="text-[10px] uppercase border-primary text-primary">

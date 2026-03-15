@@ -247,7 +247,7 @@ const AdminOrders = () => {
             <SelectItem value="all">All Statuses</SelectItem>
             {[...new Set([...storeStatuses, ...customProductionStatuses])].map((s) => (
               <SelectItem key={s} value={s} className="capitalize">
-                {s.replaceAll("_", " ")}
+                {s.replace(/_/g, " ")}
               </SelectItem>
             ))}
           </SelectContent>
@@ -300,7 +300,7 @@ const AdminOrders = () => {
                         <SelectContent>
                           {customProductionStatuses.map((s) => (
                             <SelectItem key={s} value={s} className="capitalize">
-                              {s.replaceAll("_", " ")}
+                              {s.replace(/_/g, " ")}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -422,7 +422,7 @@ const AdminOrders = () => {
                       <SelectContent>
                         {["unpaid", "awaiting_payment", "paid", "refunded", "cancelled"].map((s) => (
                           <SelectItem key={s} value={s}>
-                            {s.replaceAll("_", " ")}
+                            {s.replace(/_/g, " ")}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -437,7 +437,7 @@ const AdminOrders = () => {
                       <SelectContent>
                         {customProductionStatuses.map((s) => (
                           <SelectItem key={s} value={s}>
-                            {s.replaceAll("_", " ")}
+                            {s.replace(/_/g, " ")}
                           </SelectItem>
                         ))}
                       </SelectContent>

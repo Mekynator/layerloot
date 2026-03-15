@@ -69,7 +69,7 @@ const Account = () => {
     supabase.rpc("get_user_points_balance", { _user_id: user.id }).then(({ data }) => setPointsBalance(data ?? 0));
    supabase
   .from("orders")
-  .select("id, status, total, created_at, tool_type")
+  .select("id, status, total, created_at")
   .eq("user_id", user.id)
   .order("created_at", { ascending: false })
   .then(({ data }) => setOrders((data as Order[]) ?? []));

@@ -64,9 +64,9 @@ const QUALITIES = [
 
 type ToolReview = {
   id: string;
-  reviewer_name: string | null;
+  title: string | null;
+  comment: string | null;
   rating: number;
-  review_text: string;
   created_at: string;
 };
 
@@ -90,11 +90,11 @@ const ReviewSection = ({ toolType, title }: { toolType: "custom-print" | "lithop
       setLoading(true);
 
       const { data, error } = await supabase
-        .from("tool_reviews")
-        .select("id, reviewer_name, rating, review_text, created_at")
-        .eq("tool_type", toolType)
+        .from("product_reviews")
+        .select("id, title, comment, rating, created_at")
         .eq("is_approved", true)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(10);
 
       if (!error) {
         setReviews(data ?? []);
@@ -124,14 +124,14 @@ const ReviewSection = ({ toolType, title }: { toolType: "custom-print" | "lithop
           {reviews.map((review) => (
             <div key={review.id} className="rounded-xl border border-border bg-card p-4">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <p className="font-medium text-foreground">{review.reviewer_name || "Verified Customer"}</p>
+                <p className="font-medium text-foreground">{review.title || "Verified Customer"}</p>
                 <div className="flex gap-1">
                   {Array.from({ length: review.rating }).map((_, i) => (
                     <Star key={i} className="h-4 w-4 fill-primary text-primary" />
                   ))}
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground">{review.review_text}</p>
+              <p className="text-sm text-muted-foreground">{review.comment}</p>
             </div>
           ))}
         </div>
@@ -499,7 +499,6 @@ const CustomPrintOrder = () => {
               <div className="overflow-hidden rounded-xl border border-border">
                 <ModelViewer
                   url={previewUrl}
-                  fileName={file?.name}
                   className="aspect-square"
                   selectedColor={selectedColorHex}
                 />

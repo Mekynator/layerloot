@@ -62,61 +62,13 @@ const QUALITIES = [
   { value: "low", label: "Low", desc: "0.8mm – Lowest detail" },
 ];
 
-const REVIEWS_BY_TAB = {
-  "custom-print": [
-    {
-      name: "Mads",
-      rating: 5,
-      text: "Great print quality and the uploaded model came out better than expected.",
-    },
-    {
-      name: "Sofie",
-      rating: 5,
-      text: "Easy process and very clean result. Good communication on custom requests.",
-    },
-    {
-      name: "Jonas",
-      rating: 4,
-      text: "Fast turnaround and solid finish. Would order another custom print again.",
-    },
-  ],
-  lithophane: [
-    {
-      name: "Camilla",
-      rating: 5,
-      text: "The lithophane looked amazing with light behind it. Very emotional gift.",
-    },
-    {
-      name: "Rasmus",
-      rating: 5,
-      text: "Photo details showed up surprisingly well. Super nice quality.",
-    },
-    {
-      name: "Nina",
-      rating: 4,
-      text: "Really beautiful result. The glow effect is the best part.",
-    },
-  ],
-  "gift-finder": [
-    {
-      name: "Freja",
-      rating: 5,
-      text: "Found a really nice present idea quickly. Easy and fun to browse.",
-    },
-    {
-      name: "Oliver",
-      rating: 4,
-      text: "Helpful suggestions and clean product presentation.",
-    },
-    {
-      name: "Emma",
-      rating: 5,
-      text: "Perfect for getting gift inspiration without scrolling forever like a raccoon in a webshop.",
-    },
-  ],
+type ToolReview = {
+  id: string;
+  reviewer_name: string | null;
+  rating: number;
+  review_text: string;
+  created_at: string;
 };
-
-type ReviewTabKey = keyof typeof REVIEWS_BY_TAB;
 
 const getUserDisplayName = (user: any) => {
   if (!user) return "";
@@ -129,31 +81,63 @@ const getUserDisplayName = (user: any) => {
   );
 };
 
-const ReviewSection = ({ tab }: { tab: ReviewTabKey }) => {
-  const reviews = REVIEWS_BY_TAB[tab];
+const ReviewSection = ({ toolType, title }: { toolType: "custom-print" | "lithophane"; title: string }) => {
+  const [reviews, setReviews] = useState<ToolReview[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from("tool_reviews")
+        .select("id, reviewer_name, rating, review_text, created_at")
+        .eq("tool_type", toolType)
+        .eq("is_approved", true)
+        .order("created_at", { ascending: false });
+
+      if (!error) {
+        setReviews(data ?? []);
+      }
+
+      setLoading(false);
+    };
+
+    fetchReviews();
+  }, [toolType]);
 
   return (
     <div className="mt-8">
       <div className="mb-4 flex items-center gap-2">
         <Star className="h-5 w-5 text-primary" />
-        <h3 className="font-display text-lg font-bold uppercase text-foreground">Customer Reviews</h3>
+        <h3 className="font-display text-lg font-bold uppercase text-foreground">{title}</h3>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        {reviews.map((review, index) => (
-          <div key={`${tab}-${index}`} className="rounded-xl border border-border bg-card p-4">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="font-medium text-foreground">{review.name}</p>
-              <div className="flex gap-1">
-                {Array.from({ length: review.rating }).map((_, i) => (
-                  <Star key={i} className="h-4 w-4 fill-primary text-primary" />
-                ))}
+      {loading ? (
+        <div className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
+          Loading reviews...
+        </div>
+      ) : reviews.length === 0 ? (
+        <div className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
+          No approved reviews yet.
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-3">
+          {reviews.map((review) => (
+            <div key={review.id} className="rounded-xl border border-border bg-card p-4">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="font-medium text-foreground">{review.reviewer_name || "Verified Customer"}</p>
+                <div className="flex gap-1">
+                  {Array.from({ length: review.rating }).map((_, i) => (
+                    <Star key={i} className="h-4 w-4 fill-primary text-primary" />
+                  ))}
+                </div>
               </div>
+              <p className="text-sm text-muted-foreground">{review.review_text}</p>
             </div>
-            <p className="text-sm text-muted-foreground">{review.text}</p>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -238,7 +222,7 @@ const LithophaneGenerator = () => {
         </motion.div>
       )}
 
-      <ReviewSection tab="lithophane" />
+      <ReviewSection toolType="lithophane" title="Lithophane Reviews" />
     </div>
   );
 };
@@ -324,8 +308,6 @@ const GiftFinder = () => {
           )}
         </motion.div>
       )}
-
-      <ReviewSection tab="gift-finder" />
     </div>
   );
 };
@@ -635,7 +617,7 @@ const CustomPrintOrder = () => {
         </div>
       </div>
 
-      <ReviewSection tab="custom-print" />
+      <ReviewSection toolType="custom-print" title="Custom 3D Print Reviews" />
     </div>
   );
 };

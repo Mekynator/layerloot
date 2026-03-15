@@ -131,7 +131,7 @@ const ReviewSection = ({ toolType, title }: { toolType: "custom-print" | "lithop
                   ))}
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground">{review.review_text}</p>
+              <p className="text-sm text-muted-foreground">{review.comment}</p>
             </div>
           ))}
         </div>

@@ -49,12 +49,12 @@ const ToolReviewForm = ({
 
     setSubmitting(true);
 
-    const { error } = await supabase.from("tool_reviews").insert({
+    const { error } = await supabase.from("product_reviews").insert({
       user_id: user.id,
-      tool_type: toolType,
-      reviewer_name: reviewerName,
+      product_id: orderId ?? "00000000-0000-0000-0000-000000000000",
       rating: Number(rating),
-      review_text: reviewText.trim(),
+      title: toolType,
+      comment: reviewText.trim(),
       is_approved: false,
     });
 

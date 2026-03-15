@@ -144,6 +144,10 @@ const ReviewSection = ({ toolType, title }: { toolType: "custom-print" | "lithop
 const LithophaneGenerator = () => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [mode, setMode] = useState<"daylight" | "backlit">("daylight");
+  const [lightTone, setLightTone] = useState<"warm" | "neutral" | "cool">("warm");
+  const [displayStyle, setDisplayStyle] = useState<"flat" | "framed" | "lamp">("flat");
+  const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
+  const [glowStrength, setGlowStrength] = useState(65);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -152,6 +156,28 @@ const LithophaneGenerator = () => {
     const url = URL.createObjectURL(file);
     setImageUrl(url);
   };
+
+  useEffect(() => {
+    return () => {
+      if (imageUrl) {
+        URL.revokeObjectURL(imageUrl);
+      }
+    };
+  }, [imageUrl]);
+
+  const toneOverlayClass =
+    lightTone === "warm"
+      ? "from-amber-300/35 via-orange-200/10 to-black/35"
+      : lightTone === "cool"
+        ? "from-sky-200/30 via-blue-100/10 to-black/35"
+        : "from-white/30 via-white/10 to-black/35";
+
+  const imageFilterClass =
+    mode === "daylight"
+      ? "grayscale brightness-110 contrast-75 sepia-[0.18]"
+      : "grayscale brightness-[1.45] contrast-[1.45] invert";
+
+  const previewAspect = orientation === "portrait" ? "aspect-[3/4]" : "aspect-[4/3]";
 
   return (
     <div className="space-y-6">
@@ -168,50 +194,219 @@ const LithophaneGenerator = () => {
         <input id="litho-upload" type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
       </div>
 
-      {imageUrl && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-          <div className="flex gap-2">
+      <div className="grid gap-3 md:grid-cols-2">
+        <div>
+          <Label className="mb-2 block">View Mode</Label>
+          <div className="flex flex-wrap gap-2">
             <Button
-              variant={mode === "daylight" ? "default" : "outline"}
+              type="button"
               size="sm"
+              variant={mode === "daylight" ? "default" : "outline"}
               onClick={() => setMode("daylight")}
               className="font-display text-xs uppercase"
             >
-              Daylight View
+              Daylight
             </Button>
             <Button
-              variant={mode === "backlit" ? "default" : "outline"}
+              type="button"
               size="sm"
+              variant={mode === "backlit" ? "default" : "outline"}
               onClick={() => setMode("backlit")}
               className="font-display text-xs uppercase"
             >
-              Backlit View
+              Backlit
             </Button>
           </div>
+        </div>
 
-          <div className="relative overflow-hidden rounded-xl border border-border">
-            <img
-              src={imageUrl}
-              alt="Lithophane preview"
-              className={`aspect-square w-full object-cover transition-all duration-500 ${
-                mode === "daylight"
-                  ? "grayscale brightness-110 contrast-75 sepia-[0.2]"
-                  : "grayscale-0 brightness-125 contrast-125 saturate-50 [filter:grayscale(1)_brightness(1.3)_contrast(1.4)_invert(1)]"
-              }`}
-            />
-            <div
-              className={`pointer-events-none absolute inset-0 transition-all duration-500 ${
-                mode === "backlit"
-                  ? "bg-gradient-radial from-amber-500/20 via-transparent to-black/40"
-                  : "bg-gradient-to-br from-white/10 to-black/10"
-              }`}
-            />
+        <div>
+          <Label className="mb-2 block">Orientation</Label>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={orientation === "portrait" ? "default" : "outline"}
+              onClick={() => setOrientation("portrait")}
+              className="font-display text-xs uppercase"
+            >
+              Portrait
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={orientation === "landscape" ? "default" : "outline"}
+              onClick={() => setOrientation("landscape")}
+              className="font-display text-xs uppercase"
+            >
+              Landscape
+            </Button>
+          </div>
+        </div>
+
+        <div>
+          <Label className="mb-2 block">Light Tone</Label>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={lightTone === "warm" ? "default" : "outline"}
+              onClick={() => setLightTone("warm")}
+              className="font-display text-xs uppercase"
+            >
+              Warm
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={lightTone === "neutral" ? "default" : "outline"}
+              onClick={() => setLightTone("neutral")}
+              className="font-display text-xs uppercase"
+            >
+              Neutral
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={lightTone === "cool" ? "default" : "outline"}
+              onClick={() => setLightTone("cool")}
+              className="font-display text-xs uppercase"
+            >
+              Cool
+            </Button>
+          </div>
+        </div>
+
+        <div>
+          <Label className="mb-2 block">Display Style</Label>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={displayStyle === "flat" ? "default" : "outline"}
+              onClick={() => setDisplayStyle("flat")}
+              className="font-display text-xs uppercase"
+            >
+              Flat
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={displayStyle === "framed" ? "default" : "outline"}
+              onClick={() => setDisplayStyle("framed")}
+              className="font-display text-xs uppercase"
+            >
+              Framed
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={displayStyle === "lamp" ? "default" : "outline"}
+              onClick={() => setDisplayStyle("lamp")}
+              className="font-display text-xs uppercase"
+            >
+              Lamp
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {mode === "backlit" && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label>Backlight Intensity</Label>
+            <span className="text-xs text-muted-foreground">{glowStrength}%</span>
+          </div>
+          <Input
+            type="range"
+            min={20}
+            max={100}
+            step={1}
+            value={glowStrength}
+            onChange={(e) => setGlowStrength(Number(e.target.value))}
+            className="cursor-pointer"
+          />
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        <span className="rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
+          Best with high-contrast photos
+        </span>
+        <span className="rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
+          Backlight recommended
+        </span>
+        <span className="rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
+          Faces and portraits work very well
+        </span>
+      </div>
+
+      {imageUrl && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+          <div className="relative rounded-2xl border border-border bg-gradient-to-br from-muted to-background p-4 sm:p-6">
+            <div className="flex justify-center">
+              <div
+                className={`relative ${previewAspect} w-full max-w-[360px] overflow-hidden ${
+                  displayStyle === "lamp"
+                    ? "rounded-[2rem]"
+                    : displayStyle === "framed"
+                      ? "rounded-lg border-[12px] border-neutral-700 bg-neutral-800 shadow-2xl"
+                      : "rounded-md border border-border bg-card shadow-lg"
+                }`}
+              >
+                <img
+                  src={imageUrl}
+                  alt="Lithophane preview"
+                  className={`h-full w-full object-cover transition-all duration-500 ${imageFilterClass}`}
+                />
+
+                <div
+                  className={`pointer-events-none absolute inset-0 bg-gradient-radial transition-all duration-500 ${
+                    mode === "backlit" ? toneOverlayClass : "from-white/10 via-transparent to-black/10"
+                  }`}
+                  style={{
+                    opacity: mode === "backlit" ? glowStrength / 100 : 0.35,
+                  }}
+                />
+
+                {displayStyle === "lamp" && (
+                  <>
+                    <div
+                      className="pointer-events-none absolute inset-x-[12%] bottom-[-14px] h-6 rounded-full blur-md"
+                      style={{
+                        background:
+                          lightTone === "warm"
+                            ? "rgba(255, 200, 120, 0.35)"
+                            : lightTone === "cool"
+                              ? "rgba(160, 210, 255, 0.30)"
+                              : "rgba(255,255,255,0.28)",
+                      }}
+                    />
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[18%] bg-gradient-to-t from-black/20 to-transparent" />
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <div className="rounded-lg border border-border bg-card/60 p-3">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Preview Mode</p>
+                <p className="text-sm font-medium text-foreground">
+                  {mode === "daylight" ? "Daylight emboss preview" : "Backlit glow preview"}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-card/60 p-3">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Display Setup</p>
+                <p className="text-sm font-medium capitalize text-foreground">
+                  {displayStyle} · {orientation}
+                </p>
+              </div>
+            </div>
           </div>
 
           <p className="text-center text-xs text-muted-foreground">
             {mode === "daylight"
-              ? "How the lithophane looks in normal light — subtle embossed texture"
-              : "How the lithophane glows when backlit — photo becomes visible"}
+              ? "This preview simulates how the lithophane looks in normal light with subtle embossed contrast."
+              : "This preview simulates the glow effect when the lithophane is lit from behind. Real brightness and tone will vary by light source and material."}
           </p>
 
           <Button className="w-full font-display uppercase tracking-wider">

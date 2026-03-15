@@ -74,10 +74,12 @@ function ModelMesh({
   url,
   autoRotate,
   selectedColor = "#b0b0b0",
+  fileName,
 }: {
   url: string;
   autoRotate: boolean;
   selectedColor?: string;
+  fileName?: string;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const [object, setObject] = useState<THREE.Object3D | null>(null);
@@ -96,7 +98,7 @@ function ModelMesh({
     let mounted = true;
     let currentObject: THREE.Object3D | null = null;
 
-    const ext = getFileExtension(url);
+    const ext = getFileExtension(url, fileName);
     const manager = new THREE.LoadingManager();
 
     const applySharedMaterial = (obj: THREE.Object3D) => {
@@ -202,6 +204,7 @@ interface ModelViewerProps {
   className?: string;
   showFullscreen?: boolean;
   selectedColor?: string;
+  fileName?: string;
 }
 
 const ViewerCanvas = ({
@@ -209,11 +212,13 @@ const ViewerCanvas = ({
   autoRotate,
   selectedColor,
   isFullscreen = false,
+  fileName,
 }: {
   url: string;
   autoRotate: boolean;
   selectedColor?: string;
   isFullscreen?: boolean;
+  fileName?: string;
 }) => {
   return (
     <Canvas
@@ -235,7 +240,7 @@ const ViewerCanvas = ({
       <directionalLight position={[-3, 3, -3]} intensity={isFullscreen ? 0.35 : 0.22} />
 
       <Suspense fallback={<LoadingFallback />}>
-        <ModelMesh url={url} autoRotate={autoRotate} selectedColor={selectedColor} />
+        <ModelMesh url={url} autoRotate={autoRotate} selectedColor={selectedColor} fileName={fileName} />
         {isFullscreen && <Environment preset="studio" />}
       </Suspense>
 
@@ -244,7 +249,13 @@ const ViewerCanvas = ({
   );
 };
 
-const ModelViewer = ({ url, className = "", showFullscreen = true, selectedColor = "#b0b0b0" }: ModelViewerProps) => {
+const ModelViewer = ({
+  url,
+  className = "",
+  showFullscreen = true,
+  selectedColor = "#b0b0b0",
+  fileName,
+}: ModelViewerProps) => {
   const [autoRotate, setAutoRotate] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
 
@@ -253,7 +264,13 @@ const ModelViewer = ({ url, className = "", showFullscreen = true, selectedColor
       <div
         className={`relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-muted to-background ${className}`}
       >
-        <ViewerCanvas url={url} autoRotate={autoRotate} selectedColor={selectedColor} isFullscreen={false} />
+        <ViewerCanvas
+          url={url}
+          autoRotate={autoRotate}
+          selectedColor={selectedColor}
+          isFullscreen={false}
+          fileName={fileName}
+        />
 
         {showFullscreen && (
           <div className="absolute right-2 top-2">
@@ -293,7 +310,13 @@ const ModelViewer = ({ url, className = "", showFullscreen = true, selectedColor
         <Dialog open={fullscreen} onOpenChange={setFullscreen}>
           <DialogContent className="h-[85vh] max-w-[90vw] p-0">
             <div className="h-full w-full bg-gradient-to-br from-muted to-background">
-              <ViewerCanvas url={url} autoRotate={autoRotate} selectedColor={selectedColor} isFullscreen />
+              <ViewerCanvas
+                url={url}
+                autoRotate={autoRotate}
+                selectedColor={selectedColor}
+                isFullscreen
+                fileName={fileName}
+              />
             </div>
           </DialogContent>
         </Dialog>

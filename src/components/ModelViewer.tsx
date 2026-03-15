@@ -9,7 +9,7 @@ import { Maximize2, RotateCcw, Loader2, ScanLine, Grid3X3, Box, Smartphone, Hand
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
-type ReferenceType = "none" | "coin" | "soda" | "monster" | "hand" | "phone";
+type ReferenceType = "none" | "coin" | "soda" | "monster" | "hand" | "phone" | "banana";
 type ViewPreset = "front" | "back" | "left" | "right" | "top" | "bottom" | "iso";
 
 function getFileExtension(url: string, fileName?: string): string {
@@ -75,69 +75,234 @@ function UnsupportedFallback({ ext }: { ext: string }) {
     </Html>
   );
 }
+function makeLabelTexture({
+  bg = "#ffffff",
+  fg = "#111111",
+  lines = [],
+  width = 512,
+  height = 1024,
+}: {
+  bg?: string;
+  fg?: string;
+  lines: string[];
+  width?: number;
+  height?: number;
+}) {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
 
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, width, height);
+
+  const grad = ctx.createLinearGradient(0, 0, width, height);
+  grad.addColorStop(0, "rgba(255,255,255,0.18)");
+  grad.addColorStop(1, "rgba(0,0,0,0.12)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.fillStyle = fg;
+  ctx.textAlign = "center";
+
+  ctx.font = "bold 88px Arial";
+  ctx.fillText(lines[0] ?? "", width / 2, 180);
+
+  ctx.font = "bold 58px Arial";
+  if (lines[1]) ctx.fillText(lines[1], width / 2, 280);
+
+  ctx.font = "bold 42px Arial";
+  if (lines[2]) ctx.fillText(lines[2], width / 2, 360);
+
+  ctx.strokeStyle = "rgba(255,255,255,0.2)";
+  ctx.lineWidth = 12;
+  ctx.strokeRect(20, 20, width - 40, height - 40);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function CoinReference() {
+  return (
+    <group position={[-2.9, 0.06, 0]}>
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.5, 0.5, 0.08, 64]} />
+        <meshStandardMaterial color="#c7c7c7" metalness={0.8} roughness={0.28} />
+      </mesh>
+      <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.42, 48]} />
+        <meshStandardMaterial color="#d7d7d7" metalness={0.7} roughness={0.35} />
+      </mesh>
+    </group>
+  );
+}
+
+function SodaCanReference() {
+  const labelMap = useMemo(
+    () =>
+      makeLabelTexture({
+        bg: "#d84242",
+        fg: "#ffffff",
+        lines: ["SODA", "330 ML"],
+      }),
+    [],
+  );
+
+  return (
+    <group position={[-2.9, 1.22, 0]}>
+      <mesh>
+        <cylinderGeometry args={[0.42, 0.42, 2.44, 64]} />
+        <meshStandardMaterial color="#d84242" roughness={0.45} metalness={0.22} map={labelMap ?? undefined} />
+      </mesh>
+
+      <mesh position={[0, 1.24, 0]}>
+        <cylinderGeometry args={[0.41, 0.41, 0.04, 48]} />
+        <meshStandardMaterial color="#c7c7c7" metalness={0.9} roughness={0.22} />
+      </mesh>
+
+      <mesh position={[0, -1.24, 0]}>
+        <cylinderGeometry args={[0.41, 0.41, 0.04, 48]} />
+        <meshStandardMaterial color="#b9b9b9" metalness={0.8} roughness={0.28} />
+      </mesh>
+    </group>
+  );
+}
+
+function MonsterCanReference() {
+  const labelMap = useMemo(
+    () =>
+      makeLabelTexture({
+        bg: "#111111",
+        fg: "#76ff41",
+        lines: ["MONSTER", "500 ML"],
+      }),
+    [],
+  );
+
+  return (
+    <group position={[-2.9, 1.68, 0]}>
+      <mesh>
+        <cylinderGeometry args={[0.43, 0.43, 3.36, 64]} />
+        <meshStandardMaterial color="#151515" roughness={0.42} metalness={0.24} map={labelMap ?? undefined} />
+      </mesh>
+
+      <mesh position={[0, 1.7, 0]}>
+        <cylinderGeometry args={[0.42, 0.42, 0.04, 48]} />
+        <meshStandardMaterial color="#c7c7c7" metalness={0.9} roughness={0.22} />
+      </mesh>
+
+      <mesh position={[0, -1.7, 0]}>
+        <cylinderGeometry args={[0.42, 0.42, 0.04, 48]} />
+        <meshStandardMaterial color="#b9b9b9" metalness={0.8} roughness={0.28} />
+      </mesh>
+    </group>
+  );
+}
+
+function PhoneReference() {
+  const screenMap = useMemo(
+    () =>
+      makeLabelTexture({
+        bg: "#1b1f27",
+        fg: "#8ec5ff",
+        lines: ["12:45", "LayerLoot"],
+        width: 512,
+        height: 1024,
+      }),
+    [],
+  );
+
+  return (
+    <group position={[-2.9, 1.45, 0]}>
+      <mesh>
+        <boxGeometry args={[0.76, 2.95, 0.12]} />
+        <meshStandardMaterial color="#2e3238" metalness={0.25} roughness={0.48} />
+      </mesh>
+
+      <mesh position={[0, 0, 0.062]}>
+        <planeGeometry args={[0.64, 2.65]} />
+        <meshStandardMaterial map={screenMap ?? undefined} />
+      </mesh>
+    </group>
+  );
+}
+
+function HandReference() {
+  return (
+    <group position={[-2.9, 1.55, 0]}>
+      <mesh>
+        <boxGeometry args={[0.85, 1.7, 0.06]} />
+        <meshStandardMaterial color="#d7b29a" transparent opacity={0.72} />
+      </mesh>
+      <mesh position={[-0.25, 1.05, 0]}>
+        <boxGeometry args={[0.12, 0.65, 0.06]} />
+        <meshStandardMaterial color="#d7b29a" transparent opacity={0.72} />
+      </mesh>
+      <mesh position={[-0.05, 1.12, 0]}>
+        <boxGeometry args={[0.12, 0.78, 0.06]} />
+        <meshStandardMaterial color="#d7b29a" transparent opacity={0.72} />
+      </mesh>
+      <mesh position={[0.15, 1.08, 0]}>
+        <boxGeometry args={[0.12, 0.72, 0.06]} />
+        <meshStandardMaterial color="#d7b29a" transparent opacity={0.72} />
+      </mesh>
+      <mesh position={[0.35, 0.98, 0]}>
+        <boxGeometry args={[0.12, 0.58, 0.06]} />
+        <meshStandardMaterial color="#d7b29a" transparent opacity={0.72} />
+      </mesh>
+    </group>
+  );
+}
+
+function BananaReference() {
+  const curve = useMemo(
+    () =>
+      new THREE.CatmullRomCurve3([
+        new THREE.Vector3(-0.7, -0.2, 0),
+        new THREE.Vector3(-0.35, 0.08, 0.12),
+        new THREE.Vector3(0.0, 0.22, 0.18),
+        new THREE.Vector3(0.45, 0.08, 0.08),
+        new THREE.Vector3(0.8, -0.18, -0.02),
+      ]),
+    [],
+  );
+
+  return (
+    <group position={[-2.75, 0.62, 0]} rotation={[0.15, 0.4, -0.35]}>
+      <mesh>
+        <tubeGeometry args={[curve, 64, 0.12, 18, false]} />
+        <meshStandardMaterial color="#f2d13f" roughness={0.82} metalness={0.02} />
+      </mesh>
+
+      <mesh position={[-0.74, -0.18, 0]}>
+        <sphereGeometry args={[0.08, 16, 16]} />
+        <meshStandardMaterial color="#6b4d1f" roughness={0.9} />
+      </mesh>
+
+      <mesh position={[0.84, -0.15, -0.02]}>
+        <sphereGeometry args={[0.06, 16, 16]} />
+        <meshStandardMaterial color="#4f3a16" roughness={0.9} />
+      </mesh>
+    </group>
+  );
+}
 function ReferenceModel({ type }: { type: ReferenceType }) {
-  if (type === "none") return null;
-
   switch (type) {
     case "coin":
-      return (
-        <mesh position={[-2.8, 0.08, 0]}>
-          <cylinderGeometry args={[0.5, 0.5, 0.08, 48]} />
-          <meshStandardMaterial color="#c9c9c9" metalness={0.7} roughness={0.35} />
-        </mesh>
-      );
-
+      return <CoinReference />;
     case "soda":
-      return (
-        <mesh position={[-2.8, 1.22, 0]}>
-          <cylinderGeometry args={[0.42, 0.42, 2.44, 48]} />
-          <meshStandardMaterial color="#d94b4b" metalness={0.15} roughness={0.55} />
-        </mesh>
-      );
-
+      return <SodaCanReference />;
     case "monster":
-      return (
-        <mesh position={[-2.8, 1.65, 0]}>
-          <cylinderGeometry args={[0.43, 0.43, 3.3, 48]} />
-          <meshStandardMaterial color="#222222" metalness={0.2} roughness={0.45} />
-        </mesh>
-      );
-
+      return <MonsterCanReference />;
     case "phone":
-      return (
-        <mesh position={[-2.8, 1.45, 0]}>
-          <boxGeometry args={[0.75, 2.9, 0.12]} />
-          <meshStandardMaterial color="#30343a" metalness={0.2} roughness={0.5} />
-        </mesh>
-      );
-
+      return <PhoneReference />;
     case "hand":
-      return (
-        <group position={[-2.8, 1.55, 0]}>
-          <mesh>
-            <boxGeometry args={[0.85, 1.7, 0.06]} />
-            <meshStandardMaterial color="#d9b49a" transparent opacity={0.65} />
-          </mesh>
-          <mesh position={[-0.25, 1.05, 0]}>
-            <boxGeometry args={[0.12, 0.65, 0.06]} />
-            <meshStandardMaterial color="#d9b49a" transparent opacity={0.65} />
-          </mesh>
-          <mesh position={[-0.05, 1.12, 0]}>
-            <boxGeometry args={[0.12, 0.78, 0.06]} />
-            <meshStandardMaterial color="#d9b49a" transparent opacity={0.65} />
-          </mesh>
-          <mesh position={[0.15, 1.08, 0]}>
-            <boxGeometry args={[0.12, 0.72, 0.06]} />
-            <meshStandardMaterial color="#d9b49a" transparent opacity={0.65} />
-          </mesh>
-          <mesh position={[0.35, 0.98, 0]}>
-            <boxGeometry args={[0.12, 0.58, 0.06]} />
-            <meshStandardMaterial color="#d9b49a" transparent opacity={0.65} />
-          </mesh>
-        </group>
-      );
-
+      return <HandReference />;
+    case "banana":
+      return <BananaReference />;
     default:
       return null;
   }
@@ -431,6 +596,7 @@ const referenceButtons: {
   { key: "monster", label: "Monster", icon: <Box className="h-3.5 w-3.5" /> },
   { key: "hand", label: "Hand", icon: <Hand className="h-3.5 w-3.5" /> },
   { key: "phone", label: "Phone", icon: <Smartphone className="h-3.5 w-3.5" /> },
+  { key: "banana", label: "Banana", icon: <Circle className="h-3.5 w-3.5" /> },
 ];
 
 const ModelViewer = ({

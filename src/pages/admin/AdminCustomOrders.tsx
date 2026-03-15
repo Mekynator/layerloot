@@ -611,7 +611,7 @@ const AdminCustomOrders = () => {
                         <SelectContent>
                           {PAYMENT_STATUSES.map((s) => (
                             <SelectItem key={s} value={s}>
-                              {s.replaceAll("_", " ")}
+{s.replace(/_/g, " ")}
                             </SelectItem>
                           ))}
                         </SelectContent>

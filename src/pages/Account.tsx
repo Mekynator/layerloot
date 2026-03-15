@@ -156,34 +156,73 @@ const Account = () => {
           ))}
         </div>
 
-        {/* Orders Tab */}
-        {tab === "orders" && (
-          <div className="space-y-3">
-            {orders.length === 0 ? (
-              <Card><CardContent className="p-8 text-center text-muted-foreground">No orders yet. <Link to="/products" className="text-primary hover:underline">Start shopping!</Link></CardContent></Card>
-            ) : orders.map((order) => (
-              <Link key={order.id} to={`/orders/${order.id}`}>
-                <Card className="transition-all hover:border-primary hover:shadow-sm cursor-pointer">
-                  <CardContent className="flex items-center justify-between p-4">
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <p className="font-display text-sm font-semibold uppercase text-card-foreground">Order #{order.id.slice(0, 8)}</p>
-                        <p className="text-xs text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="font-display text-lg font-bold text-primary">{Number(order.total).toFixed(2)} kr</p>
-                        <p className={`font-display text-xs uppercase ${statusColors[order.status] || "text-muted-foreground"}`}>{order.status}</p>
-                      </div>
-                      <Eye className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        )}
+       {orders.length === 0 ? (
+  <Card>
+    <CardContent className="p-8 text-center text-muted-foreground">
+      No orders yet.{" "}
+      <Link to="/products" className="text-primary hover:underline">
+        Start shopping!
+      </Link>
+    </CardContent>
+  </Card>
+) : (
+  orders.map((order) => (
+    <Card key={order.id} className="transition-all hover:border-primary hover:shadow-sm">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <Link to={`/orders/${order.id}`} className="flex flex-1 items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div>
+                <p className="font-display text-sm font-semibold uppercase text-card-foreground">
+                  Order #{order.id.slice(0, 8)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(order.created_at).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="font-display text-lg font-bold text-primary">
+                  {Number(order.total).toFixed(2)} kr
+                </p>
+                <p className={`font-display text-xs uppercase ${statusColors[order.status] || "text-muted-foreground"}`}>
+                  {order.status}
+                </p>
+              </div>
+              <Eye className="h-4 w-4 text-muted-foreground" />
+            </div>
+          </Link>
+        </div>
+
+        {order.status === "delivered" &&
+          (order.tool_type === "custom-print" || order.tool_type === "lithophane") && (
+            <div className="mt-4 border-t border-border pt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setReviewingOrderId(reviewingOrderId === order.id ? null : order.id)
+                }
+                className="font-display uppercase tracking-wider"
+              >
+                {reviewingOrderId === order.id ? "Close Review" : "Leave Review"}
+              </Button>
+
+              {reviewingOrderId === order.id && (
+                <ToolReviewForm
+                  toolType={order.tool_type}
+                  orderId={order.id}
+                  onSubmitted={() => setReviewingOrderId(null)}
+                />
+              )}
+            </div>
+          )}
+      </CardContent>
+    </Card>
+  ))
+)}
 
         {/* Rewards Store Tab */}
         {tab === "rewards" && (

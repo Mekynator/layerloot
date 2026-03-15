@@ -247,7 +247,7 @@ const AdminOrders = () => {
             <SelectItem value="all">All Statuses</SelectItem>
             {[...new Set([...storeStatuses, ...customProductionStatuses])].map((s) => (
               <SelectItem key={s} value={s} className="capitalize">
-                {s.replaceAll("_", " ")}
+                {s.replace(/_/g, " ")}
               </SelectItem>
             ))}
           </SelectContent>

@@ -87,7 +87,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
                     {c.button_text || "Shop Now"} <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
-                <Link to="/create-your-own">
+                <Link to="/create">
                   <Button
                     size="lg"
                     variant="outline"

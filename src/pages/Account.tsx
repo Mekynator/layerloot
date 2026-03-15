@@ -577,7 +577,7 @@ const Account = () => {
                             <div className="flex flex-wrap gap-2">
                               <Badge variant="outline">Payment: {order.payment_status.replace(/_/g, " ")}</Badge>
                               <Badge variant="outline">
-                                Production: {order.production_status.replaceAll("_", " ")}
+                                Production: {order.production_status.replace(/_/g, " ")}
                               </Badge>
                               {currentQuote !== null && (
                                 <Badge variant="outline" className="border-primary text-primary">

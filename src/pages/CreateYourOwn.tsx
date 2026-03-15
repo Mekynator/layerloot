@@ -490,7 +490,12 @@ const CustomPrintOrder = () => {
           {previewUrl && (
             <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}>
               <div className="overflow-hidden rounded-xl border border-border">
-                <ModelViewer url={previewUrl} className="aspect-square" selectedColor={selectedColorHex} />
+                <ModelViewer
+                  url={previewUrl}
+                  fileName={file?.name}
+                  className="aspect-square"
+                  selectedColor={selectedColorHex}
+                />
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
                 The colors may vary from real 3D printed colors and light sources.

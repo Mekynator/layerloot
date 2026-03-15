@@ -1,14 +1,27 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Image, Gift, ArrowRight, Sparkles, Heart, Gamepad2, Swords, Monitor, Upload, Send, Box } from "lucide-react";
+import {
+  Image,
+  Gift,
+  ArrowRight,
+  Sparkles,
+  Heart,
+  Gamepad2,
+  Swords,
+  Monitor,
+  Upload,
+  Send,
+  Box,
+  Star,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -29,12 +42,10 @@ const MATERIALS = [
   { value: "petg", label: "PETG", desc: "Durable, flexible" },
   { value: "tpu", label: "TPU", desc: "Flexible, rubber-like" },
   { value: "resin", label: "Resin", desc: "High detail, smooth" },
-  { value: "nylon", label: "Nylon", desc: "Strong, lightweight" },
-  { value: "other", label: "Other", desc: "Specify in description" },
 ];
 
 const COLORS = [
-  { value: "white", label: "White", hex: "#ffffff" },
+  { value: "white", label: "White", hex: "#f5f5f5" },
   { value: "black", label: "Black", hex: "#1a1a1a" },
   { value: "red", label: "Red", hex: "#ef4444" },
   { value: "blue", label: "Blue", hex: "#3b82f6" },
@@ -42,15 +53,110 @@ const COLORS = [
   { value: "yellow", label: "Yellow", hex: "#eab308" },
   { value: "orange", label: "Orange", hex: "#f97316" },
   { value: "gray", label: "Gray", hex: "#6b7280" },
-  { value: "custom", label: "Custom", hex: null },
 ];
 
 const QUALITIES = [
-  { value: "draft", label: "Draft", desc: "0.6mm – Fast, lower detail" },
-  { value: "standard", label: "Standard", desc: "0.4mm – Balanced" },
   { value: "high", label: "High", desc: "0.2mm – Fine detail" },
-  { value: "ultra", label: "Ultra", desc: "0.1mm – Maximum detail" },
+  { value: "standard", label: "Standard", desc: "0.4mm – Balanced" },
+  { value: "moderate", label: "Moderate", desc: "0.6mm – Faster print" },
+  { value: "low", label: "Low", desc: "0.8mm – Lowest detail" },
 ];
+
+const REVIEWS_BY_TAB = {
+  "custom-print": [
+    {
+      name: "Mads",
+      rating: 5,
+      text: "Great print quality and the uploaded model came out better than expected.",
+    },
+    {
+      name: "Sofie",
+      rating: 5,
+      text: "Easy process and very clean result. Good communication on custom requests.",
+    },
+    {
+      name: "Jonas",
+      rating: 4,
+      text: "Fast turnaround and solid finish. Would order another custom print again.",
+    },
+  ],
+  lithophane: [
+    {
+      name: "Camilla",
+      rating: 5,
+      text: "The lithophane looked amazing with light behind it. Very emotional gift.",
+    },
+    {
+      name: "Rasmus",
+      rating: 5,
+      text: "Photo details showed up surprisingly well. Super nice quality.",
+    },
+    {
+      name: "Nina",
+      rating: 4,
+      text: "Really beautiful result. The glow effect is the best part.",
+    },
+  ],
+  "gift-finder": [
+    {
+      name: "Freja",
+      rating: 5,
+      text: "Found a really nice present idea quickly. Easy and fun to browse.",
+    },
+    {
+      name: "Oliver",
+      rating: 4,
+      text: "Helpful suggestions and clean product presentation.",
+    },
+    {
+      name: "Emma",
+      rating: 5,
+      text: "Perfect for getting gift inspiration without scrolling forever like a raccoon in a webshop.",
+    },
+  ],
+};
+
+type ReviewTabKey = keyof typeof REVIEWS_BY_TAB;
+
+const getUserDisplayName = (user: any) => {
+  if (!user) return "";
+  return (
+    user.user_metadata?.full_name ||
+    user.user_metadata?.name ||
+    user.user_metadata?.display_name ||
+    user.user_metadata?.first_name ||
+    ""
+  );
+};
+
+const ReviewSection = ({ tab }: { tab: ReviewTabKey }) => {
+  const reviews = REVIEWS_BY_TAB[tab];
+
+  return (
+    <div className="mt-8">
+      <div className="mb-4 flex items-center gap-2">
+        <Star className="h-5 w-5 text-primary" />
+        <h3 className="font-display text-lg font-bold uppercase text-foreground">Customer Reviews</h3>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        {reviews.map((review, index) => (
+          <div key={`${tab}-${index}`} className="rounded-xl border border-border bg-card p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="font-medium text-foreground">{review.name}</p>
+              <div className="flex gap-1">
+                {Array.from({ length: review.rating }).map((_, i) => (
+                  <Star key={i} className="h-4 w-4 fill-primary text-primary" />
+                ))}
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">{review.text}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 /* ── Lithophane Generator ── */
 const LithophaneGenerator = () => {
@@ -131,6 +237,8 @@ const LithophaneGenerator = () => {
           </Button>
         </motion.div>
       )}
+
+      <ReviewSection tab="lithophane" />
     </div>
   );
 };
@@ -216,6 +324,8 @@ const GiftFinder = () => {
           )}
         </motion.div>
       )}
+
+      <ReviewSection tab="gift-finder" />
     </div>
   );
 };
@@ -225,13 +335,13 @@ const CustomPrintOrder = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  const userName = getUserDisplayName(user);
+  const userEmail = user?.email || "";
+
   const [form, setForm] = useState({
-    name: "",
-    email: "",
     description: "",
     material: "pla",
     color: "white",
-    custom_color: "",
     quality: "standard",
     quantity: 1,
     size_scale: "100",
@@ -240,6 +350,8 @@ const CustomPrintOrder = () => {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const selectedColorHex = COLORS.find((c) => c.value === form.color)?.hex || "#f5f5f5";
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -279,10 +391,10 @@ const CustomPrintOrder = () => {
       return;
     }
 
-    if (!form.name.trim() || !form.email.trim() || !form.description.trim()) {
+    if (!form.description.trim()) {
       toast({
         title: "Missing fields",
-        description: "Please fill in all required fields.",
+        description: "Please fill in the additional details field.",
         variant: "destructive",
       });
       return;
@@ -312,9 +424,7 @@ const CustomPrintOrder = () => {
       "",
       "--- Options ---",
       `Material: ${MATERIALS.find((m) => m.value === form.material)?.label ?? form.material}`,
-      `Color: ${
-        form.color === "custom" ? form.custom_color : (COLORS.find((c) => c.value === form.color)?.label ?? form.color)
-      }`,
+      `Color: ${COLORS.find((c) => c.value === form.color)?.label ?? form.color}`,
       `Quality: ${QUALITIES.find((q) => q.value === form.quality)?.label ?? form.quality}`,
       `Quantity: ${form.quantity}`,
       `Scale: ${form.size_scale}%`,
@@ -322,8 +432,8 @@ const CustomPrintOrder = () => {
 
     const { error } = await supabase.from("custom_orders").insert({
       user_id: user.id,
-      name: form.name.trim(),
-      email: form.email.trim(),
+      name: userName || "Account User",
+      email: userEmail,
       description: fullDescription,
       model_url: urlData.publicUrl,
       model_filename: file.name,
@@ -346,12 +456,9 @@ const CustomPrintOrder = () => {
     });
 
     setForm({
-      name: "",
-      email: "",
       description: "",
       material: "pla",
       color: "white",
-      custom_color: "",
       quality: "standard",
       quantity: 1,
       size_scale: "100",
@@ -369,6 +476,13 @@ const CustomPrintOrder = () => {
             sign in
           </Link>{" "}
           to submit a custom 3D print order.
+        </div>
+      )}
+
+      {user && (
+        <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+          Ordering as <span className="font-medium text-foreground">{userName || "Account User"}</span>
+          {userEmail ? <> · {userEmail}</> : null}
         </div>
       )}
 
@@ -396,33 +510,16 @@ const CustomPrintOrder = () => {
           {previewUrl && (
             <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}>
               <div className="overflow-hidden rounded-xl border border-border">
-                <ModelViewer url={previewUrl} className="aspect-square" />
+                <ModelViewer url={previewUrl} className="aspect-square" selectedColor={selectedColorHex} />
               </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                The colors may vary from real 3D printed colors and light sources.
+              </p>
             </motion.div>
           )}
         </div>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <Label>Your Name *</Label>
-              <Input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="John Doe"
-              />
-            </div>
-            <div>
-              <Label>Email *</Label>
-              <Input
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                placeholder="john@example.com"
-              />
-            </div>
-          </div>
-
           <div>
             <Label>Material</Label>
             <Select value={form.material} onValueChange={(value) => setForm({ ...form, material: value })}>
@@ -454,25 +551,14 @@ const CustomPrintOrder = () => {
                       : "border-border text-muted-foreground hover:border-primary"
                   }`}
                 >
-                  {color.hex && (
-                    <span
-                      className="inline-block h-3 w-3 rounded-full border border-border"
-                      style={{ backgroundColor: color.hex }}
-                    />
-                  )}
+                  <span
+                    className="inline-block h-3 w-3 rounded-full border border-border"
+                    style={{ backgroundColor: color.hex }}
+                  />
                   {color.label}
                 </button>
               ))}
             </div>
-
-            {form.color === "custom" && (
-              <Input
-                className="mt-2"
-                placeholder="Specify your color (e.g. Pantone 485 C)"
-                value={form.custom_color}
-                onChange={(e) => setForm({ ...form, custom_color: e.target.value })}
-              />
-            )}
           </div>
 
           <div>
@@ -548,6 +634,8 @@ const CustomPrintOrder = () => {
           </Button>
         </div>
       </div>
+
+      <ReviewSection tab="custom-print" />
     </div>
   );
 };

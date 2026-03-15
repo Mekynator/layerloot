@@ -132,7 +132,11 @@ function parseCustomOrderDescription(description: string) {
 
   return {
     customerDescription,
-    ...parsed,
+    material: parsed.material,
+    color: parsed.color,
+    quality: parsed.quality,
+    quantity: parsed.quantity,
+    scale: parsed.scale,
   };
 }
 
@@ -375,7 +379,7 @@ const Account = () => {
 
   const customStatusBadge = (status: string) => (
     <Badge variant="outline" className={`font-display text-xs uppercase ${customStatusBadgeColors[status] || ""}`}>
-      {status.replaceAll("_", " ")}
+      {status.replace(/_/g, " ")}
     </Badge>
   );
 
@@ -571,9 +575,9 @@ const Account = () => {
                             </div>
 
                             <div className="flex flex-wrap gap-2">
-                              <Badge variant="outline">Payment: {order.payment_status.replaceAll("_", " ")}</Badge>
+                              <Badge variant="outline">Payment: {order.payment_status.replace(/_/g, " ")}</Badge>
                               <Badge variant="outline">
-                                Production: {order.production_status.replaceAll("_", " ")}
+                                Production: {order.production_status.replace(/_/g, " ")}
                               </Badge>
                               {currentQuote !== null && (
                                 <Badge variant="outline" className="border-primary text-primary">
@@ -635,7 +639,7 @@ const Account = () => {
                                     </p>
                                     <p>
                                       <span className="text-muted-foreground">Your Response:</span>{" "}
-                                      {order.customer_response_status.replaceAll("_", " ")}
+                                      {order.customer_response_status.replace(/_/g, " ")}
                                     </p>
                                   </div>
                                 </div>
@@ -665,7 +669,7 @@ const Account = () => {
                                             {msg.sender_role}
                                           </Badge>
                                           <Badge variant="outline" className="text-[10px] uppercase">
-                                            {msg.message_type.replaceAll("_", " ")}
+                                            {msg.message_type.replace(/_/g, " ")}
                                           </Badge>
                                           {msg.proposed_price !== null && (
                                             <Badge

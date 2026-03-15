@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 type ReferenceType = "none" | "coin" | "soda" | "monster" | "hand" | "phone" | "banana";
-type ViewPreset = "front" | "back" | "left" | "right" | "top" | "bottom" | "iso";
 
 function getFileExtension(url: string, fileName?: string): string {
   if (fileName) {
@@ -125,184 +124,65 @@ function makeLabelTexture({
   return texture;
 }
 
-function CoinReference() {
-  return (
-    <group position={[-2.9, 0.06, 0]}>
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.5, 0.5, 0.08, 64]} />
-        <meshStandardMaterial color="#c7c7c7" metalness={0.8} roughness={0.28} />
-      </mesh>
-      <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[0.42, 48]} />
-        <meshStandardMaterial color="#d7d7d7" metalness={0.7} roughness={0.35} />
-      </mesh>
-    </group>
-  );
+function ReferenceAsset({
+  path,
+  position = [0, 0, 0],
+  rotation = [0, 0, 0],
+  scale = 1,
+}: {
+  path: string;
+  position?: [number, number, number];
+  rotation?: [number, number, number];
+  scale?: number;
+}) {
+  const { scene } = useGLTF(path);
+  const clone = useMemo(() => scene.clone(), [scene]);
+
+  return <primitive object={clone} position={position} rotation={rotation} scale={scale} />;
 }
 
-function SodaCanReference() {
-  const labelMap = useMemo(
-    () =>
-      makeLabelTexture({
-        bg: "#d84242",
-        fg: "#ffffff",
-        lines: ["SODA", "330 ML"],
-      }),
-    [],
-  );
-
-  return (
-    <group position={[-2.9, 1.22, 0]}>
-      <mesh>
-        <cylinderGeometry args={[0.42, 0.42, 2.44, 64]} />
-        <meshStandardMaterial color="#d84242" roughness={0.45} metalness={0.22} map={labelMap ?? undefined} />
-      </mesh>
-
-      <mesh position={[0, 1.24, 0]}>
-        <cylinderGeometry args={[0.41, 0.41, 0.04, 48]} />
-        <meshStandardMaterial color="#c7c7c7" metalness={0.9} roughness={0.22} />
-      </mesh>
-
-      <mesh position={[0, -1.24, 0]}>
-        <cylinderGeometry args={[0.41, 0.41, 0.04, 48]} />
-        <meshStandardMaterial color="#b9b9b9" metalness={0.8} roughness={0.28} />
-      </mesh>
-    </group>
-  );
-}
-
-function MonsterCanReference() {
-  const labelMap = useMemo(
-    () =>
-      makeLabelTexture({
-        bg: "#111111",
-        fg: "#76ff41",
-        lines: ["MONSTER", "500 ML"],
-      }),
-    [],
-  );
-
-  return (
-    <group position={[-2.9, 1.68, 0]}>
-      <mesh>
-        <cylinderGeometry args={[0.43, 0.43, 3.36, 64]} />
-        <meshStandardMaterial color="#151515" roughness={0.42} metalness={0.24} map={labelMap ?? undefined} />
-      </mesh>
-
-      <mesh position={[0, 1.7, 0]}>
-        <cylinderGeometry args={[0.42, 0.42, 0.04, 48]} />
-        <meshStandardMaterial color="#c7c7c7" metalness={0.9} roughness={0.22} />
-      </mesh>
-
-      <mesh position={[0, -1.7, 0]}>
-        <cylinderGeometry args={[0.42, 0.42, 0.04, 48]} />
-        <meshStandardMaterial color="#b9b9b9" metalness={0.8} roughness={0.28} />
-      </mesh>
-    </group>
-  );
-}
-
-function PhoneReference() {
-  const screenMap = useMemo(
-    () =>
-      makeLabelTexture({
-        bg: "#1b1f27",
-        fg: "#8ec5ff",
-        lines: ["12:45", "LayerLoot"],
-        width: 512,
-        height: 1024,
-      }),
-    [],
-  );
-
-  return (
-    <group position={[-2.9, 1.45, 0]}>
-      <mesh>
-        <boxGeometry args={[0.76, 2.95, 0.12]} />
-        <meshStandardMaterial color="#2e3238" metalness={0.25} roughness={0.48} />
-      </mesh>
-
-      <mesh position={[0, 0, 0.062]}>
-        <planeGeometry args={[0.64, 2.65]} />
-        <meshStandardMaterial map={screenMap ?? undefined} />
-      </mesh>
-    </group>
-  );
-}
-
-function HandReference() {
-  return (
-    <group position={[-2.9, 1.55, 0]}>
-      <mesh>
-        <boxGeometry args={[0.85, 1.7, 0.06]} />
-        <meshStandardMaterial color="#d7b29a" transparent opacity={0.72} />
-      </mesh>
-      <mesh position={[-0.25, 1.05, 0]}>
-        <boxGeometry args={[0.12, 0.65, 0.06]} />
-        <meshStandardMaterial color="#d7b29a" transparent opacity={0.72} />
-      </mesh>
-      <mesh position={[-0.05, 1.12, 0]}>
-        <boxGeometry args={[0.12, 0.78, 0.06]} />
-        <meshStandardMaterial color="#d7b29a" transparent opacity={0.72} />
-      </mesh>
-      <mesh position={[0.15, 1.08, 0]}>
-        <boxGeometry args={[0.12, 0.72, 0.06]} />
-        <meshStandardMaterial color="#d7b29a" transparent opacity={0.72} />
-      </mesh>
-      <mesh position={[0.35, 0.98, 0]}>
-        <boxGeometry args={[0.12, 0.58, 0.06]} />
-        <meshStandardMaterial color="#d7b29a" transparent opacity={0.72} />
-      </mesh>
-    </group>
-  );
-}
-
-function BananaReference() {
-  const curve = useMemo(
-    () =>
-      new THREE.CatmullRomCurve3([
-        new THREE.Vector3(-0.7, -0.2, 0),
-        new THREE.Vector3(-0.35, 0.08, 0.12),
-        new THREE.Vector3(0.0, 0.22, 0.18),
-        new THREE.Vector3(0.45, 0.08, 0.08),
-        new THREE.Vector3(0.8, -0.18, -0.02),
-      ]),
-    [],
-  );
-
-  return (
-    <group position={[-2.75, 0.62, 0]} rotation={[0.15, 0.4, -0.35]}>
-      <mesh>
-        <tubeGeometry args={[curve, 64, 0.12, 18, false]} />
-        <meshStandardMaterial color="#f2d13f" roughness={0.82} metalness={0.02} />
-      </mesh>
-
-      <mesh position={[-0.74, -0.18, 0]}>
-        <sphereGeometry args={[0.08, 16, 16]} />
-        <meshStandardMaterial color="#6b4d1f" roughness={0.9} />
-      </mesh>
-
-      <mesh position={[0.84, -0.15, -0.02]}>
-        <sphereGeometry args={[0.06, 16, 16]} />
-        <meshStandardMaterial color="#4f3a16" roughness={0.9} />
-      </mesh>
-    </group>
-  );
-}
 function ReferenceModel({ type }: { type: ReferenceType }) {
   switch (type) {
     case "coin":
-      return <CoinReference />;
+      return (
+        <ReferenceAsset path="/reference-models/coin.glb" position={[-2.8, 0.05, 0]} rotation={[0, 0, 0]} scale={0.5} />
+      );
+
     case "soda":
-      return <SodaCanReference />;
+      return (
+        <ReferenceAsset path="/reference-models/soda_can.glb" position={[-2.8, 0, 0]} rotation={[0, 0, 0]} scale={1} />
+      );
+
     case "monster":
-      return <MonsterCanReference />;
+      return (
+        <ReferenceAsset
+          path="/reference-models/monster_can.glb"
+          position={[-2.8, 0, 0]}
+          rotation={[0, 0, 0]}
+          scale={1}
+        />
+      );
+
     case "phone":
-      return <PhoneReference />;
+      return (
+        <ReferenceAsset path="/reference-models/phone.glb" position={[-2.8, 0, 0]} rotation={[0, 0.2, 0]} scale={1} />
+      );
+
     case "hand":
-      return <HandReference />;
+      return (
+        <ReferenceAsset path="/reference-models/hand.glb" position={[-2.8, 0, 0]} rotation={[0, 0.1, 0]} scale={1} />
+      );
+
     case "banana":
-      return <BananaReference />;
+      return (
+        <ReferenceAsset
+          path="/reference-models/banana.glb"
+          position={[-2.8, 0, 0]}
+          rotation={[0.15, 0.4, -0.35]}
+          scale={1}
+        />
+      );
+
     default:
       return null;
   }
@@ -497,8 +377,6 @@ interface ViewerCanvasProps {
   wireframe: boolean;
   showGrid: boolean;
   referenceType: ReferenceType;
-  viewPreset: ViewPreset;
-  resetTrigger: number;
   onDimensions?: (dims: THREE.Vector3 | null) => void;
   onSupported?: (supported: boolean, ext: string) => void;
 }
@@ -558,8 +436,6 @@ function ViewerCanvas({
         {isFullscreen && <Environment preset="studio" />}
       </Suspense>
 
-      <CameraControls viewPreset={viewPreset} resetTrigger={resetTrigger} />
-
       <GizmoHelper alignment="bottom-left" margin={[78, 78]}>
         <GizmoViewport axisColors={["#ef4444", "#22c55e", "#3b82f6"]} labelColor="#ffffff" />
       </GizmoHelper>
@@ -611,8 +487,6 @@ const ModelViewer = ({
   const [wireframe, setWireframe] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [referenceType, setReferenceType] = useState<ReferenceType>("none");
-  const [viewPreset, setViewPreset] = useState<ViewPreset>("iso");
-  const [resetTrigger, setResetTrigger] = useState(0);
   const [dimensions, setDimensions] = useState<THREE.Vector3 | null>(null);
   const [isSupported, setIsSupported] = useState(true);
   const [ext, setExt] = useState("");
@@ -700,21 +574,6 @@ const ModelViewer = ({
             <Maximize2 className="h-4 w-4" />
           </Button>
         )}
-      </div>
-
-      <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1 rounded-lg bg-background/80 p-1 backdrop-blur-sm">
-        {viewButtons.map((btn) => (
-          <button
-            key={btn.key}
-            type="button"
-            onClick={() => setViewPreset(btn.key)}
-            className={`rounded px-2 py-1 text-[10px] font-display uppercase transition ${
-              viewPreset === btn.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            {btn.label}
-          </button>
-        ))}
       </div>
 
       <div className="absolute left-2 bottom-12 flex flex-wrap gap-1 rounded-lg bg-background/80 p-1 backdrop-blur-sm">

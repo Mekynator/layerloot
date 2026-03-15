@@ -56,7 +56,6 @@ const App = () => (
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/account" element={<Account />} />
                 <Route path="/orders/:orderId" element={<OrderTracking />} />
-                <Route path="/custom-order" element={<CustomOrder />} />
                 <Route path="/create" element={<CreateYourOwn />} />
                 <Route path="/gallery" element={<Gallery />} />
                 <Route path="/about" element={<About />} />

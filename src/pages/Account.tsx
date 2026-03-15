@@ -15,6 +15,7 @@ interface Order {
   status: string;
   total: number;
   created_at: string;
+  tool_type?: "custom-print" | "lithophane" | null;
 }
 
 interface Voucher {

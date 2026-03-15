@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ShoppingCart, User, Menu, X, Layers, LogOut, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavLinks } from "@/components/admin/NavLinkEditor";
+import { supabase } from "@/integrations/supabase/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,10 +16,33 @@ import {
 
 const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [adminAlerts, setAdminAlerts] = useState(0);
   const location = useLocation();
   const { totalItems } = useCart();
   const { user, isAdmin, signOut } = useAuth();
   const navLinks = useNavLinks();
+
+  useEffect(() => {
+    const fetchAdminAlerts = async () => {
+      if (!isAdmin) {
+        setAdminAlerts(0);
+        return;
+      }
+
+      const [ordersRes, customRes, reviewsRes] = await Promise.all([
+        supabase.from("orders").select("id", { count: "exact", head: true }).in("status", ["pending", "processing"]),
+        supabase
+          .from("custom_orders")
+          .select("id", { count: "exact", head: true })
+          .in("status", ["pending", "reviewing", "quoted", "accepted"]),
+        supabase.from("product_reviews").select("id", { count: "exact", head: true }).eq("is_approved", false),
+      ]);
+
+      setAdminAlerts((ordersRes.count ?? 0) + (customRes.count ?? 0) + (reviewsRes.count ?? 0));
+    };
+
+    fetchAdminAlerts();
+  }, [isAdmin, user]);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-secondary">
@@ -57,9 +81,10 @@ const Header = () => {
           </Link>
 
           {isAdmin && (
-            <Link to="/admin/editor">
-                <Button variant="ghost" size="icon" className="text-secondary-foreground hover:text-foreground">
+            <Link to="/admin">
+              <Button variant="ghost" size="icon" className="relative text-secondary-foreground hover:text-foreground">
                 <Shield className="h-5 w-5" />
+                {adminAlerts > 0 && <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500" />}
               </Button>
             </Link>
           )}
@@ -73,11 +98,15 @@ const Header = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
-                  <Link to="/account" className="cursor-pointer">My Account</Link>
+                  <Link to="/account" className="cursor-pointer">
+                    My Account
+                  </Link>
                 </DropdownMenuItem>
                 {isAdmin && (
                   <DropdownMenuItem asChild>
-                    <Link to="/admin" className="cursor-pointer"><Shield className="mr-2 h-4 w-4" /> Admin Dashboard</Link>
+                    <Link to="/admin" className="cursor-pointer">
+                      <Shield className="mr-2 h-4 w-4" /> Admin Dashboard
+                    </Link>
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
@@ -121,11 +150,19 @@ const Header = () => {
           ))}
           {user && (
             <>
-              <Link to="/account" onClick={() => setMobileOpen(false)} className="block py-3 font-display text-sm uppercase tracking-widest text-secondary-foreground hover:text-primary">
+              <Link
+                to="/account"
+                onClick={() => setMobileOpen(false)}
+                className="block py-3 font-display text-sm uppercase tracking-widest text-secondary-foreground hover:text-primary"
+              >
                 My Account
               </Link>
               {isAdmin && (
-                <Link to="/admin" onClick={() => setMobileOpen(false)} className="block py-3 font-display text-sm uppercase tracking-widest text-secondary-foreground hover:text-primary">
+                <Link
+                  to="/admin"
+                  onClick={() => setMobileOpen(false)}
+                  className="block py-3 font-display text-sm uppercase tracking-widest text-secondary-foreground hover:text-primary"
+                >
                   Admin
                 </Link>
               )}

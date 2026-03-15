@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
+import ToolReviewForm from "@/components/reviews/ToolReviewForm";
 
 interface Order {
   id: string;

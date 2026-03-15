@@ -65,8 +65,8 @@ function LoadingFallback() {
 }
 
 function ReferenceAsset({ path, position = [0, 0, 0], rotation = [0, 0, 0], scale = 1 }) {
-  const { scene } = useGLTF(path);
-  const cloned = useMemo(() => scene.clone(), [scene]);
+  const gltf = useGLTF(path) as any;
+  const cloned = useMemo(() => gltf.scene.clone(), [gltf.scene]);
 
   return <primitive object={cloned} position={position} rotation={rotation} scale={scale} />;
 }

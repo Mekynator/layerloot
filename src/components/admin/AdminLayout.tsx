@@ -15,7 +15,6 @@ import {
   Menu,
   X,
   Box,
-  Calculator,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -26,7 +25,6 @@ const sidebarLinks = [
   { to: "/admin/categories", label: "Categories", icon: FolderTree },
   { to: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { to: "/admin/custom-orders", label: "Custom Orders", icon: Box },
-  { to: "/admin/pricing", label: "Pricing", icon: Calculator },
   { to: "/admin/clients", label: "Clients", icon: Users },
   { to: "/admin/reviews", label: "Reviews", icon: Star },
   { to: "/admin/editor", label: "Page Editor", icon: FileText },
@@ -95,7 +93,6 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)]">
-      {/* Mobile top bar */}
       <div className="fixed left-0 right-0 top-16 z-40 flex h-12 items-center border-b border-sidebar-border bg-sidebar px-4 lg:hidden">
         <Button
           variant="ghost"
@@ -111,7 +108,6 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         </span>
       </div>
 
-      {/* Mobile sidebar overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
@@ -119,7 +115,6 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         </div>
       )}
 
-      {/* Desktop sidebar */}
       <aside className="hidden w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar lg:flex">
         {navContent}
       </aside>

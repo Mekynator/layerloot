@@ -690,7 +690,7 @@ const AdminCustomOrders = () => {
                         </p>
                         <p>
                           <span className="text-muted-foreground">Customer Response:</span>{" "}
-                          {selectedOrder.customer_response_status.replaceAll("_", " ")}
+                          {selectedOrder.customer_response_status.replace(/_/g, " ")}
                         </p>
                       </div>
                     </div>

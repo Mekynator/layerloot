@@ -132,7 +132,11 @@ function parseCustomOrderDescription(description: string) {
 
   return {
     customerDescription,
-    ...parsed,
+    material: parsed.material,
+    color: parsed.color,
+    quality: parsed.quality,
+    quantity: parsed.quantity,
+    scale: parsed.scale,
   };
 }
 

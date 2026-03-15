@@ -28,7 +28,6 @@ import AdminCustomOrders from "./pages/admin/AdminCustomOrders";
 import PageEditor from "./pages/admin/PageEditor";
 import AdminPricing from "./pages/admin/AdminPricing";
 import DynamicPage from "./pages/DynamicPage";
-import CustomOrder from "./pages/CustomOrder";
 import CreateYourOwn from "./pages/CreateYourOwn";
 import Gallery from "./pages/Gallery";
 import About from "./pages/About";

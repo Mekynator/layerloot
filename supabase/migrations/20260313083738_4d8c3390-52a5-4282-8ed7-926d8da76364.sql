@@ -7,7 +7,7 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM site_blocks WHERE page = 'home' LIMIT 1) THEN
     INSERT INTO site_blocks (page, block_type, title, content, sort_order, is_active) VALUES
     ('home', 'hero', 'Hero Banner', '{"heading":"Gear Up Your Print Lab","subheading":"Premium filaments, tools, miniatures, and custom prints. Everything a maker needs, delivered to your workshop.","button_text":"Shop Now","button_link":"/products"}'::jsonb, 0, true),
-    ('home', 'shipping_banner', 'Shipping Banner', '{"text":"Free shipping on orders over 75 kr"}'::jsonb, 1, true),
+    ('home', 'shipping_banner', 'Shipping Banner', '{"text":"Free shipping on orders over 500 kr"}'::jsonb, 1, true),
     ('home', 'entry_cards', 'Entry Cards', '{}'::jsonb, 2, true),
     ('home', 'categories', 'Shop by Category', '{"heading":"Shop by Category","subheading":"Find exactly what you need","limit":6}'::jsonb, 3, true),
     ('home', 'featured_products', 'Best Sellers', '{"heading":"Best Sellers","subheading":"Our most popular 3D printed items","limit":8}'::jsonb, 4, true),
@@ -20,7 +20,7 @@ BEGIN
     
     IF NOT EXISTS (SELECT 1 FROM site_blocks WHERE page = 'home' AND block_type = 'shipping_banner') THEN
       INSERT INTO site_blocks (page, block_type, title, content, sort_order, is_active) VALUES
-      ('home', 'shipping_banner', 'Shipping Banner', '{"text":"Free shipping on orders over 75 kr"}'::jsonb, next_order, true);
+      ('home', 'shipping_banner', 'Shipping Banner', '{"text":"Free shipping on orders over 500 kr"}'::jsonb, next_order, true);
       next_order := next_order + 1;
     END IF;
     

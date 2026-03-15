@@ -1,5 +1,5 @@
 import React, { Suspense, useRef, useState, useEffect, useMemo, useCallback } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { ArcballControls, Center, Environment, GizmoHelper, GizmoViewport, Grid, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
@@ -51,13 +51,6 @@ function normalizeObject(obj: THREE.Object3D, targetSize = 3) {
   const center = new THREE.Vector3();
   newBox.getCenter(center);
   obj.position.sub(center);
-}
-
-function getObjectDimensions(obj: THREE.Object3D) {
-  const box = new THREE.Box3().setFromObject(obj);
-  const size = new THREE.Vector3();
-  box.getSize(size);
-  return size;
 }
 
 function LoadingFallback() {
@@ -113,7 +106,7 @@ function ReferenceModel({ type }: { type: ReferenceType }) {
 
     case "phone":
       return (
-        <mesh position={[-2.8, 1.45, 0]} rotation={[0, 0, 0]}>
+        <mesh position={[-2.8, 1.45, 0]}>
           <boxGeometry args={[0.75, 2.9, 0.12]} />
           <meshStandardMaterial color="#30343a" metalness={0.2} roughness={0.5} />
         </mesh>
@@ -188,9 +181,13 @@ function ModelMesh({
 
     const detectedExt = getFileExtension(url, fileName);
     setExt(detectedExt);
-    const manager = new THREE.LoadingManager();
 
-    const applySharedMaterial = (obj: THREE.Object3D) => {
+    const handleSuccess = (obj: THREE.Object3D) => {
+      if (!mounted) {
+        disposeObject(obj);
+        return;
+      }
+
       obj.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
           const mesh = child as THREE.Mesh;
@@ -203,73 +200,43 @@ function ModelMesh({
           }
         }
       });
-    };
 
-    const finish = (obj: THREE.Object3D) => {
-      if (!mounted) {
-        disposeObject(obj);
-        return;
-      }
-
-      applySharedMaterial(obj);
       normalizeObject(obj);
       currentObject = obj;
       setObject(obj);
-      onDimensions?.(getObjectDimensions(obj));
+
+      const box = new THREE.Box3().setFromObject(obj);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      onDimensions?.(size);
       onSupported?.(true, detectedExt);
     };
 
-    if (detectedExt === "stl") {
-      const loader = new STLLoader(manager);
-      loader.load(
-        url,
-        (geometry) => {
-          geometry.computeVertexNormals();
-          geometry.computeBoundingSphere();
-
-          const mesh = new THREE.Mesh(geometry, sharedMaterial);
-          mesh.castShadow = true;
-          mesh.receiveShadow = true;
-
-          const group = new THREE.Group();
-          group.add(mesh);
-          finish(group);
-        },
-        undefined,
-        () => {
-          setObject(null);
-          onDimensions?.(null);
-          onSupported?.(false, detectedExt);
-        },
-      );
-    } else if (detectedExt === "obj") {
-      const loader = new OBJLoader(manager);
-      loader.load(
-        url,
-        (obj) => finish(obj),
-        undefined,
-        () => {
-          setObject(null);
-          onDimensions?.(null);
-          onSupported?.(false, detectedExt);
-        },
-      );
-    } else if (detectedExt === "3mf") {
-      const loader = new ThreeMFLoader(manager);
-      loader.load(
-        url,
-        (obj) => finish(obj),
-        undefined,
-        () => {
-          setObject(null);
-          onDimensions?.(null);
-          onSupported?.(false, detectedExt);
-        },
-      );
-    } else {
+    const handleError = () => {
       setObject(null);
       onDimensions?.(null);
       onSupported?.(false, detectedExt);
+    };
+
+    if (detectedExt === "stl") {
+      new STLLoader().load(
+        url,
+        (geometry) => {
+          geometry.computeVertexNormals();
+          const mesh = new THREE.Mesh(geometry, sharedMaterial);
+          const group = new THREE.Group();
+          group.add(mesh);
+          handleSuccess(group);
+        },
+        undefined,
+        handleError,
+      );
+    } else if (detectedExt === "obj") {
+      new OBJLoader().load(url, handleSuccess, undefined, handleError);
+    } else if (detectedExt === "3mf") {
+      new ThreeMFLoader().load(url, handleSuccess, undefined, handleError);
+    } else {
+      handleError();
     }
 
     return () => {
@@ -284,7 +251,6 @@ function ModelMesh({
     object.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh;
-
         if (Array.isArray(mesh.material)) {
           mesh.material.forEach((mat) => {
             if ("color" in mat) {
@@ -309,10 +275,7 @@ function ModelMesh({
   });
 
   if (!ext) return null;
-  if (!["stl", "obj", "3mf"].includes(ext)) {
-    return <UnsupportedFallback ext={ext} />;
-  }
-
+  if (!["stl", "obj", "3mf"].includes(ext)) return <UnsupportedFallback ext={ext} />;
   if (!object) return null;
 
   return (
@@ -324,9 +287,9 @@ function ModelMesh({
   );
 }
 
-function CameraRig({ viewPreset, resetTrigger }: { viewPreset: ViewPreset; resetTrigger: number }) {
-  const { camera } = useThree();
+function CameraControls({ viewPreset, resetTrigger }: { viewPreset: ViewPreset; resetTrigger: number }) {
   const controlsRef = useRef<any>(null);
+  const { camera } = useThree();
 
   const applyView = useCallback(
     (preset: ViewPreset) => {
@@ -344,10 +307,7 @@ function CameraRig({ viewPreset, resetTrigger }: { viewPreset: ViewPreset; reset
       camera.position.set(x, y, z);
       camera.lookAt(0, 0, 0);
       camera.updateProjectionMatrix();
-
-      if (controlsRef.current) {
-        controlsRef.current.reset?.();
-      }
+      controlsRef.current?.reset?.();
     },
     [camera],
   );
@@ -360,33 +320,10 @@ function CameraRig({ viewPreset, resetTrigger }: { viewPreset: ViewPreset; reset
     applyView("iso");
   }, [resetTrigger, applyView]);
 
-  return (
-    <ArcballControls ref={controlsRef} enabled enablePan enableZoom enableRotate dampingFactor={0.08} adjustNearFar />
-  );
+  return <ArcballControls ref={controlsRef} enabled enablePan enableZoom enableRotate adjustNearFar />;
 }
 
-interface ModelViewerProps {
-  url: string;
-  className?: string;
-  showFullscreen?: boolean;
-  selectedColor?: string;
-  fileName?: string;
-}
-
-const ViewerCanvas = ({
-  url,
-  autoRotate,
-  selectedColor,
-  isFullscreen = false,
-  fileName,
-  wireframe,
-  showGrid,
-  referenceType,
-  viewPreset,
-  resetTrigger,
-  onDimensions,
-  onSupported,
-}: {
+interface ViewerCanvasProps {
   url: string;
   autoRotate: boolean;
   selectedColor?: string;
@@ -399,19 +336,30 @@ const ViewerCanvas = ({
   resetTrigger: number;
   onDimensions?: (dims: THREE.Vector3 | null) => void;
   onSupported?: (supported: boolean, ext: string) => void;
-}) => {
+}
+
+function ViewerCanvas({
+  url,
+  autoRotate,
+  selectedColor,
+  isFullscreen = false,
+  fileName,
+  wireframe,
+  showGrid,
+  referenceType,
+  viewPreset,
+  resetTrigger,
+  onDimensions,
+  onSupported,
+}: ViewerCanvasProps) {
   return (
     <Canvas
       className="touch-none"
       shadows={false}
       dpr={isFullscreen ? [1, 1.5] : [1, 1.25]}
       frameloop="always"
-      camera={{ fov: 45, near: 0.1, far: 100 }}
-      gl={{
-        antialias: true,
-        alpha: true,
-        powerPreference: "high-performance",
-      }}
+      camera={{ fov: 45, near: 0.1, far: 100, position: [4.5, 3.5, 5.5] }}
+      gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
     >
       <ambientLight intensity={isFullscreen ? 0.92 : 0.84} />
       <directionalLight position={[5, 5, 5]} intensity={isFullscreen ? 1.15 : 1.04} />
@@ -445,14 +393,45 @@ const ViewerCanvas = ({
         {isFullscreen && <Environment preset="studio" />}
       </Suspense>
 
-      <CameraRig viewPreset={viewPreset} resetTrigger={resetTrigger} />
+      <CameraControls viewPreset={viewPreset} resetTrigger={resetTrigger} />
 
       <GizmoHelper alignment="bottom-left" margin={[78, 78]}>
         <GizmoViewport axisColors={["#ef4444", "#22c55e", "#3b82f6"]} labelColor="#ffffff" />
       </GizmoHelper>
     </Canvas>
   );
-};
+}
+
+interface ModelViewerProps {
+  url: string;
+  className?: string;
+  showFullscreen?: boolean;
+  selectedColor?: string;
+  fileName?: string;
+}
+
+const viewButtons: { key: ViewPreset; label: string }[] = [
+  { key: "front", label: "Front" },
+  { key: "back", label: "Back" },
+  { key: "left", label: "Left" },
+  { key: "right", label: "Right" },
+  { key: "top", label: "Top" },
+  { key: "bottom", label: "Bottom" },
+  { key: "iso", label: "Iso" },
+];
+
+const referenceButtons: {
+  key: ReferenceType;
+  label: string;
+  icon?: React.ReactNode;
+}[] = [
+  { key: "none", label: "None" },
+  { key: "coin", label: "Coin", icon: <Circle className="h-3.5 w-3.5" /> },
+  { key: "soda", label: "Soda", icon: <Box className="h-3.5 w-3.5" /> },
+  { key: "monster", label: "Monster", icon: <Box className="h-3.5 w-3.5" /> },
+  { key: "hand", label: "Hand", icon: <Hand className="h-3.5 w-3.5" /> },
+  { key: "phone", label: "Phone", icon: <Smartphone className="h-3.5 w-3.5" /> },
+];
 
 const ModelViewer = ({
   url,
@@ -482,32 +461,11 @@ const ModelViewer = ({
     setResetTrigger((v) => v + 1);
   };
 
-  const viewButtons: { key: ViewPreset; label: string }[] = [
-    { key: "front", label: "Front" },
-    { key: "back", label: "Back" },
-    { key: "left", label: "Left" },
-    { key: "right", label: "Right" },
-    { key: "top", label: "Top" },
-    { key: "bottom", label: "Bottom" },
-    { key: "iso", label: "Iso" },
-  ];
-
-  const referenceButtons: {
-    key: ReferenceType;
-    label: string;
-    icon?: React.ReactNode;
-  }[] = [
-    { key: "none", label: "None" },
-    { key: "coin", label: "Coin", icon: <Circle className="h-3.5 w-3.5" /> },
-    { key: "soda", label: "Soda", icon: <Box className="h-3.5 w-3.5" /> },
-    { key: "monster", label: "Monster", icon: <Box className="h-3.5 w-3.5" /> },
-    { key: "hand", label: "Hand", icon: <Hand className="h-3.5 w-3.5" /> },
-    { key: "phone", label: "Phone", icon: <Smartphone className="h-3.5 w-3.5" /> },
-  ];
-
-  const Viewer = ({ isFullscreenMode = false }: { isFullscreenMode?: boolean }) => (
+  const viewerContent = (isFullscreenMode = false) => (
     <div
-      className={`relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-muted to-background ${isFullscreenMode ? "h-full w-full" : className}`}
+      className={`relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-muted to-background ${
+        isFullscreenMode ? "h-full w-full" : className
+      }`}
     >
       <ViewerCanvas
         url={url}
@@ -629,13 +587,11 @@ const ModelViewer = ({
 
   return (
     <>
-      <Viewer />
+      {viewerContent(false)}
 
       {showFullscreen && (
         <Dialog open={fullscreen} onOpenChange={setFullscreen}>
-          <DialogContent className="h-[88vh] max-w-[94vw] p-0">
-            <Viewer isFullscreenMode />
-          </DialogContent>
+          <DialogContent className="h-[88vh] max-w-[94vw] p-0">{viewerContent(true)}</DialogContent>
         </Dialog>
       )}
     </>

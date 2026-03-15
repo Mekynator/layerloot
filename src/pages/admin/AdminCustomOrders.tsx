@@ -3,7 +3,6 @@ import {
   Eye,
   Box,
   ArrowRight,
-  Calculator,
   Palette,
   Layers3,
   Ruler,
@@ -29,7 +28,6 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
 import ModelViewer from "@/components/ModelViewer";
-import PricingCalculator from "@/components/admin/PricingCalculator";
 
 interface CustomOrder {
   id: string;
@@ -133,7 +131,6 @@ const AdminCustomOrders = () => {
   const [statusUpdate, setStatusUpdate] = useState("");
   const [saving, setSaving] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
-  const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
   const [convertOpen, setConvertOpen] = useState(false);
   const [convertForm, setConvertForm] = useState({ name: "", slug: "", price: 0, stock: 1 });
   const [messages, setMessages] = useState<CustomOrderMessage[]>([]);
@@ -179,7 +176,6 @@ const AdminCustomOrders = () => {
     setSelectedOrder(order);
     setAdminNotes(order.admin_notes ?? "");
     setStatusUpdate(order.status);
-    setCalculatedPrice(null);
     setQuoteAmount(order.quoted_price !== null ? String(order.quoted_price) : "");
     setPaymentStatusUpdate(order.payment_status);
     setProductionStatusUpdate(order.production_status);
@@ -287,9 +283,7 @@ const AdminCustomOrders = () => {
     setThreadMessage("");
     toast({ title: "Quote sent" });
     await fetchOrders();
-    const refreshed = parsedOrders.find((o) => o.id === selectedOrder.id);
-    if (refreshed) setSelectedOrder(refreshed);
-    fetchMessages(selectedOrder.id);
+    await fetchMessages(selectedOrder.id);
   };
 
   const respondToCustomerOffer = async (accept: boolean) => {
@@ -504,9 +498,6 @@ const AdminCustomOrders = () => {
                 <TabsTrigger value="conversation">
                   <MessageSquare className="mr-1 h-3.5 w-3.5" /> Conversation
                 </TabsTrigger>
-                <TabsTrigger value="pricing">
-                  <Calculator className="mr-1 h-3.5 w-3.5" /> Pricing
-                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="details" className="space-y-6">
@@ -611,7 +602,7 @@ const AdminCustomOrders = () => {
                         <SelectContent>
                           {PAYMENT_STATUSES.map((s) => (
                             <SelectItem key={s} value={s}>
-{s.replace(/_/g, " ")}
+                              {s.replaceAll("_", " ")}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -630,7 +621,7 @@ const AdminCustomOrders = () => {
                         <SelectContent>
                           {PRODUCTION_STATUSES.map((s) => (
                             <SelectItem key={s} value={s}>
-                              {s.replace(/_/g, " ")}
+                              {s.replaceAll("_", " ")}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -642,7 +633,7 @@ const AdminCustomOrders = () => {
                       <Textarea
                         value={adminNotes}
                         onChange={(e) => setAdminNotes(e.target.value)}
-                        placeholder="Internal notes, pricing details, production notes..."
+                        placeholder="Internal notes, production notes..."
                         rows={4}
                       />
                     </div>
@@ -690,7 +681,7 @@ const AdminCustomOrders = () => {
                         </p>
                         <p>
                           <span className="text-muted-foreground">Customer Response:</span>{" "}
-                          {selectedOrder.customer_response_status.replace(/_/g, " ")}
+                          {selectedOrder.customer_response_status.replaceAll("_", " ")}
                         </p>
                       </div>
                     </div>
@@ -711,7 +702,7 @@ const AdminCustomOrders = () => {
                       <Textarea
                         value={threadMessage}
                         onChange={(e) => setThreadMessage(e.target.value)}
-                        placeholder="Explain the quote, production considerations, timeline, or conditions..."
+                        placeholder="Explain the quote, timeline, or conditions..."
                         rows={4}
                       />
                     </div>
@@ -773,7 +764,7 @@ const AdminCustomOrders = () => {
                         setConvertForm({
                           name: `Custom - ${selectedOrder.name}`,
                           slug: generateSlug(`custom-${selectedOrder.name}-${Date.now()}`),
-                          price: calculatedPrice || selectedOrder.final_agreed_price || selectedOrder.quoted_price || 0,
+                          price: selectedOrder.final_agreed_price || selectedOrder.quoted_price || 0,
                           stock: 1,
                         });
                         setConvertOpen(true);
@@ -829,7 +820,7 @@ const AdminCustomOrders = () => {
                               {msg.sender_role}
                             </Badge>
                             <Badge variant="outline" className="text-[10px] uppercase">
-                              {msg.message_type.replace(/_/g, " ")}
+                              {msg.message_type.replaceAll("_", " ")}
                             </Badge>
                             {msg.proposed_price !== null && (
                               <Badge variant="outline" className="text-[10px] uppercase border-primary text-primary">
@@ -866,10 +857,6 @@ const AdminCustomOrders = () => {
                     </Button>
                   </div>
                 </div>
-              </TabsContent>
-
-              <TabsContent value="pricing">
-                <PricingCalculator customOrderId={selectedOrder.id} onPriceCalculated={setCalculatedPrice} compact />
               </TabsContent>
             </Tabs>
           )}

@@ -499,6 +499,7 @@ const CustomPrintOrder = () => {
               <div className="overflow-hidden rounded-xl border border-border">
                 <ModelViewer
                   url={previewUrl}
+                  fileName={file?.name}
                   className="aspect-square"
                   selectedColor={selectedColorHex}
                 />

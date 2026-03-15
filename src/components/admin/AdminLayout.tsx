@@ -1,6 +1,22 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Package, FolderTree, ShoppingCart, Users, Truck, Layers, ArrowLeft, Star, FileText, Settings, Menu, X, Box, Calculator } from "lucide-react";
+import {
+  LayoutDashboard,
+  Package,
+  FolderTree,
+  ShoppingCart,
+  Users,
+  Truck,
+  Layers,
+  ArrowLeft,
+  Star,
+  FileText,
+  Settings,
+  Menu,
+  X,
+  Box,
+  Calculator,
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 
@@ -9,7 +25,6 @@ const sidebarLinks = [
   { to: "/admin/products", label: "Products", icon: Package },
   { to: "/admin/categories", label: "Categories", icon: FolderTree },
   { to: "/admin/orders", label: "Orders", icon: ShoppingCart },
-  { to: "/admin/custom-orders", label: "Custom Orders", icon: Box },
   { to: "/admin/pricing", label: "Pricing", icon: Calculator },
   { to: "/admin/clients", label: "Clients", icon: Users },
   { to: "/admin/reviews", label: "Reviews", icon: Star },
@@ -78,11 +93,16 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
     <div className="flex min-h-[calc(100vh-4rem)]">
       {/* Mobile top bar */}
       <div className="fixed left-0 right-0 top-16 z-40 flex h-12 items-center border-b border-sidebar-border bg-sidebar px-4 lg:hidden">
-        <Button variant="ghost" size="icon" onClick={() => setMobileOpen(!mobileOpen)} className="text-sidebar-foreground hover:text-sidebar-primary">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="text-sidebar-foreground hover:text-sidebar-primary"
+        >
           <Menu className="h-5 w-5" />
         </Button>
         <span className="ml-2 font-display text-sm font-bold uppercase tracking-wider text-sidebar-foreground">
-          {sidebarLinks.find(l => l.to === location.pathname)?.label || "Admin"}
+          {sidebarLinks.find((l) => l.to === location.pathname)?.label || "Admin"}
         </span>
       </div>
 
@@ -90,9 +110,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
-          <aside className="relative z-10 flex h-full w-64 flex-col bg-sidebar">
-            {navContent}
-          </aside>
+          <aside className="relative z-10 flex h-full w-64 flex-col bg-sidebar">{navContent}</aside>
         </div>
       )}
 

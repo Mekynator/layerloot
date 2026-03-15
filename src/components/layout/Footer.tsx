@@ -25,11 +25,26 @@ const Footer = () => {
               Quick Links
             </h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link to="/products" className="hover:text-primary">Shop</Link></li>
-              <li><Link to="/create" className="hover:text-primary">Create Your Own</Link></li>
-              <li><Link to="/custom-order" className="hover:text-primary">Custom Orders</Link></li>
-              <li><Link to="/gallery" className="hover:text-primary">Gallery</Link></li>
-              <li><Link to="/about" className="hover:text-primary">About</Link></li>
+              <li>
+                <Link to="/products" className="hover:text-primary">
+                  Shop
+                </Link>
+              </li>
+              <li>
+                <Link to="/create" className="hover:text-primary">
+                  Create Your Own
+                </Link>
+              </li>
+              <li>
+                <Link to="/gallery" className="hover:text-primary">
+                  Gallery
+                </Link>
+              </li>
+              <li>
+                <Link to="/about" className="hover:text-primary">
+                  About
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -39,9 +54,21 @@ const Footer = () => {
               Account
             </h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link to="/auth" className="hover:text-primary">Login / Register</Link></li>
-              <li><Link to="/account" className="hover:text-primary">My Account</Link></li>
-              <li><Link to="/account/orders" className="hover:text-primary">Order History</Link></li>
+              <li>
+                <Link to="/auth" className="hover:text-primary">
+                  Login / Register
+                </Link>
+              </li>
+              <li>
+                <Link to="/account" className="hover:text-primary">
+                  My Account
+                </Link>
+              </li>
+              <li>
+                <Link to="/account/orders" className="hover:text-primary">
+                  Order History
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -53,7 +80,9 @@ const Footer = () => {
             <ul className="space-y-3 text-sm text-muted-foreground">
               <li className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-primary" />
-                <a href="mailto:support@layerloot.lovable.app" className="hover:text-primary">support@layerloot.lovable.app</a>
+                <a href="mailto:support@layerloot.lovable.app" className="hover:text-primary">
+                  support@layerloot.lovable.app
+                </a>
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="h-4 w-4 text-primary" />

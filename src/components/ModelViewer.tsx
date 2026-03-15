@@ -9,7 +9,11 @@ import { Maximize2, RotateCcw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
-function getFileExtension(url: string): string {
+function getFileExtension(url: string, fileName?: string): string {
+  if (fileName) {
+    return fileName.split(".").pop()?.toLowerCase() ?? "";
+  }
+
   const clean = url.split("?")[0];
   return clean.split(".").pop()?.toLowerCase() ?? "";
 }

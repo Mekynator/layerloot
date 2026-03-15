@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import { ArrowRight, Eye, ShoppingBag, Sparkles } from "lucide-react";
 
 interface ProductCardProps {
   product: {
@@ -19,95 +21,129 @@ interface ProductCardProps {
 
 const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
   const images = product.images?.length ? product.images : ["/placeholder.svg"];
-  const isNew = product.created_at
-    ? Date.now() - new Date(product.created_at).getTime() < 14 * 86400000
-    : false;
+  const isNew = product.created_at ? Date.now() - new Date(product.created_at).getTime() < 14 * 86400000 : false;
   const hasModel = !!product.model_url;
+  const hasSale = !!product.compare_at_price && Number(product.compare_at_price) > Number(product.price);
+
+  const discountPct = hasSale
+    ? Math.round(((Number(product.compare_at_price) - Number(product.price)) / Number(product.compare_at_price)) * 100)
+    : 0;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 22 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: index * 0.06 }}
+      transition={{ duration: 0.4, delay: index * 0.06 }}
+      whileHover={{ y: -6 }}
+      className="h-full"
     >
       <Link
         to={`/products/${product.slug}`}
-        className="group relative block overflow-hidden rounded-lg border border-border bg-card transition-all duration-300 hover:border-primary hover:shadow-xl hover:-translate-y-1"
+        className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all duration-300 hover:border-primary/60 hover:shadow-2xl"
       >
-        {/* Image */}
         <div className="relative aspect-square overflow-hidden bg-muted">
           <img
             src={images[0]}
             alt={product.name}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
             loading="lazy"
           />
-          {/* Second image on hover */}
+
           {images.length > 1 && (
             <img
               src={images[1]}
               alt=""
-              className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+              className="absolute inset-0 h-full w-full object-cover opacity-0 transition-all duration-700 group-hover:opacity-100"
               loading="lazy"
             />
           )}
-          {/* Overlay gradient */}
-          <div className="absolute inset-0 bg-gradient-to-t from-foreground/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
-          {/* Tags */}
+          <div className="absolute inset-0 bg-gradient-to-t from-foreground/35 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
           <div className="absolute left-3 top-3 flex flex-col gap-1.5">
-            {product.compare_at_price && (
-              <Badge className="bg-primary font-display text-xs uppercase tracking-wider text-primary-foreground">
-                Sale
+            {hasSale && (
+              <Badge className="bg-primary font-display text-[10px] uppercase tracking-wider text-primary-foreground">
+                Sale {discountPct > 0 ? `-${discountPct}%` : ""}
               </Badge>
             )}
+
             {product.is_featured && (
-              <Badge className="bg-secondary font-display text-xs uppercase tracking-wider text-secondary-foreground">
+              <Badge className="bg-secondary font-display text-[10px] uppercase tracking-wider text-secondary-foreground">
                 Bestseller
               </Badge>
             )}
+
             {isNew && (
-              <Badge className="bg-accent font-display text-xs uppercase tracking-wider text-accent-foreground">
+              <Badge className="bg-accent font-display text-[10px] uppercase tracking-wider text-accent-foreground">
                 New
               </Badge>
             )}
+
             {hasModel && (
-              <Badge variant="outline" className="border-primary/50 bg-card/80 font-display text-xs uppercase tracking-wider text-primary backdrop-blur-sm">
-                3D
+              <Badge
+                variant="outline"
+                className="border-primary/50 bg-card/80 font-display text-[10px] uppercase tracking-wider text-primary backdrop-blur-sm"
+              >
+                3D Preview
               </Badge>
             )}
           </div>
 
-          {/* Color preview dots (from first few images as proxy) */}
+          <div className="absolute inset-x-3 bottom-3 translate-y-4 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center justify-center rounded-xl bg-background/90 px-3 py-2 text-xs font-medium text-foreground shadow-sm backdrop-blur">
+                <Eye className="mr-1.5 h-3.5 w-3.5" />
+                Quick View
+              </div>
+              <div className="flex items-center justify-center rounded-xl bg-primary px-3 py-2 text-xs font-medium text-primary-foreground shadow-sm">
+                <ShoppingBag className="mr-1.5 h-3.5 w-3.5" />
+                Open
+              </div>
+            </div>
+          </div>
+
           {images.length > 2 && (
-            <div className="absolute bottom-3 right-3 flex gap-1 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-              {images.slice(0, 4).map((_, i) => (
-                <span
-                  key={i}
-                  className="h-2.5 w-2.5 rounded-full border border-card/50 bg-muted-foreground/40"
-                />
+            <div className="absolute right-3 top-3 flex gap-1 rounded-full bg-card/80 px-2 py-1 opacity-0 backdrop-blur transition-opacity duration-300 group-hover:opacity-100">
+              {images.slice(0, 3).map((_, i) => (
+                <span key={i} className="h-2.5 w-2.5 rounded-full border border-card/50 bg-muted-foreground/40" />
               ))}
-              {images.length > 4 && (
-                <span className="font-display text-[10px] text-card">+{images.length - 4}</span>
+              {images.length > 3 && (
+                <span className="font-display text-[10px] text-foreground">+{images.length - 3}</span>
               )}
             </div>
           )}
         </div>
 
-        {/* Info */}
-        <div className="p-4">
-          <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-card-foreground transition-colors group-hover:text-primary">
-            {product.name}
-          </h3>
-          <div className="mt-2 flex items-center gap-2">
-            <span className="font-display text-lg font-bold text-primary">
-              {Number(product.price).toFixed(2)} kr
-            </span>
-            {product.compare_at_price && (
-              <span className="text-sm text-muted-foreground line-through">
-                {Number(product.compare_at_price).toFixed(2)} kr
-              </span>
+        <div className="flex flex-1 flex-col p-4">
+          <div className="mb-2 flex items-start justify-between gap-3">
+            <h3 className="line-clamp-2 font-display text-sm font-semibold uppercase tracking-wide text-card-foreground transition-colors duration-300 group-hover:text-primary">
+              {product.name}
+            </h3>
+            {hasModel && (
+              <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary/70 transition-transform duration-300 group-hover:rotate-12" />
             )}
+          </div>
+
+          <div className="mt-auto">
+            <div className="flex items-end gap-2">
+              <span className="font-display text-xl font-bold text-primary">{Number(product.price).toFixed(2)} kr</span>
+              {product.compare_at_price && (
+                <span className="pb-0.5 text-sm text-muted-foreground line-through">
+                  {Number(product.compare_at_price).toFixed(2)} kr
+                </span>
+              )}
+            </div>
+
+            <div className="mt-3 flex items-center justify-between">
+              <div className="text-[11px] text-muted-foreground">
+                {hasModel ? "Interactive model available" : "Ready to order"}
+              </div>
+              <div className="inline-flex items-center text-xs font-medium text-primary transition-all duration-300 group-hover:gap-1">
+                View
+                <ArrowRight className="ml-1 h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
+              </div>
+            </div>
           </div>
         </div>
       </Link>

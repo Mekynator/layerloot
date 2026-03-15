@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Eye, Box, ArrowRight, Calculator, Palette, Layers3, Ruler, Hash } from "lucide-react";
+import { Eye, Box, ArrowRight, Calculator, Palette, Layers3, Ruler, Hash, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -181,6 +181,18 @@ const AdminCustomOrders = () => {
       setDetailOpen(false);
       fetchOrders();
     }
+  };
+
+  const handleDownloadModel = () => {
+    if (!selectedOrder?.model_url) return;
+
+    const link = document.createElement("a");
+    link.href = selectedOrder.model_url;
+    link.download = selectedOrder.model_filename || "custom-model";
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const getStatusBadge = (status: string) => {
@@ -410,6 +422,14 @@ const AdminCustomOrders = () => {
                     </Button>
 
                     <Button
+                      variant="outline"
+                      onClick={handleDownloadModel}
+                      className="font-display uppercase tracking-wider"
+                    >
+                      <Download className="mr-1 h-4 w-4" /> Download File
+                    </Button>
+
+                    <Button
                       variant="secondary"
                       onClick={() => {
                         setConvertForm({
@@ -429,12 +449,24 @@ const AdminCustomOrders = () => {
               </TabsContent>
 
               <TabsContent value="model" className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-muted-foreground">File: {selectedOrder.model_filename}</p>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDownloadModel}
+                    className="font-display uppercase tracking-wider"
+                  >
+                    <Download className="mr-1 h-4 w-4" /> Download File
+                  </Button>
+                </div>
+
                 <ModelViewer
                   url={selectedOrder.model_url}
                   fileName={selectedOrder.model_filename}
                   className="aspect-video"
                 />
-                <p className="text-xs text-muted-foreground">File: {selectedOrder.model_filename}</p>
               </TabsContent>
 
               <TabsContent value="pricing">

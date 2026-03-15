@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Eye, Box, ArrowRight, Calculator } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Eye, Box, ArrowRight, Calculator, Palette, Layers3, Ruler, Hash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -10,7 +10,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
@@ -31,6 +30,15 @@ interface CustomOrder {
   user_id: string;
 }
 
+interface ParsedCustomOrder extends CustomOrder {
+  customer_description: string;
+  material: string;
+  color: string;
+  quality: string;
+  quantity: string;
+  scale: string;
+}
+
 const STATUSES = [
   { value: "pending", label: "Pending", color: "bg-yellow-500/10 text-yellow-600 border-yellow-500/30" },
   { value: "reviewing", label: "Reviewing", color: "bg-blue-500/10 text-blue-600 border-blue-500/30" },
@@ -41,9 +49,50 @@ const STATUSES = [
   { value: "rejected", label: "Rejected", color: "bg-red-500/10 text-red-600 border-red-500/30" },
 ];
 
+function parseCustomOrder(order: CustomOrder): ParsedCustomOrder {
+  const raw = order.description || "";
+  const marker = "\n--- Options ---";
+  const parts = raw.split(marker);
+
+  const customer_description = (parts[0] || "").trim();
+  const optionsText = (parts[1] || "").trim();
+
+  const parsed: Record<string, string> = {
+    material: "",
+    color: "",
+    quality: "",
+    quantity: "",
+    scale: "",
+  };
+
+  optionsText.split("\n").forEach((line) => {
+    const [key, ...rest] = line.split(":");
+    if (!key || rest.length === 0) return;
+
+    const normalizedKey = key.trim().toLowerCase();
+    const value = rest.join(":").trim();
+
+    if (normalizedKey === "material") parsed.material = value;
+    if (normalizedKey === "color") parsed.color = value;
+    if (normalizedKey === "quality") parsed.quality = value;
+    if (normalizedKey === "quantity") parsed.quantity = value;
+    if (normalizedKey === "scale") parsed.scale = value;
+  });
+
+  return {
+    ...order,
+    customer_description,
+    material: parsed.material || "-",
+    color: parsed.color || "-",
+    quality: parsed.quality || "-",
+    quantity: parsed.quantity || "-",
+    scale: parsed.scale || "-",
+  };
+}
+
 const AdminCustomOrders = () => {
   const [orders, setOrders] = useState<CustomOrder[]>([]);
-  const [selectedOrder, setSelectedOrder] = useState<CustomOrder | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<ParsedCustomOrder | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [adminNotes, setAdminNotes] = useState("");
   const [statusUpdate, setStatusUpdate] = useState("");
@@ -55,16 +104,23 @@ const AdminCustomOrders = () => {
   const { toast } = useToast();
 
   const fetchOrders = async () => {
-    const { data } = await supabase
-      .from("custom_orders")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("custom_orders").select("*").order("created_at", { ascending: false });
+
+    if (error) {
+      toast({ title: "Error loading custom orders", description: error.message, variant: "destructive" });
+      return;
+    }
+
     setOrders((data as CustomOrder[]) ?? []);
   };
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
-  const openDetail = (order: CustomOrder) => {
+  const parsedOrders = useMemo(() => orders.map(parseCustomOrder), [orders]);
+
+  const openDetail = (order: ParsedCustomOrder) => {
     setSelectedOrder(order);
     setAdminNotes(order.admin_notes ?? "");
     setStatusUpdate(order.status);
@@ -74,12 +130,16 @@ const AdminCustomOrders = () => {
 
   const handleSave = async () => {
     if (!selectedOrder) return;
+
     setSaving(true);
+
     const { error } = await supabase
       .from("custom_orders")
       .update({ status: statusUpdate, admin_notes: adminNotes || null })
       .eq("id", selectedOrder.id);
+
     setSaving(false);
+
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
@@ -89,11 +149,17 @@ const AdminCustomOrders = () => {
     }
   };
 
-  const generateSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  const generateSlug = (name: string) =>
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
 
   const handleConvertToProduct = async () => {
     if (!selectedOrder) return;
+
     setSaving(true);
+
     const { error } = await supabase.from("products").insert({
       name: convertForm.name,
       slug: convertForm.slug || generateSlug(convertForm.name),
@@ -101,15 +167,16 @@ const AdminCustomOrders = () => {
       stock: convertForm.stock,
       model_url: selectedOrder.model_url,
       is_active: false,
-      description: `Custom order from ${selectedOrder.name}: ${selectedOrder.description}`,
+      description: `Custom order from ${selectedOrder.name}: ${selectedOrder.customer_description}`,
     });
+
     setSaving(false);
+
     if (error) {
       toast({ title: "Error creating product", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Product created!", description: "The product has been created as a draft." });
       setConvertOpen(false);
-      // Update custom order status
       await supabase.from("custom_orders").update({ status: "completed" }).eq("id", selectedOrder.id);
       setDetailOpen(false);
       fetchOrders();
@@ -125,12 +192,18 @@ const AdminCustomOrders = () => {
     );
   };
 
-  const filtered = filterStatus === "all" ? orders : orders.filter((o) => o.status === filterStatus);
+  const filtered = filterStatus === "all" ? parsedOrders : parsedOrders.filter((o) => o.status === filterStatus);
 
   return (
     <AdminLayout>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="font-display text-3xl font-bold uppercase text-foreground">Custom Orders</h1>
+        <div>
+          <h1 className="font-display text-3xl font-bold uppercase text-foreground">Custom Print Requests</h1>
+          <p className="text-sm text-muted-foreground">
+            Review uploaded 3D print requests before quoting or converting them into products.
+          </p>
+        </div>
+
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filter by status" />
@@ -138,7 +211,9 @@ const AdminCustomOrders = () => {
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
             {STATUSES.map((s) => (
-              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              <SelectItem key={s.value} value={s.value}>
+                {s.label}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -151,11 +226,17 @@ const AdminCustomOrders = () => {
               <TableRow>
                 <TableHead>Customer</TableHead>
                 <TableHead>File</TableHead>
+                <TableHead>Material</TableHead>
+                <TableHead>Color</TableHead>
+                <TableHead>Quality</TableHead>
+                <TableHead>Qty</TableHead>
+                <TableHead>Scale</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
+
             <TableBody>
               {filtered.map((order) => (
                 <TableRow key={order.id}>
@@ -163,16 +244,27 @@ const AdminCustomOrders = () => {
                     <p className="font-display text-sm font-semibold uppercase">{order.name}</p>
                     <p className="text-xs text-muted-foreground">{order.email}</p>
                   </TableCell>
+
                   <TableCell>
                     <div className="flex items-center gap-1.5">
                       <Box className="h-4 w-4 text-primary" />
-                      <span className="max-w-[150px] truncate text-xs text-muted-foreground">{order.model_filename}</span>
+                      <span className="max-w-[150px] truncate text-xs text-muted-foreground">
+                        {order.model_filename}
+                      </span>
                     </div>
                   </TableCell>
+
+                  <TableCell className="text-sm">{order.material}</TableCell>
+                  <TableCell className="text-sm">{order.color}</TableCell>
+                  <TableCell className="text-sm">{order.quality}</TableCell>
+                  <TableCell className="text-sm">{order.quantity}</TableCell>
+                  <TableCell className="text-sm">{order.scale}</TableCell>
                   <TableCell>{getStatusBadge(order.status)}</TableCell>
+
                   <TableCell className="text-sm text-muted-foreground">
                     {new Date(order.created_at).toLocaleDateString()}
                   </TableCell>
+
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => openDetail(order)}>
                       <Eye className="h-4 w-4" />
@@ -180,10 +272,11 @@ const AdminCustomOrders = () => {
                   </TableCell>
                 </TableRow>
               ))}
+
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
-                    No custom orders found.
+                  <TableCell colSpan={10} className="py-8 text-center text-muted-foreground">
+                    No custom print requests found.
                   </TableCell>
                 </TableRow>
               )}
@@ -192,12 +285,12 @@ const AdminCustomOrders = () => {
         </CardContent>
       </Card>
 
-      {/* Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
           <DialogHeader>
-            <DialogTitle className="font-display uppercase">Custom Order Details</DialogTitle>
+            <DialogTitle className="font-display uppercase">Custom Print Request Details</DialogTitle>
           </DialogHeader>
+
           {selectedOrder && (
             <Tabs defaultValue="details" className="space-y-4">
               <TabsList>
@@ -209,29 +302,74 @@ const AdminCustomOrders = () => {
               </TabsList>
 
               <TabsContent value="details" className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   <div>
                     <Label className="text-xs text-muted-foreground">Customer</Label>
                     <p className="font-medium text-foreground">{selectedOrder.name}</p>
                   </div>
+
                   <div>
                     <Label className="text-xs text-muted-foreground">Email</Label>
                     <p className="font-medium text-foreground">{selectedOrder.email}</p>
                   </div>
+
                   <div>
                     <Label className="text-xs text-muted-foreground">Submitted</Label>
                     <p className="text-sm text-foreground">{new Date(selectedOrder.created_at).toLocaleString()}</p>
                   </div>
+
                   <div>
                     <Label className="text-xs text-muted-foreground">File</Label>
                     <p className="text-sm text-foreground">{selectedOrder.model_filename}</p>
                   </div>
                 </div>
 
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                  <div className="rounded-md border border-border bg-muted/40 p-3">
+                    <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
+                      <Layers3 className="h-3.5 w-3.5" />
+                      Material
+                    </div>
+                    <p className="text-sm font-medium text-foreground">{selectedOrder.material}</p>
+                  </div>
+
+                  <div className="rounded-md border border-border bg-muted/40 p-3">
+                    <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
+                      <Palette className="h-3.5 w-3.5" />
+                      Color
+                    </div>
+                    <p className="text-sm font-medium text-foreground">{selectedOrder.color}</p>
+                  </div>
+
+                  <div className="rounded-md border border-border bg-muted/40 p-3">
+                    <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
+                      <Box className="h-3.5 w-3.5" />
+                      Quality
+                    </div>
+                    <p className="text-sm font-medium text-foreground">{selectedOrder.quality}</p>
+                  </div>
+
+                  <div className="rounded-md border border-border bg-muted/40 p-3">
+                    <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
+                      <Hash className="h-3.5 w-3.5" />
+                      Quantity
+                    </div>
+                    <p className="text-sm font-medium text-foreground">{selectedOrder.quantity}</p>
+                  </div>
+
+                  <div className="rounded-md border border-border bg-muted/40 p-3">
+                    <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
+                      <Ruler className="h-3.5 w-3.5" />
+                      Scale
+                    </div>
+                    <p className="text-sm font-medium text-foreground">{selectedOrder.scale}</p>
+                  </div>
+                </div>
+
                 <div>
                   <Label className="text-xs text-muted-foreground">Customer Description</Label>
                   <pre className="mt-1 whitespace-pre-wrap rounded-md border border-border bg-muted p-3 text-sm text-foreground">
-                    {selectedOrder.description}
+                    {selectedOrder.customer_description || "-"}
                   </pre>
                 </div>
 
@@ -239,14 +377,19 @@ const AdminCustomOrders = () => {
                   <div>
                     <Label>Status</Label>
                     <Select value={statusUpdate} onValueChange={setStatusUpdate}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
                         {STATUSES.map((s) => (
-                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                          <SelectItem key={s.value} value={s.value}>
+                            {s.label}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
+
                   <div>
                     <Label>Admin Notes</Label>
                     <Textarea
@@ -256,10 +399,16 @@ const AdminCustomOrders = () => {
                       rows={4}
                     />
                   </div>
+
                   <div className="flex gap-2">
-                    <Button onClick={handleSave} disabled={saving} className="flex-1 font-display uppercase tracking-wider">
-                      {saving ? "Saving..." : "Update Order"}
+                    <Button
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="flex-1 font-display uppercase tracking-wider"
+                    >
+                      {saving ? "Saving..." : "Update Request"}
                     </Button>
+
                     <Button
                       variant="secondary"
                       onClick={() => {
@@ -279,54 +428,86 @@ const AdminCustomOrders = () => {
                 </div>
               </TabsContent>
 
-              <TabsContent value="model">
-                <ModelViewer url={selectedOrder.model_url} className="aspect-video" />
-                <p className="mt-2 text-xs text-muted-foreground">File: {selectedOrder.model_filename}</p>
+              <TabsContent value="model" className="space-y-3">
+                <ModelViewer
+                  url={selectedOrder.model_url}
+                  fileName={selectedOrder.model_filename}
+                  className="aspect-video"
+                />
+                <p className="text-xs text-muted-foreground">File: {selectedOrder.model_filename}</p>
               </TabsContent>
 
               <TabsContent value="pricing">
-                <PricingCalculator
-                  customOrderId={selectedOrder.id}
-                  onPriceCalculated={setCalculatedPrice}
-                  compact
-                />
+                <PricingCalculator customOrderId={selectedOrder.id} onPriceCalculated={setCalculatedPrice} compact />
               </TabsContent>
             </Tabs>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Convert to Product Dialog */}
       <Dialog open={convertOpen} onOpenChange={setConvertOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="font-display uppercase">Convert to Product</DialogTitle>
           </DialogHeader>
+
           <div className="space-y-4">
             <div>
               <Label>Product Name</Label>
-              <Input value={convertForm.name} onChange={(e) => setConvertForm({ ...convertForm, name: e.target.value })} />
+              <Input
+                value={convertForm.name}
+                onChange={(e) => setConvertForm({ ...convertForm, name: e.target.value })}
+              />
             </div>
+
             <div>
               <Label>Slug</Label>
-              <Input value={convertForm.slug} onChange={(e) => setConvertForm({ ...convertForm, slug: e.target.value })} />
+              <Input
+                value={convertForm.slug}
+                onChange={(e) => setConvertForm({ ...convertForm, slug: e.target.value })}
+              />
             </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Price (DKK)</Label>
-                <Input type="number" step="1" value={convertForm.price}
-                  onChange={(e) => setConvertForm({ ...convertForm, price: parseFloat(e.target.value) || 0 })} />
+                <Input
+                  type="number"
+                  step="1"
+                  value={convertForm.price}
+                  onChange={(e) =>
+                    setConvertForm({
+                      ...convertForm,
+                      price: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                />
               </div>
+
               <div>
                 <Label>Initial Stock</Label>
-                <Input type="number" value={convertForm.stock}
-                  onChange={(e) => setConvertForm({ ...convertForm, stock: parseInt(e.target.value) || 1 })} />
+                <Input
+                  type="number"
+                  value={convertForm.stock}
+                  onChange={(e) =>
+                    setConvertForm({
+                      ...convertForm,
+                      stock: parseInt(e.target.value) || 1,
+                    })
+                  }
+                />
               </div>
             </div>
+
             <p className="text-xs text-muted-foreground">
               The 3D model will be linked automatically. The product will be created as a draft.
             </p>
-            <Button onClick={handleConvertToProduct} disabled={saving} className="w-full font-display uppercase tracking-wider">
+
+            <Button
+              onClick={handleConvertToProduct}
+              disabled={saving}
+              className="w-full font-display uppercase tracking-wider"
+            >
               {saving ? "Creating..." : "Create Product"}
             </Button>
           </div>

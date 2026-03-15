@@ -1,16 +1,25 @@
 import { useState, useEffect, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import {
-  ArrowRight, Truck, Shield, Star, Printer, Play, ChevronLeft, ChevronRight,
-  Upload, Palette, ShoppingBag, Package, HelpCircle
+  ArrowRight,
+  Truck,
+  Shield,
+  Star,
+  Printer,
+  Play,
+  ChevronLeft,
+  ChevronRight,
+  Upload,
+  Palette,
+  ShoppingBag,
+  Package,
+  HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import ProductCard from "@/components/ProductCard";
-import {
-  Accordion, AccordionContent, AccordionItem, AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export interface SiteBlock {
   id: string;
@@ -45,9 +54,13 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
             </div>
           )}
           <div className="absolute inset-0 opacity-5">
-            <div className="absolute inset-0" style={{
-              backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 35px, currentColor 35px, currentColor 36px)",
-            }} />
+            <div
+              className="absolute inset-0"
+              style={{
+                backgroundImage:
+                  "repeating-linear-gradient(45deg, transparent, transparent 35px, currentColor 35px, currentColor 36px)",
+              }}
+            />
           </div>
           <div className="container relative">
             <div className="max-w-2xl">
@@ -58,10 +71,15 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
                 </span>
               </div>
               <h1 className="mb-6 font-display text-5xl font-bold uppercase leading-tight text-secondary-foreground lg:text-7xl">
-                {c.heading || <>Gear Up Your <span className="text-primary">Print Lab</span></>}
+                {c.heading || (
+                  <>
+                    Gear Up Your <span className="text-primary">Print Lab</span>
+                  </>
+                )}
               </h1>
               <p className="mb-8 max-w-lg text-lg text-muted-foreground">
-                {c.subheading || "Premium filaments, tools, miniatures, and custom prints. Everything a maker needs, delivered to your workshop."}
+                {c.subheading ||
+                  "Premium filaments, tools, miniatures, and custom prints. Everything a maker needs, delivered to your workshop."}
               </p>
               <div className="flex flex-wrap gap-4">
                 <Link to={c.button_link || "/products"}>
@@ -69,8 +87,12 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
                     {c.button_text || "Shop Now"} <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
-                <Link to="/custom-order">
-                  <Button size="lg" variant="outline" className="font-display uppercase tracking-wider border-muted-foreground/30 text-secondary-foreground hover:border-primary hover:text-primary">
+                <Link to="/create-your-own">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="font-display uppercase tracking-wider border-muted-foreground/30 text-secondary hover:border-primary hover:text-primary"
+                  >
                     Custom Order
                   </Button>
                 </Link>
@@ -114,7 +136,9 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
       return (
         <section className="py-16">
           <div className="container">
-            {c.heading && <h2 className="mb-4 font-display text-3xl font-bold uppercase text-foreground">{c.heading}</h2>}
+            {c.heading && (
+              <h2 className="mb-4 font-display text-3xl font-bold uppercase text-foreground">{c.heading}</h2>
+            )}
             <p className="text-lg text-muted-foreground whitespace-pre-wrap">{c.body || ""}</p>
           </div>
         </section>
@@ -125,9 +149,15 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
         <section className="py-16">
           <div className="container">
             {c.image_url ? (
-              <img src={c.image_url} alt={c.alt || ""} className="w-full rounded-lg object-contain max-h-[600px] mx-auto" />
+              <img
+                src={c.image_url}
+                alt={c.alt || ""}
+                className="w-full rounded-lg object-contain max-h-[600px] mx-auto"
+              />
             ) : (
-              <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted text-muted-foreground">No image set</div>
+              <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted text-muted-foreground">
+                No image set
+              </div>
             )}
           </div>
         </section>
@@ -152,11 +182,15 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
       return (
         <section className="bg-secondary py-16 lg:py-24">
           <div className="container text-center">
-            <h2 className="mb-4 font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">{c.heading}</h2>
+            <h2 className="mb-4 font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">
+              {c.heading}
+            </h2>
             {c.subheading && <p className="mb-8 text-lg text-muted-foreground">{c.subheading}</p>}
             {c.button_text && (
               <Link to={c.button_link || "/products"}>
-                <Button size="lg" className="font-display uppercase tracking-wider">{c.button_text} <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                <Button size="lg" className="font-display uppercase tracking-wider">
+                  {c.button_text} <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
               </Link>
             )}
           </div>
@@ -168,7 +202,11 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
         <section className="py-8">
           <div className="container flex justify-center">
             <Link to={c.button_link || "#"}>
-              <Button variant={c.style === "outline" ? "outline" : c.style === "ghost" ? "ghost" : "default"} size="lg" className="font-display uppercase tracking-wider">
+              <Button
+                variant={c.style === "outline" ? "outline" : c.style === "ghost" ? "ghost" : "default"}
+                size="lg"
+                className="font-display uppercase tracking-wider"
+              >
                 {c.button_text || "Click Me"}
               </Button>
             </Link>
@@ -190,13 +228,27 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
       return (
         <section className="py-8">
           <div className="container">
-            {c.heading && <h2 className="mb-4 font-display text-2xl font-bold uppercase text-foreground text-center">{c.heading}</h2>}
+            {c.heading && (
+              <h2 className="mb-4 font-display text-2xl font-bold uppercase text-foreground text-center">
+                {c.heading}
+              </h2>
+            )}
             {c.embed_url ? (
-              <div className="overflow-hidden rounded-lg border border-border" style={{ height: `${c.height || 400}px` }}>
-                <iframe src={c.embed_url} className="h-full w-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+              <div
+                className="overflow-hidden rounded-lg border border-border"
+                style={{ height: `${c.height || 400}px` }}
+              >
+                <iframe
+                  src={c.embed_url}
+                  className="h-full w-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
               </div>
             ) : (
-              <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted text-muted-foreground">No embed URL set</div>
+              <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted text-muted-foreground">
+                No embed URL set
+              </div>
             )}
           </div>
         </section>
@@ -213,9 +265,27 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
 /* ─── Entry Cards Block ─── */
 const EntryCardsBlock = ({ block, disableAnimations }: { block: SiteBlock; disableAnimations: boolean }) => {
   const cards = [
-    { icon: ShoppingBag, title: "Shop Products", desc: "Browse our curated collection of 3D printed items, filaments, and accessories.", link: "/products", cta: "Browse Shop" },
-    { icon: Palette, title: "Customize", desc: "Choose your material, color, and finish. Make any product truly yours.", link: "/products", cta: "Start Customizing" },
-    { icon: Upload, title: "Upload Your Idea", desc: "Got a 3D model? Upload it and we'll print it for you with professional quality.", link: "/custom-order", cta: "Upload Model" },
+    {
+      icon: ShoppingBag,
+      title: "Shop Products",
+      desc: "Browse our curated collection of 3D printed items, filaments, and accessories.",
+      link: "/products",
+      cta: "Browse Shop",
+    },
+    {
+      icon: Palette,
+      title: "Customize",
+      desc: "Choose your material, color, and finish. Make any product truly yours.",
+      link: "/products",
+      cta: "Start Customizing",
+    },
+    {
+      icon: Upload,
+      title: "Upload Your Idea",
+      desc: "Got a 3D model? Upload it and we'll print it for you with professional quality.",
+      link: "/custom-order",
+      cta: "Upload Model",
+    },
   ];
 
   const Wrap = disableAnimations ? "div" : motion.div;
@@ -293,7 +363,11 @@ const CategoriesBlock = ({ block, disableAnimations }: { block: SiteBlock; disab
                 className="group relative flex h-40 items-end overflow-hidden rounded-lg border border-border p-6 transition-all duration-300 hover:border-primary hover:-translate-y-1"
               >
                 {cat.image_url && (
-                  <img src={cat.image_url} alt={cat.name} className="absolute inset-0 h-full w-full object-cover opacity-30 transition-all duration-500 group-hover:scale-110 group-hover:opacity-40" />
+                  <img
+                    src={cat.image_url}
+                    alt={cat.name}
+                    className="absolute inset-0 h-full w-full object-cover opacity-30 transition-all duration-500 group-hover:scale-110 group-hover:opacity-40"
+                  />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-secondary via-secondary/60 to-transparent" />
                 <h3 className="relative font-display text-xl font-bold uppercase text-secondary-foreground transition-colors group-hover:text-primary">
@@ -331,7 +405,9 @@ const FeaturedProductsBlock = ({ block, disableAnimations }: { block: SiteBlock;
             {c.heading || "Best Sellers"}
           </h2>
           <p className="mt-2 text-muted-foreground">{c.subheading || "Our most popular 3D printed items"}</p>
-          <p className="mt-8 text-sm text-muted-foreground italic">No featured products yet — mark products as featured in the admin panel.</p>
+          <p className="mt-8 text-sm text-muted-foreground italic">
+            No featured products yet — mark products as featured in the admin panel.
+          </p>
         </div>
       </section>
     );
@@ -348,7 +424,10 @@ const FeaturedProductsBlock = ({ block, disableAnimations }: { block: SiteBlock;
             <p className="mt-2 text-muted-foreground">{c.subheading || "Our most popular 3D printed items"}</p>
           </div>
           <Link to="/products">
-            <Button variant="ghost" className="font-display uppercase tracking-wider text-primary hover:text-primary/80">
+            <Button
+              variant="ghost"
+              className="font-display uppercase tracking-wider text-primary hover:text-primary/80"
+            >
               View All <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           </Link>
@@ -407,12 +486,30 @@ const HowItWorksBlock = ({ block, disableAnimations }: { block: SiteBlock; disab
 const FaqBlock = ({ block, disableAnimations }: { block: SiteBlock; disableAnimations: boolean }) => {
   const c = block.content || {};
   const items = c.items || [
-    { q: "What materials do you offer?", a: "We offer PLA, PLA Silk, PETG, and Resin. Each material has unique properties suited for different applications — from decorative items to functional parts." },
-    { q: "How long does printing take?", a: "Depending on size and complexity, prints typically take 2-24 hours. Custom orders usually ship within 3-5 business days." },
-    { q: "Can I upload my own 3D model?", a: "Absolutely! We accept STL, OBJ, and 3MF files. Upload your model through our Custom Order page and choose your preferred material and finish." },
-    { q: "What finishes are available?", a: "We offer Raw (straight from the printer), Cleaned (support marks removed and sanded), and Painted (hand-painted with your choice of colors)." },
-    { q: "Do you offer international shipping?", a: "Yes! We ship worldwide. Orders over 75 kr qualify for free shipping within our primary shipping zones." },
-    { q: "What if my print arrives damaged?", a: "We stand behind our work. If your item arrives damaged, contact us within 48 hours and we'll reprint and reship at no extra cost." },
+    {
+      q: "What materials do you offer?",
+      a: "We offer PLA, PLA Silk, PETG, and Resin. Each material has unique properties suited for different applications — from decorative items to functional parts.",
+    },
+    {
+      q: "How long does printing take?",
+      a: "Depending on size and complexity, prints typically take 2-24 hours. Custom orders usually ship within 3-5 business days.",
+    },
+    {
+      q: "Can I upload my own 3D model?",
+      a: "Absolutely! We accept STL, OBJ, and 3MF files. Upload your model through our Custom Order page and choose your preferred material and finish.",
+    },
+    {
+      q: "What finishes are available?",
+      a: "We offer Raw (straight from the printer), Cleaned (support marks removed and sanded), and Painted (hand-painted with your choice of colors).",
+    },
+    {
+      q: "Do you offer international shipping?",
+      a: "Yes! We ship worldwide. Orders over 75 kr qualify for free shipping within our primary shipping zones.",
+    },
+    {
+      q: "What if my print arrives damaged?",
+      a: "We stand behind our work. If your item arrives damaged, contact us within 48 hours and we'll reprint and reship at no extra cost.",
+    },
   ];
 
   return (
@@ -429,9 +526,7 @@ const FaqBlock = ({ block, disableAnimations }: { block: SiteBlock; disableAnima
               <AccordionTrigger className="font-display text-sm uppercase tracking-wider text-card-foreground hover:no-underline hover:text-primary">
                 {item.q}
               </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">
-                {item.a}
-              </AccordionContent>
+              <AccordionContent className="text-muted-foreground">{item.a}</AccordionContent>
             </AccordionItem>
           ))}
         </Accordion>
@@ -487,7 +582,9 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
   return (
     <section className="py-16">
       <div className="container">
-        {block.title && <h2 className="mb-8 font-display text-3xl font-bold uppercase text-foreground text-center">{block.title}</h2>}
+        {block.title && (
+          <h2 className="mb-8 font-display text-3xl font-bold uppercase text-foreground text-center">{block.title}</h2>
+        )}
         <div className="relative overflow-hidden rounded-lg">
           <div className="aspect-[21/9] overflow-hidden">
             <AnimatePresence mode="wait">
@@ -505,18 +602,29 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
           </div>
           {images.length > 1 && (
             <>
-              <Button variant="ghost" size="icon" className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background"
-                onClick={() => setCurrent((p) => (p - 1 + images.length) % images.length)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background"
+                onClick={() => setCurrent((p) => (p - 1 + images.length) % images.length)}
+              >
                 <ChevronLeft className="h-[45px] w-[45px] text-primary" />
               </Button>
-              <Button variant="ghost" size="icon" className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background"
-                onClick={() => setCurrent((p) => (p + 1) % images.length)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background"
+                onClick={() => setCurrent((p) => (p + 1) % images.length)}
+              >
                 <ChevronRight className="h-[45px] w-[45px] text-primary" />
               </Button>
               <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
                 {images.map((_, i) => (
-                  <button key={i} onClick={() => setCurrent(i)}
-                    className={`h-2 w-2 rounded-full transition-all ${i === current ? "bg-primary w-6" : "bg-background/60"}`} />
+                  <button
+                    key={i}
+                    onClick={() => setCurrent(i)}
+                    className={`h-2 w-2 rounded-full transition-all ${i === current ? "bg-primary w-6" : "bg-background/60"}`}
+                  />
                 ))}
               </div>
             </>
@@ -546,15 +654,29 @@ const VideoBlock = ({ block }: { block: SiteBlock }) => {
   return (
     <section className="bg-secondary py-16 lg:py-24">
       <div className="container max-w-4xl">
-        {block.title && <h2 className="mb-8 font-display text-3xl font-bold uppercase text-secondary-foreground text-center">{block.title}</h2>}
+        {block.title && (
+          <h2 className="mb-8 font-display text-3xl font-bold uppercase text-secondary-foreground text-center">
+            {block.title}
+          </h2>
+        )}
         <div className="overflow-hidden rounded-lg border border-border shadow-xl">
           {isYouTube ? (
             <div className="aspect-video">
-              <iframe src={`https://www.youtube.com/embed/${getYouTubeId(url)}`} className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+              <iframe
+                src={`https://www.youtube.com/embed/${getYouTubeId(url)}`}
+                className="h-full w-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
             </div>
           ) : isVimeo ? (
             <div className="aspect-video">
-              <iframe src={`https://player.vimeo.com/video/${getVimeoId(url)}`} className="h-full w-full" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
+              <iframe
+                src={`https://player.vimeo.com/video/${getVimeoId(url)}`}
+                className="h-full w-full"
+                allow="autoplay; fullscreen; picture-in-picture"
+                allowFullScreen
+              />
             </div>
           ) : (
             <div className="aspect-video">
@@ -564,9 +686,7 @@ const VideoBlock = ({ block }: { block: SiteBlock }) => {
             </div>
           )}
         </div>
-        {block.content?.caption && (
-          <p className="mt-4 text-center text-muted-foreground">{block.content.caption}</p>
-        )}
+        {block.content?.caption && <p className="mt-4 text-center text-muted-foreground">{block.content.caption}</p>}
       </div>
     </section>
   );
@@ -587,15 +707,30 @@ const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
   return (
     <section className="bg-secondary py-16">
       <div className="container max-w-xl text-center">
-        <h2 className="mb-2 font-display text-2xl font-bold uppercase text-secondary-foreground">{c.heading || "Stay Updated"}</h2>
-        <p className="mb-6 text-muted-foreground">{c.subheading || "Subscribe to our newsletter for the latest updates."}</p>
+        <h2 className="mb-2 font-display text-2xl font-bold uppercase text-secondary-foreground">
+          {c.heading || "Stay Updated"}
+        </h2>
+        <p className="mb-6 text-muted-foreground">
+          {c.subheading || "Subscribe to our newsletter for the latest updates."}
+        </p>
         {status === "success" ? (
           <p className="font-display text-primary">Thanks for subscribing!</p>
         ) : (
           <form onSubmit={handleSubmit} className="flex gap-2">
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="your@email.com"
-              className="flex-1 rounded-md border border-border bg-background px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
-            <button type="submit" className="rounded-md bg-primary px-6 py-2 font-display text-sm uppercase tracking-wider text-primary-foreground hover:bg-primary/90">Subscribe</button>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="your@email.com"
+              className="flex-1 rounded-md border border-border bg-background px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            <button
+              type="submit"
+              className="rounded-md bg-primary px-6 py-2 font-display text-sm uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
+            >
+              Subscribe
+            </button>
           </form>
         )}
         {status === "error" && <p className="mt-2 text-sm text-destructive">Already subscribed or error occurred.</p>}

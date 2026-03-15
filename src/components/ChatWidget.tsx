@@ -1,5 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bot, Gift, Link as LinkIcon, MapPin, MessageCircle, Send, ShoppingBag, Sparkles, TicketPercent, User, X } from "lucide-react";
+import {
+  Bot,
+  Gift,
+  Link as LinkIcon,
+  MapPin,
+  MessageCircle,
+  Send,
+  ShoppingBag,
+  Sparkles,
+  TicketPercent,
+  User,
+  X,
+  Wand2,
+  PackageSearch,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -61,10 +75,10 @@ function uid() {
 }
 
 function getPageSuggestions(pathname: string, loggedIn: boolean): string[] {
-  if (pathname.startsWith("/product")) {
+  if (pathname.startsWith("/products/")) {
     return ["Show similar items", "How long is delivery?", "Is this available painted?"];
   }
-  if (pathname.startsWith("/shop")) {
+  if (pathname.startsWith("/products")) {
     return ["Show best sellers", "Find gifts under 200 DKK", "Custom print help"];
   }
   if (pathname.startsWith("/cart")) {
@@ -88,7 +102,6 @@ function safeJsonParse<T>(value: string | null, fallback: T): T {
 }
 
 function getCartSnapshot() {
-  // Adjust this key if your cart storage uses another key
   const raw = localStorage.getItem("layerloot-cart");
   const items = safeJsonParse<any[]>(raw, []);
 
@@ -137,9 +150,7 @@ function AssistantExtras({ payload }: { payload?: ChatPayload }) {
                 <LinkIcon className="h-4 w-4" />
                 {link.label}
               </div>
-              {link.description ? (
-                <div className="mt-1 text-xs text-muted-foreground">{link.description}</div>
-              ) : null}
+              {link.description ? <div className="mt-1 text-xs text-muted-foreground">{link.description}</div> : null}
             </Link>
           ))}
         </div>
@@ -154,11 +165,7 @@ function AssistantExtras({ payload }: { payload?: ChatPayload }) {
               className="flex items-center gap-3 rounded-xl border bg-background/70 p-3 transition hover:bg-background"
             >
               {product.image ? (
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="h-14 w-14 rounded-lg object-cover"
-                />
+                <img src={product.image} alt={product.name} className="h-14 w-14 rounded-lg object-cover" />
               ) : (
                 <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-muted">
                   <ShoppingBag className="h-5 w-5 text-muted-foreground" />
@@ -201,15 +208,9 @@ function AssistantExtras({ payload }: { payload?: ChatPayload }) {
                 <TicketPercent className="h-4 w-4" />
                 {coupon.code}
               </div>
-              {coupon.discountText ? (
-                <div className="mt-1 text-muted-foreground">{coupon.discountText}</div>
-              ) : null}
-              {coupon.description ? (
-                <div className="text-muted-foreground">{coupon.description}</div>
-              ) : null}
-              {coupon.expiresAt ? (
-                <div className="text-muted-foreground">Expires: {coupon.expiresAt}</div>
-              ) : null}
+              {coupon.discountText ? <div className="mt-1 text-muted-foreground">{coupon.discountText}</div> : null}
+              {coupon.description ? <div className="text-muted-foreground">{coupon.description}</div> : null}
+              {coupon.expiresAt ? <div className="text-muted-foreground">Expires: {coupon.expiresAt}</div> : null}
             </div>
           ))}
         </div>
@@ -218,12 +219,13 @@ function AssistantExtras({ payload }: { payload?: ChatPayload }) {
       {payload.suggestions?.length ? (
         <div className="flex flex-wrap gap-2">
           {payload.suggestions.map((suggestion) => (
-            <div
+            <button
               key={suggestion}
-              className="rounded-full border bg-background/80 px-3 py-1 text-[11px] text-muted-foreground"
+              type="button"
+              className="rounded-full border bg-background/80 px-3 py-1 text-[11px] text-muted-foreground transition hover:bg-background hover:text-foreground"
             >
               {suggestion}
-            </div>
+            </button>
           ))}
         </div>
       ) : null}
@@ -241,6 +243,7 @@ const ChatWidget = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
+  const [showPromptBubble, setShowPromptBubble] = useState(false);
 
   const [messages, setMessages] = useState<Msg[]>(() => {
     const saved = safeJsonParse<Msg[] | null>(localStorage.getItem(STORAGE_KEY), null);
@@ -250,14 +253,15 @@ const ChatWidget = () => {
       {
         id: uid(),
         role: "assistant",
-        content: "Hi! I’m LayerLoot’s assistant. I can help with products, custom prints, shipping, coupons, and your orders.",
+        content:
+          "Hi! I’m LayerLoot’s assistant. I can help with products, custom prints, shipping, coupons, and your orders.",
       },
     ];
   });
 
   const starterSuggestions = useMemo(
     () => getPageSuggestions(location.pathname, !!userId),
-    [location.pathname, userId]
+    [location.pathname, userId],
   );
 
   useEffect(() => {
@@ -292,6 +296,19 @@ const ChatWidget = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (open) {
+      setShowPromptBubble(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setShowPromptBubble(true);
+    }, 8000);
+
+    return () => window.clearTimeout(timer);
+  }, [open, location.pathname]);
+
   const requestLocation = () => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
@@ -301,15 +318,15 @@ const ChatWidget = () => {
           lng: pos.coords.longitude,
         });
       },
-      () => {
-        // user denied or browser blocked; no drama
-      }
+      () => {},
     );
   };
 
   const send = async (forcedText?: string) => {
     const text = (forcedText ?? input).trim();
     if (!text || loading) return;
+
+    setShowPromptBubble(false);
 
     const userMsg: Msg = {
       id: uid(),
@@ -397,8 +414,8 @@ const ChatWidget = () => {
                     ...(partial.payload ?? {}),
                   },
                 }
-              : m
-          )
+              : m,
+          ),
         );
       };
 
@@ -435,9 +452,7 @@ const ChatWidget = () => {
 
             if (event.type === "status") {
               updateAssistant({
-                payload: {
-                  status: event.status,
-                },
+                payload: { status: event.status },
               });
             }
 
@@ -445,9 +460,7 @@ const ChatWidget = () => {
               assistantText += event.content ?? "";
               updateAssistant({
                 content: assistantText,
-                payload: {
-                  status: undefined,
-                },
+                payload: { status: undefined },
               });
             }
 
@@ -460,9 +473,7 @@ const ChatWidget = () => {
                 },
               });
             }
-          } catch {
-            // keep incomplete chunks in buffer, do not explode dramatically
-          }
+          } catch {}
 
           newlineIndex = buffer.indexOf("\n");
         }
@@ -480,8 +491,8 @@ const ChatWidget = () => {
                     status: undefined,
                   },
                 }
-              : m
-          )
+              : m,
+          ),
         );
       }
     } catch {
@@ -496,8 +507,8 @@ const ChatWidget = () => {
                   status: undefined,
                 },
               }
-            : m
-        )
+            : m,
+        ),
       );
     } finally {
       setLoading(false);
@@ -521,19 +532,49 @@ const ChatWidget = () => {
   return (
     <>
       <AnimatePresence>
+        {!open && showPromptBubble && (
+          <motion.button
+            initial={{ opacity: 0, y: 12, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.96 }}
+            onClick={() => {
+              setOpen(true);
+              setShowPromptBubble(false);
+            }}
+            className="fixed bottom-24 right-6 z-50 max-w-[250px] rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-xl"
+          >
+            <div className="mb-1 flex items-center gap-2 text-sm font-medium text-foreground">
+              <Wand2 className="h-4 w-4 text-primary" />
+              Need help choosing?
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Ask about custom prints, best sellers, shipping, or gift ideas.
+            </div>
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {!open && (
           <motion.div
             initial={{ scale: 0.85, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.85, opacity: 0 }}
+            whileHover={{ y: -4, scale: 1.04 }}
             className="fixed bottom-6 right-6 z-50"
           >
             <Button
-              onClick={() => setOpen(true)}
+              onClick={() => {
+                setOpen(true);
+                setShowPromptBubble(false);
+              }}
               size="lg"
-              className="h-14 w-14 rounded-full shadow-2xl"
+              className="relative h-14 w-14 rounded-full shadow-2xl"
             >
               <MessageCircle className="h-6 w-6" />
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-background text-[9px] font-bold text-primary shadow">
+                ✦
+              </span>
             </Button>
           </motion.div>
         )}
@@ -601,7 +642,7 @@ const ChatWidget = () => {
                   <button
                     key={s}
                     onClick={() => send(s)}
-                    className="rounded-full border bg-background px-3 py-1.5 text-xs text-foreground transition hover:bg-muted"
+                    className="rounded-full border bg-background px-3 py-1.5 text-xs text-foreground transition hover:-translate-y-0.5 hover:bg-muted"
                   >
                     {s}
                   </button>
@@ -618,7 +659,7 @@ const ChatWidget = () => {
                   Coupons
                 </span>
                 <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1">
-                  <ShoppingBag className="h-3 w-3" />
+                  <PackageSearch className="h-3 w-3" />
                   Orders
                 </span>
                 <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1">
@@ -630,15 +671,10 @@ const ChatWidget = () => {
 
             <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
               {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
-                >
+                <div key={msg.id} className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
                   <div
                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs ${
-                      msg.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
+                      msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                     }`}
                   >
                     {msg.role === "user" ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
@@ -646,9 +682,7 @@ const ChatWidget = () => {
 
                   <div
                     className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                      msg.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-foreground"
+                      msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
                     }`}
                   >
                     {msg.payload?.status && !msg.content ? (
@@ -693,7 +727,7 @@ const ChatWidget = () => {
               <Button
                 type="submit"
                 size="icon"
-                className="h-9 w-9 shrink-0 rounded-full"
+                className="h-9 w-9 shrink-0 rounded-full transition-transform hover:scale-105"
                 disabled={loading || !input.trim()}
               >
                 <Send className="h-4 w-4" />

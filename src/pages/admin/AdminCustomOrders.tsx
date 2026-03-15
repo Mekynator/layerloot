@@ -820,7 +820,7 @@ const AdminCustomOrders = () => {
                               {msg.sender_role}
                             </Badge>
                             <Badge variant="outline" className="text-[10px] uppercase">
-                              {msg.message_type.replaceAll("_", " ")}
+                              {msg.message_type.replace(/_/g, " ")}
                             </Badge>
                             {msg.proposed_price !== null && (
                               <Badge variant="outline" className="text-[10px] uppercase border-primary text-primary">

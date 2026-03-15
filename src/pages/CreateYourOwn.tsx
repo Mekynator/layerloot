@@ -90,11 +90,11 @@ const ReviewSection = ({ toolType, title }: { toolType: "custom-print" | "lithop
       setLoading(true);
 
       const { data, error } = await supabase
-        .from("tool_reviews")
-        .select("id, reviewer_name, rating, review_text, created_at")
-        .eq("tool_type", toolType)
+        .from("product_reviews")
+        .select("id, title, comment, rating, created_at")
         .eq("is_approved", true)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(10);
 
       if (!error) {
         setReviews(data ?? []);

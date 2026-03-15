@@ -145,9 +145,11 @@ const LithophaneGenerator = () => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [mode, setMode] = useState<"daylight" | "backlit">("daylight");
   const [lightTone, setLightTone] = useState<"warm" | "neutral" | "cool">("warm");
-  const [displayStyle, setDisplayStyle] = useState<"flat" | "framed" | "lamp">("flat");
   const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
-  const [glowStrength, setGlowStrength] = useState(65);
+  const [sceneType, setSceneType] = useState<"table" | "wall">("table");
+  const [sceneRotation, setSceneRotation] = useState(0);
+  const [glowStrength, setGlowStrength] = useState(70);
+  const [frameColor, setFrameColor] = useState<"black" | "walnut" | "white">("black");
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -159,25 +161,54 @@ const LithophaneGenerator = () => {
 
   useEffect(() => {
     return () => {
-      if (imageUrl) {
-        URL.revokeObjectURL(imageUrl);
-      }
+      if (imageUrl) URL.revokeObjectURL(imageUrl);
     };
   }, [imageUrl]);
+
+  const previewAspect = orientation === "portrait" ? "aspect-[3/4]" : "aspect-[4/3]";
+
+  const toneGlow =
+    lightTone === "warm"
+      ? "rgba(255, 198, 120, 0.55)"
+      : lightTone === "cool"
+        ? "rgba(170, 215, 255, 0.50)"
+        : "rgba(255,255,255,0.45)";
 
   const toneOverlayClass =
     lightTone === "warm"
       ? "from-amber-300/35 via-orange-200/10 to-black/35"
       : lightTone === "cool"
-        ? "from-sky-200/30 via-blue-100/10 to-black/35"
+        ? "from-sky-200/35 via-blue-100/10 to-black/35"
         : "from-white/30 via-white/10 to-black/35";
+
+  const frameClass =
+    frameColor === "black"
+      ? "border-neutral-900 bg-neutral-800"
+      : frameColor === "walnut"
+        ? "border-[#5f4128] bg-[#7a5434]"
+        : "border-neutral-200 bg-neutral-100";
 
   const imageFilterClass =
     mode === "daylight"
       ? "grayscale brightness-110 contrast-75 sepia-[0.18]"
       : "grayscale brightness-[1.45] contrast-[1.45] invert";
 
-  const previewAspect = orientation === "portrait" ? "aspect-[3/4]" : "aspect-[4/3]";
+  const wallBackgroundStyle: React.CSSProperties = {
+    backgroundColor: "#6b4f3f",
+    backgroundImage: `
+      linear-gradient(rgba(0,0,0,0.08), rgba(0,0,0,0.08)),
+      linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px),
+      linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px)
+    `,
+    backgroundSize: "100% 100%, 56px 28px, 56px 28px",
+    backgroundPosition: "0 0, 0 0, 0 0",
+  };
+
+  const tableBackgroundStyle: React.CSSProperties = {
+    background: `
+      linear-gradient(to bottom, #d9d2c8 0%, #d9d2c8 62%, #6a4a35 62%, #8a6145 100%)
+    `,
+  };
 
   return (
     <div className="space-y-6">
@@ -277,36 +308,76 @@ const LithophaneGenerator = () => {
         </div>
 
         <div>
-          <Label className="mb-2 block">Display Style</Label>
+          <Label className="mb-2 block">Background Scene</Label>
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
               size="sm"
-              variant={displayStyle === "flat" ? "default" : "outline"}
-              onClick={() => setDisplayStyle("flat")}
+              variant={sceneType === "table" ? "default" : "outline"}
+              onClick={() => setSceneType("table")}
               className="font-display text-xs uppercase"
             >
-              Flat
+              Table
             </Button>
             <Button
               type="button"
               size="sm"
-              variant={displayStyle === "framed" ? "default" : "outline"}
-              onClick={() => setDisplayStyle("framed")}
+              variant={sceneType === "wall" ? "default" : "outline"}
+              onClick={() => setSceneType("wall")}
               className="font-display text-xs uppercase"
             >
-              Framed
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={displayStyle === "lamp" ? "default" : "outline"}
-              onClick={() => setDisplayStyle("lamp")}
-              className="font-display text-xs uppercase"
-            >
-              Lamp
+              Brick Wall
             </Button>
           </div>
+        </div>
+
+        <div>
+          <Label className="mb-2 block">Frame Color</Label>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={frameColor === "black" ? "default" : "outline"}
+              onClick={() => setFrameColor("black")}
+              className="font-display text-xs uppercase"
+            >
+              Black
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={frameColor === "walnut" ? "default" : "outline"}
+              onClick={() => setFrameColor("walnut")}
+              className="font-display text-xs uppercase"
+            >
+              Walnut
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={frameColor === "white" ? "default" : "outline"}
+              onClick={() => setFrameColor("white")}
+              className="font-display text-xs uppercase"
+            >
+              White
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label>Scene Rotation</Label>
+            <span className="text-xs text-muted-foreground">{sceneRotation}°</span>
+          </div>
+          <Input
+            type="range"
+            min={-90}
+            max={90}
+            step={1}
+            value={sceneRotation}
+            onChange={(e) => setSceneRotation(Number(e.target.value))}
+            className="cursor-pointer"
+          />
         </div>
       </div>
 
@@ -333,80 +404,105 @@ const LithophaneGenerator = () => {
           Best with high-contrast photos
         </span>
         <span className="rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
-          Backlight recommended
+          Framed display preview
         </span>
         <span className="rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
-          Faces and portraits work very well
+          Interactive lamp and scene angle
         </span>
       </div>
 
       {imageUrl && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-          <div className="relative rounded-2xl border border-border bg-gradient-to-br from-muted to-background p-4 sm:p-6">
-            <div className="flex justify-center">
+          <div className="rounded-2xl border border-border bg-gradient-to-br from-muted to-background p-4 sm:p-6">
+            <div className="mx-auto w-full max-w-[760px] overflow-hidden rounded-xl" style={{ perspective: "1400px" }}>
               <div
-                className={`relative ${previewAspect} w-full max-w-[360px] overflow-hidden ${
-                  displayStyle === "lamp"
-                    ? "rounded-[2rem]"
-                    : displayStyle === "framed"
-                      ? "rounded-lg border-[12px] border-neutral-700 bg-neutral-800 shadow-2xl"
-                      : "rounded-md border border-border bg-card shadow-lg"
-                }`}
+                className="relative h-[460px] w-full transition-transform duration-500 ease-out"
+                style={{
+                  transformStyle: "preserve-3d",
+                  transform: `rotateY(${sceneRotation}deg)`,
+                }}
               >
-                <img
-                  src={imageUrl}
-                  alt="Lithophane preview"
-                  className={`h-full w-full object-cover transition-all duration-500 ${imageFilterClass}`}
+                {/* Background scene */}
+                <div
+                  className="absolute inset-0 rounded-xl"
+                  style={sceneType === "wall" ? wallBackgroundStyle : tableBackgroundStyle}
                 />
 
+                {/* Wall/table lighting mood */}
+                <div className="absolute inset-0 rounded-xl bg-black/10" />
+
+                {/* Framed lithophane */}
                 <div
-                  className={`pointer-events-none absolute inset-0 bg-gradient-radial transition-all duration-500 ${
-                    mode === "backlit" ? toneOverlayClass : "from-white/10 via-transparent to-black/10"
+                  className={`absolute left-1/2 top-1/2 transition-all duration-500 ${
+                    sceneType === "wall" ? "-translate-x-1/2 -translate-y-1/2" : "-translate-x-1/2 -translate-y-[60%]"
                   }`}
                   style={{
-                    opacity: mode === "backlit" ? glowStrength / 100 : 0.35,
+                    transformStyle: "preserve-3d",
+                    transform: sceneType === "wall" ? `translateZ(12px)` : `translateZ(12px) rotateX(0deg)`,
                   }}
-                />
-
-                {displayStyle === "lamp" && (
-                  <>
+                >
+                  {/* Backlight glow */}
+                  {mode === "backlit" && (
                     <div
-                      className="pointer-events-none absolute inset-x-[12%] bottom-[-14px] h-6 rounded-full blur-md"
+                      className="absolute left-1/2 top-1/2 -z-10 rounded-full blur-3xl transition-all duration-500"
                       style={{
-                        background:
-                          lightTone === "warm"
-                            ? "rgba(255, 200, 120, 0.35)"
-                            : lightTone === "cool"
-                              ? "rgba(160, 210, 255, 0.30)"
-                              : "rgba(255,255,255,0.28)",
+                        width: orientation === "portrait" ? "240px" : "300px",
+                        height: orientation === "portrait" ? "300px" : "230px",
+                        transform: "translate(-50%, -50%)",
+                        background: toneGlow,
+                        opacity: glowStrength / 100,
                       }}
                     />
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[18%] bg-gradient-to-t from-black/20 to-transparent" />
-                  </>
-                )}
-              </div>
-            </div>
+                  )}
 
-            <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              <div className="rounded-lg border border-border bg-card/60 p-3">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">Preview Mode</p>
-                <p className="text-sm font-medium text-foreground">
-                  {mode === "daylight" ? "Daylight emboss preview" : "Backlit glow preview"}
-                </p>
-              </div>
-              <div className="rounded-lg border border-border bg-card/60 p-3">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">Display Setup</p>
-                <p className="text-sm font-medium capitalize text-foreground">
-                  {displayStyle} · {orientation}
-                </p>
+                  {/* Lamp source */}
+                  {mode === "backlit" && (
+                    <div
+                      className={`absolute transition-all duration-500 ${
+                        sceneType === "wall" ? "left-1/2 top-1/2 -z-20" : "left-1/2 top-1/2 -z-20"
+                      }`}
+                      style={{
+                        width: orientation === "portrait" ? "200px" : "260px",
+                        height: orientation === "portrait" ? "260px" : "190px",
+                        transform: "translate(-50%, -50%)",
+                        background: `radial-gradient(circle, ${toneGlow} 0%, transparent 70%)`,
+                        opacity: glowStrength / 100,
+                        filter: "blur(18px)",
+                      }}
+                    />
+                  )}
+
+                  {/* Frame */}
+                  <div className={`relative overflow-hidden rounded-lg border-[12px] shadow-2xl ${frameClass}`}>
+                    <div className={`${previewAspect} w-[250px] sm:w-[320px] overflow-hidden bg-card`}>
+                      <img
+                        src={imageUrl}
+                        alt="Lithophane preview"
+                        className={`h-full w-full object-cover transition-all duration-500 ${imageFilterClass}`}
+                      />
+                      <div
+                        className={`pointer-events-none absolute inset-0 bg-gradient-radial transition-all duration-500 ${
+                          mode === "backlit" ? toneOverlayClass : "from-white/10 via-transparent to-black/10"
+                        }`}
+                        style={{
+                          opacity: mode === "backlit" ? glowStrength / 100 : 0.28,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Table support shadow */}
+                  {sceneType === "table" && (
+                    <div className="absolute inset-x-[12%] bottom-[-20px] h-6 rounded-full bg-black/25 blur-md" />
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
           <p className="text-center text-xs text-muted-foreground">
-            {mode === "daylight"
-              ? "This preview simulates how the lithophane looks in normal light with subtle embossed contrast."
-              : "This preview simulates the glow effect when the lithophane is lit from behind. Real brightness and tone will vary by light source and material."}
+            Dragging scene angle is simulated as a horizontal showcase preview. Light color and brightness are
+            illustrative and may differ from the real lamp, frame, and print material.
           </p>
 
           <Button className="w-full font-display uppercase tracking-wider">

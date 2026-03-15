@@ -59,19 +59,26 @@ function SceneSetup() {
   return null;
 }
 
-function ModelMesh({ url, autoRotate }: { url: string; autoRotate: boolean }) {
+function ModelMesh({
+  url,
+  autoRotate,
+  selectedColor = "#b0b0b0",
+}: {
+  url: string;
+  autoRotate: boolean;
+  selectedColor?: string;
+}) {
   const groupRef = useRef<THREE.Group>(null);
   const [object, setObject] = useState<THREE.Object3D | null>(null);
 
-  // Reuse one material instance instead of recreating for each mesh
   const sharedMaterial = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: 0xb0b0b0,
-        metalness: 0.25,
-        roughness: 0.55,
+        color: new THREE.Color(selectedColor),
+        metalness: 0.22,
+        roughness: 0.58,
       }),
-    [],
+    [selectedColor],
   );
 
   useEffect(() => {
@@ -142,6 +149,26 @@ function ModelMesh({ url, autoRotate }: { url: string; autoRotate: boolean }) {
     };
   }, [url, sharedMaterial]);
 
+  useEffect(() => {
+    if (!object) return;
+
+    object.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const mesh = child as THREE.Mesh;
+
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach((mat) => {
+            if ("color" in mat) {
+              (mat as THREE.MeshStandardMaterial).color.set(selectedColor);
+            }
+          });
+        } else if (mesh.material && "color" in mesh.material) {
+          (mesh.material as THREE.MeshStandardMaterial).color.set(selectedColor);
+        }
+      }
+    });
+  }, [object, selectedColor]);
+
   useFrame((_, delta) => {
     if (autoRotate && groupRef.current) {
       groupRef.current.rotation.y += delta * 0.5;
@@ -163,9 +190,18 @@ interface ModelViewerProps {
   url: string;
   className?: string;
   showFullscreen?: boolean;
+  selectedColor?: string;
 }
 
-const ViewerCanvas = ({ url, autoRotate }: { url: string; autoRotate: boolean }) => {
+const ViewerCanvas = ({
+  url,
+  autoRotate,
+  selectedColor,
+}: {
+  url: string;
+  autoRotate: boolean;
+  selectedColor?: string;
+}) => {
   return (
     <Canvas
       className="touch-none"
@@ -180,12 +216,16 @@ const ViewerCanvas = ({ url, autoRotate }: { url: string; autoRotate: boolean })
       }}
     >
       <SceneSetup />
-      <ambientLight intensity={0.8} />
-      <directionalLight position={[5, 5, 5]} intensity={1.1} />
-      <directionalLight position={[-3, 3, -3]} intensity={0.35} />
+      <ambientLight intensity={0.82} />
+      <directionalLight position={[5, 5, 5]} intensity={1.05} />
+      <directionalLight position={[-3, 3, -3]} intensity={0.3} />
 
       <Suspense fallback={null}>
-        <ModelMesh url={url} autoRotate={autoRotate} />
+        <ModelMesh
+          url={url}
+          autoRotate={autoRotate}
+          selectedColor={selectedColor}
+        />
         <Environment preset="studio" />
       </Suspense>
 
@@ -194,14 +234,23 @@ const ViewerCanvas = ({ url, autoRotate }: { url: string; autoRotate: boolean })
   );
 };
 
-const ModelViewer = ({ url, className = "", showFullscreen = true }: ModelViewerProps) => {
+const ModelViewer = ({
+  url,
+  className = "",
+  showFullscreen = true,
+  selectedColor = "#b0b0b0",
+}: ModelViewerProps) => {
   const [autoRotate, setAutoRotate] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
 
   return (
     <>
-      <div className={`relative overflow-hidden rounded-lg border border-border bg-muted ${className}`}>
-        <ViewerCanvas url={url} autoRotate={autoRotate} />
+      <div className={`relative overflow-hidden rounded-xl border border-border bg-muted ${className}`}>
+        <ViewerCanvas
+          url={url}
+          autoRotate={autoRotate}
+          selectedColor={selectedColor}
+        />
 
         <div className="absolute bottom-2 right-2 flex gap-1">
           <Button
@@ -230,7 +279,7 @@ const ModelViewer = ({ url, className = "", showFullscreen = true }: ModelViewer
           )}
         </div>
 
-        <div className="absolute left-2 top-2 rounded bg-background/80 px-2 py-1 text-xs text-muted-foreground font-display uppercase">
+        <div className="absolute left-2 top-2 rounded bg-background/80 px-2 py-1 text-xs font-display uppercase text-muted-foreground backdrop-blur-sm">
           3D View
         </div>
       </div>
@@ -239,7 +288,11 @@ const ModelViewer = ({ url, className = "", showFullscreen = true }: ModelViewer
         <Dialog open={fullscreen} onOpenChange={setFullscreen}>
           <DialogContent className="h-[85vh] max-w-[90vw] p-0">
             <div className="h-full w-full">
-              <ViewerCanvas url={url} autoRotate={autoRotate} />
+              <ViewerCanvas
+                url={url}
+                autoRotate={autoRotate}
+                selectedColor={selectedColor}
+              />
             </div>
           </DialogContent>
         </Dialog>

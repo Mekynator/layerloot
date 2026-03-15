@@ -197,13 +197,21 @@ function ViewerCanvas({ url, autoRotate, selectedColor, fileName, wireframe, sho
   );
 }
 
+interface ModelViewerProps {
+  url: string;
+  className?: string;
+  showFullscreen?: boolean;
+  selectedColor?: string;
+  fileName?: string;
+}
+
 export default function ModelViewer({
   url,
   className = "",
   showFullscreen = true,
   selectedColor = "#b0b0b0",
   fileName,
-}) {
+}: ModelViewerProps) {
   const [autoRotate, setAutoRotate] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
   const [wireframe, setWireframe] = useState(false);

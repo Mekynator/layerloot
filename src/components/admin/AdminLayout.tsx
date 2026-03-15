@@ -25,6 +25,7 @@ const sidebarLinks = [
   { to: "/admin/products", label: "Products", icon: Package },
   { to: "/admin/categories", label: "Categories", icon: FolderTree },
   { to: "/admin/orders", label: "Orders", icon: ShoppingCart },
+  { to: "/admin/custom-orders", label: "Custom Orders", icon: Box },
   { to: "/admin/pricing", label: "Pricing", icon: Calculator },
   { to: "/admin/clients", label: "Clients", icon: Users },
   { to: "/admin/reviews", label: "Reviews", icon: Star },
@@ -58,10 +59,12 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             Admin Panel
           </span>
         </div>
+
         <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen(false)}>
           <X className="h-5 w-5" />
         </Button>
       </div>
+
       <nav className="space-y-1 p-3">
         {sidebarLinks.map(({ to, label, icon: Icon }) => (
           <Link
@@ -78,6 +81,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           </Link>
         ))}
       </nav>
+
       <div className="mt-auto border-t border-sidebar-border p-3">
         <Link
           to="/"
@@ -101,6 +105,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         >
           <Menu className="h-5 w-5" />
         </Button>
+
         <span className="ml-2 font-display text-sm font-bold uppercase tracking-wider text-sidebar-foreground">
           {sidebarLinks.find((l) => l.to === location.pathname)?.label || "Admin"}
         </span>

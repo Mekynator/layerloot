@@ -1,5 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
-import { Eye, Box, ArrowRight, Calculator, Palette, Layers3, Ruler, Hash, Download } from "lucide-react";
+import {
+  Eye,
+  Box,
+  ArrowRight,
+  Calculator,
+  Palette,
+  Layers3,
+  Ruler,
+  Hash,
+  Download,
+  Send,
+  DollarSign,
+  CheckCircle2,
+  XCircle,
+  MessageSquare,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -28,6 +43,12 @@ interface CustomOrder {
   created_at: string;
   updated_at: string;
   user_id: string;
+  quoted_price: number | null;
+  customer_offer_price: number | null;
+  final_agreed_price: number | null;
+  customer_response_status: "pending" | "accepted" | "declined" | "countered";
+  payment_status: "unpaid" | "awaiting_payment" | "paid" | "refunded" | "cancelled";
+  production_status: "pending" | "queued" | "in_production" | "completed" | "shipped" | "cancelled";
 }
 
 interface ParsedCustomOrder extends CustomOrder {
@@ -39,6 +60,17 @@ interface ParsedCustomOrder extends CustomOrder {
   scale: string;
 }
 
+interface CustomOrderMessage {
+  id: string;
+  custom_order_id: string;
+  sender_role: "user" | "admin" | "system";
+  sender_user_id: string | null;
+  message: string | null;
+  message_type: "note" | "quote" | "counter_offer" | "status_update" | "system";
+  proposed_price: number | null;
+  created_at: string;
+}
+
 const STATUSES = [
   { value: "pending", label: "Pending", color: "bg-yellow-500/10 text-yellow-600 border-yellow-500/30" },
   { value: "reviewing", label: "Reviewing", color: "bg-blue-500/10 text-blue-600 border-blue-500/30" },
@@ -48,6 +80,9 @@ const STATUSES = [
   { value: "completed", label: "Completed", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" },
   { value: "rejected", label: "Rejected", color: "bg-red-500/10 text-red-600 border-red-500/30" },
 ];
+
+const PAYMENT_STATUSES = ["unpaid", "awaiting_payment", "paid", "refunded", "cancelled"] as const;
+const PRODUCTION_STATUSES = ["pending", "queued", "in_production", "completed", "shipped", "cancelled"] as const;
 
 function parseCustomOrder(order: CustomOrder): ParsedCustomOrder {
   const raw = order.description || "";
@@ -101,6 +136,11 @@ const AdminCustomOrders = () => {
   const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
   const [convertOpen, setConvertOpen] = useState(false);
   const [convertForm, setConvertForm] = useState({ name: "", slug: "", price: 0, stock: 1 });
+  const [messages, setMessages] = useState<CustomOrderMessage[]>([]);
+  const [threadMessage, setThreadMessage] = useState("");
+  const [quoteAmount, setQuoteAmount] = useState("");
+  const [paymentStatusUpdate, setPaymentStatusUpdate] = useState<CustomOrder["payment_status"]>("unpaid");
+  const [productionStatusUpdate, setProductionStatusUpdate] = useState<CustomOrder["production_status"]>("pending");
   const { toast } = useToast();
 
   const fetchOrders = async () => {
@@ -114,39 +154,193 @@ const AdminCustomOrders = () => {
     setOrders((data as CustomOrder[]) ?? []);
   };
 
+  const fetchMessages = async (customOrderId: string) => {
+    const { data, error } = await supabase
+      .from("custom_order_messages")
+      .select("*")
+      .eq("custom_order_id", customOrderId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      toast({ title: "Error loading conversation", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    setMessages((data as CustomOrderMessage[]) ?? []);
+  };
+
   useEffect(() => {
     fetchOrders();
   }, []);
 
   const parsedOrders = useMemo(() => orders.map(parseCustomOrder), [orders]);
 
-  const openDetail = (order: ParsedCustomOrder) => {
+  const openDetail = async (order: ParsedCustomOrder) => {
     setSelectedOrder(order);
     setAdminNotes(order.admin_notes ?? "");
     setStatusUpdate(order.status);
     setCalculatedPrice(null);
+    setQuoteAmount(order.quoted_price !== null ? String(order.quoted_price) : "");
+    setPaymentStatusUpdate(order.payment_status);
+    setProductionStatusUpdate(order.production_status);
+    setThreadMessage("");
     setDetailOpen(true);
+    await fetchMessages(order.id);
   };
 
   const handleSave = async () => {
     if (!selectedOrder) return;
-
     setSaving(true);
 
     const { error } = await supabase
       .from("custom_orders")
-      .update({ status: statusUpdate, admin_notes: adminNotes || null })
+      .update({
+        status: statusUpdate,
+        admin_notes: adminNotes || null,
+        payment_status: paymentStatusUpdate,
+        production_status: productionStatusUpdate,
+      })
       .eq("id", selectedOrder.id);
 
     setSaving(false);
 
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Order updated" });
-      setDetailOpen(false);
-      fetchOrders();
+      return;
     }
+
+    await supabase.from("custom_order_messages").insert({
+      custom_order_id: selectedOrder.id,
+      sender_role: "admin",
+      message: `Admin updated request. Status: ${statusUpdate}. Payment: ${paymentStatusUpdate}. Production: ${productionStatusUpdate}.`,
+      message_type: "status_update",
+    });
+
+    toast({ title: "Request updated" });
+    setDetailOpen(false);
+    fetchOrders();
+  };
+
+  const sendAdminMessage = async () => {
+    if (!selectedOrder || !threadMessage.trim()) return;
+
+    setSaving(true);
+    const { error } = await supabase.from("custom_order_messages").insert({
+      custom_order_id: selectedOrder.id,
+      sender_role: "admin",
+      message: threadMessage.trim(),
+      message_type: "note",
+    });
+    setSaving(false);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    setThreadMessage("");
+    toast({ title: "Message sent" });
+    fetchMessages(selectedOrder.id);
+  };
+
+  const sendQuote = async () => {
+    if (!selectedOrder) return;
+    const amount = parseFloat(quoteAmount);
+
+    if (!amount || amount <= 0) {
+      toast({ title: "Invalid quote", description: "Enter a valid amount.", variant: "destructive" });
+      return;
+    }
+
+    setSaving(true);
+
+    const { error: updateError } = await supabase
+      .from("custom_orders")
+      .update({
+        quoted_price: amount,
+        status: "quoted",
+        customer_response_status: "pending",
+      })
+      .eq("id", selectedOrder.id);
+
+    if (updateError) {
+      setSaving(false);
+      toast({ title: "Error", description: updateError.message, variant: "destructive" });
+      return;
+    }
+
+    const { error: messageError } = await supabase.from("custom_order_messages").insert({
+      custom_order_id: selectedOrder.id,
+      sender_role: "admin",
+      message: threadMessage.trim() || `Admin sent a quote of ${amount.toFixed(2)} kr.`,
+      message_type: "quote",
+      proposed_price: amount,
+    });
+
+    setSaving(false);
+
+    if (messageError) {
+      toast({ title: "Error", description: messageError.message, variant: "destructive" });
+      return;
+    }
+
+    setThreadMessage("");
+    toast({ title: "Quote sent" });
+    await fetchOrders();
+    const refreshed = parsedOrders.find((o) => o.id === selectedOrder.id);
+    if (refreshed) setSelectedOrder(refreshed);
+    fetchMessages(selectedOrder.id);
+  };
+
+  const respondToCustomerOffer = async (accept: boolean) => {
+    if (!selectedOrder) return;
+    if (selectedOrder.customer_offer_price === null) {
+      toast({
+        title: "No customer offer",
+        description: "There is no counter-offer to review.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+
+    const updatePayload = accept
+      ? {
+          final_agreed_price: selectedOrder.customer_offer_price,
+          status: "accepted",
+          customer_response_status: "accepted",
+          payment_status: "awaiting_payment",
+        }
+      : {
+          status: "reviewing",
+        };
+
+    const { error: updateError } = await supabase
+      .from("custom_orders")
+      .update(updatePayload)
+      .eq("id", selectedOrder.id);
+
+    if (updateError) {
+      setSaving(false);
+      toast({ title: "Error", description: updateError.message, variant: "destructive" });
+      return;
+    }
+
+    await supabase.from("custom_order_messages").insert({
+      custom_order_id: selectedOrder.id,
+      sender_role: "admin",
+      message: accept
+        ? `Admin accepted the customer offer of ${selectedOrder.customer_offer_price.toFixed(2)} kr.`
+        : `Admin declined the customer offer of ${selectedOrder.customer_offer_price.toFixed(2)} kr.`,
+      message_type: "status_update",
+      proposed_price: accept ? selectedOrder.customer_offer_price : null,
+    });
+
+    setSaving(false);
+    toast({ title: accept ? "Customer offer accepted" : "Customer offer declined" });
+    await fetchOrders();
+    await fetchMessages(selectedOrder.id);
   };
 
   const generateSlug = (name: string) =>
@@ -157,7 +351,6 @@ const AdminCustomOrders = () => {
 
   const handleConvertToProduct = async () => {
     if (!selectedOrder) return;
-
     setSaving(true);
 
     const { error } = await supabase.from("products").insert({
@@ -298,7 +491,7 @@ const AdminCustomOrders = () => {
       </Card>
 
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
+        <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-6xl">
           <DialogHeader>
             <DialogTitle className="font-display uppercase">Custom Print Request Details</DialogTitle>
           </DialogHeader>
@@ -308,6 +501,9 @@ const AdminCustomOrders = () => {
               <TabsList>
                 <TabsTrigger value="details">Details</TabsTrigger>
                 <TabsTrigger value="model">3D Model</TabsTrigger>
+                <TabsTrigger value="conversation">
+                  <MessageSquare className="mr-1 h-3.5 w-3.5" /> Conversation
+                </TabsTrigger>
                 <TabsTrigger value="pricing">
                   <Calculator className="mr-1 h-3.5 w-3.5" /> Pricing
                 </TabsTrigger>
@@ -385,49 +581,191 @@ const AdminCustomOrders = () => {
                   </pre>
                 </div>
 
-                <div className="space-y-4 rounded-md border border-border bg-muted/50 p-4">
-                  <div>
-                    <Label>Status</Label>
-                    <Select value={statusUpdate} onValueChange={setStatusUpdate}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STATUSES.map((s) => (
-                          <SelectItem key={s.value} value={s.value}>
-                            {s.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div className="space-y-4 rounded-md border border-border bg-muted/50 p-4">
+                    <div>
+                      <Label>Status</Label>
+                      <Select value={statusUpdate} onValueChange={setStatusUpdate}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STATUSES.map((s) => (
+                            <SelectItem key={s.value} value={s.value}>
+                              {s.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Payment Status</Label>
+                      <Select
+                        value={paymentStatusUpdate}
+                        onValueChange={(v) => setPaymentStatusUpdate(v as CustomOrder["payment_status"])}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PAYMENT_STATUSES.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {s.replaceAll("_", " ")}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Production Status</Label>
+                      <Select
+                        value={productionStatusUpdate}
+                        onValueChange={(v) => setProductionStatusUpdate(v as CustomOrder["production_status"])}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PRODUCTION_STATUSES.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {s.replaceAll("_", " ")}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Admin Notes</Label>
+                      <Textarea
+                        value={adminNotes}
+                        onChange={(e) => setAdminNotes(e.target.value)}
+                        placeholder="Internal notes, pricing details, production notes..."
+                        rows={4}
+                      />
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="flex-1 font-display uppercase tracking-wider"
+                      >
+                        {saving ? "Saving..." : "Update Request"}
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        onClick={handleDownloadModel}
+                        className="font-display uppercase tracking-wider"
+                      >
+                        <Download className="mr-1 h-4 w-4" /> Download File
+                      </Button>
+                    </div>
                   </div>
 
-                  <div>
-                    <Label>Admin Notes</Label>
-                    <Textarea
-                      value={adminNotes}
-                      onChange={(e) => setAdminNotes(e.target.value)}
-                      placeholder="Internal notes, pricing details, production notes..."
-                      rows={4}
-                    />
-                  </div>
+                  <div className="space-y-4 rounded-md border border-border bg-muted/50 p-4">
+                    <div>
+                      <Label>Current Pricing State</Label>
+                      <div className="mt-2 space-y-2 text-sm">
+                        <p>
+                          <span className="text-muted-foreground">Quoted Price:</span>{" "}
+                          {selectedOrder.quoted_price !== null
+                            ? `${Number(selectedOrder.quoted_price).toFixed(2)} kr`
+                            : "-"}
+                        </p>
+                        <p>
+                          <span className="text-muted-foreground">Customer Offer:</span>{" "}
+                          {selectedOrder.customer_offer_price !== null
+                            ? `${Number(selectedOrder.customer_offer_price).toFixed(2)} kr`
+                            : "-"}
+                        </p>
+                        <p>
+                          <span className="text-muted-foreground">Final Agreed:</span>{" "}
+                          {selectedOrder.final_agreed_price !== null
+                            ? `${Number(selectedOrder.final_agreed_price).toFixed(2)} kr`
+                            : "-"}
+                        </p>
+                        <p>
+                          <span className="text-muted-foreground">Customer Response:</span>{" "}
+                          {selectedOrder.customer_response_status.replaceAll("_", " ")}
+                        </p>
+                      </div>
+                    </div>
 
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handleSave}
-                      disabled={saving}
-                      className="flex-1 font-display uppercase tracking-wider"
-                    >
-                      {saving ? "Saving..." : "Update Request"}
-                    </Button>
+                    <div>
+                      <Label>Send / Update Quote</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Quoted amount in DKK"
+                        value={quoteAmount}
+                        onChange={(e) => setQuoteAmount(e.target.value)}
+                      />
+                    </div>
 
-                    <Button
-                      variant="outline"
-                      onClick={handleDownloadModel}
-                      className="font-display uppercase tracking-wider"
-                    >
-                      <Download className="mr-1 h-4 w-4" /> Download File
-                    </Button>
+                    <div>
+                      <Label>Quote / Pricing Message</Label>
+                      <Textarea
+                        value={threadMessage}
+                        onChange={(e) => setThreadMessage(e.target.value)}
+                        placeholder="Explain the quote, production considerations, timeline, or conditions..."
+                        rows={4}
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        onClick={sendQuote}
+                        disabled={saving || !quoteAmount}
+                        className="font-display uppercase tracking-wider"
+                      >
+                        <DollarSign className="mr-1 h-4 w-4" />
+                        Send Quote
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        onClick={sendAdminMessage}
+                        disabled={saving || !threadMessage.trim()}
+                        className="font-display uppercase tracking-wider"
+                      >
+                        <Send className="mr-1 h-4 w-4" />
+                        Send Note
+                      </Button>
+                    </div>
+
+                    {selectedOrder.customer_response_status === "countered" &&
+                      selectedOrder.customer_offer_price !== null && (
+                        <div className="rounded-md border border-primary/20 bg-primary/5 p-3">
+                          <p className="mb-2 text-sm text-foreground">
+                            Customer counter-offered <strong>{selectedOrder.customer_offer_price.toFixed(2)} kr</strong>
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => respondToCustomerOffer(true)}
+                              disabled={saving}
+                              className="font-display uppercase tracking-wider"
+                            >
+                              <CheckCircle2 className="mr-1 h-4 w-4" />
+                              Accept Offer
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => respondToCustomerOffer(false)}
+                              disabled={saving}
+                              className="font-display uppercase tracking-wider"
+                            >
+                              <XCircle className="mr-1 h-4 w-4" />
+                              Decline Offer
+                            </Button>
+                          </div>
+                        </div>
+                      )}
 
                     <Button
                       variant="secondary"
@@ -435,7 +773,7 @@ const AdminCustomOrders = () => {
                         setConvertForm({
                           name: `Custom - ${selectedOrder.name}`,
                           slug: generateSlug(`custom-${selectedOrder.name}-${Date.now()}`),
-                          price: calculatedPrice || 0,
+                          price: calculatedPrice || selectedOrder.final_agreed_price || selectedOrder.quoted_price || 0,
                           stock: 1,
                         });
                         setConvertOpen(true);
@@ -467,6 +805,67 @@ const AdminCustomOrders = () => {
                   fileName={selectedOrder.model_filename}
                   className="aspect-video"
                 />
+              </TabsContent>
+
+              <TabsContent value="conversation" className="space-y-4">
+                <div className="space-y-3 rounded-md border border-border bg-muted/20 p-3">
+                  {messages.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No conversation yet.</p>
+                  ) : (
+                    messages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={`rounded-md border p-3 text-sm ${
+                          msg.sender_role === "admin"
+                            ? "border-blue-500/20 bg-blue-500/5"
+                            : msg.sender_role === "user"
+                              ? "border-primary/20 bg-primary/5"
+                              : "border-border bg-card"
+                        }`}
+                      >
+                        <div className="mb-1 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-[10px] uppercase">
+                              {msg.sender_role}
+                            </Badge>
+                            <Badge variant="outline" className="text-[10px] uppercase">
+                              {msg.message_type.replaceAll("_", " ")}
+                            </Badge>
+                            {msg.proposed_price !== null && (
+                              <Badge variant="outline" className="text-[10px] uppercase border-primary text-primary">
+                                {Number(msg.proposed_price).toFixed(2)} kr
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(msg.created_at).toLocaleString()}
+                          </span>
+                        </div>
+                        <p className="whitespace-pre-wrap text-foreground">{msg.message || "-"}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="rounded-md border border-border bg-muted/40 p-4">
+                  <Label>Quick Admin Reply</Label>
+                  <Textarea
+                    value={threadMessage}
+                    onChange={(e) => setThreadMessage(e.target.value)}
+                    rows={4}
+                    placeholder="Reply to customer..."
+                  />
+                  <div className="mt-3 flex gap-2">
+                    <Button
+                      onClick={sendAdminMessage}
+                      disabled={saving || !threadMessage.trim()}
+                      className="font-display uppercase tracking-wider"
+                    >
+                      <Send className="mr-1 h-4 w-4" />
+                      Send Reply
+                    </Button>
+                  </div>
+                </div>
               </TabsContent>
 
               <TabsContent value="pricing">

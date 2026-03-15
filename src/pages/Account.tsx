@@ -65,7 +65,12 @@ const Account = () => {
   useEffect(() => {
     if (!user) return;
     supabase.rpc("get_user_points_balance", { _user_id: user.id }).then(({ data }) => setPointsBalance(data ?? 0));
-    supabase.from("orders").select("id, status, total, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).then(({ data }) => setOrders((data as Order[]) ?? []));
+   supabase
+  .from("orders")
+  .select("id, status, total, created_at, tool_type")
+  .eq("user_id", user.id)
+  .order("created_at", { ascending: false })
+  .then(({ data }) => setOrders((data as Order[]) ?? []));
     supabase.from("vouchers").select("*").eq("is_active", true).then(({ data }) => setVouchers((data as Voucher[]) ?? []));
     supabase.from("user_vouchers").select("id, code, is_used, balance, redeemed_at, recipient_email, vouchers(name, discount_value, discount_type)").eq("user_id", user.id).order("redeemed_at", { ascending: false }).then(({ data }) => setUserVouchers((data as any[]) ?? []));
   }, [user]);

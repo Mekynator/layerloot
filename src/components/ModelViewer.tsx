@@ -1,11 +1,11 @@
 import { Suspense, useRef, useState, useEffect, useMemo } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, Center, Environment } from "@react-three/drei";
+import { Center, Environment, Html, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
 import { ThreeMFLoader } from "three/examples/jsm/loaders/3MFLoader.js";
-import { Maximize2, RotateCcw } from "lucide-react";
+import { Maximize2, RotateCcw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
@@ -49,14 +49,25 @@ function normalizeObject(obj: THREE.Object3D, targetSize = 3) {
   obj.position.sub(center);
 }
 
-function SceneSetup() {
+function SceneSetup({ isFullscreen = false }: { isFullscreen?: boolean }) {
   const { camera } = useThree();
 
   useEffect(() => {
-    camera.position.set(3, 2, 5);
-  }, [camera]);
+    camera.position.set(isFullscreen ? 3.4 : 3, isFullscreen ? 2.2 : 2, isFullscreen ? 5.4 : 5);
+  }, [camera, isFullscreen]);
 
   return null;
+}
+
+function LoadingFallback() {
+  return (
+    <Html center>
+      <div className="flex items-center gap-2 rounded-md border border-border bg-background/90 px-3 py-2 text-xs text-muted-foreground shadow-sm backdrop-blur-sm">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Loading 3D preview...
+      </div>
+    </Html>
+  );
 }
 
 function ModelMesh({
@@ -75,8 +86,8 @@ function ModelMesh({
     () =>
       new THREE.MeshStandardMaterial({
         color: new THREE.Color(selectedColor),
-        metalness: 0.22,
-        roughness: 0.58,
+        metalness: 0.18,
+        roughness: 0.62,
       }),
     [selectedColor],
   );
@@ -197,16 +208,18 @@ const ViewerCanvas = ({
   url,
   autoRotate,
   selectedColor,
+  isFullscreen = false,
 }: {
   url: string;
   autoRotate: boolean;
   selectedColor?: string;
+  isFullscreen?: boolean;
 }) => {
   return (
     <Canvas
       className="touch-none"
       shadows={false}
-      dpr={[1, 1.5]}
+      dpr={isFullscreen ? [1, 1.5] : [1, 1.25]}
       frameloop={autoRotate ? "always" : "demand"}
       camera={{ fov: 45, near: 0.1, far: 100 }}
       gl={{
@@ -215,21 +228,27 @@ const ViewerCanvas = ({
         powerPreference: "high-performance",
       }}
     >
-      <SceneSetup />
-      <ambientLight intensity={0.82} />
-      <directionalLight position={[5, 5, 5]} intensity={1.05} />
-      <directionalLight position={[-3, 3, -3]} intensity={0.3} />
+      <SceneSetup isFullscreen={isFullscreen} />
 
-      <Suspense fallback={null}>
+      <ambientLight intensity={isFullscreen ? 0.9 : 0.82} />
+      <directionalLight position={[5, 5, 5]} intensity={isFullscreen ? 1.12 : 1.02} />
+      <directionalLight position={[-3, 3, -3]} intensity={isFullscreen ? 0.35 : 0.22} />
+
+      <Suspense fallback={<LoadingFallback />}>
         <ModelMesh
           url={url}
           autoRotate={autoRotate}
           selectedColor={selectedColor}
         />
-        <Environment preset="studio" />
+        {isFullscreen && <Environment preset="studio" />}
       </Suspense>
 
-      <OrbitControls enablePan enableZoom enableRotate dampingFactor={0.1} />
+      <OrbitControls
+        enablePan={false}
+        enableZoom
+        enableRotate
+        dampingFactor={0.1}
+      />
     </Canvas>
   );
 };
@@ -245,18 +264,35 @@ const ModelViewer = ({
 
   return (
     <>
-      <div className={`relative overflow-hidden rounded-xl border border-border bg-muted ${className}`}>
+      <div
+        className={`relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-muted to-background ${className}`}
+      >
         <ViewerCanvas
           url={url}
           autoRotate={autoRotate}
           selectedColor={selectedColor}
+          isFullscreen={false}
         />
 
-        <div className="absolute bottom-2 right-2 flex gap-1">
+        {showFullscreen && (
+          <div className="absolute right-2 top-2">
+            <Button
+              variant="secondary"
+              size="icon"
+              className="h-8 w-8 shadow-sm"
+              onClick={() => setFullscreen(true)}
+              title="Fullscreen"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
+        <div className="absolute bottom-2 right-2">
           <Button
             variant="secondary"
             size="icon"
-            className="h-8 w-8"
+            className="h-8 w-8 shadow-sm"
             onClick={() => setAutoRotate((v) => !v)}
             title={autoRotate ? "Stop rotation" : "Auto-rotate"}
           >
@@ -265,18 +301,6 @@ const ModelViewer = ({
               style={autoRotate ? { animationDuration: "3s" } : {}}
             />
           </Button>
-
-          {showFullscreen && (
-            <Button
-              variant="secondary"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setFullscreen(true)}
-              title="Fullscreen"
-            >
-              <Maximize2 className="h-4 w-4" />
-            </Button>
-          )}
         </div>
 
         <div className="absolute left-2 top-2 rounded bg-background/80 px-2 py-1 text-xs font-display uppercase text-muted-foreground backdrop-blur-sm">
@@ -287,11 +311,12 @@ const ModelViewer = ({
       {showFullscreen && (
         <Dialog open={fullscreen} onOpenChange={setFullscreen}>
           <DialogContent className="h-[85vh] max-w-[90vw] p-0">
-            <div className="h-full w-full">
+            <div className="h-full w-full bg-gradient-to-br from-muted to-background">
               <ViewerCanvas
                 url={url}
                 autoRotate={autoRotate}
                 selectedColor={selectedColor}
+                isFullscreen
               />
             </div>
           </DialogContent>

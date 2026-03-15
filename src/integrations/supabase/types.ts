@@ -100,16 +100,63 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_order_messages: {
+        Row: {
+          created_at: string
+          custom_order_id: string
+          id: string
+          message: string | null
+          message_type: string
+          proposed_price: number | null
+          sender_role: string
+          sender_user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          custom_order_id: string
+          id?: string
+          message?: string | null
+          message_type?: string
+          proposed_price?: number | null
+          sender_role?: string
+          sender_user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          custom_order_id?: string
+          id?: string
+          message?: string | null
+          message_type?: string
+          proposed_price?: number | null
+          sender_role?: string
+          sender_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_order_messages_custom_order_id_fkey"
+            columns: ["custom_order_id"]
+            isOneToOne: false
+            referencedRelation: "custom_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custom_orders: {
         Row: {
           admin_notes: string | null
           created_at: string
+          customer_offer_price: number | null
+          customer_response_status: string
           description: string
           email: string
+          final_agreed_price: number | null
           id: string
           model_filename: string
           model_url: string
           name: string
+          payment_status: string
+          production_status: string
+          quoted_price: number | null
           status: string
           updated_at: string
           user_id: string
@@ -117,12 +164,18 @@ export type Database = {
         Insert: {
           admin_notes?: string | null
           created_at?: string
+          customer_offer_price?: number | null
+          customer_response_status?: string
           description: string
           email: string
+          final_agreed_price?: number | null
           id?: string
           model_filename: string
           model_url: string
           name: string
+          payment_status?: string
+          production_status?: string
+          quoted_price?: number | null
           status?: string
           updated_at?: string
           user_id: string
@@ -130,12 +183,18 @@ export type Database = {
         Update: {
           admin_notes?: string | null
           created_at?: string
+          customer_offer_price?: number | null
+          customer_response_status?: string
           description?: string
           email?: string
+          final_agreed_price?: number | null
           id?: string
           model_filename?: string
           model_url?: string
           name?: string
+          payment_status?: string
+          production_status?: string
+          quoted_price?: number | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -325,6 +384,7 @@ export type Database = {
           shipping_cost: number
           status: string
           subtotal: number
+          tool_type: string | null
           total: number
           tracking_number: string | null
           tracking_url: string | null
@@ -339,6 +399,7 @@ export type Database = {
           shipping_cost?: number
           status?: string
           subtotal?: number
+          tool_type?: string | null
           total?: number
           tracking_number?: string | null
           tracking_url?: string | null
@@ -353,6 +414,7 @@ export type Database = {
           shipping_cost?: number
           status?: string
           subtotal?: number
+          tool_type?: string | null
           total?: number
           tracking_number?: string | null
           tracking_url?: string | null

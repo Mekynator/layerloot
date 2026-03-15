@@ -379,7 +379,7 @@ const Account = () => {
 
   const customStatusBadge = (status: string) => (
     <Badge variant="outline" className={`font-display text-xs uppercase ${customStatusBadgeColors[status] || ""}`}>
-      {status.replaceAll("_", " ")}
+      {status.replace(/_/g, " ")}
     </Badge>
   );
 

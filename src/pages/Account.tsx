@@ -639,7 +639,7 @@ const Account = () => {
                                     </p>
                                     <p>
                                       <span className="text-muted-foreground">Your Response:</span>{" "}
-                                      {order.customer_response_status.replaceAll("_", " ")}
+                                      {order.customer_response_status.replace(/_/g, " ")}
                                     </p>
                                   </div>
                                 </div>

@@ -1,6 +1,6 @@
 import { Suspense, useRef, useState, useEffect, useMemo } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Center, Environment, Html, OrbitControls } from "@react-three/drei";
+import { ArcballControls, Center, Environment, GizmoHelper, GizmoViewport, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
@@ -57,7 +57,8 @@ function SceneSetup({ isFullscreen = false }: { isFullscreen?: boolean }) {
   const { camera } = useThree();
 
   useEffect(() => {
-    camera.position.set(isFullscreen ? 3.4 : 3, isFullscreen ? 2.2 : 2, isFullscreen ? 5.4 : 5);
+    camera.position.set(isFullscreen ? 3.6 : 3.2, isFullscreen ? 2.4 : 2.1, isFullscreen ? 5.8 : 5.2);
+    camera.lookAt(0, 0, 0);
   }, [camera, isFullscreen]);
 
   return null;
@@ -164,7 +165,7 @@ function ModelMesh({
       mounted = false;
       if (currentObject) disposeObject(currentObject);
     };
-  }, [url, sharedMaterial]);
+  }, [url, fileName, sharedMaterial]);
 
   useEffect(() => {
     if (!object) return;
@@ -229,7 +230,7 @@ const ViewerCanvas = ({
       className="touch-none"
       shadows={false}
       dpr={isFullscreen ? [1, 1.5] : [1, 1.25]}
-      frameloop={autoRotate ? "always" : "demand"}
+      frameloop="always"
       camera={{ fov: 45, near: 0.1, far: 100 }}
       gl={{
         antialias: true,
@@ -239,16 +240,20 @@ const ViewerCanvas = ({
     >
       <SceneSetup isFullscreen={isFullscreen} />
 
-      <ambientLight intensity={isFullscreen ? 0.9 : 0.82} />
-      <directionalLight position={[5, 5, 5]} intensity={isFullscreen ? 1.12 : 1.02} />
-      <directionalLight position={[-3, 3, -3]} intensity={isFullscreen ? 0.35 : 0.22} />
+      <ambientLight intensity={isFullscreen ? 0.92 : 0.84} />
+      <directionalLight position={[5, 5, 5]} intensity={isFullscreen ? 1.15 : 1.04} />
+      <directionalLight position={[-3, 3, -3]} intensity={isFullscreen ? 0.38 : 0.24} />
 
       <Suspense fallback={<LoadingFallback />}>
         <ModelMesh url={url} autoRotate={autoRotate} selectedColor={selectedColor} fileName={fileName} />
         {isFullscreen && <Environment preset="studio" />}
       </Suspense>
 
-      <OrbitControls enablePan={false} enableZoom enableRotate dampingFactor={0.1} />
+      <ArcballControls enabled enablePan enableZoom enableRotate dampingFactor={0.08} adjustNearFar />
+
+      <GizmoHelper alignment="bottom-left" margin={[80, 80]}>
+        <GizmoViewport axisColors={["#ef4444", "#22c55e", "#3b82f6"]} labelColor="#ffffff" />
+      </GizmoHelper>
     </Canvas>
   );
 };

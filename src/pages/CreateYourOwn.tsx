@@ -331,6 +331,13 @@ const CustomPrintOrder = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
   const selectedColorHex = COLORS.find((c) => c.value === form.color)?.hex || "#f5f5f5";
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

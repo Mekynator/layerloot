@@ -124,7 +124,7 @@ const ReviewSection = ({ toolType, title }: { toolType: "custom-print" | "lithop
           {reviews.map((review) => (
             <div key={review.id} className="rounded-xl border border-border bg-card p-4">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <p className="font-medium text-foreground">{review.reviewer_name || "Verified Customer"}</p>
+                <p className="font-medium text-foreground">{review.title || "Verified Customer"}</p>
                 <div className="flex gap-1">
                   {Array.from({ length: review.rating }).map((_, i) => (
                     <Star key={i} className="h-4 w-4 fill-primary text-primary" />

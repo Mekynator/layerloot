@@ -300,7 +300,7 @@ const AdminOrders = () => {
                         <SelectContent>
                           {customProductionStatuses.map((s) => (
                             <SelectItem key={s} value={s} className="capitalize">
-                              {s.replaceAll("_", " ")}
+                              {s.replace(/_/g, " ")}
                             </SelectItem>
                           ))}
                         </SelectContent>

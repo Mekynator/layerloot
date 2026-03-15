@@ -422,7 +422,7 @@ const AdminOrders = () => {
                       <SelectContent>
                         {["unpaid", "awaiting_payment", "paid", "refunded", "cancelled"].map((s) => (
                           <SelectItem key={s} value={s}>
-                            {s.replaceAll("_", " ")}
+                            {s.replace(/_/g, " ")}
                           </SelectItem>
                         ))}
                       </SelectContent>

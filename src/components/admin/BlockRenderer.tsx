@@ -108,7 +108,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
           <div className="container flex items-center justify-center gap-2 text-primary-foreground">
             <Truck className="h-5 w-5" />
             <span className="font-display text-sm uppercase tracking-widest">
-              {c.text || "Free shipping on orders over 75 kr"}
+              {c.text || "Free shipping on orders over 500 kr"}
             </span>
           </div>
         </section>

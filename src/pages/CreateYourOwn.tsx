@@ -118,9 +118,7 @@ const ReviewSection = ({ toolType, title }: { toolType: "custom-print" | "lithop
           Loading reviews...
         </div>
       ) : reviews.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
-          No approved reviews yet.
-        </div>
+        <div className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">No reviews yet.</div>
       ) : (
         <div className="grid gap-4 md:grid-cols-3">
           {reviews.map((review) => (

@@ -9,7 +9,7 @@ export default function CartPage() {
   return <CartPageUpgrade />;
 }
 
-const FREE_SHIPPING_THRESHOLD = 75;
+const FREE_SHIPPING_THRESHOLD = 500;
 
 const Cart = () => {
   const { items, removeItem, updateQuantity, totalPrice } = useCart();

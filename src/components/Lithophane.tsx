@@ -108,10 +108,10 @@ async function processImage(
     gamma: number;
     blur: number;
     invert: boolean;
-  }
+  },
 ): Promise<ProcessedResult> {
   const img = await loadImage(sourceDataUrl);
-  const size = 520;
+  const size = 720;
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
 
@@ -219,15 +219,7 @@ async function processImage(
   };
 }
 
-function Section({
-  title,
-  icon,
-  children,
-}: {
-  title: string;
-  icon?: React.ReactNode;
-  children: React.ReactNode;
-}) {
+function Section({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-sm backdrop-blur">
       <div className="mb-3 flex items-center gap-2">
@@ -333,12 +325,12 @@ export default function Lithophane({
 
   const estimatedPrice = useMemo(
     () => estimatePrice(widthMm, heightMm, maxThicknessMm, borderMm),
-    [widthMm, heightMm, maxThicknessMm, borderMm]
+    [widthMm, heightMm, maxThicknessMm, borderMm],
   );
 
   const estimatedPrintHours = useMemo(
     () => estimatePrintHours(widthMm, heightMm, maxThicknessMm),
-    [widthMm, heightMm, maxThicknessMm]
+    [widthMm, heightMm, maxThicknessMm],
   );
 
   const processCurrentImage = useCallback(async () => {
@@ -533,203 +525,204 @@ export default function Lithophane({
       estimatedPrintHours,
       qualityLabel,
       qualityMessage,
-    ]
+    ],
   );
 
-  const previewImage = activeTab === "original" ? sourceDataUrl : activeTab === "heightmap" ? heightmapDataUrl : processedDataUrl;
+  const previewImage =
+    activeTab === "original" ? sourceDataUrl : activeTab === "heightmap" ? heightmapDataUrl : processedDataUrl;
 
   return (
-    <div className={["grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]", className].filter(Boolean).join(" ")}>
-      <div className="space-y-4">
-        <Section title="Upload image" icon={<Upload className="h-4 w-4 text-amber-300" />}>
-          <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-slate-950/40 px-4 py-8 text-center hover:bg-white/5">
-            <ImageIcon className="mb-3 h-8 w-8 text-slate-300" />
-            <div className="text-sm font-medium text-white">Drop photo here or click to upload</div>
-            <div className="mt-1 text-xs text-slate-400">PNG, JPG, WEBP</div>
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              className="hidden"
-              onChange={(e) => void handleFileChange(e.target.files?.[0])}
-            />
-          </label>
-
-          <div className="mt-3 text-xs text-slate-400">
-            {sourceFileName ? `Loaded: ${sourceFileName}` : "No image loaded yet."}
+    <div className={["space-y-5", className].filter(Boolean).join(" ")}>
+      <div className="rounded-3xl border border-white/10 bg-[#0b1020] p-4 md:p-5 shadow-2xl">
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-white">Lithophane Preview</h2>
+            <p className="text-sm text-slate-400">Full-width live preview with image, heightmap, and scene mode.</p>
           </div>
-        </Section>
-
-        <Section title="Image tuning" icon={<SlidersHorizontal className="h-4 w-4 text-amber-300" />}>
-          <div className="space-y-3">
-            <Range label="Brightness" value={brightness} min={-80} max={80} onChange={setBrightness} />
-            <Range label="Contrast" value={contrast} min={-120} max={120} onChange={setContrast} />
-            <Range label="Gamma" value={gamma} min={0.4} max={2.5} step={0.1} onChange={setGamma} />
-            <Range label="Blur cleanup" value={blur} min={0} max={4} step={0.2} onChange={setBlur} />
+          <div className="flex flex-wrap gap-2">
+            {(["original", "processed", "heightmap", "scene"] as LithophanePreviewTab[]).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={[
+                  "rounded-full px-3 py-1.5 text-xs capitalize transition",
+                  activeTab === tab
+                    ? "bg-amber-400/15 text-amber-200 ring-1 ring-amber-400/40"
+                    : "bg-white/5 text-slate-300 hover:bg-white/10",
+                ].join(" ")}
+              >
+                {tab}
+              </button>
+            ))}
           </div>
+        </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            <ToggleChip active={invert} onClick={() => setInvert((v) => !v)}>
-              Invert tones
-            </ToggleChip>
-            <ToggleChip active={orientation === "portrait"} onClick={() => setOrientation("portrait")}>
-              Portrait
-            </ToggleChip>
-            <ToggleChip active={orientation === "landscape"} onClick={() => setOrientation("landscape")}>
-              Landscape
-            </ToggleChip>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleReset}
-            className="mt-4 inline-flex items-center gap-2 text-sm text-slate-300 hover:text-white"
-          >
-            <RotateCcw className="h-4 w-4" />
-            Reset controls
-          </button>
-        </Section>
-
-        <Section title="Product setup" icon={<PackageCheck className="h-4 w-4 text-amber-300" />}>
-          <div className="grid grid-cols-3 gap-2">
-            <ToggleChip active={shape === "flat"} onClick={() => setShape("flat")}>
-              Flat
-            </ToggleChip>
-            <ToggleChip active={shape === "arched"} onClick={() => setShape("arched")}>
-              Arched
-            </ToggleChip>
-            <ToggleChip active={shape === "frame"} onClick={() => setShape("frame")}>
-              Framed
-            </ToggleChip>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            <Range label="Width (mm)" value={widthMm} min={60} max={240} onChange={setWidthMm} />
-            <Range label="Height (mm)" value={heightMm} min={80} max={300} onChange={setHeightMm} />
-            <Range
-              label="Min thickness (mm)"
-              value={minThicknessMm}
-              min={0.4}
-              max={2}
-              step={0.1}
-              onChange={setMinThicknessMm}
-            />
-            <Range
-              label="Max thickness (mm)"
-              value={maxThicknessMm}
-              min={1.8}
-              max={5}
-              step={0.1}
-              onChange={setMaxThicknessMm}
-            />
-            <Range label="Border (mm)" value={borderMm} min={0} max={10} step={0.5} onChange={setBorderMm} />
-          </div>
-        </Section>
-      </div>
-
-      <div className="space-y-4">
-        <div className="rounded-3xl border border-white/10 bg-[#0b1020] p-4 shadow-2xl">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h2 className="text-lg font-semibold text-white">Lithophane Preview</h2>
-              <p className="text-sm text-slate-400">Fast preview now, full custom-order payload on submit.</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {(["original", "processed", "heightmap", "scene"] as LithophanePreviewTab[]).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setActiveTab(tab)}
-                  className={[
-                    "rounded-full px-3 py-1.5 text-xs capitalize transition",
-                    activeTab === tab
-                      ? "bg-amber-400/15 text-amber-200 ring-1 ring-amber-400/40"
-                      : "bg-white/5 text-slate-300 hover:bg-white/10",
-                  ].join(" ")}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-950 to-slate-900">
-            <div className="aspect-[16/9] w-full">
-              {activeTab !== "scene" && previewImage ? (
-                <img src={previewImage} alt="Lithophane preview" className="h-full w-full object-contain" />
-              ) : activeTab === "scene" ? (
-                <div
-                  className="relative flex h-full w-full items-center justify-center overflow-hidden"
-                  style={{
-                    background:
-                      lightTone === "warm"
-                        ? "radial-gradient(circle at center, rgba(255,200,120,0.15), rgba(12,18,32,1) 55%)"
-                        : lightTone === "cool"
+        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-950 to-slate-900">
+          <div className="aspect-[16/8] min-h-[340px] w-full md:min-h-[420px] xl:min-h-[500px]">
+            {activeTab !== "scene" && previewImage ? (
+              <img src={previewImage} alt="Lithophane preview" className="h-full w-full object-contain" />
+            ) : activeTab === "scene" ? (
+              <div
+                className="relative flex h-full w-full items-center justify-center overflow-hidden"
+                style={{
+                  background:
+                    lightTone === "warm"
+                      ? "radial-gradient(circle at center, rgba(255,200,120,0.15), rgba(12,18,32,1) 55%)"
+                      : lightTone === "cool"
                         ? "radial-gradient(circle at center, rgba(120,200,255,0.14), rgba(12,18,32,1) 55%)"
                         : "radial-gradient(circle at center, rgba(220,220,220,0.12), rgba(12,18,32,1) 55%)",
-                  }}
-                >
-                  <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:28px_28px] opacity-30" />
-                  <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/45 to-transparent" />
-                  <div className="relative flex items-end justify-center">
-                    <div
-                      className="absolute top-1/2 h-36 w-36 -translate-y-1/2 rounded-full blur-3xl"
-                      style={{
-                        background:
-                          lightEnabled
-                            ? lightTone === "warm"
-                              ? "rgba(255, 196, 110, 0.48)"
-                              : lightTone === "cool"
-                              ? "rgba(142, 214, 255, 0.42)"
-                              : "rgba(255,255,255,0.35)"
-                            : "transparent",
-                      }}
-                    />
-                    <div className="absolute bottom-10 h-3 w-64 rounded-full bg-black/40 blur-md" />
-                    <div className="rounded-[30px] border border-[#5f4632] bg-[#2a1d17] p-3 shadow-2xl">
-                      <div className="rounded-[22px] border border-[#6e584a] bg-[#161616] p-2">
-                        <div className="h-[290px] w-[220px] overflow-hidden rounded-[16px] border border-white/10 bg-black">
-                          {processedDataUrl ? (
-                            <img
-                              src={processedDataUrl}
-                              alt="Framed lithophane scene"
-                              className="h-full w-full object-cover opacity-95"
-                              style={{
-                                filter: lightEnabled
-                                  ? lightTone === "warm"
-                                    ? "sepia(0.25) brightness(1.35)"
-                                    : lightTone === "cool"
+                }}
+              >
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:28px_28px] opacity-30" />
+                <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/45 to-transparent" />
+                <div className="relative flex items-end justify-center">
+                  <div
+                    className="absolute top-1/2 h-40 w-40 -translate-y-1/2 rounded-full blur-3xl"
+                    style={{
+                      background: lightEnabled
+                        ? lightTone === "warm"
+                          ? "rgba(255, 196, 110, 0.48)"
+                          : lightTone === "cool"
+                            ? "rgba(142, 214, 255, 0.42)"
+                            : "rgba(255,255,255,0.35)"
+                        : "transparent",
+                    }}
+                  />
+                  <div className="absolute bottom-10 h-3 w-64 rounded-full bg-black/40 blur-md" />
+                  <div className="rounded-[30px] border border-[#5f4632] bg-[#2a1d17] p-3 shadow-2xl">
+                    <div className="rounded-[22px] border border-[#6e584a] bg-[#161616] p-2">
+                      <div className="h-[320px] w-[240px] md:h-[360px] md:w-[270px] overflow-hidden rounded-[16px] border border-white/10 bg-black">
+                        {processedDataUrl ? (
+                          <img
+                            src={processedDataUrl}
+                            alt="Framed lithophane scene"
+                            className="h-full w-full object-cover opacity-95"
+                            style={{
+                              filter: lightEnabled
+                                ? lightTone === "warm"
+                                  ? "sepia(0.25) brightness(1.35)"
+                                  : lightTone === "cool"
                                     ? "hue-rotate(180deg) brightness(1.22)"
                                     : "brightness(1.2)"
-                                  : "brightness(0.72)",
-                              }}
-                            />
-                          ) : (
-                            <div className="flex h-full items-center justify-center text-sm text-slate-400">
-                              Upload an image to light the frame
-                            </div>
-                          )}
-                        </div>
+                                : "brightness(0.72)",
+                            }}
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-sm text-slate-400">
+                            Upload an image to light the frame
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
                 </div>
-              ) : (
-                <div className="flex h-full items-center justify-center text-sm text-slate-400">
-                  Upload an image to preview the lithophane
-                </div>
-              )}
+              </div>
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-slate-400">
+                Upload an image to preview the lithophane
+              </div>
+            )}
 
-              {isProcessing && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
-                  <div className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-white">
-                    Processing image…
-                  </div>
+            {isProcessing && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+                <div className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-white">
+                  Processing image…
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
+        </div>
+      </div>
 
-          <div className="mt-4 grid gap-3 lg:grid-cols-3">
+      <div className="grid gap-5 xl:grid-cols-2">
+        <div className="space-y-4">
+          <Section title="Upload image" icon={<Upload className="h-4 w-4 text-amber-300" />}>
+            <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-slate-950/40 px-4 py-8 text-center hover:bg-white/5">
+              <ImageIcon className="mb-3 h-8 w-8 text-slate-300" />
+              <div className="text-sm font-medium text-white">Drop photo here or click to upload</div>
+              <div className="mt-1 text-xs text-slate-400">PNG, JPG, WEBP</div>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={(e) => void handleFileChange(e.target.files?.[0])}
+              />
+            </label>
+            <div className="mt-3 text-xs text-slate-400">
+              {sourceFileName ? `Loaded: ${sourceFileName}` : "No image loaded yet."}
+            </div>
+          </Section>
+
+          <Section title="Image tuning" icon={<SlidersHorizontal className="h-4 w-4 text-amber-300" />}>
+            <div className="space-y-3">
+              <Range label="Brightness" value={brightness} min={-80} max={80} onChange={setBrightness} />
+              <Range label="Contrast" value={contrast} min={-120} max={120} onChange={setContrast} />
+              <Range label="Gamma" value={gamma} min={0.4} max={2.5} step={0.1} onChange={setGamma} />
+              <Range label="Blur cleanup" value={blur} min={0} max={4} step={0.2} onChange={setBlur} />
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <ToggleChip active={invert} onClick={() => setInvert((v) => !v)}>
+                Invert tones
+              </ToggleChip>
+              <ToggleChip active={orientation === "portrait"} onClick={() => setOrientation("portrait")}>
+                Portrait
+              </ToggleChip>
+              <ToggleChip active={orientation === "landscape"} onClick={() => setOrientation("landscape")}>
+                Landscape
+              </ToggleChip>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleReset}
+              className="mt-4 inline-flex items-center gap-2 text-sm text-slate-300 hover:text-white"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Reset controls
+            </button>
+          </Section>
+
+          <Section title="Product setup" icon={<PackageCheck className="h-4 w-4 text-amber-300" />}>
+            <div className="grid grid-cols-3 gap-2">
+              <ToggleChip active={shape === "flat"} onClick={() => setShape("flat")}>
+                Flat
+              </ToggleChip>
+              <ToggleChip active={shape === "arched"} onClick={() => setShape("arched")}>
+                Arched
+              </ToggleChip>
+              <ToggleChip active={shape === "frame"} onClick={() => setShape("frame")}>
+                Framed
+              </ToggleChip>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <Range label="Width (mm)" value={widthMm} min={60} max={240} onChange={setWidthMm} />
+              <Range label="Height (mm)" value={heightMm} min={80} max={300} onChange={setHeightMm} />
+              <Range
+                label="Min thickness (mm)"
+                value={minThicknessMm}
+                min={0.4}
+                max={2}
+                step={0.1}
+                onChange={setMinThicknessMm}
+              />
+              <Range
+                label="Max thickness (mm)"
+                value={maxThicknessMm}
+                min={1.8}
+                max={5}
+                step={0.1}
+                onChange={setMaxThicknessMm}
+              />
+              <Range label="Border (mm)" value={borderMm} min={0} max={10} step={0.5} onChange={setBorderMm} />
+            </div>
+          </Section>
+        </div>
+
+        <div className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-3">
             <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-3">
               <div className="mb-1 flex items-center gap-2 text-sm font-medium text-emerald-200">
                 <Wand2 className="h-4 w-4" />
@@ -768,32 +761,34 @@ export default function Lithophane({
               <p className="mt-1 text-[11px] text-slate-400">Preview estimate only. Final admin quote can adjust it.</p>
             </div>
           </div>
-        </div>
 
-        <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
           <Section title="Order summary" icon={<PackageCheck className="h-4 w-4 text-amber-300" />}>
-            <div className="space-y-2 text-sm text-slate-300">
-              <div className="flex justify-between">
+            <div className="grid gap-2 text-sm text-slate-300 sm:grid-cols-2">
+              <div className="flex justify-between gap-3">
                 <span>Type</span>
                 <span className="capitalize text-white">{shape}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between gap-3">
                 <span>Orientation</span>
                 <span className="capitalize text-white">{orientation}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between gap-3">
                 <span>Size</span>
-                <span className="text-white">{widthMm} × {heightMm} mm</span>
+                <span className="text-white">
+                  {widthMm} × {heightMm} mm
+                </span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between gap-3">
                 <span>Thickness</span>
-                <span className="text-white">{minThicknessMm}–{maxThicknessMm} mm</span>
+                <span className="text-white">
+                  {minThicknessMm}–{maxThicknessMm} mm
+                </span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between gap-3">
                 <span>Border</span>
                 <span className="text-white">{borderMm} mm</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between gap-3">
                 <span>Estimated price</span>
                 <span className="font-semibold text-amber-200">{estimatedPrice} DKK</span>
               </div>
@@ -801,31 +796,29 @@ export default function Lithophane({
 
             <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-3 text-xs text-amber-100">
               Save this payload into your custom order record together with the source image, processed preview, and the
-              designJson object. Tiny gremlin-proof and scalable.
+              designJson object.
             </div>
           </Section>
 
-          <div className="space-y-4">
-            <Section title="Customer note" icon={<AlertTriangle className="h-4 w-4 text-amber-300" />}>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Add mounting notes, gift request, frame color, lamp preference..."
-                className="min-h-[160px] w-full rounded-2xl border border-white/10 bg-slate-950/50 p-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-amber-400/40"
-              />
-            </Section>
+          <Section title="Customer note" icon={<AlertTriangle className="h-4 w-4 text-amber-300" />}>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add mounting notes, gift request, frame color, lamp preference..."
+              className="min-h-[160px] w-full rounded-2xl border border-white/10 bg-slate-950/50 p-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-amber-400/40"
+            />
+          </Section>
 
-            <button
-              type="button"
-              onClick={() => void onSubmitDesign?.(submitPayload)}
-              disabled={!sourceDataUrl}
-              className="w-full rounded-2xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
-            >
-              {submitLabel}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => void onSubmitDesign?.(submitPayload)}
+            disabled={!sourceDataUrl}
+            className="w-full rounded-2xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+          >
+            {submitLabel}
+          </button>
         </div>
-      </div>      </div>
+      </div>
     </div>
   );
 }

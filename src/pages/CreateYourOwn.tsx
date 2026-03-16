@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import ModelViewer from "@/components/ModelViewer";
+import Lithophane, { LithophaneSubmitPayload } from "@/components/Lithophane";
 import { motion } from "framer-motion";
 
 const fadeUp = {
@@ -141,375 +142,201 @@ const ReviewSection = ({ toolType, title }: { toolType: "custom-print" | "lithop
 };
 
 /* ── Lithophane Generator ── */
-const LithophaneGenerator = () => {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [mode, setMode] = useState<"daylight" | "backlit">("daylight");
-  const [lightTone, setLightTone] = useState<"warm" | "neutral" | "cool">("warm");
-  const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
-  const [sceneType, setSceneType] = useState<"table" | "wall">("table");
-  const [sceneRotation, setSceneRotation] = useState(0);
-  const [glowStrength, setGlowStrength] = useState(70);
-  const [frameColor, setFrameColor] = useState<"black" | "walnut" | "white">("black");
+const LithophaneOrderSection = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) return;
-    const url = URL.createObjectURL(file);
-    setImageUrl(url);
+  const userName = getUserDisplayName(user);
+  const userEmail = user?.email || "";
+  const [submittingLithophane, setSubmittingLithophane] = useState(false);
+
+  const dataUrlToBlob = (dataUrl: string) => {
+    const [meta, base64] = dataUrl.split(",");
+    const mime = meta.match(/data:(.*?);base64/)?.[1] ?? "application/octet-stream";
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+
+    for (let i = 0; i < binary.length; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+
+    return new Blob([bytes], { type: mime });
   };
 
-  useEffect(() => {
-    return () => {
-      if (imageUrl) URL.revokeObjectURL(imageUrl);
-    };
-  }, [imageUrl]);
+  const handleLithophaneSubmit = async (payload: LithophaneSubmitPayload) => {
+    if (!user) {
+      toast({
+        title: "Please sign in",
+        description: "You need to sign in to submit a lithophane order.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-  const previewAspect = orientation === "portrait" ? "aspect-[3/4]" : "aspect-[4/3]";
+    if (!payload.sourceDataUrl) {
+      toast({
+        title: "Missing image",
+        description: "Please upload a photo before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-  const toneGlow =
-    lightTone === "warm"
-      ? "rgba(255, 198, 120, 0.55)"
-      : lightTone === "cool"
-        ? "rgba(170, 215, 255, 0.50)"
-        : "rgba(255,255,255,0.45)";
+    setSubmittingLithophane(true);
 
-  const toneOverlayClass =
-    lightTone === "warm"
-      ? "from-amber-300/35 via-orange-200/10 to-black/35"
-      : lightTone === "cool"
-        ? "from-sky-200/35 via-blue-100/10 to-black/35"
-        : "from-white/30 via-white/10 to-black/35";
+    try {
+      const timestamp = Date.now();
+      const safeBaseName =
+        payload.sourceFileName?.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9-_]/g, "_") || "lithophane";
 
-  const frameClass =
-    frameColor === "black"
-      ? "border-neutral-900 bg-neutral-800"
-      : frameColor === "walnut"
-        ? "border-[#5f4128] bg-[#7a5434]"
-        : "border-neutral-200 bg-neutral-100";
+      let sourceImageUrl: string | null = null;
+      let processedImageUrl: string | null = null;
+      let previewImageUrl: string | null = null;
 
-  const imageFilterClass =
-    mode === "daylight"
-      ? "grayscale brightness-110 contrast-75 sepia-[0.18]"
-      : "grayscale brightness-[1.45] contrast-[1.45] invert";
+      const sourcePath = `${user.id}/lithophane/${timestamp}-${safeBaseName}-source.png`;
+      const processedPath = `${user.id}/lithophane/${timestamp}-${safeBaseName}-processed.png`;
+      const previewPath = `${user.id}/lithophane/${timestamp}-${safeBaseName}-preview.png`;
 
-  const wallBackgroundStyle: React.CSSProperties = {
-    backgroundColor: "#6b4f3f",
-    backgroundImage: `
-      linear-gradient(rgba(0,0,0,0.08), rgba(0,0,0,0.08)),
-      linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px),
-      linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px)
-    `,
-    backgroundSize: "100% 100%, 56px 28px, 56px 28px",
-    backgroundPosition: "0 0, 0 0, 0 0",
-  };
+      const { error: sourceUploadError } = await supabase.storage
+        .from("custom-order-files")
+        .upload(sourcePath, dataUrlToBlob(payload.sourceDataUrl), {
+          contentType: "image/png",
+          upsert: false,
+        });
 
-  const tableBackgroundStyle: React.CSSProperties = {
-    background: `
-      linear-gradient(to bottom, #d9d2c8 0%, #d9d2c8 62%, #6a4a35 62%, #8a6145 100%)
-    `,
+      if (sourceUploadError) {
+        throw sourceUploadError;
+      }
+
+      sourceImageUrl = supabase.storage.from("custom-order-files").getPublicUrl(sourcePath).data.publicUrl;
+
+      if (payload.processedDataUrl) {
+        const { error: processedUploadError } = await supabase.storage
+          .from("custom-order-files")
+          .upload(processedPath, dataUrlToBlob(payload.processedDataUrl), {
+            contentType: "image/png",
+            upsert: false,
+          });
+
+        if (processedUploadError) {
+          throw processedUploadError;
+        }
+
+        processedImageUrl = supabase.storage.from("custom-order-files").getPublicUrl(processedPath).data.publicUrl;
+      }
+
+      if (payload.previewScreenshotDataUrl) {
+        const { error: previewUploadError } = await supabase.storage
+          .from("custom-order-files")
+          .upload(previewPath, dataUrlToBlob(payload.previewScreenshotDataUrl), {
+            contentType: "image/png",
+            upsert: false,
+          });
+
+        if (previewUploadError) {
+          throw previewUploadError;
+        }
+
+        previewImageUrl = supabase.storage.from("custom-order-files").getPublicUrl(previewPath).data.publicUrl;
+      }
+
+      const fullDescription = [
+        "Lithophane custom order",
+        "",
+        `Shape: ${payload.shape}`,
+        `Orientation: ${payload.orientation}`,
+        `Size: ${payload.widthMm} x ${payload.heightMm} mm`,
+        `Thickness: ${payload.minThicknessMm}-${payload.maxThicknessMm} mm`,
+        `Border: ${payload.borderMm} mm`,
+        `Light enabled: ${payload.lightEnabled ? "Yes" : "No"}`,
+        `Light tone: ${payload.lightTone}`,
+        `Estimated price: ${payload.estimatedPrice} DKK`,
+        `Estimated print time: ${payload.estimatedPrintHours} hrs`,
+        "",
+        "Customer notes:",
+        payload.notes?.trim() || "No extra notes.",
+        "",
+        "--- Lithophane Config JSON ---",
+        JSON.stringify(payload.designJson, null, 2),
+      ].join("\n");
+
+      const { error } = await supabase.from("custom_orders").insert({
+        user_id: user.id,
+        name: userName || "Account User",
+        email: userEmail,
+        description: fullDescription,
+        model_url: sourceImageUrl,
+        model_filename: payload.sourceFileName || "lithophane-image.png",
+        metadata: {
+          order_type: "lithophane",
+          source_image_url: sourceImageUrl,
+          processed_image_url: processedImageUrl,
+          preview_image_url: previewImageUrl,
+          estimated_price: payload.estimatedPrice,
+          estimated_print_hours: payload.estimatedPrintHours,
+          lithophane_config: payload.designJson,
+          lithophane_summary: {
+            shape: payload.shape,
+            orientation: payload.orientation,
+            width_mm: payload.widthMm,
+            height_mm: payload.heightMm,
+            min_thickness_mm: payload.minThicknessMm,
+            max_thickness_mm: payload.maxThicknessMm,
+            border_mm: payload.borderMm,
+            invert: payload.invert,
+            brightness: payload.brightness,
+            contrast: payload.contrast,
+            gamma: payload.gamma,
+            blur: payload.blur,
+            light_enabled: payload.lightEnabled,
+            light_tone: payload.lightTone,
+            notes: payload.notes,
+          },
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Lithophane submitted!",
+        description: "Your lithophane design was added to custom orders successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Submission failed",
+        description: error?.message || "Could not submit lithophane order.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmittingLithophane(false);
+    }
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <Label>Upload a Photo</Label>
-        <div
-          className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-8 transition-colors hover:border-primary"
-          onClick={() => document.getElementById("litho-upload")?.click()}
-        >
-          <Image className="mb-2 h-8 w-8 text-muted-foreground" />
-          <p className="text-sm font-medium text-foreground">{imageUrl ? "Change photo" : "Click to upload"}</p>
-          <p className="text-xs text-muted-foreground">JPG, PNG supported</p>
-        </div>
-        <input id="litho-upload" type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-2">
-        <div>
-          <Label className="mb-2 block">View Mode</Label>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant={mode === "daylight" ? "default" : "outline"}
-              onClick={() => setMode("daylight")}
-              className="font-display text-xs uppercase"
-            >
-              Daylight
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={mode === "backlit" ? "default" : "outline"}
-              onClick={() => setMode("backlit")}
-              className="font-display text-xs uppercase"
-            >
-              Backlit
-            </Button>
-          </div>
-        </div>
-
-        <div>
-          <Label className="mb-2 block">Orientation</Label>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant={orientation === "portrait" ? "default" : "outline"}
-              onClick={() => setOrientation("portrait")}
-              className="font-display text-xs uppercase"
-            >
-              Portrait
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={orientation === "landscape" ? "default" : "outline"}
-              onClick={() => setOrientation("landscape")}
-              className="font-display text-xs uppercase"
-            >
-              Landscape
-            </Button>
-          </div>
-        </div>
-
-        <div>
-          <Label className="mb-2 block">Light Tone</Label>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant={lightTone === "warm" ? "default" : "outline"}
-              onClick={() => setLightTone("warm")}
-              className="font-display text-xs uppercase"
-            >
-              Warm
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={lightTone === "neutral" ? "default" : "outline"}
-              onClick={() => setLightTone("neutral")}
-              className="font-display text-xs uppercase"
-            >
-              Neutral
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={lightTone === "cool" ? "default" : "outline"}
-              onClick={() => setLightTone("cool")}
-              className="font-display text-xs uppercase"
-            >
-              Cool
-            </Button>
-          </div>
-        </div>
-
-        <div>
-          <Label className="mb-2 block">Background Scene</Label>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant={sceneType === "table" ? "default" : "outline"}
-              onClick={() => setSceneType("table")}
-              className="font-display text-xs uppercase"
-            >
-              Table
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={sceneType === "wall" ? "default" : "outline"}
-              onClick={() => setSceneType("wall")}
-              className="font-display text-xs uppercase"
-            >
-              Brick Wall
-            </Button>
-          </div>
-        </div>
-
-        <div>
-          <Label className="mb-2 block">Frame Color</Label>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant={frameColor === "black" ? "default" : "outline"}
-              onClick={() => setFrameColor("black")}
-              className="font-display text-xs uppercase"
-            >
-              Black
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={frameColor === "walnut" ? "default" : "outline"}
-              onClick={() => setFrameColor("walnut")}
-              className="font-display text-xs uppercase"
-            >
-              Walnut
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={frameColor === "white" ? "default" : "outline"}
-              onClick={() => setFrameColor("white")}
-              className="font-display text-xs uppercase"
-            >
-              White
-            </Button>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label>Scene Rotation</Label>
-            <span className="text-xs text-muted-foreground">{sceneRotation}°</span>
-          </div>
-          <Input
-            type="range"
-            min={-90}
-            max={90}
-            step={1}
-            value={sceneRotation}
-            onChange={(e) => setSceneRotation(Number(e.target.value))}
-            className="cursor-pointer"
-          />
-        </div>
-      </div>
-
-      {mode === "backlit" && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label>Backlight Intensity</Label>
-            <span className="text-xs text-muted-foreground">{glowStrength}%</span>
-          </div>
-          <Input
-            type="range"
-            min={20}
-            max={100}
-            step={1}
-            value={glowStrength}
-            onChange={(e) => setGlowStrength(Number(e.target.value))}
-            className="cursor-pointer"
-          />
+      {!user && (
+        <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+          Please{" "}
+          <Link to="/auth" className="text-primary hover:underline">
+            sign in
+          </Link>{" "}
+          to submit a lithophane order.
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        <span className="rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
-          Best with high-contrast photos
-        </span>
-        <span className="rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
-          Framed display preview
-        </span>
-        <span className="rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
-          Interactive lamp and scene angle
-        </span>
-      </div>
-
-      {imageUrl && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-          <div className="rounded-2xl border border-border bg-gradient-to-br from-muted to-background p-4 sm:p-6">
-            <div className="mx-auto w-full max-w-[760px] overflow-hidden rounded-xl" style={{ perspective: "1400px" }}>
-              <div
-                className="relative h-[460px] w-full transition-transform duration-500 ease-out"
-                style={{
-                  transformStyle: "preserve-3d",
-                  transform: `rotateY(${sceneRotation}deg)`,
-                }}
-              >
-                {/* Background scene */}
-                <div
-                  className="absolute inset-0 rounded-xl"
-                  style={sceneType === "wall" ? wallBackgroundStyle : tableBackgroundStyle}
-                />
-
-                {/* Wall/table lighting mood */}
-                <div className="absolute inset-0 rounded-xl bg-black/10" />
-
-                {/* Framed lithophane */}
-                <div
-                  className={`absolute left-1/2 top-1/2 transition-all duration-500 ${
-                    sceneType === "wall" ? "-translate-x-1/2 -translate-y-1/2" : "-translate-x-1/2 -translate-y-[60%]"
-                  }`}
-                  style={{
-                    transformStyle: "preserve-3d",
-                    transform: sceneType === "wall" ? `translateZ(12px)` : `translateZ(12px) rotateX(0deg)`,
-                  }}
-                >
-                  {/* Backlight glow */}
-                  {mode === "backlit" && (
-                    <div
-                      className="absolute left-1/2 top-1/2 -z-10 rounded-full blur-3xl transition-all duration-500"
-                      style={{
-                        width: orientation === "portrait" ? "240px" : "300px",
-                        height: orientation === "portrait" ? "300px" : "230px",
-                        transform: "translate(-50%, -50%)",
-                        background: toneGlow,
-                        opacity: glowStrength / 100,
-                      }}
-                    />
-                  )}
-
-                  {/* Lamp source */}
-                  {mode === "backlit" && (
-                    <div
-                      className={`absolute transition-all duration-500 ${
-                        sceneType === "wall" ? "left-1/2 top-1/2 -z-20" : "left-1/2 top-1/2 -z-20"
-                      }`}
-                      style={{
-                        width: orientation === "portrait" ? "200px" : "260px",
-                        height: orientation === "portrait" ? "260px" : "190px",
-                        transform: "translate(-50%, -50%)",
-                        background: `radial-gradient(circle, ${toneGlow} 0%, transparent 70%)`,
-                        opacity: glowStrength / 100,
-                        filter: "blur(18px)",
-                      }}
-                    />
-                  )}
-
-                  {/* Frame */}
-                  <div className={`relative overflow-hidden rounded-lg border-[12px] shadow-2xl ${frameClass}`}>
-                    <div className={`${previewAspect} w-[250px] sm:w-[320px] overflow-hidden bg-card`}>
-                      <img
-                        src={imageUrl}
-                        alt="Lithophane preview"
-                        className={`h-full w-full object-cover transition-all duration-500 ${imageFilterClass}`}
-                      />
-                      <div
-                        className={`pointer-events-none absolute inset-0 bg-gradient-radial transition-all duration-500 ${
-                          mode === "backlit" ? toneOverlayClass : "from-white/10 via-transparent to-black/10"
-                        }`}
-                        style={{
-                          opacity: mode === "backlit" ? glowStrength / 100 : 0.28,
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Table support shadow */}
-                  {sceneType === "table" && (
-                    <div className="absolute inset-x-[12%] bottom-[-20px] h-6 rounded-full bg-black/25 blur-md" />
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <p className="text-center text-xs text-muted-foreground">
-            Dragging scene angle is simulated as a horizontal showcase preview. Light color and brightness are
-            illustrative and may differ from the real lamp, frame, and print material.
-          </p>
-
-          <Button className="w-full font-display uppercase tracking-wider">
-            Order Lithophane <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </motion.div>
+      {user && (
+        <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+          Ordering as <span className="font-medium text-foreground">{userName || "Account User"}</span>
+          {userEmail ? <> · {userEmail}</> : null}
+        </div>
       )}
+
+      <Lithophane
+        onSubmitDesign={handleLithophaneSubmit}
+        submitLabel={submittingLithophane ? "Submitting..." : "Order Lithophane"}
+      />
 
       <ReviewSection toolType="lithophane" title="Lithophane Reviews" />
     </div>
@@ -629,6 +456,7 @@ const CustomPrintOrder = () => {
       }
     };
   }, [previewUrl]);
+
   const selectedColorHex = COLORS.find((c) => c.value === form.color)?.hex || "#f5f5f5";
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -680,69 +508,66 @@ const CustomPrintOrder = () => {
 
     setSubmitting(true);
 
-    const ext = file.name.split(".").pop();
-    const path = `${user.id}/${Date.now()}.${ext}`;
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${user.id}/${Date.now()}.${ext}`;
 
-    const { error: uploadError } = await supabase.storage.from("custom-order-files").upload(path, file);
+      const { error: uploadError } = await supabase.storage.from("custom-order-files").upload(path, file);
 
-    if (uploadError) {
-      toast({
-        title: "Upload failed",
-        description: uploadError.message,
-        variant: "destructive",
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: urlData } = supabase.storage.from("custom-order-files").getPublicUrl(path);
+
+      const fullDescription = [
+        form.description.trim(),
+        "",
+        "--- Options ---",
+        `Material: ${MATERIALS.find((m) => m.value === form.material)?.label ?? form.material}`,
+        `Color: ${COLORS.find((c) => c.value === form.color)?.label ?? form.color}`,
+        `Quality: ${QUALITIES.find((q) => q.value === form.quality)?.label ?? form.quality}`,
+        `Quantity: ${form.quantity}`,
+        `Scale: ${form.size_scale}%`,
+      ].join("\n");
+
+      const { error } = await supabase.from("custom_orders").insert({
+        user_id: user.id,
+        name: userName || "Account User",
+        email: userEmail,
+        description: fullDescription,
+        model_url: urlData.publicUrl,
+        model_filename: file.name,
       });
-      setSubmitting(false);
-      return;
-    }
 
-    const { data: urlData } = supabase.storage.from("custom-order-files").getPublicUrl(path);
+      if (error) {
+        throw error;
+      }
 
-    const fullDescription = [
-      form.description.trim(),
-      "",
-      "--- Options ---",
-      `Material: ${MATERIALS.find((m) => m.value === form.material)?.label ?? form.material}`,
-      `Color: ${COLORS.find((c) => c.value === form.color)?.label ?? form.color}`,
-      `Quality: ${QUALITIES.find((q) => q.value === form.quality)?.label ?? form.quality}`,
-      `Quantity: ${form.quantity}`,
-      `Scale: ${form.size_scale}%`,
-    ].join("\n");
+      toast({
+        title: "Order submitted!",
+        description: "We'll review your 3D model and get back to you.",
+      });
 
-    const { error } = await supabase.from("custom_orders").insert({
-      user_id: user.id,
-      name: userName || "Account User",
-      email: userEmail,
-      description: fullDescription,
-      model_url: urlData.publicUrl,
-      model_filename: file.name,
-    });
-
-    setSubmitting(false);
-
-    if (error) {
+      setForm({
+        description: "",
+        material: "pla",
+        color: "white",
+        quality: "standard",
+        quantity: 1,
+        size_scale: "100",
+      });
+      setFile(null);
+      setPreviewUrl(null);
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error?.message || "Could not submit custom order.",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setSubmitting(false);
     }
-
-    toast({
-      title: "Order submitted!",
-      description: "We'll review your 3D model and get back to you.",
-    });
-
-    setForm({
-      description: "",
-      material: "pla",
-      color: "white",
-      quality: "standard",
-      quantity: 1,
-      size_scale: "100",
-    });
-    setFile(null);
-    setPreviewUrl(null);
   };
 
   return (
@@ -980,7 +805,7 @@ const CreateYourOwn = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <LithophaneGenerator />
+                <LithophaneOrderSection />
               </CardContent>
             </Card>
           </TabsContent>

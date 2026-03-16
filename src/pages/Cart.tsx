@@ -3,12 +3,17 @@ import { Trash2, Plus, Minus, ShoppingBag, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useCart } from "@/contexts/CartContext";
+import CartPageUpgrade from "@/components/cart/CartPageUpgrade";
+
+export default function CartPage() {
+  return <CartPageUpgrade />;
+}
 
 const FREE_SHIPPING_THRESHOLD = 75;
 
 const Cart = () => {
   const { items, removeItem, updateQuantity, totalPrice } = useCart();
-  const shippingProgress = Math.min(totalPrice / FREE_SHIPPING_THRESHOLD * 100, 100);
+  const shippingProgress = Math.min((totalPrice / FREE_SHIPPING_THRESHOLD) * 100, 100);
   const remaining = FREE_SHIPPING_THRESHOLD - totalPrice;
 
   if (items.length === 0) {
@@ -20,8 +25,8 @@ const Cart = () => {
         <Link to="/products">
           <Button className="font-display uppercase tracking-wider">Browse Products</Button>
         </Link>
-      </div>);
-
+      </div>
+    );
   }
 
   return (
@@ -35,9 +40,9 @@ const Cart = () => {
             <div className="flex items-center gap-2">
               <Truck className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium text-card-foreground">
-                {remaining > 0 ?
-                `Add $${remaining.toFixed(2)} more for free shipping` :
-                "🎉 You qualify for free shipping!"}
+                {remaining > 0
+                  ? `Add $${remaining.toFixed(2)} more for free shipping`
+                  : "🎉 You qualify for free shipping!"}
               </span>
             </div>
           </div>
@@ -46,30 +51,45 @@ const Cart = () => {
 
         {/* Items */}
         <div className="space-y-4">
-          {items.map((item) =>
-          <div key={item.id} className="flex items-center gap-4 rounded-lg border border-border bg-card p-4">
+          {items.map((item) => (
+            <div key={item.id} className="flex items-center gap-4 rounded-lg border border-border bg-card p-4">
               <img src={item.image} alt={item.name} className="h-16 w-16 rounded bg-muted object-cover" />
               <div className="flex-1">
                 <h3 className="font-display text-sm font-semibold uppercase text-card-foreground">{item.name}</h3>
                 <p className="text-sm text-primary font-bold">${item.price.toFixed(2)}</p>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.id, item.quantity - 1)}>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                >
                   <Minus className="h-3 w-3" />
                 </Button>
                 <span className="w-8 text-center font-display text-sm">{item.quantity}</span>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.id, item.quantity + 1)}>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                >
                   <Plus className="h-3 w-3" />
                 </Button>
               </div>
               <span className="w-20 text-right font-display font-bold text-foreground">
                 ${(item.price * item.quantity).toFixed(2)}
               </span>
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => removeItem(item.id)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground hover:text-destructive"
+                onClick={() => removeItem(item.id)}
+              >
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
-          )}
+          ))}
         </div>
 
         {/* Summary */}
@@ -80,7 +100,9 @@ const Cart = () => {
           </div>
           <div className="flex items-center justify-between mb-4">
             <span className="text-muted-foreground">Shipping</span>
-            <span className="font-display font-bold text-foreground">{totalPrice >= FREE_SHIPPING_THRESHOLD ? "Free" : "$5.99"}</span>
+            <span className="font-display font-bold text-foreground">
+              {totalPrice >= FREE_SHIPPING_THRESHOLD ? "Free" : "$5.99"}
+            </span>
           </div>
           <div className="border-t border-border pt-4 flex items-center justify-between">
             <span className="font-display text-lg font-bold uppercase text-foreground">Total</span>
@@ -93,8 +115,8 @@ const Cart = () => {
           </Button>
         </div>
       </div>
-    </div>);
-
+    </div>
+  );
 };
 
 export default Cart;

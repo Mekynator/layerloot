@@ -19,7 +19,6 @@ import { useCart } from "@/contexts/CartContext";
 
 const FREE_SHIPPING_THRESHOLD = 500;
 const BASE_SHIPPING_PRICE = 5.99;
-const POINTS_TO_CURRENCY_RATIO = 0.1; // 10 points = 1 currency unit
 
 type DiscountCode = {
   code: string;
@@ -56,18 +55,13 @@ export default function CartPage() {
   const [savedItems, setSavedItems] = useState<CartItemExt[]>([]);
   const [selectedDiscountCode, setSelectedDiscountCode] = useState<string>("");
   const [manualDiscountCode, setManualDiscountCode] = useState("");
-  const [usePoints, setUsePoints] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-  // Demo discount codes already exchanged into account.
-  // Later replace this with user profile / Supabase data.
+  // Replace later with Supabase/account data
   const availableDiscountCodes: DiscountCode[] = [
     { code: "WELCOME10", label: "WELCOME10 - 10% off", type: "percent", value: 10 },
     { code: "SAVE50", label: "SAVE50 - $50 off", type: "fixed", value: 50 },
   ];
-
-  // Demo user points.
-  // Later replace this with logged-in account points.
-  const availablePoints = 240;
 
   useEffect(() => {
     const raw = localStorage.getItem("layerloot_saved_items");
@@ -103,19 +97,7 @@ export default function CartPage() {
     return Math.min(selectedDiscount.value, totalPrice);
   }, [selectedDiscount, totalPrice]);
 
-  const pointsDiscount = useMemo(() => {
-    if (!usePoints) return 0;
-    const rawValue = availablePoints * POINTS_TO_CURRENCY_RATIO;
-    return Math.min(rawValue, Math.max(totalPrice - discountAmount, 0));
-  }, [usePoints, availablePoints, totalPrice, discountAmount]);
-
-  const finalTotal = Math.max(totalPrice + shippingCost - discountAmount - pointsDiscount, 0);
-
-  const buildPlateUsage = useMemo(() => {
-    const totalGrams = cartItems.reduce((sum, item) => sum + (item.materialGrams ?? 0) * item.quantity, 0);
-    // Fake starter logic for now. Replace later with real slicer/build estimate.
-    return Math.min(Math.round((totalGrams / 250) * 100), 100);
-  }, [cartItems]);
+  const finalTotal = Math.max(totalPrice + shippingCost - discountAmount, 0);
 
   const recommendedProducts = useMemo(() => {
     const map = new Map<string, RecommendedProduct>();
@@ -147,6 +129,51 @@ export default function CartPage() {
     }
   };
 
+  const handleCheckout = async () => {
+    try {
+      setIsCheckingOut(true);
+
+      // CHANGE THIS URL if your Supabase Edge Function name is different
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          items: cartItems.map((item) => ({
+            id: item.id,
+            name: item.name,
+            image: item.image,
+            price: item.price,
+            quantity: item.quantity,
+          })),
+          discountCode: selectedDiscountCode || manualDiscountCode || null,
+          shippingCost,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Failed to create Stripe checkout session.");
+      }
+
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+
+      throw new Error("No Stripe checkout URL returned.");
+    } catch (error) {
+      console.error("Checkout error:", error);
+      alert(error instanceof Error ? error.message : "Checkout failed.");
+    } finally {
+      setIsCheckingOut(false);
+    }
+  };
+
   if (cartItems.length === 0) {
     return (
       <div className="py-10 md:py-14">
@@ -160,8 +187,7 @@ export default function CartPage() {
               Your Cart Is Empty
             </h1>
             <p className="mx-auto mb-8 max-w-xl text-muted-foreground">
-              Looks like the cart goblin has nothing to carry yet. Add a few prints and let’s make this page earn its
-              pixels.
+              Looks like the cart is taking a nap. Add some prints and wake the beast.
             </p>
 
             <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -190,7 +216,6 @@ export default function CartPage() {
         <div className="grid gap-8 lg:grid-cols-[1.4fr_0.8fr]">
           {/* LEFT SIDE */}
           <div className="space-y-6">
-            {/* Shipping notice */}
             <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
               <div className="mb-3 flex items-center gap-2">
                 <Truck className="h-4 w-4 text-primary" />
@@ -203,7 +228,6 @@ export default function CartPage() {
               <Progress value={shippingProgress} className="h-2" />
             </div>
 
-            {/* Cart items */}
             <div className="space-y-4">
               {cartItems.map((item) => {
                 const lineTotal = item.price * item.quantity;
@@ -237,7 +261,6 @@ export default function CartPage() {
                             </p>
                           )}
 
-                          {/* Manufacturing info */}
                           {(item.printTime || item.materialGrams || item.dispatchEstimate) && (
                             <div className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
                               {item.printTime && (
@@ -271,13 +294,6 @@ export default function CartPage() {
                               <Bookmark className="h-4 w-4" />
                               Save for later
                             </button>
-
-                            <Link
-                              to={`/products/${item.id}`}
-                              className="text-sm text-primary transition-opacity hover:opacity-80"
-                            >
-                              Edit item
-                            </Link>
                           </div>
                         </div>
                       </div>
@@ -325,7 +341,6 @@ export default function CartPage() {
               })}
             </div>
 
-            {/* Saved for later */}
             {savedItems.length > 0 && (
               <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
                 <h2 className="mb-4 font-display text-xl font-bold uppercase text-foreground">Saved for Later</h2>
@@ -353,7 +368,6 @@ export default function CartPage() {
               </div>
             )}
 
-            {/* Recommendations */}
             {recommendedProducts.length > 0 && (
               <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
                 <h2 className="mb-4 font-display text-xl font-bold uppercase text-foreground">You May Also Like</h2>
@@ -374,7 +388,7 @@ export default function CartPage() {
                         />
                       </div>
                       <p className="font-display text-sm font-bold uppercase text-foreground">{product.name}</p>
-                      <p className="mt-1 text-sm text-primary font-semibold">${product.price.toFixed(2)}</p>
+                      <p className="mt-1 text-sm font-semibold text-primary">${product.price.toFixed(2)}</p>
                     </Link>
                   ))}
                 </div>
@@ -400,7 +414,6 @@ export default function CartPage() {
                   </span>
                 </div>
 
-                {/* Discount dropdown */}
                 <div className="rounded-xl border border-border bg-background/50 p-3">
                   <label className="mb-2 block text-sm font-medium text-foreground">Discount</label>
 
@@ -434,59 +447,11 @@ export default function CartPage() {
                   )}
                 </div>
 
-                {/* Points */}
-                <div className="rounded-xl border border-border bg-background/50 p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">Rewards Points</p>
-                      <p className="text-sm text-muted-foreground">
-                        Available: {availablePoints} points = ${(availablePoints * POINTS_TO_CURRENCY_RATIO).toFixed(2)}
-                      </p>
-                    </div>
-
-                    <label className="flex cursor-pointer items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={usePoints}
-                        onChange={(e) => setUsePoints(e.target.checked)}
-                        className="h-4 w-4"
-                      />
-                      Use
-                    </label>
-                  </div>
-
-                  {usePoints && (
-                    <div className="mt-2 flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Points deduction</span>
-                      <span className="font-semibold text-primary">-${pointsDiscount.toFixed(2)}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Build plate usage starter */}
-                <div className="rounded-xl border border-border bg-background/50 p-3">
-                  <div className="mb-2 flex items-center justify-between text-sm">
-                    <span className="text-foreground font-medium">Estimated Build Plate Usage</span>
-                    <span className="font-display font-bold text-foreground">{buildPlateUsage}%</span>
-                  </div>
-                  <Progress value={buildPlateUsage} className="h-2" />
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Starter estimate based on material usage. Swap later with real slicer logic.
-                  </p>
-                </div>
-
                 <div className="border-t border-border pt-4">
                   {discountAmount > 0 && (
                     <div className="mb-2 flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Discount</span>
                       <span className="font-display font-bold text-primary">-${discountAmount.toFixed(2)}</span>
-                    </div>
-                  )}
-
-                  {pointsDiscount > 0 && (
-                    <div className="mb-2 flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Points</span>
-                      <span className="font-display font-bold text-primary">-${pointsDiscount.toFixed(2)}</span>
                     </div>
                   )}
 
@@ -496,8 +461,13 @@ export default function CartPage() {
                   </div>
                 </div>
 
-                <Button className="mt-2 w-full font-display uppercase tracking-wider" size="lg">
-                  Continue to Secure Checkout
+                <Button
+                  className="mt-2 w-full font-display uppercase tracking-wider"
+                  size="lg"
+                  onClick={handleCheckout}
+                  disabled={isCheckingOut}
+                >
+                  {isCheckingOut ? "Redirecting..." : "Continue to Secure Checkout"}
                 </Button>
 
                 <div className="space-y-2 pt-2 text-sm text-muted-foreground">

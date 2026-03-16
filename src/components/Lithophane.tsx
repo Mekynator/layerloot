@@ -539,7 +539,7 @@ export default function Lithophane({
   const previewImage = activeTab === "original" ? sourceDataUrl : activeTab === "heightmap" ? heightmapDataUrl : processedDataUrl;
 
   return (
-    <div className={["grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)_320px]", className].filter(Boolean).join(" ")}>
+    <div className={["grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]", className].filter(Boolean).join(" ")}>
       <div className="space-y-4">
         <Section title="Upload image" icon={<Upload className="h-4 w-4 text-amber-300" />}>
           <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-slate-950/40 px-4 py-8 text-center hover:bg-white/5">
@@ -653,7 +653,7 @@ export default function Lithophane({
           </div>
 
           <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-950 to-slate-900">
-            <div className="aspect-[16/11] w-full">
+            <div className="aspect-[16/9] w-full">
               {activeTab !== "scene" && previewImage ? (
                 <img src={previewImage} alt="Lithophane preview" className="h-full w-full object-contain" />
               ) : activeTab === "scene" ? (
@@ -671,7 +671,8 @@ export default function Lithophane({
                   <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:28px_28px] opacity-30" />
                   <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/45 to-transparent" />
                   <div className="relative flex items-end justify-center">
-                    <div className="absolute top-1/2 h-36 w-36 -translate-y-1/2 rounded-full blur-3xl"
+                    <div
+                      className="absolute top-1/2 h-36 w-36 -translate-y-1/2 rounded-full blur-3xl"
                       style={{
                         background:
                           lightEnabled
@@ -728,7 +729,7 @@ export default function Lithophane({
             </div>
           </div>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="mt-4 grid gap-3 lg:grid-cols-3">
             <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-3">
               <div className="mb-1 flex items-center gap-2 text-sm font-medium text-emerald-200">
                 <Wand2 className="h-4 w-4" />
@@ -768,61 +769,63 @@ export default function Lithophane({
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="space-y-4">
-        <Section title="Order summary" icon={<PackageCheck className="h-4 w-4 text-amber-300" />}>
-          <div className="space-y-2 text-sm text-slate-300">
-            <div className="flex justify-between">
-              <span>Type</span>
-              <span className="capitalize text-white">{shape}</span>
+        <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
+          <Section title="Order summary" icon={<PackageCheck className="h-4 w-4 text-amber-300" />}>
+            <div className="space-y-2 text-sm text-slate-300">
+              <div className="flex justify-between">
+                <span>Type</span>
+                <span className="capitalize text-white">{shape}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Orientation</span>
+                <span className="capitalize text-white">{orientation}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Size</span>
+                <span className="text-white">{widthMm} × {heightMm} mm</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Thickness</span>
+                <span className="text-white">{minThicknessMm}–{maxThicknessMm} mm</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Border</span>
+                <span className="text-white">{borderMm} mm</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Estimated price</span>
+                <span className="font-semibold text-amber-200">{estimatedPrice} DKK</span>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span>Orientation</span>
-              <span className="capitalize text-white">{orientation}</span>
+
+            <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-3 text-xs text-amber-100">
+              Save this payload into your custom order record together with the source image, processed preview, and the
+              designJson object. Tiny gremlin-proof and scalable.
             </div>
-            <div className="flex justify-between">
-              <span>Size</span>
-              <span className="text-white">{widthMm} × {heightMm} mm</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Thickness</span>
-              <span className="text-white">{minThicknessMm}–{maxThicknessMm} mm</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Border</span>
-              <span className="text-white">{borderMm} mm</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Estimated price</span>
-              <span className="font-semibold text-amber-200">{estimatedPrice} DKK</span>
-            </div>
+          </Section>
+
+          <div className="space-y-4">
+            <Section title="Customer note" icon={<AlertTriangle className="h-4 w-4 text-amber-300" />}>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Add mounting notes, gift request, frame color, lamp preference..."
+                className="min-h-[160px] w-full rounded-2xl border border-white/10 bg-slate-950/50 p-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-amber-400/40"
+              />
+            </Section>
+
+            <button
+              type="button"
+              onClick={() => void onSubmitDesign?.(submitPayload)}
+              disabled={!sourceDataUrl}
+              className="w-full rounded-2xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+            >
+              {submitLabel}
+            </button>
           </div>
-
-          <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-3 text-xs text-amber-100">
-            Save this payload into your custom order record together with the source image, processed preview, and the
-            designJson object. Tiny gremlin-proof and scalable.
-          </div>
-        </Section>
-
-        <Section title="Customer note" icon={<AlertTriangle className="h-4 w-4 text-amber-300" />}>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Add mounting notes, gift request, frame color, lamp preference..."
-            className="min-h-[140px] w-full rounded-2xl border border-white/10 bg-slate-950/50 p-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-amber-400/40"
-          />
-        </Section>
-
-        <button
-          type="button"
-          onClick={() => void onSubmitDesign?.(submitPayload)}
-          disabled={!sourceDataUrl}
-          className="w-full rounded-2xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
-        >
-          {submitLabel}
-        </button>
-      </div>
+        </div>
+      </div>      </div>
     </div>
   );
 }

@@ -196,7 +196,7 @@ export default function CartPage() {
                   Browse Products
                 </Button>
               </Link>
-              <Link to="/create-your-own">
+              <Link to="/create">
                 <Button size="lg" variant="outline" className="font-display uppercase tracking-wider">
                   Create Your Own
                 </Button>

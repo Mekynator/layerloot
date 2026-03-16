@@ -58,8 +58,6 @@ type ProcessedResult = {
 const DEFAULTS = {
   widthMm: 120,
   heightMm: 160,
-  minThicknessMm: 0.8,
-  maxThicknessMm: 3.2,
   borderMm: 3,
   brightness: 0,
   contrast: 15,
@@ -71,15 +69,14 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function estimatePrice(widthMm: number, heightMm: number, maxThicknessMm: number, borderMm: number) {
+function estimatePrice(widthMm: number, heightMm: number, borderMm: number) {
   const areaFactor = (widthMm * heightMm) / 1000;
-  const thicknessFactor = maxThicknessMm * 1.35;
-  const borderFactor = borderMm * 0.9;
-  return Number((39 + areaFactor + thicknessFactor + borderFactor).toFixed(2));
+  const borderFactor = borderMm * 1.2;
+  return Number((39 + areaFactor + borderFactor).toFixed(2));
 }
 
-function estimatePrintHours(widthMm: number, heightMm: number, maxThicknessMm: number) {
-  return Number((1.2 + widthMm / 80 + heightMm / 65 + maxThicknessMm * 0.7).toFixed(1));
+function estimatePrintHours(widthMm: number, heightMm: number) {
+  return Number((1.2 + widthMm / 80 + heightMm / 65).toFixed(1));
 }
 
 function readFileAsDataUrl(file: File): Promise<string> {
@@ -107,7 +104,6 @@ async function processImage(
     contrast: number;
     gamma: number;
     blur: number;
-    invert: boolean;
   },
 ): Promise<ProcessedResult> {
   const img = await loadImage(sourceDataUrl);
@@ -165,7 +161,6 @@ async function processImage(
     gray += options.brightness;
     gray = contrastFactor * (gray - 128) + 128;
     gray = 255 * Math.pow(clamp(gray / 255, 0, 1), 1 / Math.max(0.2, options.gamma));
-    if (options.invert) gray = 255 - gray;
     gray = clamp(gray, 0, 255);
 
     data[i] = gray;
@@ -221,10 +216,10 @@ async function processImage(
 
 function Section({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-sm backdrop-blur">
-      <div className="mb-3 flex items-center gap-2">
+    <div className="rounded-2xl border border-slate-300 bg-white p-5 shadow-sm">
+      <div className="mb-4 flex items-center gap-2">
         {icon}
-        <h3 className="text-sm font-semibold text-white">{title}</h3>
+        <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
       </div>
       {children}
     </div>
@@ -248,12 +243,12 @@ function Range({
 }) {
   return (
     <label className="block space-y-2">
-      <div className="flex items-center justify-between text-xs text-slate-300">
+      <div className="flex items-center justify-between text-xs font-medium text-slate-700">
         <span>{label}</span>
-        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-white">{value}</span>
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-900">{value}</span>
       </div>
       <input
-        className="w-full accent-amber-400"
+        className="w-full accent-amber-500"
         type="range"
         min={min}
         max={max}
@@ -279,10 +274,10 @@ function ToggleChip({
       type="button"
       onClick={onClick}
       className={[
-        "rounded-xl border px-3 py-2 text-sm transition",
+        "rounded-xl border px-3 py-2 text-sm font-medium transition",
         active
-          ? "border-amber-400 bg-amber-400/15 text-amber-200"
-          : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10",
+          ? "border-amber-500 bg-amber-50 text-amber-700"
+          : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50",
       ].join(" ")}
     >
       {children}
@@ -308,14 +303,11 @@ export default function Lithophane({
   const [activeTab, setActiveTab] = useState<LithophanePreviewTab>("processed");
   const [widthMm, setWidthMm] = useState(DEFAULTS.widthMm);
   const [heightMm, setHeightMm] = useState(DEFAULTS.heightMm);
-  const [minThicknessMm, setMinThicknessMm] = useState(DEFAULTS.minThicknessMm);
-  const [maxThicknessMm, setMaxThicknessMm] = useState(DEFAULTS.maxThicknessMm);
   const [borderMm, setBorderMm] = useState(DEFAULTS.borderMm);
   const [brightness, setBrightness] = useState(DEFAULTS.brightness);
   const [contrast, setContrast] = useState(DEFAULTS.contrast);
   const [gamma, setGamma] = useState(DEFAULTS.gamma);
   const [blur, setBlur] = useState(DEFAULTS.blur);
-  const [invert, setInvert] = useState(false);
   const [lightEnabled, setLightEnabled] = useState(true);
   const [lightTone, setLightTone] = useState<"warm" | "neutral" | "cool">("warm");
   const [notes, setNotes] = useState(initialNotes);
@@ -323,15 +315,9 @@ export default function Lithophane({
 
   const debounceRef = useRef<number | null>(null);
 
-  const estimatedPrice = useMemo(
-    () => estimatePrice(widthMm, heightMm, maxThicknessMm, borderMm),
-    [widthMm, heightMm, maxThicknessMm, borderMm],
-  );
+  const estimatedPrice = useMemo(() => estimatePrice(widthMm, heightMm, borderMm), [widthMm, heightMm, borderMm]);
 
-  const estimatedPrintHours = useMemo(
-    () => estimatePrintHours(widthMm, heightMm, maxThicknessMm),
-    [widthMm, heightMm, maxThicknessMm],
-  );
+  const estimatedPrintHours = useMemo(() => estimatePrintHours(widthMm, heightMm), [widthMm, heightMm]);
 
   const processCurrentImage = useCallback(async () => {
     if (!sourceDataUrl) return;
@@ -343,7 +329,6 @@ export default function Lithophane({
         contrast,
         gamma,
         blur,
-        invert,
       });
       setProcessedDataUrl(result.processedDataUrl);
       setHeightmapDataUrl(result.heightmapDataUrl);
@@ -356,7 +341,7 @@ export default function Lithophane({
     } finally {
       setIsProcessing(false);
     }
-  }, [sourceDataUrl, brightness, contrast, gamma, blur, invert]);
+  }, [sourceDataUrl, brightness, contrast, gamma, blur]);
 
   useEffect(() => {
     if (!sourceDataUrl) return;
@@ -368,7 +353,7 @@ export default function Lithophane({
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
-  }, [sourceDataUrl, brightness, contrast, gamma, blur, invert, processCurrentImage]);
+  }, [sourceDataUrl, brightness, contrast, gamma, blur, processCurrentImage]);
 
   useEffect(() => {
     onDraftChange?.({
@@ -379,10 +364,10 @@ export default function Lithophane({
       orientation,
       widthMm,
       heightMm,
-      minThicknessMm,
-      maxThicknessMm,
+      minThicknessMm: 0.8,
+      maxThicknessMm: 3.2,
       borderMm,
-      invert,
+      invert: false,
       brightness,
       contrast,
       gamma,
@@ -401,10 +386,7 @@ export default function Lithophane({
     orientation,
     widthMm,
     heightMm,
-    minThicknessMm,
-    maxThicknessMm,
     borderMm,
-    invert,
     brightness,
     contrast,
     gamma,
@@ -437,14 +419,12 @@ export default function Lithophane({
     setContrast(DEFAULTS.contrast);
     setGamma(DEFAULTS.gamma);
     setBlur(DEFAULTS.blur);
-    setInvert(false);
     setWidthMm(DEFAULTS.widthMm);
     setHeightMm(DEFAULTS.heightMm);
-    setMinThicknessMm(DEFAULTS.minThicknessMm);
-    setMaxThicknessMm(DEFAULTS.maxThicknessMm);
     setBorderMm(DEFAULTS.borderMm);
     setLightEnabled(true);
     setLightTone("warm");
+    setOrientation("portrait");
   };
 
   const previewScreenshotDataUrl = useMemo(() => {
@@ -461,10 +441,10 @@ export default function Lithophane({
       orientation,
       widthMm,
       heightMm,
-      minThicknessMm,
-      maxThicknessMm,
+      minThicknessMm: 0.8,
+      maxThicknessMm: 3.2,
       borderMm,
-      invert,
+      invert: false,
       brightness,
       contrast,
       gamma,
@@ -475,19 +455,16 @@ export default function Lithophane({
       estimatedPrice,
       estimatedPrintHours,
       designJson: {
-        version: 1,
+        version: 2,
         component: "Lithophane",
         shape,
         orientation,
         dimensions: {
           widthMm,
           heightMm,
-          minThicknessMm,
-          maxThicknessMm,
           borderMm,
         },
         image: {
-          invert,
           brightness,
           contrast,
           gamma,
@@ -510,10 +487,7 @@ export default function Lithophane({
       orientation,
       widthMm,
       heightMm,
-      minThicknessMm,
-      maxThicknessMm,
       borderMm,
-      invert,
       brightness,
       contrast,
       gamma,
@@ -531,13 +505,32 @@ export default function Lithophane({
   const previewImage =
     activeTab === "original" ? sourceDataUrl : activeTab === "heightmap" ? heightmapDataUrl : processedDataUrl;
 
+  const frameOuterStyle =
+    orientation === "portrait"
+      ? {
+          width: `${clamp(widthMm * 1.8, 240, 420)}px`,
+          height: `${clamp(heightMm * 1.8, 320, 560)}px`,
+          padding: `${clamp(borderMm * 2.2, 10, 26)}px`,
+        }
+      : {
+          width: `${clamp(widthMm * 2.1, 320, 620)}px`,
+          height: `${clamp(heightMm * 1.5, 220, 420)}px`,
+          padding: `${clamp(borderMm * 2.2, 10, 26)}px`,
+        };
+
+  const innerFrameStyle = {
+    padding: `${clamp(borderMm * 1.1, 6, 14)}px`,
+  };
+
   return (
-    <div className={["space-y-5", className].filter(Boolean).join(" ")}>
-      <div className="rounded-3xl border border-white/10 bg-[#0b1020] p-4 md:p-5 shadow-2xl">
+    <div className={["space-y-6", className].filter(Boolean).join(" ")}>
+      <div className="rounded-3xl border border-slate-300 bg-[#0b1020] p-5 shadow-2xl">
         <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-white">Lithophane Preview</h2>
-            <p className="text-sm text-slate-400">Full-width live preview with image, heightmap, and scene mode.</p>
+            <h2 className="text-xl font-semibold text-white">Lithophane Preview</h2>
+            <p className="text-sm text-slate-300">
+              Full-width live preview. Orientation, width, height, and border now affect the visualization.
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             {(["original", "processed", "heightmap", "scene"] as LithophanePreviewTab[]).map((tab) => (
@@ -546,10 +539,10 @@ export default function Lithophane({
                 type="button"
                 onClick={() => setActiveTab(tab)}
                 className={[
-                  "rounded-full px-3 py-1.5 text-xs capitalize transition",
+                  "rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition",
                   activeTab === tab
-                    ? "bg-amber-400/15 text-amber-200 ring-1 ring-amber-400/40"
-                    : "bg-white/5 text-slate-300 hover:bg-white/10",
+                    ? "bg-amber-400/20 text-amber-200 ring-1 ring-amber-400/50"
+                    : "bg-white/10 text-slate-200 hover:bg-white/15",
                 ].join(" ")}
               >
                 {tab}
@@ -559,7 +552,7 @@ export default function Lithophane({
         </div>
 
         <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-950 to-slate-900">
-          <div className="aspect-[16/8] min-h-[340px] w-full md:min-h-[420px] xl:min-h-[500px]">
+          <div className="aspect-[16/8] min-h-[360px] w-full md:min-h-[460px] xl:min-h-[560px]">
             {activeTab !== "scene" && previewImage ? (
               <img src={previewImage} alt="Lithophane preview" className="h-full w-full object-contain" />
             ) : activeTab === "scene" ? (
@@ -568,18 +561,21 @@ export default function Lithophane({
                 style={{
                   background:
                     lightTone === "warm"
-                      ? "radial-gradient(circle at center, rgba(255,200,120,0.15), rgba(12,18,32,1) 55%)"
+                      ? "radial-gradient(circle at center, rgba(255,200,120,0.16), rgba(12,18,32,1) 55%)"
                       : lightTone === "cool"
-                        ? "radial-gradient(circle at center, rgba(120,200,255,0.14), rgba(12,18,32,1) 55%)"
-                        : "radial-gradient(circle at center, rgba(220,220,220,0.12), rgba(12,18,32,1) 55%)",
+                        ? "radial-gradient(circle at center, rgba(120,200,255,0.16), rgba(12,18,32,1) 55%)"
+                        : "radial-gradient(circle at center, rgba(220,220,220,0.14), rgba(12,18,32,1) 55%)",
                 }}
               >
                 <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:28px_28px] opacity-30" />
                 <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/45 to-transparent" />
                 <div className="relative flex items-end justify-center">
                   <div
-                    className="absolute top-1/2 h-40 w-40 -translate-y-1/2 rounded-full blur-3xl"
+                    className="absolute top-1/2 rounded-full blur-3xl"
                     style={{
+                      width: orientation === "portrait" ? "240px" : "320px",
+                      height: orientation === "portrait" ? "340px" : "220px",
+                      transform: "translateY(-50%)",
                       background: lightEnabled
                         ? lightTone === "warm"
                           ? "rgba(255, 196, 110, 0.48)"
@@ -589,10 +585,16 @@ export default function Lithophane({
                         : "transparent",
                     }}
                   />
-                  <div className="absolute bottom-10 h-3 w-64 rounded-full bg-black/40 blur-md" />
-                  <div className="rounded-[30px] border border-[#5f4632] bg-[#2a1d17] p-3 shadow-2xl">
-                    <div className="rounded-[22px] border border-[#6e584a] bg-[#161616] p-2">
-                      <div className="h-[320px] w-[240px] md:h-[360px] md:w-[270px] overflow-hidden rounded-[16px] border border-white/10 bg-black">
+                  <div className="absolute bottom-10 h-4 w-80 rounded-full bg-black/40 blur-md" />
+                  <div
+                    className="rounded-[30px] border border-[#5f4632] bg-[#2a1d17] shadow-2xl"
+                    style={frameOuterStyle}
+                  >
+                    <div
+                      className="h-full w-full rounded-[22px] border border-[#6e584a] bg-[#161616]"
+                      style={innerFrameStyle}
+                    >
+                      <div className="h-full w-full overflow-hidden rounded-[16px] border border-white/10 bg-black">
                         {processedDataUrl ? (
                           <img
                             src={processedDataUrl}
@@ -609,7 +611,7 @@ export default function Lithophane({
                             }}
                           />
                         ) : (
-                          <div className="flex h-full items-center justify-center text-sm text-slate-400">
+                          <div className="flex h-full items-center justify-center text-sm text-slate-300">
                             Upload an image to light the frame
                           </div>
                         )}
@@ -619,7 +621,7 @@ export default function Lithophane({
                 </div>
               </div>
             ) : (
-              <div className="flex h-full items-center justify-center text-sm text-slate-400">
+              <div className="flex h-full items-center justify-center text-sm text-slate-300">
                 Upload an image to preview the lithophane
               </div>
             )}
@@ -637,11 +639,11 @@ export default function Lithophane({
 
       <div className="grid gap-5 xl:grid-cols-2">
         <div className="space-y-4">
-          <Section title="Upload image" icon={<Upload className="h-4 w-4 text-amber-300" />}>
-            <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-slate-950/40 px-4 py-8 text-center hover:bg-white/5">
-              <ImageIcon className="mb-3 h-8 w-8 text-slate-300" />
-              <div className="text-sm font-medium text-white">Drop photo here or click to upload</div>
-              <div className="mt-1 text-xs text-slate-400">PNG, JPG, WEBP</div>
+          <Section title="Upload image" icon={<Upload className="h-4 w-4 text-amber-500" />}>
+            <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center hover:bg-slate-100">
+              <ImageIcon className="mb-3 h-8 w-8 text-slate-500" />
+              <div className="text-sm font-semibold text-slate-900">Drop photo here or click to upload</div>
+              <div className="mt-1 text-xs text-slate-600">PNG, JPG, WEBP</div>
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
@@ -649,12 +651,12 @@ export default function Lithophane({
                 onChange={(e) => void handleFileChange(e.target.files?.[0])}
               />
             </label>
-            <div className="mt-3 text-xs text-slate-400">
+            <div className="mt-3 text-xs font-medium text-slate-700">
               {sourceFileName ? `Loaded: ${sourceFileName}` : "No image loaded yet."}
             </div>
           </Section>
 
-          <Section title="Image tuning" icon={<SlidersHorizontal className="h-4 w-4 text-amber-300" />}>
+          <Section title="Image tuning" icon={<SlidersHorizontal className="h-4 w-4 text-amber-500" />}>
             <div className="space-y-3">
               <Range label="Brightness" value={brightness} min={-80} max={80} onChange={setBrightness} />
               <Range label="Contrast" value={contrast} min={-120} max={120} onChange={setContrast} />
@@ -663,9 +665,6 @@ export default function Lithophane({
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2">
-              <ToggleChip active={invert} onClick={() => setInvert((v) => !v)}>
-                Invert tones
-              </ToggleChip>
               <ToggleChip active={orientation === "portrait"} onClick={() => setOrientation("portrait")}>
                 Portrait
               </ToggleChip>
@@ -677,14 +676,14 @@ export default function Lithophane({
             <button
               type="button"
               onClick={handleReset}
-              className="mt-4 inline-flex items-center gap-2 text-sm text-slate-300 hover:text-white"
+              className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900"
             >
               <RotateCcw className="h-4 w-4" />
               Reset controls
             </button>
           </Section>
 
-          <Section title="Product setup" icon={<PackageCheck className="h-4 w-4 text-amber-300" />}>
+          <Section title="Product setup" icon={<PackageCheck className="h-4 w-4 text-amber-500" />}>
             <div className="grid grid-cols-3 gap-2">
               <ToggleChip active={shape === "flat"} onClick={() => setShape("flat")}>
                 Flat
@@ -700,22 +699,6 @@ export default function Lithophane({
             <div className="mt-4 space-y-3">
               <Range label="Width (mm)" value={widthMm} min={60} max={240} onChange={setWidthMm} />
               <Range label="Height (mm)" value={heightMm} min={80} max={300} onChange={setHeightMm} />
-              <Range
-                label="Min thickness (mm)"
-                value={minThicknessMm}
-                min={0.4}
-                max={2}
-                step={0.1}
-                onChange={setMinThicknessMm}
-              />
-              <Range
-                label="Max thickness (mm)"
-                value={maxThicknessMm}
-                min={1.8}
-                max={5}
-                step={0.1}
-                onChange={setMaxThicknessMm}
-              />
               <Range label="Border (mm)" value={borderMm} min={0} max={10} step={0.5} onChange={setBorderMm} />
             </div>
           </Section>
@@ -723,16 +706,16 @@ export default function Lithophane({
 
         <div className="space-y-4">
           <div className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-3">
-              <div className="mb-1 flex items-center gap-2 text-sm font-medium text-emerald-200">
+            <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-4">
+              <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-emerald-700">
                 <Wand2 className="h-4 w-4" />
                 Quality: {qualityLabel}
               </div>
-              <p className="text-xs text-emerald-50/90">{qualityMessage}</p>
+              <p className="text-xs leading-5 text-emerald-800">{qualityMessage}</p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-              <div className="mb-1 flex items-center gap-2 text-sm font-medium text-white">
-                <SunMedium className="h-4 w-4 text-amber-300" />
+            <div className="rounded-2xl border border-slate-300 bg-white p-4">
+              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                <SunMedium className="h-4 w-4 text-amber-500" />
                 Light preview
               </div>
               <div className="flex flex-wrap gap-2">
@@ -750,62 +733,53 @@ export default function Lithophane({
                 </ToggleChip>
               </div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-              <div className="mb-1 flex items-center gap-2 text-sm font-medium text-white">
-                <Contrast className="h-4 w-4 text-amber-300" />
+            <div className="rounded-2xl border border-slate-300 bg-white p-4">
+              <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                <Contrast className="h-4 w-4 text-amber-500" />
                 Print estimate
               </div>
-              <p className="text-xs text-slate-300">
+              <p className="text-sm font-semibold text-slate-900">
                 ~{estimatedPrintHours} hrs · {estimatedPrice} DKK
               </p>
-              <p className="mt-1 text-[11px] text-slate-400">Preview estimate only. Final admin quote can adjust it.</p>
+              <p className="mt-1 text-xs leading-5 text-slate-600">
+                Preview estimate only. Final admin quote can adjust it.
+              </p>
             </div>
           </div>
 
-          <Section title="Order summary" icon={<PackageCheck className="h-4 w-4 text-amber-300" />}>
-            <div className="grid gap-2 text-sm text-slate-300 sm:grid-cols-2">
-              <div className="flex justify-between gap-3">
+          <Section title="Order summary" icon={<PackageCheck className="h-4 w-4 text-amber-500" />}>
+            <div className="grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
+              <div className="flex justify-between gap-3 border-b border-slate-200 pb-2">
                 <span>Type</span>
-                <span className="capitalize text-white">{shape}</span>
+                <span className="capitalize font-semibold text-slate-900">{shape}</span>
               </div>
-              <div className="flex justify-between gap-3">
+              <div className="flex justify-between gap-3 border-b border-slate-200 pb-2">
                 <span>Orientation</span>
-                <span className="capitalize text-white">{orientation}</span>
+                <span className="capitalize font-semibold text-slate-900">{orientation}</span>
               </div>
-              <div className="flex justify-between gap-3">
+              <div className="flex justify-between gap-3 border-b border-slate-200 pb-2">
                 <span>Size</span>
-                <span className="text-white">
+                <span className="font-semibold text-slate-900">
                   {widthMm} × {heightMm} mm
                 </span>
               </div>
-              <div className="flex justify-between gap-3">
-                <span>Thickness</span>
-                <span className="text-white">
-                  {minThicknessMm}–{maxThicknessMm} mm
-                </span>
-              </div>
-              <div className="flex justify-between gap-3">
+              <div className="flex justify-between gap-3 border-b border-slate-200 pb-2">
                 <span>Border</span>
-                <span className="text-white">{borderMm} mm</span>
+                <span className="font-semibold text-slate-900">{borderMm} mm</span>
               </div>
-              <div className="flex justify-between gap-3">
+              <div className="flex justify-between gap-3 sm:col-span-2">
                 <span>Estimated price</span>
-                <span className="font-semibold text-amber-200">{estimatedPrice} DKK</span>
+                <span className="font-semibold text-amber-700">{estimatedPrice} DKK</span>
               </div>
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-3 text-xs text-amber-100">
-              Save this payload into your custom order record together with the source image, processed preview, and the
-              designJson object.
             </div>
           </Section>
 
-          <Section title="Customer note" icon={<AlertTriangle className="h-4 w-4 text-amber-300" />}>
+          <Section title="Customer note" icon={<AlertTriangle className="h-4 w-4 text-amber-500" />}>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add mounting notes, gift request, frame color, lamp preference..."
-              className="min-h-[160px] w-full rounded-2xl border border-white/10 bg-slate-950/50 p-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-amber-400/40"
+              className="min-h-[160px] w-full rounded-2xl border border-slate-300 bg-slate-50 p-3 text-sm text-slate-900 outline-none placeholder:text-slate-500 focus:border-amber-500"
             />
           </Section>
 
@@ -813,7 +787,7 @@ export default function Lithophane({
             type="button"
             onClick={() => void onSubmitDesign?.(submitPayload)}
             disabled={!sourceDataUrl}
-            className="w-full rounded-2xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+            className="w-full rounded-2xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:text-slate-100"
           >
             {submitLabel}
           </button>

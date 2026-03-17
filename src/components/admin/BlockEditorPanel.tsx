@@ -74,37 +74,39 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
     return Array.from(new Set([...pages, ...extras]));
   }, [pages]);
 
+  const DEFAULT_PLACEMENT = "__default__";
+
   const placementOptions = useMemo(() => {
     const page = form.page || block?.page || "home";
 
     switch (page) {
       case "products":
         return [
-          { value: "", label: "Before products" },
+          { value: DEFAULT_PLACEMENT, label: "Before products" },
           { value: "after_products", label: "After products" },
         ];
       case "contact":
         return [
-          { value: "", label: "Before contact section" },
+          { value: DEFAULT_PLACEMENT, label: "Before contact section" },
           { value: "after_contact", label: "After contact section" },
         ];
       case "gallery":
         return [
-          { value: "", label: "Before gallery" },
+          { value: DEFAULT_PLACEMENT, label: "Before gallery" },
           { value: "after_gallery", label: "After gallery" },
         ];
       case "create-your-own":
         return [
-          { value: "", label: "Before tools section" },
+          { value: DEFAULT_PLACEMENT, label: "Before tools section" },
           { value: "after_create_your_own", label: "After tools section" },
         ];
       case "submit-design":
         return [
-          { value: "", label: "Before submit form" },
+          { value: DEFAULT_PLACEMENT, label: "Before submit form" },
           { value: "after_submit_design", label: "After submit form" },
         ];
       default:
-        return [{ value: "", label: "Default position" }];
+        return [{ value: DEFAULT_PLACEMENT, label: "Default position" }];
     }
   }, [form.page, block?.page]);
 
@@ -237,14 +239,17 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Page</Label>
-                <Select value={form.page} onValueChange={(v) => updateForm("page", v)}>
+                <Select
+                  value={form.content?.placement ?? DEFAULT_PLACEMENT}
+                  onValueChange={(v) => updateContent("placement", v === DEFAULT_PLACEMENT ? "" : v)}
+                >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select placement" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availablePages.map((p) => (
-                      <SelectItem key={p} value={p}>
-                        {prettyPageLabel(p)}
+                    {placementOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
                       </SelectItem>
                     ))}
                   </SelectContent>

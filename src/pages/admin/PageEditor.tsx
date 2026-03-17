@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -84,7 +84,6 @@ const pageGroups = [
 ];
 
 const defaultPages = pageGroups.flatMap((group) => group.pages.map((page) => page.value));
-const [backgroundEditorOpen, setBackgroundEditorOpen] = useState(false);
 
 const blockTypes = [
   { value: "hero", label: "Hero Banner", icon: Square },
@@ -174,6 +173,7 @@ const PageEditor = () => {
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [sDragIndex, setSDragIndex] = useState<number | null>(null);
   const [sDragOverIndex, setSDragOverIndex] = useState<number | null>(null);
+  const [backgroundEditorOpen, setBackgroundEditorOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) navigate("/");
@@ -204,7 +204,6 @@ const PageEditor = () => {
   }, [activePage]);
 
   const pageBlocks = blocks.filter((b) => b.page === activePage).sort((a, b) => a.sort_order - b.sort_order);
-
   const selectedBlock = pageBlocks.find((b) => b.id === selectedBlockId) || null;
   const customPages = allPages.filter((p) => !defaultPages.includes(p));
 
@@ -439,7 +438,6 @@ const PageEditor = () => {
                     <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                       {group.label}
                     </SelectLabel>
-
                     {group.pages
                       .filter((p) => allPages.includes(p.value))
                       .map((p) => (
@@ -455,7 +453,6 @@ const PageEditor = () => {
                     <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                       Custom Pages
                     </SelectLabel>
-
                     {customPages.map((p) => (
                       <SelectItem key={p} value={p}>
                         {prettyPageLabel(p)}
@@ -499,6 +496,15 @@ const PageEditor = () => {
             <NavLinkEditor />
 
             <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBackgroundEditorOpen(true)}
+              className="font-display text-xs uppercase tracking-wider text-foreground hover:text-primary-foreground"
+            >
+              Page Background
+            </Button>
+
+            <Button
               size="sm"
               onClick={() => {
                 setInsertAtIndex(null);
@@ -508,13 +514,8 @@ const PageEditor = () => {
             >
               <Plus className="mr-1 h-3.5 w-3.5" /> Add Block
             </Button>
-          <Button
-             variant="outline"
-             size="sm"
-             onClick={() => setBackgroundEditorOpen(true)}
-             className="font-display text-xs uppercase tracking-wider"
-          <Button
-              </Button>
+
+            <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate("/")}
@@ -522,7 +523,6 @@ const PageEditor = () => {
             >
               <X className="mr-1 h-4 w-4" /> Exit
             </Button>
-        </Button>
           </div>
         </div>
       </div>
@@ -793,6 +793,8 @@ const PageEditor = () => {
         pages={allPages}
       />
 
+      <PageBackgroundEditor page={activePage} open={backgroundEditorOpen} onOpenChange={setBackgroundEditorOpen} />
+
       <Dialog open={addBlockOpen} onOpenChange={setAddBlockOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
@@ -838,13 +840,7 @@ const PageEditor = () => {
           </div>
         </DialogContent>
       </Dialog>
-          
-      <PageBackgroundEditor
-  page={activePage}
-  open={backgroundEditorOpen}
-  onOpenChange={setBackgroundEditorOpen}
-/>
-          
+
       <Dialog open={deletePageOpen} onOpenChange={setDeletePageOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>

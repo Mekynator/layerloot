@@ -83,6 +83,9 @@ interface CustomOrderMessage {
   created_at: string;
 }
 
+const POINTS_PER_KR = 0.25;
+const KR_PER_100_POINTS = 400;
+
 const statusColors: Record<string, string> = {
   completed: "text-green-500",
   shipped: "text-blue-500",
@@ -222,23 +225,28 @@ const Account = () => {
       toast({ title: "Not enough points", variant: "destructive" });
       return;
     }
+
     const { error: pointsError } = await supabase.from("loyalty_points").insert({
       user_id: user!.id,
       points: -voucher.points_cost,
       reason: `Redeemed: ${voucher.name}`,
     });
+
     if (pointsError) {
       toast({ title: "Error", description: pointsError.message, variant: "destructive" });
       return;
     }
+
     const code = `LL-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
     const isGiftCard = voucher.discount_type === "gift_card";
+
     await supabase.from("user_vouchers").insert({
       user_id: user!.id,
       voucher_id: voucher.id,
       code,
       balance: isGiftCard ? voucher.discount_value : null,
     });
+
     setPointsBalance((p) => p - voucher.points_cost);
     toast({ title: "Voucher redeemed!", description: `Your code: ${code}` });
     fetchAll();
@@ -249,10 +257,12 @@ const Account = () => {
       toast({ title: "Enter recipient email", variant: "destructive" });
       return;
     }
+
     await supabase
       .from("user_vouchers")
       .update({ recipient_email: giftEmail, recipient_name: giftName || null })
       .eq("id", uvId);
+
     toast({ title: "Gift card details saved!", description: `Gift card will be sent to ${giftEmail}` });
     setGiftingVoucherId(null);
     setGiftEmail("");
@@ -265,6 +275,7 @@ const Account = () => {
     if (!message || !user) return;
 
     setSendingReply(true);
+
     const { error } = await supabase.from("custom_order_messages").insert({
       custom_order_id: customOrderId,
       sender_role: "user",
@@ -287,6 +298,7 @@ const Account = () => {
 
   const submitCounterOffer = async (order: CustomOrder) => {
     if (!user) return;
+
     const offerValue = parseFloat(counterOffer[order.id] || "");
     const note = (replyMessage[order.id] || "").trim();
 
@@ -400,6 +412,7 @@ const Account = () => {
             <h1 className="font-display text-3xl font-bold uppercase text-foreground">My Account</h1>
             <p className="text-sm text-muted-foreground">{user.email}</p>
           </div>
+
           <div className="flex gap-2">
             {isAdmin && (
               <Link to="/admin">
@@ -408,6 +421,7 @@ const Account = () => {
                 </Button>
               </Link>
             )}
+
             <Button variant="outline" size="sm" onClick={signOut} className="font-display uppercase tracking-wider">
               <LogOut className="mr-1 h-4 w-4" /> Sign Out
             </Button>
@@ -416,14 +430,21 @@ const Account = () => {
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="mb-8 border-primary/30 bg-primary/5">
-            <CardContent className="flex items-center gap-4 p-6">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-                <Star className="h-7 w-7 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Loyalty Points Balance</p>
-                <p className="font-display text-3xl font-bold text-primary">{pointsBalance}</p>
-                <p className="text-xs text-muted-foreground">Earn 1 point per 1 kr spent</p>
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                  <Star className="h-7 w-7 text-primary" />
+                </div>
+
+                <div>
+                  <p className="text-sm text-muted-foreground">Loyalty Points Balance</p>
+                  <p className="font-display text-3xl font-bold text-primary">{pointsBalance}</p>
+                  <p className="text-xs text-muted-foreground">Earn 25 points for every 100 kr spent</p>
+                  <p className="text-xs text-muted-foreground">
+                    1 point is earned for every {KR_PER_100_POINTS / 100} kr spent? No. The tiny math goblin says: 1 kr
+                    = {POINTS_PER_KR} points.
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -576,9 +597,7 @@ const Account = () => {
 
                             <div className="flex flex-wrap gap-2">
                               <Badge variant="outline">Payment: {order.payment_status.replace(/_/g, " ")}</Badge>
-                              <Badge variant="outline">
-                                Production: {order.production_status.replace(/_/g, " ")}
-                              </Badge>
+                              <Badge variant="outline">Production: {order.production_status.replace(/_/g, " ")}</Badge>
                               {currentQuote !== null && (
                                 <Badge variant="outline" className="border-primary text-primary">
                                   Quote: {Number(currentQuote).toFixed(2)} kr
@@ -611,7 +630,7 @@ const Account = () => {
                               <div className="space-y-3">
                                 <div className="rounded-md border border-border bg-muted/40 p-3">
                                   <Label className="text-xs text-muted-foreground">Admin Notes</Label>
-                                  <p className="mt-1 text-sm text-foreground whitespace-pre-wrap">
+                                  <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
                                     {order.admin_notes || "No admin notes yet."}
                                   </p>
                                 </div>
@@ -674,16 +693,18 @@ const Account = () => {
                                           {msg.proposed_price !== null && (
                                             <Badge
                                               variant="outline"
-                                              className="text-[10px] uppercase border-primary text-primary"
+                                              className="border-primary text-[10px] uppercase text-primary"
                                             >
                                               {Number(msg.proposed_price).toFixed(2)} kr
                                             </Badge>
                                           )}
                                         </div>
+
                                         <span className="text-xs text-muted-foreground">
                                           {new Date(msg.created_at).toLocaleString()}
                                         </span>
                                       </div>
+
                                       <p className="whitespace-pre-wrap text-foreground">{msg.message || "-"}</p>
                                     </div>
                                   ))
@@ -827,8 +848,10 @@ const Account = () => {
                           </Badge>
                         )}
                       </div>
+
                       {v.description && <p className="text-sm text-muted-foreground">{v.description}</p>}
                     </CardHeader>
+
                     <CardContent className="flex items-center justify-between">
                       <div>
                         <span className="font-display text-2xl font-bold text-primary">
@@ -838,6 +861,7 @@ const Account = () => {
                           {v.discount_type === "gift_card" ? "gift card" : "off"}
                         </span>
                       </div>
+
                       <Button
                         size="sm"
                         onClick={() => redeemVoucher(v)}
@@ -870,23 +894,28 @@ const Account = () => {
                           <p className="font-display text-sm font-semibold uppercase text-card-foreground">
                             {uv.vouchers?.name ?? "Voucher"}
                           </p>
+
                           {uv.vouchers?.discount_type === "gift_card" && (
                             <Badge variant="outline" className="text-xs">
                               Gift Card
                             </Badge>
                           )}
                         </div>
+
                         <p className="font-mono text-lg font-bold text-primary">{uv.code}</p>
+
                         {uv.balance !== null && (
                           <p className="text-sm text-muted-foreground">
                             Balance:{" "}
                             <span className="font-bold text-foreground">{Number(uv.balance).toFixed(2)} kr</span>
                           </p>
                         )}
+
                         {uv.recipient_email && (
                           <p className="text-xs text-muted-foreground">Sent to: {uv.recipient_email}</p>
                         )}
                       </div>
+
                       <div className="flex items-center gap-2">
                         {uv.vouchers?.discount_type === "gift_card" && !uv.recipient_email && !uv.is_used && (
                           <Button
@@ -898,6 +927,7 @@ const Account = () => {
                             <Send className="mr-1 h-3 w-3" /> Gift
                           </Button>
                         )}
+
                         <Badge
                           variant={
                             uv.is_used && uv.balance === null
@@ -921,16 +951,19 @@ const Account = () => {
                         className="mt-4 space-y-3 border-t border-border pt-4"
                       >
                         <p className="text-sm text-muted-foreground">Send this gift card to someone:</p>
+
                         <Input
                           placeholder="Recipient email"
                           value={giftEmail}
                           onChange={(e) => setGiftEmail(e.target.value)}
                         />
+
                         <Input
                           placeholder="Recipient name (optional)"
                           value={giftName}
                           onChange={(e) => setGiftName(e.target.value)}
                         />
+
                         <Button
                           size="sm"
                           onClick={() => sendGiftCard(uv.id)}

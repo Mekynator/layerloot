@@ -723,9 +723,51 @@ const PageEditor = () => {
           ) : (
             <div className="pb-16">
               <div className="border-b border-border bg-muted/20 px-6 py-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span className="font-medium text-foreground">{prettyPageLabel(activePage)}</span>
-                  <ChevronDown className="h-4 w-4" />
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <Select
+                    value={activePage}
+                    onValueChange={(v) => {
+                      setActivePage(v);
+                      setSelectedBlockId(null);
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-[220px] bg-background">
+                      <SelectValue />
+                    </SelectTrigger>
+
+                    <SelectContent>
+                      {pageGroups.map((group) => (
+                        <SelectGroup key={group.label}>
+                          <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            {group.label}
+                          </SelectLabel>
+
+                          {group.pages
+                            .filter((p) => allPages.includes(p.value))
+                            .map((p) => (
+                              <SelectItem key={p.value} value={p.value}>
+                                {p.label}
+                              </SelectItem>
+                            ))}
+                        </SelectGroup>
+                      ))}
+
+                      {customPages.length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            Custom Pages
+                          </SelectLabel>
+
+                          {customPages.map((p) => (
+                            <SelectItem key={p} value={p}>
+                              {prettyPageLabel(p)}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                    </SelectContent>
+                  </Select>
+
                   <span>Live canvas preview</span>
                 </div>
               </div>

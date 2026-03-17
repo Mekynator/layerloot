@@ -29,7 +29,6 @@ import {
   Layers,
   Package,
   FolderTree,
-  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,11 +47,11 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
-import EditableBlockWrapper from "@/components/admin/EditableBlockWrapper";
+import type { SiteBlock } from "@/components/admin/BlockRenderer";
 import BlockEditorPanel from "@/components/admin/BlockEditorPanel";
 import NavLinkEditor from "@/components/admin/NavLinkEditor";
 import PageBackgroundEditor from "@/components/admin/PageBackgroundEditor";
+import LivePagePreview from "@/components/admin/LivePagePreview";
 
 const pageGroups = [
   {
@@ -168,8 +167,6 @@ const PageEditor = () => {
   const [newPageOpen, setNewPageOpen] = useState(false);
   const [newPageSlug, setNewPageSlug] = useState("");
   const [deletePageOpen, setDeletePageOpen] = useState(false);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [sDragIndex, setSDragIndex] = useState<number | null>(null);
   const [sDragOverIndex, setSDragOverIndex] = useState<number | null>(null);
@@ -204,6 +201,7 @@ const PageEditor = () => {
   }, [activePage]);
 
   const pageBlocks = blocks.filter((b) => b.page === activePage).sort((a, b) => a.sort_order - b.sort_order);
+
   const selectedBlock = pageBlocks.find((b) => b.id === selectedBlockId) || null;
   const customPages = allPages.filter((p) => !defaultPages.includes(p));
 
@@ -322,30 +320,6 @@ const PageEditor = () => {
     fetchBlocks();
   };
 
-  const moveBlock = async (index: number, direction: "up" | "down") => {
-    const swapIndex = direction === "up" ? index - 1 : index + 1;
-    if (swapIndex < 0 || swapIndex >= pageBlocks.length) return;
-    const a = pageBlocks[index];
-    const b = pageBlocks[swapIndex];
-    await Promise.all([
-      supabase.from("site_blocks").update({ sort_order: b.sort_order }).eq("id", a.id),
-      supabase.from("site_blocks").update({ sort_order: a.sort_order }).eq("id", b.id),
-    ]);
-    fetchBlocks();
-  };
-
-  const handleDragEnd = async () => {
-    if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
-      const reordered = [...pageBlocks];
-      const [moved] = reordered.splice(dragIndex, 1);
-      reordered.splice(dragOverIndex, 0, moved);
-      await Promise.all(reordered.map((b, i) => supabase.from("site_blocks").update({ sort_order: i }).eq("id", b.id)));
-      fetchBlocks();
-    }
-    setDragIndex(null);
-    setDragOverIndex(null);
-  };
-
   const handleStructureDragEnd = async () => {
     if (sDragIndex !== null && sDragOverIndex !== null && sDragIndex !== sDragOverIndex) {
       const reordered = [...pageBlocks];
@@ -371,6 +345,7 @@ const PageEditor = () => {
     const updated = [...customPages.map((s) => ({ slug: s, title: prettyPageLabel(s) })), { slug, title: newPageSlug }];
 
     await supabase.from("site_settings").upsert({ key: "custom_pages", value: updated as any }, { onConflict: "key" });
+
     const merged = Array.from(new Set([...defaultPages, ...updated.map((p) => p.slug)]));
     setAllPages(merged);
     setActivePage(slug);
@@ -382,6 +357,7 @@ const PageEditor = () => {
   const deletePage = async () => {
     await supabase.from("site_blocks").delete().eq("page", activePage);
     const remainingCustomPages = customPages.filter((p) => p !== activePage);
+
     await supabase.from("site_settings").upsert(
       {
         key: "custom_pages",
@@ -389,15 +365,11 @@ const PageEditor = () => {
       },
       { onConflict: "key" },
     );
+
     setAllPages([...defaultPages, ...remainingCustomPages]);
     setActivePage("home");
     setDeletePageOpen(false);
     toast({ title: "Page deleted" });
-  };
-
-  const scrollToBlock = (id: string) => {
-    const el = document.getElementById(`canvas-block-${id}`);
-    el?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
   if (loading || !isAdmin) return null;
@@ -421,8 +393,9 @@ const PageEditor = () => {
             <Select
               value={activePage}
               onValueChange={(v) => {
-                if (v === "__new__") setNewPageOpen(true);
-                else {
+                if (v === "__new__") {
+                  setNewPageOpen(true);
+                } else {
                   setActivePage(v);
                   setSelectedBlockId(null);
                 }
@@ -529,7 +502,9 @@ const PageEditor = () => {
 
       <div className="flex flex-1 overflow-hidden">
         <aside
-          className={`shrink-0 overflow-y-auto border-r border-border bg-card transition-all duration-300 ${panelCollapsed ? "w-0 overflow-hidden" : "w-72 lg:w-80"}`}
+          className={`shrink-0 overflow-y-auto border-r border-border bg-card transition-all duration-300 ${
+            panelCollapsed ? "w-0 overflow-hidden" : "w-72 lg:w-80"
+          }`}
         >
           <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-4 py-3">
             <div className="flex items-center gap-2">
@@ -591,10 +566,7 @@ const PageEditor = () => {
                         setSDragOverIndex(index);
                       }}
                       onDragEnd={handleStructureDragEnd}
-                      onClick={() => {
-                        setSelectedBlockId(isSelected ? null : block.id);
-                        if (!isSelected) scrollToBlock(block.id);
-                      }}
+                      onClick={() => setSelectedBlockId(isSelected ? null : block.id)}
                       className={`group cursor-pointer rounded-md border-l-[3px] px-2 py-2 text-sm transition-all ${colorClass} ${
                         isSelected ? "ring-2 ring-primary ring-offset-1 ring-offset-card" : "hover:bg-accent/50"
                       } ${!block.is_active ? "opacity-50" : ""}`}
@@ -658,6 +630,7 @@ const PageEditor = () => {
               })}
 
               {sDragOverIndex === pageBlocks.length && <div className="mx-2 h-0.5 rounded bg-primary" />}
+
               <div
                 onDragOver={(e) => {
                   e.preventDefault();
@@ -704,123 +677,8 @@ const PageEditor = () => {
           )}
         </aside>
 
-        <main className="flex-1 overflow-y-auto bg-background">
-          {pageBlocks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-32">
-              <FileText className="mb-4 h-16 w-16 text-muted-foreground/30" />
-              <p className="font-display text-lg uppercase text-muted-foreground">Empty Page</p>
-              <p className="mt-1 text-sm text-muted-foreground">Click "Add Block" to start building</p>
-              <Button
-                className="mt-4"
-                onClick={() => {
-                  setInsertAtIndex(null);
-                  setAddBlockOpen(true);
-                }}
-              >
-                <Plus className="mr-1 h-4 w-4" /> Add First Block
-              </Button>
-            </div>
-          ) : (
-            <div className="pb-16">
-              <div className="border-b border-border bg-muted/20 px-6 py-3">
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <Select
-                    value={activePage}
-                    onValueChange={(v) => {
-                      setActivePage(v);
-                      setSelectedBlockId(null);
-                    }}
-                  >
-                    <SelectTrigger className="h-8 w-[220px] bg-background">
-                      <SelectValue />
-                    </SelectTrigger>
-
-                    <SelectContent>
-                      {pageGroups.map((group) => (
-                        <SelectGroup key={group.label}>
-                          <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                            {group.label}
-                          </SelectLabel>
-
-                          {group.pages
-                            .filter((p) => allPages.includes(p.value))
-                            .map((p) => (
-                              <SelectItem key={p.value} value={p.value}>
-                                {p.label}
-                              </SelectItem>
-                            ))}
-                        </SelectGroup>
-                      ))}
-
-                      {customPages.length > 0 && (
-                        <SelectGroup>
-                          <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                            Custom Pages
-                          </SelectLabel>
-
-                          {customPages.map((p) => (
-                            <SelectItem key={p} value={p}>
-                              {prettyPageLabel(p)}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      )}
-                    </SelectContent>
-                  </Select>
-
-                  <span>Live canvas preview</span>
-                </div>
-              </div>
-
-              {pageBlocks.map((block, index) => (
-                <div key={block.id} id={`canvas-block-${block.id}`}>
-                  <EditableBlockWrapper
-                    block={block}
-                    index={index}
-                    total={pageBlocks.length}
-                    isSelected={selectedBlockId === block.id}
-                    isDragOver={dragOverIndex === index}
-                    onSelect={() => setSelectedBlockId(block.id === selectedBlockId ? null : block.id)}
-                    onEdit={() => {
-                      setSelectedBlockId(block.id);
-                      setEditPanelOpen(true);
-                    }}
-                    onDelete={() => deleteBlock(block.id)}
-                    onDuplicate={() => duplicateBlock(block)}
-                    onToggleActive={() => toggleActive(block.id, !(block.is_active ?? true))}
-                    onMoveUp={() => moveBlock(index, "up")}
-                    onMoveDown={() => moveBlock(index, "down")}
-                    onDragStart={() => setDragIndex(index)}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setDragOverIndex(index);
-                    }}
-                    onDragEnd={handleDragEnd}
-                    onInsertBefore={() => {
-                      setInsertAtIndex(index > 0 ? pageBlocks[index - 1].sort_order + 1 : 0);
-                      setAddBlockOpen(true);
-                    }}
-                  >
-                    {renderBlock(block, true)}
-                  </EditableBlockWrapper>
-                </div>
-              ))}
-
-              <div
-                className="flex h-12 items-center justify-center opacity-0 transition-opacity hover:opacity-100"
-                onClick={() => {
-                  setInsertAtIndex(null);
-                  setAddBlockOpen(true);
-                }}
-              >
-                <div className="flex h-0.5 flex-1 bg-primary/30" />
-                <button className="mx-2 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
-                  <Plus className="h-4 w-4" />
-                </button>
-                <div className="flex h-0.5 flex-1 bg-primary/30" />
-              </div>
-            </div>
-          )}
+        <main className="flex-1 overflow-hidden bg-background">
+          <LivePagePreview page={activePage} />
         </main>
       </div>
 

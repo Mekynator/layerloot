@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { ArrowRight, ShoppingBag } from "lucide-react";
+import { ShoppingBag } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 
 interface ProductCardProps {
@@ -24,7 +24,6 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
   const { addItem } = useCart();
   const images = product.images?.length ? product.images : ["/placeholder.svg"];
   const isNew = product.created_at ? Date.now() - new Date(product.created_at).getTime() < 14 * 86400000 : false;
-  const hasModel = !!product.model_url;
   const hasSale = !!product.compare_at_price && Number(product.compare_at_price) > Number(product.price);
 
   const discountPct = hasSale
@@ -107,8 +106,8 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
           )}
         </div>
 
-        <div className="flex flex-1 flex-col p-4">
-          <div className="mb-2">
+        <div className="flex flex-1 flex-col p-4 pt-3">
+          <div className="mb-3">
             <h3 className="line-clamp-2 font-display text-sm font-semibold uppercase tracking-wide text-card-foreground transition-colors duration-300 group-hover:text-primary">
               {product.name}
             </h3>
@@ -124,20 +123,11 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
               )}
             </div>
 
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <div className="text-[11px] text-muted-foreground">
-                {hasModel ? "Interactive model available" : "Ready to order"}
-              </div>
-
+            <div className="mt-3 flex items-center justify-end">
               <Button type="button" size="sm" onClick={handleAddToCart} className="shrink-0 rounded-xl px-3">
                 <ShoppingBag className="mr-1.5 h-4 w-4" />
                 Add to cart
               </Button>
-            </div>
-
-            <div className="mt-3 inline-flex items-center text-xs font-medium text-primary transition-all duration-300 group-hover:gap-1">
-              View
-              <ArrowRight className="ml-1 h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
             </div>
           </div>
         </div>

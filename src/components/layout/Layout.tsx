@@ -4,6 +4,8 @@ import Footer from "./Footer";
 import GlobalSectionRenderer from "./GlobalSectionRenderer";
 import PageBackgroundSlideshow from "@/components/layout/PageBackgroundSlideshow";
 
+<PageBackgroundSlideshow />
+className="relative z-10"
 
 const Layout = ({ children }: { children: ReactNode }) => {
   return (

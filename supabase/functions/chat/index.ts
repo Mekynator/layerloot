@@ -9,7 +9,6 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SUPABASE_PUBLISHABLE_KEY = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
 const serviceSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -28,28 +27,65 @@ function createUserClient(token: string) {
 }
 
 async function getPoints(userId: string) {
-  const { data } = await serviceSupabase.rpc("get_user_points_balance", {
+  const { data, error } = await serviceSupabase.rpc("get_user_points_balance", {
     _user_id: userId,
   });
+
+  if (error) {
+    console.error("get_user_points_balance error:", error);
+    return 0;
+  }
+
   return data ?? 0;
 }
 
 async function getRecentOrders(userId: string) {
-  const { data } = await serviceSupabase
+  const { data, error } = await serviceSupabase
     .from("orders")
     .select("id,status,total,created_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(3);
 
+  if (error) {
+    console.error("getRecentOrders error:", error);
+    return [];
+  }
+
   return data ?? [];
 }
 
+async function getCoupons(userId: string) {
+  const { data, error } = await serviceSupabase
+    .from("coupons")
+    .select("code,description,discount_type,discount_value,expires_at,is_active")
+    .eq("is_active", true)
+    .limit(5);
+
+  if (error) {
+    console.error("getCoupons error:", error);
+    return [];
+  }
+
+  return (data ?? []).map((coupon: any) => ({
+    code: coupon.code,
+    description: coupon.description ?? undefined,
+    discountText:
+      coupon.discount_type && coupon.discount_value != null
+        ? `${coupon.discount_value}${coupon.discount_type === "percent" ? "%" : " DKK"} off`
+        : undefined,
+    expiresAt: coupon.expires_at ?? undefined,
+  }));
+}
+
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
 
   try {
-    const { messages } = await req.json();
+    const body = await req.json();
+    const messages = Array.isArray(body?.messages) ? body.messages : [];
     const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user")?.content || "";
 
     const token = extractBearerToken(req);
@@ -59,7 +95,13 @@ serve(async (req) => {
       const userClient = createUserClient(token);
       const {
         data: { user },
+        error,
       } = await userClient.auth.getUser();
+
+      if (error) {
+        console.error("auth.getUser error:", error);
+      }
+
       userId = user?.id ?? null;
     }
 
@@ -83,13 +125,14 @@ serve(async (req) => {
           payload: {
             text: `You currently have ${points} loyalty points.`,
             points,
+            suggestions: ["Show my latest order", "Do I have active coupons?"],
           },
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    if (/latest order|recent orders|my orders/i.test(lastUserMsg)) {
+    if (/latest order|recent orders|my orders|order status/i.test(lastUserMsg)) {
       if (!userId) {
         return new Response(
           JSON.stringify({
@@ -107,7 +150,9 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           payload: {
-            text: "Here are your most recent orders.",
+            text: orders.length
+              ? "Here are your most recent orders."
+              : "I couldn't find any recent orders on your account.",
             orders: orders.map((o: any) => ({
               orderNumber: o.id,
               status: o.status,
@@ -115,6 +160,37 @@ serve(async (req) => {
               createdAt: o.created_at,
               url: "/account",
             })),
+            suggestions: ["Check my points", "Do I have active coupons?"],
+          },
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    if (/coupon|coupons|discount/i.test(lastUserMsg)) {
+      const coupons = await getCoupons(userId ?? "guest");
+
+      return new Response(
+        JSON.stringify({
+          payload: {
+            text: coupons.length
+              ? "Here are the currently available coupons."
+              : "I couldn't find any active coupons right now.",
+            coupons,
+            suggestions: ["Check my points", "Show best sellers"],
+          },
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    if (/best sellers|bestsellers|best seller/i.test(lastUserMsg)) {
+      return new Response(
+        JSON.stringify({
+          payload: {
+            text: "You can browse our best sellers right here.",
+            links: [{ label: "Open products", url: "/products", description: "Explore popular LayerLoot items." }],
+            suggestions: ["Find gifts under 200 DKK", "Custom print help"],
           },
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -124,15 +200,29 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         payload: {
-          text: "I can help with your orders, loyalty points, products, and custom prints.",
+          text: userId
+            ? "I can help with your orders, loyalty points, coupons, products, and custom prints."
+            : "I can help with products, custom prints, shipping, and general shop questions. Sign in for points and order help.",
+          suggestions: userId
+            ? ["Check my points", "Show my latest order", "Do I have active coupons?"]
+            : ["Show best sellers", "Shipping information", "Custom print help"],
         },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("chat function error:", e);
+
+    return new Response(
+      JSON.stringify({
+        payload: {
+          text: "I can chat, but I couldn't access your account details right now.",
+        },
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });

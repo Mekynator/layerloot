@@ -32,12 +32,19 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { SelectGroup, SelectLabel } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,7 +52,6 @@ import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 import EditableBlockWrapper from "@/components/admin/EditableBlockWrapper";
 import BlockEditorPanel from "@/components/admin/BlockEditorPanel";
 import NavLinkEditor from "@/components/admin/NavLinkEditor";
-
 
 const pageGroups = [
   {
@@ -424,6 +430,7 @@ const PageEditor = () => {
               <SelectTrigger className="w-56 border-background/20 bg-background/10 text-background">
                 <SelectValue />
               </SelectTrigger>
+
               <SelectContent>
                 {pageGroups.map((group) => (
                   <SelectGroup key={group.label}>
@@ -445,13 +452,14 @@ const PageEditor = () => {
                   <SelectGroup>
                     <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                       Custom Pages
-                    </div>
+                    </SelectLabel>
+
                     {customPages.map((p) => (
                       <SelectItem key={p} value={p}>
                         {prettyPageLabel(p)}
                       </SelectItem>
                     ))}
-                  </div>
+                  </SelectGroup>
                 )}
 
                 <SelectItem value="__new__" className="font-semibold text-primary">
@@ -666,17 +674,17 @@ const PageEditor = () => {
                   Summary
                 </h3>
                 <div className="grid grid-cols-3 gap-2 text-center">
-                  <SelectGroup>
+                  <div>
                     <p className="font-display text-lg font-bold text-foreground">{pageBlocks.length}</p>
                     <p className="text-[10px] text-muted-foreground">Total</p>
                   </div>
-                  <SelectGroup>
+                  <div>
                     <p className="font-display text-lg font-bold text-primary">
                       {pageBlocks.filter((b) => b.is_active).length}
                     </p>
                     <p className="text-[10px] text-muted-foreground">Visible</p>
                   </div>
-                  <SelectGroup>
+                  <div>
                     <p className="font-display text-lg font-bold text-muted-foreground">
                       {pageBlocks.filter((b) => !b.is_active).length}
                     </p>
@@ -804,7 +812,7 @@ const PageEditor = () => {
             <DialogTitle className="font-display uppercase">Create Page</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <SelectGroup>
+            <div>
               <Label>Page Name</Label>
               <Input
                 value={newPageSlug}

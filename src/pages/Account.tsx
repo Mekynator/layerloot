@@ -220,6 +220,94 @@ function getRewardSortOrder(voucher: Voucher) {
   return preset?.sortOrder ?? 999;
 }
 
+type RewardCatalogItem = {
+  key: string;
+  name: string;
+  description: string;
+  pointsCost: number;
+  discountType: string;
+  discountValue: number;
+  badge?: string;
+};
+
+const REWARD_CATALOG: RewardCatalogItem[] = [
+  {
+    key: "25-discount",
+    name: "25 KR DISCOUNT",
+    description: "Get 25 kr off your next order",
+    pointsCost: 200,
+    discountType: "fixed_discount",
+    discountValue: 25,
+  },
+  {
+    key: "50-discount",
+    name: "50 KR DISCOUNT",
+    description: "Get 50 kr off your next order",
+    pointsCost: 400,
+    discountType: "fixed_discount",
+    discountValue: 50,
+  },
+  {
+    key: "100-discount",
+    name: "100 KR DISCOUNT",
+    description: "Get 100 kr off your next order",
+    pointsCost: 800,
+    discountType: "fixed_discount",
+    discountValue: 100,
+  },
+  {
+    key: "150-discount",
+    name: "150 KR DISCOUNT",
+    description: "Get 150 kr off your next order",
+    pointsCost: 1200,
+    discountType: "fixed_discount",
+    discountValue: 150,
+  },
+  {
+    key: "250-discount",
+    name: "250 KR DISCOUNT",
+    description: "Get 250 kr off your next order",
+    pointsCost: 2000,
+    discountType: "fixed_discount",
+    discountValue: 250,
+  },
+  {
+    key: "500-gift-card",
+    name: "500 KR GIFT CARD",
+    description: "A 500 kr gift card - use it yourself or send it to someone!",
+    pointsCost: 5000,
+    discountType: "gift_card",
+    discountValue: 500,
+    badge: "Gift Card",
+  },
+  {
+    key: "free-delivery",
+    name: "FREE DELIVERY DISCOUNT",
+    description: "Get free delivery on one order",
+    pointsCost: 800,
+    discountType: "free_shipping",
+    discountValue: 0,
+    badge: "Shipping",
+  },
+];
+
+function findMatchingVoucher(catalogItem: RewardCatalogItem, vouchers: Voucher[]) {
+  return vouchers.find((voucher) => {
+    if (catalogItem.discountType === "free_shipping") {
+      return (
+        voucher.discount_type === "free_shipping" ||
+        voucher.name.toLowerCase().includes("free delivery") ||
+        voucher.name.toLowerCase().includes("free shipping")
+      );
+    }
+
+    return (
+      voucher.discount_type === catalogItem.discountType &&
+      Number(voucher.discount_value) === catalogItem.discountValue
+    );
+  });
+}
+
 const Account = () => {
   const { user, isAdmin, signOut, loading } = useAuth();
   const navigate = useNavigate();
@@ -917,178 +1005,72 @@ const Account = () => {
         )}
 
         {tab === "rewards" && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {displayRewards.length === 0 ? (
-              <Card className="col-span-full">
-                <CardContent className="p-8 text-center text-muted-foreground">No rewards available.</CardContent>
-              </Card>
-            ) : (
-              displayRewards.map((v) => {
-                const effectivePointsCost = getEffectivePointsCost(v);
-                const rewardTitle = getRewardTitle(v);
-                const isFreeDelivery =
-                  rewardTitle.toLowerCase().includes("free delivery") ||
-                  rewardTitle.toLowerCase().includes("free shipping");
+  <div className="grid gap-4 sm:grid-cols-2">
+    {REWARD_CATALOG.map((reward) => {
+      const matchedVoucher = findMatchingVoucher(reward, vouchers);
+      const canRedeem = !!matchedVoucher && pointsBalance >= reward.pointsCost;
 
-                return (
-                  <motion.div
-                    key={v.id}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <div className="flex items-center gap-2">
-                          <CardTitle className="font-display text-lg uppercase">{rewardTitle}</CardTitle>
+      return (
+        <motion.div
+          key={reward.key}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <CardTitle className="font-display text-lg uppercase">{reward.name}</CardTitle>
 
-                          {v.discount_type === "gift_card" && (
-                            <Badge variant="outline" className="font-display text-xs">
-                              Gift Card
-                            </Badge>
-                          )}
+                {reward.badge && (
+                  <Badge variant="outline" className="font-display text-xs">
+                    {reward.badge}
+                  </Badge>
+                )}
+              </div>
 
-                          {isFreeDelivery && (
-                            <Badge variant="outline" className="font-display text-xs">
-                              <Truck className="mr-1 h-3 w-3" />
-                              Shipping
-                            </Badge>
-                          )}
-                        </div>
+              <p className="text-sm text-muted-foreground">{reward.description}</p>
+            </CardHeader>
 
-                        {v.description && <p className="text-sm text-muted-foreground">{v.description}</p>}
-                      </CardHeader>
+            <CardContent className="flex items-center justify-between">
+              <div>
+                {reward.discountType === "free_shipping" ? (
+                  <>
+                    <span className="font-display text-2xl font-bold text-primary">Free delivery</span>
+                    <span className="ml-1 text-sm text-muted-foreground">discount</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="font-display text-2xl font-bold text-primary">
+                      {reward.discountValue} kr
+                    </span>
+                    <span className="ml-1 text-sm text-muted-foreground">
+                      {reward.discountType === "gift_card" ? "gift card" : "discount"}
+                    </span>
+                  </>
+                )}
+              </div>
 
-                      <CardContent className="flex items-center justify-between">
-                        <div>
-                          {isFreeDelivery ? (
-                            <>
-                              <span className="font-display text-2xl font-bold text-primary">Free delivery</span>
-                              <p className="text-sm text-muted-foreground">One-time voucher</p>
-                            </>
-                          ) : (
-                            <>
-                              <span className="font-display text-2xl font-bold text-primary">
-                                {Number(v.discount_value).toFixed(0)} kr
-                              </span>
-                              <span className="ml-1 text-sm text-muted-foreground">
-                                {v.discount_type === "gift_card" ? "gift card" : "discount"}
-                              </span>
-                            </>
-                          )}
-                        </div>
+              <Button
+                size="sm"
+                onClick={() => matchedVoucher && redeemVoucher(matchedVoucher)}
+                disabled={!matchedVoucher || pointsBalance < reward.pointsCost}
+                className="font-display uppercase tracking-wider"
+              >
+                <Star className="mr-1 h-3 w-3" /> {reward.pointsCost} pts
+              </Button>
+            </CardContent>
 
-                        <Button
-                          size="sm"
-                          onClick={() => redeemVoucher(v)}
-                          disabled={pointsBalance < effectivePointsCost}
-                          className="font-display uppercase tracking-wider"
-                        >
-                          <Star className="mr-1 h-3 w-3" /> {effectivePointsCost} pts
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                );
-              })
+            {!matchedVoucher && (
+              <div className="px-6 pb-4 text-xs text-muted-foreground">
+                Reward not connected in database yet
+              </div>
             )}
-          </div>
-        )}
-
-        {tab === "vouchers" && (
-          <div className="space-y-3">
-            {userVouchers.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center text-muted-foreground">
-                  No active vouchers available.
-                </CardContent>
-              </Card>
-            ) : (
-              userVouchers.map((uv) => (
-                <Card key={uv.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-display text-sm font-semibold uppercase text-card-foreground">
-                            {uv.vouchers?.name ?? "Voucher"}
-                          </p>
-
-                          {uv.vouchers?.discount_type === "gift_card" && (
-                            <Badge variant="outline" className="text-xs">
-                              Gift Card
-                            </Badge>
-                          )}
-                        </div>
-
-                        <p className="font-mono text-lg font-bold text-primary">{uv.code}</p>
-
-                        {uv.balance !== null && (
-                          <p className="text-sm text-muted-foreground">
-                            Balance:{" "}
-                            <span className="font-bold text-foreground">{Number(uv.balance).toFixed(2)} kr</span>
-                          </p>
-                        )}
-
-                        {uv.recipient_email && (
-                          <p className="text-xs text-muted-foreground">Sent to: {uv.recipient_email}</p>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {uv.vouchers?.discount_type === "gift_card" && !uv.recipient_email && !uv.is_used && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setGiftingVoucherId(giftingVoucherId === uv.id ? null : uv.id)}
-                            className="font-display text-xs uppercase tracking-wider"
-                          >
-                            <Send className="mr-1 h-3 w-3" /> Gift
-                          </Button>
-                        )}
-
-                        <Badge variant="default">Active</Badge>
-                      </div>
-                    </div>
-
-                    {giftingVoucherId === uv.id && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        className="mt-4 space-y-3 border-t border-border pt-4"
-                      >
-                        <p className="text-sm text-muted-foreground">Send this gift card to someone:</p>
-
-                        <Input
-                          placeholder="Recipient email"
-                          value={giftEmail}
-                          onChange={(e) => setGiftEmail(e.target.value)}
-                        />
-
-                        <Input
-                          placeholder="Recipient name (optional)"
-                          value={giftName}
-                          onChange={(e) => setGiftName(e.target.value)}
-                        />
-
-                        <Button
-                          size="sm"
-                          onClick={() => sendGiftCard(uv.id)}
-                          className="font-display uppercase tracking-wider"
-                        >
-                          <Send className="mr-1 h-3 w-3" /> Send Gift Card
-                        </Button>
-                      </motion.div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
+          </Card>
+        </motion.div>
+      );
+    })}
+  </div>
+)}
 
 export default Account;

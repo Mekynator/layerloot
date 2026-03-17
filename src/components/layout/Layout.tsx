@@ -4,15 +4,13 @@ import Footer from "./Footer";
 import GlobalSectionRenderer from "./GlobalSectionRenderer";
 import PageBackgroundSlideshow from "@/components/layout/PageBackgroundSlideshow";
 
-<PageBackgroundSlideshow />
-className="relative z-10"
-
 const Layout = ({ children }: { children: ReactNode }) => {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="relative flex min-h-screen flex-col">
+      <PageBackgroundSlideshow />
       <Header />
       <GlobalSectionRenderer page="global_before_main" />
-      <main className="flex-1">{children}</main>
+      <main className="relative z-10 flex-1">{children}</main>
       <GlobalSectionRenderer page="global_after_main" />
       <Footer />
     </div>

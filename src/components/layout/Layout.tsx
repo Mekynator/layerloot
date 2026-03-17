@@ -6,13 +6,15 @@ import PageBackgroundSlideshow from "@/components/layout/PageBackgroundSlideshow
 
 const Layout = ({ children }: { children: ReactNode }) => {
   return (
-    <div className="relative flex min-h-screen flex-col">
+    <div className="relative isolate flex min-h-screen flex-col">
       <PageBackgroundSlideshow />
-      <Header />
-      <GlobalSectionRenderer page="global_before_main" />
-      <main className="relative z-10 flex-1">{children}</main>
-      <GlobalSectionRenderer page="global_after_main" />
-      <Footer />
+      <div className="relative z-10 flex min-h-screen flex-col">
+        <Header />
+        <GlobalSectionRenderer page="global_before_main" />
+        <main className="flex-1">{children}</main>
+        <GlobalSectionRenderer page="global_after_main" />
+        <Footer />
+      </div>
     </div>
   );
 };

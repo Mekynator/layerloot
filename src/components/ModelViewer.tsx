@@ -1,23 +1,14 @@
-// Updated ModelViewer.tsx
-// Changes:
-// - Removed optional props (keeps only url)
-// - Fixed fullscreen centering
-// - Improved mobile layout and controls
-// - Keeps free orbit/tilt/zoom, gizmo, grid, wireframe, reset, fullscreen, reference objects
+// ModelViewer.tsx
+// Backward-compatible clean viewer for Lovable build
+// - Keeps only url functionally required
+// - Accepts old props so existing pages still build
+// - Fullscreen centered
+// - Mobile-friendly layout
 // - STL / OBJ / 3MF support
 
 import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import {
-  ArcballControls,
-  Center,
-  Environment,
-  GizmoHelper,
-  GizmoViewport,
-  Grid,
-  Html,
-  useGLTF,
-} from "@react-three/drei";
+import { ArcballControls, Center, Environment, GizmoHelper, GizmoViewport, Grid, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
@@ -28,9 +19,14 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface ModelViewerProps {
   url: string;
+  className?: string;
+  showFullscreen?: boolean;
+  selectedColor?: string;
+  fileName?: string;
 }
 
-function getFileExtension(url: string): string {
+function getFileExtension(url: string, fileName?: string): string {
+  if (fileName) return fileName.split(".").pop()?.toLowerCase() ?? "";
   const clean = url.split("?")[0];
   return clean.split(".").pop()?.toLowerCase() ?? "";
 }
@@ -38,10 +34,7 @@ function getFileExtension(url: string): string {
 function normalizeObject(obj: THREE.Object3D, targetSize = 3) {
   const box = new THREE.Box3().setFromObject(obj);
   const size = new THREE.Vector3();
-  const center = new THREE.Vector3();
-
   box.getSize(size);
-  box.getCenter(center);
 
   const maxDim = Math.max(size.x, size.y, size.z);
   if (maxDim === 0) return;
@@ -49,11 +42,10 @@ function normalizeObject(obj: THREE.Object3D, targetSize = 3) {
   const scale = targetSize / maxDim;
   obj.scale.multiplyScalar(scale);
 
-  const scaledBox = new THREE.Box3().setFromObject(obj);
-  const scaledCenter = new THREE.Vector3();
-  scaledBox.getCenter(scaledCenter);
-
-  obj.position.sub(scaledCenter);
+  const newBox = new THREE.Box3().setFromObject(obj);
+  const center = new THREE.Vector3();
+  newBox.getCenter(center);
+  obj.position.sub(center);
 }
 
 function LoadingFallback() {
@@ -64,22 +56,34 @@ function LoadingFallback() {
   );
 }
 
-function ModelMesh({ url, autoRotate, wireframe }: { url: string; autoRotate: boolean; wireframe: boolean }) {
+function ModelMesh({
+  url,
+  autoRotate,
+  wireframe,
+  selectedColor,
+  fileName,
+}: {
+  url: string;
+  autoRotate: boolean;
+  wireframe: boolean;
+  selectedColor: string;
+  fileName?: string;
+}) {
   const groupRef = useRef<THREE.Group>(null);
   const [object, setObject] = useState<THREE.Object3D | null>(null);
 
   const material = useMemo(() => {
     return new THREE.MeshStandardMaterial({
-      color: new THREE.Color("#b0b0b0"),
+      color: new THREE.Color(selectedColor),
       metalness: 0.18,
       roughness: 0.62,
       wireframe,
     });
-  }, [wireframe]);
+  }, [selectedColor, wireframe]);
 
   useEffect(() => {
     let mounted = true;
-    const ext = getFileExtension(url);
+    const ext = getFileExtension(url, fileName);
 
     const finish = (obj: THREE.Object3D) => {
       obj.traverse((child) => {
@@ -93,6 +97,7 @@ function ModelMesh({ url, autoRotate, wireframe }: { url: string; autoRotate: bo
       });
 
       normalizeObject(obj, 3);
+
       if (mounted) setObject(obj);
     };
 
@@ -117,7 +122,7 @@ function ModelMesh({ url, autoRotate, wireframe }: { url: string; autoRotate: bo
     return () => {
       mounted = false;
     };
-  }, [url, material]);
+  }, [url, fileName, material]);
 
   useFrame((_, delta) => {
     if (autoRotate && groupRef.current) {
@@ -145,11 +150,12 @@ function CameraControls({ resetKey, mobile }: { resetKey: number; mobile: boolea
     } else {
       camera.position.set(4.5, 3.5, 5.5);
     }
+
     camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
   }, [camera, resetKey, mobile]);
 
-  return <ArcballControls enablePan enableZoom enableRotate minDistance={2.2} maxDistance={12} dampingFactor={0.08} />;
+  return <ArcballControls enablePan enableZoom enableRotate minDistance={2.2} maxDistance={12} />;
 }
 
 function ViewerCanvas({
@@ -159,6 +165,8 @@ function ViewerCanvas({
   showGrid,
   resetKey,
   mobile,
+  selectedColor,
+  fileName,
 }: {
   url: string;
   autoRotate: boolean;
@@ -166,6 +174,8 @@ function ViewerCanvas({
   showGrid: boolean;
   resetKey: number;
   mobile: boolean;
+  selectedColor: string;
+  fileName?: string;
 }) {
   return (
     <div className="h-full w-full">
@@ -185,8 +195,13 @@ function ViewerCanvas({
         {showGrid && <Grid position={[0, -1.8, 0]} args={[20, 20]} cellSize={0.5} infiniteGrid />}
 
         <Suspense fallback={<LoadingFallback />}>
-          <ModelMesh url={url} autoRotate={autoRotate} wireframe={wireframe} />
-
+          <ModelMesh
+            url={url}
+            autoRotate={autoRotate}
+            wireframe={wireframe}
+            selectedColor={selectedColor}
+            fileName={fileName}
+          />
           <Environment preset="studio" />
         </Suspense>
 
@@ -200,7 +215,13 @@ function ViewerCanvas({
   );
 }
 
-export default function ModelViewer({ url }: ModelViewerProps) {
+export default function ModelViewer({
+  url,
+  className = "",
+  showFullscreen = true,
+  selectedColor = "#b0b0b0",
+  fileName,
+}: ModelViewerProps) {
   const [autoRotate, setAutoRotate] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
   const [wireframe, setWireframe] = useState(false);
@@ -212,8 +233,17 @@ export default function ModelViewer({ url }: ModelViewerProps) {
     const media = window.matchMedia("(max-width: 768px)");
     const update = () => setMobile(media.matches);
     update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
+
+    const add = media.addEventListener?.bind(media);
+    const remove = media.removeEventListener?.bind(media);
+
+    if (add && remove) {
+      add("change", update);
+      return () => remove("change", update);
+    }
+
+    media.addListener(update);
+    return () => media.removeListener(update);
   }, []);
 
   const resetView = () => {
@@ -222,9 +252,9 @@ export default function ModelViewer({ url }: ModelViewerProps) {
 
   const viewer = (full = false) => (
     <div
-      className={`relative h-full w-full overflow-hidden rounded-2xl bg-gradient-to-b from-zinc-100 to-zinc-200 dark:from-zinc-900 dark:to-zinc-950 ${
-        full ? "rounded-none" : "min-h-[320px] sm:min-h-[420px]"
-      }`}
+      className={`relative h-full w-full overflow-hidden bg-gradient-to-b from-zinc-100 to-zinc-200 dark:from-zinc-900 dark:to-zinc-950 ${
+        full ? "rounded-none" : "min-h-[320px] rounded-2xl sm:min-h-[420px]"
+      } ${className}`}
     >
       <div className="absolute inset-0 flex items-center justify-center">
         <ViewerCanvas
@@ -232,9 +262,10 @@ export default function ModelViewer({ url }: ModelViewerProps) {
           autoRotate={autoRotate}
           wireframe={wireframe}
           showGrid={showGrid}
-          referenceType={referenceType}
           resetKey={resetKey}
           mobile={mobile}
+          selectedColor={selectedColor}
+          fileName={fileName}
         />
       </div>
 
@@ -261,7 +292,7 @@ export default function ModelViewer({ url }: ModelViewerProps) {
           <Undo2 size={16} />
         </Button>
 
-        {!full && (
+        {showFullscreen && !full && (
           <Button
             size="icon"
             variant="secondary"
@@ -290,17 +321,13 @@ export default function ModelViewer({ url }: ModelViewerProps) {
     <>
       {viewer(false)}
 
-      <Dialog open={fullscreen} onOpenChange={setFullscreen}>
-        <DialogContent className="h-[100dvh] w-[100vw] max-w-none border-0 p-0 sm:h-[88vh] sm:w-[94vw] overflow-hidden">
-          <div className="flex h-full w-full items-center justify-center bg-black">{viewer(true)}</div>
-        </DialogContent>
-      </Dialog>
+      {showFullscreen && (
+        <Dialog open={fullscreen} onOpenChange={setFullscreen}>
+          <DialogContent className="h-[100dvh] w-[100vw] max-w-none overflow-hidden border-0 p-0 sm:h-[88vh] sm:w-[94vw]">
+            <div className="flex h-full w-full items-center justify-center bg-black">{viewer(true)}</div>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }
-
-useGLTF.preload("/reference-models/coin.glb");
-useGLTF.preload("/reference-models/soda_can.glb");
-useGLTF.preload("/reference-models/monster_can.glb");
-useGLTF.preload("/reference-models/phone.glb");
-useGLTF.preload("/reference-models/banana.glb");

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -29,6 +29,7 @@ import {
   Layers,
   Package,
   FolderTree,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -44,7 +45,36 @@ import EditableBlockWrapper from "@/components/admin/EditableBlockWrapper";
 import BlockEditorPanel from "@/components/admin/BlockEditorPanel";
 import NavLinkEditor from "@/components/admin/NavLinkEditor";
 
-const defaultPages = ["home", "products", "contact", "about", "faq", "shipping-info", "returns"];
+const pageGroups = [
+  {
+    label: "Main Pages",
+    pages: [
+      { value: "home", label: "Home" },
+      { value: "products", label: "Products" },
+      { value: "about", label: "About" },
+      { value: "contact", label: "Contact" },
+      { value: "gallery", label: "Gallery" },
+      { value: "create-your-own", label: "Create Your Own" },
+      { value: "submit-design", label: "Submit Design" },
+      { value: "faq", label: "FAQ" },
+      { value: "shipping-info", label: "Shipping Info" },
+      { value: "returns", label: "Returns" },
+    ],
+  },
+  {
+    label: "Global Layout",
+    pages: [
+      { value: "global_header_top", label: "Global Header Top" },
+      { value: "global_header_bottom", label: "Global Header Bottom" },
+      { value: "global_before_main", label: "Global Before Main" },
+      { value: "global_after_main", label: "Global After Main" },
+      { value: "global_footer_top", label: "Global Footer Top" },
+      { value: "global_footer_bottom", label: "Global Footer Bottom" },
+    ],
+  },
+];
+
+const defaultPages = pageGroups.flatMap((group) => group.pages.map((page) => page.value));
 
 const blockTypes = [
   { value: "hero", label: "Hero Banner", icon: Square },
@@ -90,6 +120,30 @@ const BLOCK_COLORS: Record<string, string> = {
   newsletter: "border-l-pink-500 bg-pink-500/5",
 };
 
+const pageLabelMap = new Map(
+  pageGroups.flatMap((group) => group.pages.map((page) => [page.value, page.label] as const)),
+);
+
+const prettyPageLabel = (slug: string) =>
+  pageLabelMap.get(slug) ||
+  slug
+    .replace(/^global_/, "Global ")
+    .replace(/-/g, " ")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (m) => m.toUpperCase());
+
+const placementLabel = (page: string, placement?: string) => {
+  if (!placement) return "Default";
+  const map: Record<string, Record<string, string>> = {
+    products: { after_products: "After products" },
+    contact: { after_contact: "After contact" },
+    gallery: { after_gallery: "After gallery" },
+    "create-your-own": { after_create_your_own: "After tools" },
+    "submit-design": { after_submit_design: "After submit form" },
+  };
+  return map[page]?.[placement] || placement;
+};
+
 const PageEditor = () => {
   const { isAdmin, loading, user } = useAuth();
   const navigate = useNavigate();
@@ -124,7 +178,8 @@ const PageEditor = () => {
       .then(({ data }) => {
         if (data?.value && Array.isArray(data.value)) {
           const customSlugs = (data.value as any[]).map((p: any) => p.slug);
-          setAllPages([...defaultPages, ...customSlugs.filter((s: string) => !defaultPages.includes(s))]);
+          const merged = Array.from(new Set([...defaultPages, ...customSlugs]));
+          setAllPages(merged);
         }
       });
   }, []);
@@ -139,7 +194,9 @@ const PageEditor = () => {
   }, [activePage]);
 
   const pageBlocks = blocks.filter((b) => b.page === activePage).sort((a, b) => a.sort_order - b.sort_order);
+
   const selectedBlock = pageBlocks.find((b) => b.id === selectedBlockId) || null;
+  const customPages = allPages.filter((p) => !defaultPages.includes(p));
 
   const addBlock = async (type: string) => {
     const sortOrder =
@@ -161,7 +218,6 @@ const PageEditor = () => {
       );
     }
 
-    // Set sensible default content for new data-driven blocks
     let defaultContent: any = {};
     switch (type) {
       case "categories":
@@ -179,20 +235,51 @@ const PageEditor = () => {
       case "shipping_banner":
         defaultContent = { text: "Free shipping on orders over 500 kr" };
         break;
+      case "hero":
+        defaultContent = {
+          eyebrow: "3D Printing Essentials",
+          heading: "New hero title",
+          subheading: "Describe the section here",
+          button_text: "Explore",
+          button_link: "/products",
+          secondary_button_text: "Custom Order",
+          secondary_button_link: "/create",
+        };
+        break;
+      case "entry_cards":
+        defaultContent = {
+          cards: [
+            { icon: "ShoppingBag", title: "Shop Products", desc: "Card description", link: "/products", cta: "Browse" },
+            { icon: "Palette", title: "Customize", desc: "Card description", link: "/create", cta: "Customize" },
+            { icon: "Upload", title: "Upload Idea", desc: "Card description", link: "/submit-design", cta: "Upload" },
+          ],
+        };
+        break;
+      case "trust_badges":
+        defaultContent = {
+          badges: [
+            { icon: "Truck", title: "Free Shipping", desc: "On orders over 500 kr" },
+            { icon: "Shield", title: "Secure Checkout", desc: "Protected checkout" },
+            { icon: "Star", title: "Rewards", desc: "Earn points on purchases" },
+          ],
+        };
+        break;
     }
 
     const { error } = await supabase.from("site_blocks").insert({
       page: activePage,
       block_type: type,
-      title: blockTypes.find((bt) => bt.value === type)?.label || type.charAt(0).toUpperCase() + type.slice(1),
+      title: blockTypes.find((bt) => bt.value === type)?.label || type,
       content: defaultContent,
       sort_order: sortOrder,
       is_active: true,
     });
+
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
       return;
     }
+
     toast({ title: "Block added" });
     setAddBlockOpen(false);
     setInsertAtIndex(null);
@@ -267,14 +354,16 @@ const PageEditor = () => {
     const slug = newPageSlug
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, "-")
-      .replace(/-+/g, "-");
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+
     if (!slug) return;
-    const updated = [
-      ...allPages.filter((p) => !defaultPages.includes(p)).map((s) => ({ slug: s, title: s })),
-      { slug, title: newPageSlug },
-    ];
+
+    const updated = [...customPages.map((s) => ({ slug: s, title: prettyPageLabel(s) })), { slug, title: newPageSlug }];
+
     await supabase.from("site_settings").upsert({ key: "custom_pages", value: updated as any }, { onConflict: "key" });
-    setAllPages([...defaultPages, ...updated.map((p) => p.slug)]);
+    const merged = Array.from(new Set([...defaultPages, ...updated.map((p) => p.slug)]));
+    setAllPages(merged);
     setActivePage(slug);
     setNewPageOpen(false);
     setNewPageSlug("");
@@ -283,14 +372,17 @@ const PageEditor = () => {
 
   const deletePage = async () => {
     await supabase.from("site_blocks").delete().eq("page", activePage);
-    const customPages = allPages.filter((p) => !defaultPages.includes(p) && p !== activePage);
+    const remainingCustomPages = customPages.filter((p) => p !== activePage);
     await supabase
       .from("site_settings")
       .upsert(
-        { key: "custom_pages", value: customPages.map((s) => ({ slug: s, title: s })) as any },
+        {
+          key: "custom_pages",
+          value: remainingCustomPages.map((s) => ({ slug: s, title: prettyPageLabel(s) })) as any,
+        },
         { onConflict: "key" },
       );
-    setAllPages([...defaultPages, ...customPages]);
+    setAllPages([...defaultPages, ...remainingCustomPages]);
     setActivePage("home");
     setDeletePageOpen(false);
     toast({ title: "Page deleted" });
@@ -305,7 +397,6 @@ const PageEditor = () => {
 
   return (
     <div className="flex min-h-screen flex-col">
-      {/* ─── Admin Toolbar ─── */}
       <div className="sticky top-16 z-40 border-b border-border bg-foreground text-background">
         <div className="flex h-12 items-center justify-between gap-3 px-4">
           <div className="flex items-center gap-3">
@@ -313,57 +404,89 @@ const PageEditor = () => {
               variant="ghost"
               size="sm"
               onClick={() => navigate("/admin")}
-              className="text-background/70 hover:text-background hover:bg-background/10"
+              className="text-background/70 hover:bg-background/10 hover:text-background"
             >
               <ArrowLeft className="mr-1 h-4 w-4" /> Admin
             </Button>
+
             <div className="h-5 w-px bg-background/20" />
+
             <Select
               value={activePage}
               onValueChange={(v) => {
-                if (v === "__new__") {
-                  setNewPageOpen(true);
-                } else {
+                if (v === "__new__") setNewPageOpen(true);
+                else {
                   setActivePage(v);
                   setSelectedBlockId(null);
                 }
               }}
             >
-              <SelectTrigger className="w-40 border-background/20 bg-background/10 text-background">
+              <SelectTrigger className="w-56 border-background/20 bg-background/10 text-background">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {allPages.map((p) => (
-                  <SelectItem key={p} value={p} className="capitalize">
-                    {p}
-                  </SelectItem>
+                {pageGroups.map((group) => (
+                  <div key={group.label}>
+                    <div className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      {group.label}
+                    </div>
+                    {group.pages
+                      .filter((p) => allPages.includes(p.value))
+                      .map((p) => (
+                        <SelectItem key={p.value} value={p.value}>
+                          {p.label}
+                        </SelectItem>
+                      ))}
+                  </div>
                 ))}
-                <SelectItem value="__new__" className="text-primary font-semibold">
+
+                {customPages.length > 0 && (
+                  <div>
+                    <div className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Custom Pages
+                    </div>
+                    {customPages.map((p) => (
+                      <SelectItem key={p} value={p}>
+                        {prettyPageLabel(p)}
+                      </SelectItem>
+                    ))}
+                  </div>
+                )}
+
+                <SelectItem value="__new__" className="font-semibold text-primary">
                   + Create Page
                 </SelectItem>
               </SelectContent>
             </Select>
+
+            <Badge variant="secondary" className="hidden md:inline-flex">
+              {prettyPageLabel(activePage)}
+            </Badge>
+
             {!defaultPages.includes(activePage) && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setDeletePageOpen(true)}
-                className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive/80"
               >
                 <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete Page
               </Button>
             )}
           </div>
+
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setPanelCollapsed(!panelCollapsed)}
-              className="text-background/70 hover:text-background hover:bg-background/10"
+              className="text-background/70 hover:bg-background/10 hover:text-background"
             >
               {panelCollapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
             </Button>
+
             <NavLinkEditor />
+
             <Button
               size="sm"
               onClick={() => {
@@ -374,11 +497,12 @@ const PageEditor = () => {
             >
               <Plus className="mr-1 h-3.5 w-3.5" /> Add Block
             </Button>
+
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate("/")}
-              className="text-background/70 hover:text-background hover:bg-background/10"
+              className="text-background/70 hover:bg-background/10 hover:text-background"
             >
               <X className="mr-1 h-4 w-4" /> Exit
             </Button>
@@ -386,11 +510,9 @@ const PageEditor = () => {
         </div>
       </div>
 
-      {/* ─── Split View ─── */}
       <div className="flex flex-1 overflow-hidden">
-        {/* ── Structure Panel ── */}
         <aside
-          className={`shrink-0 border-r border-border bg-card transition-all duration-300 overflow-y-auto ${panelCollapsed ? "w-0 overflow-hidden" : "w-72 lg:w-80"}`}
+          className={`shrink-0 overflow-y-auto border-r border-border bg-card transition-all duration-300 ${panelCollapsed ? "w-0 overflow-hidden" : "w-72 lg:w-80"}`}
         >
           <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-4 py-3">
             <div className="flex items-center gap-2">
@@ -402,6 +524,16 @@ const PageEditor = () => {
             <Badge variant="secondary" className="font-mono text-[10px]">
               {pageBlocks.length} blocks
             </Badge>
+          </div>
+
+          <div className="border-b border-border bg-muted/30 px-4 py-3">
+            <p className="font-display text-[10px] uppercase tracking-widest text-muted-foreground">Editing</p>
+            <p className="mt-1 text-sm font-medium text-foreground">{prettyPageLabel(activePage)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {activePage.startsWith("global_")
+                ? "This area appears across the site."
+                : "This controls the live public page layout."}
+            </p>
           </div>
 
           {pageBlocks.length === 0 ? (
@@ -426,12 +558,14 @@ const PageEditor = () => {
                 const Icon = bt?.icon ?? Square;
                 const colorClass = BLOCK_COLORS[block.block_type] ?? "border-l-muted-foreground bg-muted/30";
                 const isSelected = selectedBlockId === block.id;
+                const placement = block.content?.placement as string | undefined;
 
                 return (
                   <div key={block.id}>
                     {sDragOverIndex === index && sDragIndex !== index && (
                       <div className="mx-2 h-0.5 rounded bg-primary" />
                     )}
+
                     <div
                       draggable
                       onDragStart={() => setSDragIndex(index)}
@@ -444,50 +578,62 @@ const PageEditor = () => {
                         setSelectedBlockId(isSelected ? null : block.id);
                         if (!isSelected) scrollToBlock(block.id);
                       }}
-                      className={`group flex items-center gap-2 rounded-md border-l-[3px] px-2 py-2 text-sm transition-all cursor-pointer ${colorClass} ${
+                      className={`group cursor-pointer rounded-md border-l-[3px] px-2 py-2 text-sm transition-all ${colorClass} ${
                         isSelected ? "ring-2 ring-primary ring-offset-1 ring-offset-card" : "hover:bg-accent/50"
                       } ${!block.is_active ? "opacity-50" : ""}`}
                     >
-                      <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground" />
-                      <Icon className="h-3.5 w-3.5 shrink-0 text-foreground/60" />
-                      <div className="min-w-0 flex-1">
-                        <span className="block truncate font-display text-[11px] font-semibold uppercase tracking-wider text-foreground">
-                          {bt?.label ?? block.block_type}
-                        </span>
-                        {block.title && block.title !== bt?.label && (
-                          <span className="block truncate text-[10px] text-muted-foreground">{block.title}</span>
-                        )}
-                      </div>
-                      {!block.is_active && <EyeOff className="h-3 w-3 shrink-0 text-muted-foreground" />}
-                      <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleActive(block.id, !(block.is_active ?? true));
-                          }}
-                          className="rounded p-1 text-muted-foreground hover:text-foreground"
-                        >
-                          {block.is_active ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedBlockId(block.id);
-                            setEditPanelOpen(true);
-                          }}
-                          className="rounded p-1 text-muted-foreground hover:text-foreground"
-                        >
-                          <PanelLeft className="h-3 w-3" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteBlock(block.id);
-                          }}
-                          className="rounded p-1 text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
+                      <div className="flex items-start gap-2">
+                        <GripVertical className="mt-0.5 h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground" />
+                        <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-foreground/60" />
+
+                        <div className="min-w-0 flex-1">
+                          <span className="block truncate font-display text-[11px] font-semibold uppercase tracking-wider text-foreground">
+                            {bt?.label ?? block.block_type}
+                          </span>
+                          {block.title && block.title !== bt?.label && (
+                            <span className="block truncate text-[10px] text-muted-foreground">{block.title}</span>
+                          )}
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            <span className="rounded bg-background/70 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-muted-foreground">
+                              {placementLabel(activePage, placement)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {!block.is_active && <EyeOff className="h-3 w-3 shrink-0 text-muted-foreground" />}
+
+                        <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleActive(block.id, !(block.is_active ?? true));
+                            }}
+                            className="rounded p-1 text-muted-foreground hover:text-foreground"
+                          >
+                            {block.is_active ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                          </button>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedBlockId(block.id);
+                              setEditPanelOpen(true);
+                            }}
+                            className="rounded p-1 text-muted-foreground hover:text-foreground"
+                          >
+                            <PanelLeft className="h-3 w-3" />
+                          </button>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteBlock(block.id);
+                            }}
+                            className="rounded p-1 text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -541,7 +687,6 @@ const PageEditor = () => {
           )}
         </aside>
 
-        {/* ── Live Canvas ── */}
         <main className="flex-1 overflow-y-auto bg-background">
           {pageBlocks.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-32">
@@ -560,6 +705,14 @@ const PageEditor = () => {
             </div>
           ) : (
             <div className="pb-16">
+              <div className="border-b border-border bg-muted/20 px-6 py-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">{prettyPageLabel(activePage)}</span>
+                  <ChevronDown className="h-4 w-4" />
+                  <span>Live canvas preview</span>
+                </div>
+              </div>
+
               {pageBlocks.map((block, index) => (
                 <div key={block.id} id={`canvas-block-${block.id}`}>
                   <EditableBlockWrapper
@@ -612,7 +765,6 @@ const PageEditor = () => {
         </main>
       </div>
 
-      {/* Panels & Dialogs */}
       <BlockEditorPanel
         block={selectedBlock}
         open={editPanelOpen}
@@ -627,7 +779,7 @@ const PageEditor = () => {
       <Dialog open={addBlockOpen} onOpenChange={setAddBlockOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-display uppercase">Add Section</DialogTitle>
+            <DialogTitle className="font-display uppercase">Add Section · {prettyPageLabel(activePage)}</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-3 gap-2">
             {blockTypes.map(({ value, label, icon: Icon }) => (
@@ -653,7 +805,11 @@ const PageEditor = () => {
           <div className="space-y-3">
             <div>
               <Label>Page Name</Label>
-              <Input value={newPageSlug} onChange={(e) => setNewPageSlug(e.target.value)} placeholder="e.g. about-us" />
+              <Input
+                value={newPageSlug}
+                onChange={(e) => setNewPageSlug(e.target.value)}
+                placeholder="e.g. campaigns/summer-drop"
+              />
             </div>
             <Button
               onClick={createPage}
@@ -672,7 +828,7 @@ const PageEditor = () => {
             <DialogTitle className="font-display uppercase">Delete Page</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            This will permanently delete all blocks on the "{activePage}" page.
+            This will permanently delete all blocks on "{prettyPageLabel(activePage)}".
           </p>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setDeletePageOpen(false)} className="flex-1">

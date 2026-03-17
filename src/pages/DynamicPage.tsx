@@ -1,18 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 
 type DynamicPageProps = {
-  slug: string;
+  slug?: string;
   emptyTitle?: string;
   emptyDescription?: string;
 };
 
 const DynamicPage = ({
-  slug,
+  slug: slugProp,
   emptyTitle = "Page is empty",
   emptyDescription = "Add blocks from the page editor to publish this page.",
 }: DynamicPageProps) => {
+  const params = useParams();
+  const slug = slugProp ?? params.slug ?? "";
+
   const [blocks, setBlocks] = useState<SiteBlock[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -20,6 +24,12 @@ const DynamicPage = ({
     let mounted = true;
 
     const fetchBlocks = async () => {
+      if (!slug) {
+        setBlocks([]);
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
 
       const { data, error } = await supabase

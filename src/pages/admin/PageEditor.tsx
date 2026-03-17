@@ -37,6 +37,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { SelectGroup, SelectLabel } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,6 +45,7 @@ import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 import EditableBlockWrapper from "@/components/admin/EditableBlockWrapper";
 import BlockEditorPanel from "@/components/admin/BlockEditorPanel";
 import NavLinkEditor from "@/components/admin/NavLinkEditor";
+
 
 const pageGroups = [
   {
@@ -373,15 +375,13 @@ const PageEditor = () => {
   const deletePage = async () => {
     await supabase.from("site_blocks").delete().eq("page", activePage);
     const remainingCustomPages = customPages.filter((p) => p !== activePage);
-    await supabase
-      .from("site_settings")
-      .upsert(
-        {
-          key: "custom_pages",
-          value: remainingCustomPages.map((s) => ({ slug: s, title: prettyPageLabel(s) })) as any,
-        },
-        { onConflict: "key" },
-      );
+    await supabase.from("site_settings").upsert(
+      {
+        key: "custom_pages",
+        value: remainingCustomPages.map((s) => ({ slug: s, title: prettyPageLabel(s) })) as any,
+      },
+      { onConflict: "key" },
+    );
     setAllPages([...defaultPages, ...remainingCustomPages]);
     setActivePage("home");
     setDeletePageOpen(false);
@@ -426,10 +426,11 @@ const PageEditor = () => {
               </SelectTrigger>
               <SelectContent>
                 {pageGroups.map((group) => (
-                  <div key={group.label}>
-                    <div className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <SelectGroup key={group.label}>
+                    <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                       {group.label}
-                    </div>
+                    </SelectLabel>
+
                     {group.pages
                       .filter((p) => allPages.includes(p.value))
                       .map((p) => (
@@ -437,12 +438,12 @@ const PageEditor = () => {
                           {p.label}
                         </SelectItem>
                       ))}
-                  </div>
+                  </SelectGroup>
                 ))}
 
                 {customPages.length > 0 && (
-                  <div>
-                    <div className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <SelectGroup>
+                    <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                       Custom Pages
                     </div>
                     {customPages.map((p) => (
@@ -665,17 +666,17 @@ const PageEditor = () => {
                   Summary
                 </h3>
                 <div className="grid grid-cols-3 gap-2 text-center">
-                  <div>
+                  <SelectGroup>
                     <p className="font-display text-lg font-bold text-foreground">{pageBlocks.length}</p>
                     <p className="text-[10px] text-muted-foreground">Total</p>
                   </div>
-                  <div>
+                  <SelectGroup>
                     <p className="font-display text-lg font-bold text-primary">
                       {pageBlocks.filter((b) => b.is_active).length}
                     </p>
                     <p className="text-[10px] text-muted-foreground">Visible</p>
                   </div>
-                  <div>
+                  <SelectGroup>
                     <p className="font-display text-lg font-bold text-muted-foreground">
                       {pageBlocks.filter((b) => !b.is_active).length}
                     </p>
@@ -803,7 +804,7 @@ const PageEditor = () => {
             <DialogTitle className="font-display uppercase">Create Page</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <div>
+            <SelectGroup>
               <Label>Page Name</Label>
               <Input
                 value={newPageSlug}

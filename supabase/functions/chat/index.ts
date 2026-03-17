@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const SUPABASE_PUBLISHABLE_KEY = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
 
 const serviceSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -19,11 +19,38 @@ function extractBearerToken(req: Request) {
   return match?.[1] ?? null;
 }
 
-function createUserClient(token: string) {
-  return createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-    auth: { persistSession: false },
-  });
+async function resolveUserIdFromToken(token: string | null) {
+  if (!token) {
+    console.log("No bearer token received");
+    return null;
+  }
+
+  try {
+    const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
+
+    const { data, error } = await authClient.auth.getUser();
+
+    if (error) {
+      console.error("auth.getUser failed:", error);
+      return null;
+    }
+
+    console.log("Resolved user from token:", data.user?.id ?? null);
+    return data.user?.id ?? null;
+  } catch (err) {
+    console.error("resolveUserIdFromToken crashed:", err);
+    return null;
+  }
 }
 
 async function getPoints(userId: string) {
@@ -48,34 +75,11 @@ async function getRecentOrders(userId: string) {
     .limit(3);
 
   if (error) {
-    console.error("getRecentOrders error:", error);
+    console.error("orders query error:", error);
     return [];
   }
 
   return data ?? [];
-}
-
-async function getCoupons(userId: string) {
-  const { data, error } = await serviceSupabase
-    .from("coupons")
-    .select("code,description,discount_type,discount_value,expires_at,is_active")
-    .eq("is_active", true)
-    .limit(5);
-
-  if (error) {
-    console.error("getCoupons error:", error);
-    return [];
-  }
-
-  return (data ?? []).map((coupon: any) => ({
-    code: coupon.code,
-    description: coupon.description ?? undefined,
-    discountText:
-      coupon.discount_type && coupon.discount_value != null
-        ? `${coupon.discount_value}${coupon.discount_type === "percent" ? "%" : " DKK"} off`
-        : undefined,
-    expiresAt: coupon.expires_at ?? undefined,
-  }));
 }
 
 serve(async (req) => {
@@ -89,28 +93,17 @@ serve(async (req) => {
     const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user")?.content || "";
 
     const token = extractBearerToken(req);
-    let userId: string | null = null;
+    const userId = await resolveUserIdFromToken(token);
 
-    if (token) {
-      const userClient = createUserClient(token);
-      const {
-        data: { user },
-        error,
-      } = await userClient.auth.getUser();
-
-      if (error) {
-        console.error("auth.getUser error:", error);
-      }
-
-      userId = user?.id ?? null;
-    }
+    console.log("Last user message:", lastUserMsg);
+    console.log("Authenticated userId:", userId);
 
     if (/points|loyalty/i.test(lastUserMsg)) {
       if (!userId) {
         return new Response(
           JSON.stringify({
             payload: {
-              text: "Please sign in to see your loyalty points.",
+              text: "I couldn't verify your signed-in account. Please sign in again, then try checking your points.",
               links: [{ label: "Open account", url: "/account" }],
             },
           }),
@@ -125,7 +118,7 @@ serve(async (req) => {
           payload: {
             text: `You currently have ${points} loyalty points.`,
             points,
-            suggestions: ["Show my latest order", "Do I have active coupons?"],
+            suggestions: ["Show my latest order"],
           },
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -137,7 +130,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({
             payload: {
-              text: "Please sign in to view your orders.",
+              text: "I couldn't verify your signed-in account. Please sign in again, then try viewing your orders.",
               links: [{ label: "Open account", url: "/account" }],
             },
           }),
@@ -160,37 +153,6 @@ serve(async (req) => {
               createdAt: o.created_at,
               url: "/account",
             })),
-            suggestions: ["Check my points", "Do I have active coupons?"],
-          },
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    if (/coupon|coupons|discount/i.test(lastUserMsg)) {
-      const coupons = await getCoupons(userId ?? "guest");
-
-      return new Response(
-        JSON.stringify({
-          payload: {
-            text: coupons.length
-              ? "Here are the currently available coupons."
-              : "I couldn't find any active coupons right now.",
-            coupons,
-            suggestions: ["Check my points", "Show best sellers"],
-          },
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    if (/best sellers|bestsellers|best seller/i.test(lastUserMsg)) {
-      return new Response(
-        JSON.stringify({
-          payload: {
-            text: "You can browse our best sellers right here.",
-            links: [{ label: "Open products", url: "/products", description: "Explore popular LayerLoot items." }],
-            suggestions: ["Find gifts under 200 DKK", "Custom print help"],
           },
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -201,17 +163,14 @@ serve(async (req) => {
       JSON.stringify({
         payload: {
           text: userId
-            ? "I can help with your orders, loyalty points, coupons, products, and custom prints."
-            : "I can help with products, custom prints, shipping, and general shop questions. Sign in for points and order help.",
-          suggestions: userId
-            ? ["Check my points", "Show my latest order", "Do I have active coupons?"]
-            : ["Show best sellers", "Shipping information", "Custom print help"],
+            ? "I can help with your account, orders, points, and products."
+            : "I can help with products and general shop questions. Sign in for account-specific help.",
         },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
-    console.error("chat function error:", e);
+    console.error("chat function crash:", e);
 
     return new Response(
       JSON.stringify({

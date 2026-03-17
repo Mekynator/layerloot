@@ -84,12 +84,14 @@ interface CustomOrderMessage {
   created_at: string;
 }
 
-type RewardPreset = {
-  match: (voucher: Voucher) => boolean;
+type RewardCatalogItem = {
+  key: string;
+  name: string;
+  description: string;
   pointsCost: number;
-  label?: string;
-  sortOrder: number;
-  icon?: "gift" | "truck" | "discount";
+  discountType: string;
+  discountValue: number;
+  badge?: string;
 };
 
 const statusColors: Record<string, string> = {
@@ -109,125 +111,6 @@ const customStatusBadgeColors: Record<string, string> = {
   in_production: "bg-orange-500/10 text-orange-600 border-orange-500/30",
   completed: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
   rejected: "bg-red-500/10 text-red-600 border-red-500/30",
-};
-
-const REWARD_PRESETS: RewardPreset[] = [
-  {
-    match: (v) => v.discount_type !== "gift_card" && Number(v.discount_value) === 25,
-    pointsCost: 200,
-    sortOrder: 1,
-    icon: "discount",
-  },
-  {
-    match: (v) => v.discount_type !== "gift_card" && Number(v.discount_value) === 50,
-    pointsCost: 400,
-    sortOrder: 2,
-    icon: "discount",
-  },
-  {
-    match: (v) => v.discount_type !== "gift_card" && Number(v.discount_value) === 100,
-    pointsCost: 800,
-    sortOrder: 3,
-    icon: "discount",
-  },
-  {
-    match: (v) => v.discount_type !== "gift_card" && Number(v.discount_value) === 150,
-    pointsCost: 1200,
-    sortOrder: 4,
-    icon: "discount",
-  },
-  {
-    match: (v) => v.discount_type !== "gift_card" && Number(v.discount_value) === 250,
-    pointsCost: 2000,
-    sortOrder: 5,
-    icon: "discount",
-  },
-  {
-    match: (v) => v.discount_type === "gift_card" && Number(v.discount_value) === 500,
-    pointsCost: 5000,
-    sortOrder: 6,
-    icon: "gift",
-  },
-  {
-    match: (v) =>
-      v.discount_type !== "gift_card" &&
-      ((v.name || "").toLowerCase().includes("free delivery") ||
-        (v.name || "").toLowerCase().includes("free shipping") ||
-        (v.description || "").toLowerCase().includes("free delivery") ||
-        (v.description || "").toLowerCase().includes("free shipping")),
-    pointsCost: 800,
-    label: "Free delivery discount",
-    sortOrder: 7,
-    icon: "truck",
-  },
-];
-
-function parseCustomOrderDescription(description: string) {
-  const raw = description || "";
-  const marker = "\n--- Options ---";
-  const parts = raw.split(marker);
-
-  const customerDescription = (parts[0] || "").trim();
-  const optionsText = (parts[1] || "").trim();
-
-  const parsed: Record<string, string> = {
-    material: "-",
-    color: "-",
-    quality: "-",
-    quantity: "-",
-    scale: "-",
-  };
-
-  optionsText.split("\n").forEach((line) => {
-    const [key, ...rest] = line.split(":");
-    if (!key || rest.length === 0) return;
-    const normalizedKey = key.trim().toLowerCase();
-    const value = rest.join(":").trim();
-
-    if (normalizedKey === "material") parsed.material = value;
-    if (normalizedKey === "color") parsed.color = value;
-    if (normalizedKey === "quality") parsed.quality = value;
-    if (normalizedKey === "quantity") parsed.quantity = value;
-    if (normalizedKey === "scale") parsed.scale = value;
-  });
-
-  return {
-    customerDescription,
-    material: parsed.material,
-    color: parsed.color,
-    quality: parsed.quality,
-    quantity: parsed.quantity,
-    scale: parsed.scale,
-  };
-}
-
-function getRewardPreset(voucher: Voucher) {
-  return REWARD_PRESETS.find((preset) => preset.match(voucher)) ?? null;
-}
-
-function getEffectivePointsCost(voucher: Voucher) {
-  const preset = getRewardPreset(voucher);
-  return preset?.pointsCost ?? voucher.points_cost;
-}
-
-function getRewardTitle(voucher: Voucher) {
-  const preset = getRewardPreset(voucher);
-  return preset?.label ?? voucher.name;
-}
-
-function getRewardSortOrder(voucher: Voucher) {
-  const preset = getRewardPreset(voucher);
-  return preset?.sortOrder ?? 999;
-}
-
-type RewardCatalogItem = {
-  key: string;
-  name: string;
-  description: string;
-  pointsCost: number;
-  discountType: string;
-  discountValue: number;
-  badge?: string;
 };
 
 const REWARD_CATALOG: RewardCatalogItem[] = [
@@ -291,6 +174,46 @@ const REWARD_CATALOG: RewardCatalogItem[] = [
   },
 ];
 
+function parseCustomOrderDescription(description: string) {
+  const raw = description || "";
+  const marker = "\n--- Options ---";
+  const parts = raw.split(marker);
+
+  const customerDescription = (parts[0] || "").trim();
+  const optionsText = (parts[1] || "").trim();
+
+  const parsed: Record<string, string> = {
+    material: "-",
+    color: "-",
+    quality: "-",
+    quantity: "-",
+    scale: "-",
+  };
+
+  optionsText.split("\n").forEach((line) => {
+    const [key, ...rest] = line.split(":");
+    if (!key || rest.length === 0) return;
+
+    const normalizedKey = key.trim().toLowerCase();
+    const value = rest.join(":").trim();
+
+    if (normalizedKey === "material") parsed.material = value;
+    if (normalizedKey === "color") parsed.color = value;
+    if (normalizedKey === "quality") parsed.quality = value;
+    if (normalizedKey === "quantity") parsed.quantity = value;
+    if (normalizedKey === "scale") parsed.scale = value;
+  });
+
+  return {
+    customerDescription,
+    material: parsed.material,
+    color: parsed.color,
+    quality: parsed.quality,
+    quantity: parsed.quantity,
+    scale: parsed.scale,
+  };
+}
+
 function findMatchingVoucher(catalogItem: RewardCatalogItem, vouchers: Voucher[]) {
   return vouchers.find((voucher) => {
     if (catalogItem.discountType === "free_shipping") {
@@ -302,8 +225,7 @@ function findMatchingVoucher(catalogItem: RewardCatalogItem, vouchers: Voucher[]
     }
 
     return (
-      voucher.discount_type === catalogItem.discountType &&
-      Number(voucher.discount_value) === catalogItem.discountValue
+      voucher.discount_type === catalogItem.discountType && Number(voucher.discount_value) === catalogItem.discountValue
     );
   });
 }
@@ -357,16 +279,16 @@ const Account = () => {
 
     setPointsBalance(pointsRes.data ?? 0);
     setOrders((ordersRes.data as Order[]) ?? []);
+
     const customOrdersData = (customOrdersRes.data as CustomOrder[]) ?? [];
     setCustomOrders(customOrdersData);
     setVouchers((vouchersRes.data as Voucher[]) ?? []);
 
-    const rawUserVouchers = ((userVouchersRes.data as UserVoucher[]) ?? []).filter((uv) => {
+    const activeUserVouchers = ((userVouchersRes.data as UserVoucher[]) ?? []).filter((uv) => {
       const hasRemainingGiftBalance = uv.balance !== null ? Number(uv.balance) > 0 : true;
       return !uv.is_used && hasRemainingGiftBalance;
     });
-
-    setUserVouchers(rawUserVouchers);
+    setUserVouchers(activeUserVouchers);
 
     if (customOrdersData.length > 0) {
       const ids = customOrdersData.map((o) => o.id);
@@ -381,7 +303,6 @@ const Account = () => {
         if (!grouped[msg.custom_order_id]) grouped[msg.custom_order_id] = [];
         grouped[msg.custom_order_id].push(msg);
       });
-
       setCustomOrderMessages(grouped);
     } else {
       setCustomOrderMessages({});
@@ -392,22 +313,27 @@ const Account = () => {
     fetchAll();
   }, [user]);
 
-  const displayRewards = useMemo(() => {
-    return [...vouchers].sort((a, b) => getRewardSortOrder(a) - getRewardSortOrder(b));
-  }, [vouchers]);
+  const parsedCustomOrders = useMemo(() => {
+    return customOrders.map((order) => ({
+      ...order,
+      parsed: parseCustomOrderDescription(order.description),
+    }));
+  }, [customOrders]);
 
-  const redeemVoucher = async (voucher: Voucher) => {
-    const effectivePointsCost = getEffectivePointsCost(voucher);
+  const redeemVoucher = async (voucher: Voucher, pointsCostOverride?: number) => {
+    const pointsCost = pointsCostOverride ?? voucher.points_cost;
 
-    if (pointsBalance < effectivePointsCost) {
+    if (!user) return;
+
+    if (pointsBalance < pointsCost) {
       toast({ title: "Not enough points", variant: "destructive" });
       return;
     }
 
     const { error: pointsError } = await supabase.from("loyalty_points").insert({
-      user_id: user!.id,
-      points: -effectivePointsCost,
-      reason: `Redeemed: ${getRewardTitle(voucher)}`,
+      user_id: user.id,
+      points: -pointsCost,
+      reason: `Redeemed: ${voucher.name}`,
     });
 
     if (pointsError) {
@@ -419,7 +345,7 @@ const Account = () => {
     const isGiftCard = voucher.discount_type === "gift_card";
 
     const { error: voucherError } = await supabase.from("user_vouchers").insert({
-      user_id: user!.id,
+      user_id: user.id,
       voucher_id: voucher.id,
       code,
       balance: isGiftCard ? voucher.discount_value : null,
@@ -430,7 +356,7 @@ const Account = () => {
       return;
     }
 
-    setPointsBalance((p) => p - effectivePointsCost);
+    setPointsBalance((p) => p - pointsCost);
     toast({ title: "Voucher redeemed!", description: `Your code: ${code}` });
     fetchAll();
   };
@@ -583,13 +509,6 @@ const Account = () => {
     </Badge>
   );
 
-  const parsedCustomOrders = useMemo(() => {
-    return customOrders.map((order) => ({
-      ...order,
-      parsed: parseCustomOrderDescription(order.description),
-    }));
-  }, [customOrders]);
-
   if (loading || !user) return null;
 
   return (
@@ -622,7 +541,6 @@ const Account = () => {
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
                 <Star className="h-7 w-7 text-primary" />
               </div>
-
               <div>
                 <p className="text-sm text-muted-foreground">Loyalty Points Balance</p>
                 <p className="font-display text-3xl font-bold text-primary">{pointsBalance}</p>
@@ -875,7 +793,7 @@ const Account = () => {
                                           {msg.proposed_price !== null && (
                                             <Badge
                                               variant="outline"
-                                              className="text-[10px] uppercase border-primary text-primary"
+                                              className="border-primary text-[10px] uppercase text-primary"
                                             >
                                               {Number(msg.proposed_price).toFixed(2)} kr
                                             </Badge>
@@ -1005,72 +923,164 @@ const Account = () => {
         )}
 
         {tab === "rewards" && (
-  <div className="grid gap-4 sm:grid-cols-2">
-    {REWARD_CATALOG.map((reward) => {
-      const matchedVoucher = findMatchingVoucher(reward, vouchers);
-      const canRedeem = !!matchedVoucher && pointsBalance >= reward.pointsCost;
+          <div className="grid gap-4 sm:grid-cols-2">
+            {REWARD_CATALOG.map((reward) => {
+              const matchedVoucher = findMatchingVoucher(reward, vouchers);
+              const canRedeem = !!matchedVoucher && pointsBalance >= reward.pointsCost;
 
-      return (
-        <motion.div
-          key={reward.key}
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3 }}
-        >
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <CardTitle className="font-display text-lg uppercase">{reward.name}</CardTitle>
+              return (
+                <motion.div
+                  key={reward.key}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="font-display text-lg uppercase">{reward.name}</CardTitle>
 
-                {reward.badge && (
-                  <Badge variant="outline" className="font-display text-xs">
-                    {reward.badge}
-                  </Badge>
-                )}
-              </div>
+                        {reward.badge && (
+                          <Badge variant="outline" className="font-display text-xs">
+                            {reward.badge === "Shipping" ? <Truck className="mr-1 h-3 w-3" /> : null}
+                            {reward.badge}
+                          </Badge>
+                        )}
+                      </div>
 
-              <p className="text-sm text-muted-foreground">{reward.description}</p>
-            </CardHeader>
+                      <p className="text-sm text-muted-foreground">{reward.description}</p>
+                    </CardHeader>
 
-            <CardContent className="flex items-center justify-between">
-              <div>
-                {reward.discountType === "free_shipping" ? (
-                  <>
-                    <span className="font-display text-2xl font-bold text-primary">Free delivery</span>
-                    <span className="ml-1 text-sm text-muted-foreground">discount</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="font-display text-2xl font-bold text-primary">
-                      {reward.discountValue} kr
-                    </span>
-                    <span className="ml-1 text-sm text-muted-foreground">
-                      {reward.discountType === "gift_card" ? "gift card" : "discount"}
-                    </span>
-                  </>
-                )}
-              </div>
+                    <CardContent className="flex items-center justify-between">
+                      <div>
+                        {reward.discountType === "free_shipping" ? (
+                          <>
+                            <span className="font-display text-2xl font-bold text-primary">Free delivery</span>
+                            <span className="ml-1 text-sm text-muted-foreground">discount</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="font-display text-2xl font-bold text-primary">
+                              {reward.discountValue} kr
+                            </span>
+                            <span className="ml-1 text-sm text-muted-foreground">
+                              {reward.discountType === "gift_card" ? "gift card" : "discount"}
+                            </span>
+                          </>
+                        )}
+                      </div>
 
-              <Button
-                size="sm"
-                onClick={() => matchedVoucher && redeemVoucher(matchedVoucher)}
-                disabled={!matchedVoucher || pointsBalance < reward.pointsCost}
-                className="font-display uppercase tracking-wider"
-              >
-                <Star className="mr-1 h-3 w-3" /> {reward.pointsCost} pts
-              </Button>
-            </CardContent>
+                      <Button
+                        size="sm"
+                        onClick={() => matchedVoucher && redeemVoucher(matchedVoucher, reward.pointsCost)}
+                        disabled={!canRedeem}
+                        className="font-display uppercase tracking-wider"
+                      >
+                        <Star className="mr-1 h-3 w-3" /> {reward.pointsCost} pts
+                      </Button>
+                    </CardContent>
 
-            {!matchedVoucher && (
-              <div className="px-6 pb-4 text-xs text-muted-foreground">
-                Reward not connected in database yet
-              </div>
+                    {!matchedVoucher && (
+                      <div className="px-6 pb-4 text-xs text-muted-foreground">
+                        Reward not connected in database yet
+                      </div>
+                    )}
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+
+        {tab === "vouchers" && (
+          <div className="space-y-3">
+            {userVouchers.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  No active vouchers available.
+                </CardContent>
+              </Card>
+            ) : (
+              userVouchers.map((uv) => (
+                <Card key={uv.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-display text-sm font-semibold uppercase text-card-foreground">
+                            {uv.vouchers?.name ?? "Voucher"}
+                          </p>
+                          {uv.vouchers?.discount_type === "gift_card" && (
+                            <Badge variant="outline" className="text-xs">
+                              Gift Card
+                            </Badge>
+                          )}
+                        </div>
+
+                        <p className="font-mono text-lg font-bold text-primary">{uv.code}</p>
+
+                        {uv.balance !== null && (
+                          <p className="text-sm text-muted-foreground">
+                            Balance:{" "}
+                            <span className="font-bold text-foreground">{Number(uv.balance).toFixed(2)} kr</span>
+                          </p>
+                        )}
+
+                        {uv.recipient_email && (
+                          <p className="text-xs text-muted-foreground">Sent to: {uv.recipient_email}</p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {uv.vouchers?.discount_type === "gift_card" && !uv.recipient_email && !uv.is_used && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setGiftingVoucherId(giftingVoucherId === uv.id ? null : uv.id)}
+                            className="font-display text-xs uppercase tracking-wider"
+                          >
+                            <Send className="mr-1 h-3 w-3" /> Gift
+                          </Button>
+                        )}
+                        <Badge variant="default">Active</Badge>
+                      </div>
+                    </div>
+
+                    {giftingVoucherId === uv.id && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        className="mt-4 space-y-3 border-t border-border pt-4"
+                      >
+                        <p className="text-sm text-muted-foreground">Send this gift card to someone:</p>
+                        <Input
+                          placeholder="Recipient email"
+                          value={giftEmail}
+                          onChange={(e) => setGiftEmail(e.target.value)}
+                        />
+                        <Input
+                          placeholder="Recipient name (optional)"
+                          value={giftName}
+                          onChange={(e) => setGiftName(e.target.value)}
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => sendGiftCard(uv.id)}
+                          className="font-display uppercase tracking-wider"
+                        >
+                          <Send className="mr-1 h-3 w-3" /> Send Gift Card
+                        </Button>
+                      </motion.div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
             )}
-          </Card>
-        </motion.div>
-      );
-    })}
-  </div>
-)}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export default Account;

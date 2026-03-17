@@ -52,6 +52,7 @@ import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 import EditableBlockWrapper from "@/components/admin/EditableBlockWrapper";
 import BlockEditorPanel from "@/components/admin/BlockEditorPanel";
 import NavLinkEditor from "@/components/admin/NavLinkEditor";
+import PageBackgroundEditor from "@/components/admin/PageBackgroundEditor";
 
 const pageGroups = [
   {
@@ -83,6 +84,7 @@ const pageGroups = [
 ];
 
 const defaultPages = pageGroups.flatMap((group) => group.pages.map((page) => page.value));
+const [backgroundEditorOpen, setBackgroundEditorOpen] = useState(false);
 
 const blockTypes = [
   { value: "hero", label: "Hero Banner", icon: Square },
@@ -506,8 +508,13 @@ const PageEditor = () => {
             >
               <Plus className="mr-1 h-3.5 w-3.5" /> Add Block
             </Button>
-
-            <Button
+          <Button
+             variant="outline"
+             size="sm"
+             onClick={() => setBackgroundEditorOpen(true)}
+             className="font-display text-xs uppercase tracking-wider"
+          <Button
+              </Button>
               variant="ghost"
               size="sm"
               onClick={() => navigate("/")}
@@ -515,6 +522,7 @@ const PageEditor = () => {
             >
               <X className="mr-1 h-4 w-4" /> Exit
             </Button>
+        </Button>
           </div>
         </div>
       </div>
@@ -830,7 +838,13 @@ const PageEditor = () => {
           </div>
         </DialogContent>
       </Dialog>
-
+          
+      <PageBackgroundEditor
+  page={activePage}
+  open={backgroundEditorOpen}
+  onOpenChange={setBackgroundEditorOpen}
+/>
+          
       <Dialog open={deletePageOpen} onOpenChange={setDeletePageOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>

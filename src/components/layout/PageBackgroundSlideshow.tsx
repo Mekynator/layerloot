@@ -25,14 +25,13 @@ function normalizeSettings(value: any): PageBackgroundSettings {
     opacity: typeof value?.opacity === "number" ? value.opacity : DEFAULT_SETTINGS.opacity,
     blur: typeof value?.blur === "number" ? value.blur : DEFAULT_SETTINGS.blur,
     intervalMs:
-      typeof value?.intervalMs === "number" && value.intervalMs > 0
-        ? value.intervalMs
-        : DEFAULT_SETTINGS.intervalMs,
+      typeof value?.intervalMs === "number" && value.intervalMs > 0 ? value.intervalMs : DEFAULT_SETTINGS.intervalMs,
   };
 }
 
 function routeToPageKey(pathname: string): string {
   const clean = pathname.split("?")[0].split("#")[0];
+
   if (clean === "/" || clean === "") return "home";
 
   const firstSegment = clean.split("/").filter(Boolean)[0] ?? "home";
@@ -56,11 +55,8 @@ export default function PageBackgroundSlideshow() {
 
     async function loadSettings() {
       const settingKey = `page_background_${pageKey}`;
-      const { data } = await supabase
-        .from("site_settings")
-        .select("value")
-        .eq("key", settingKey)
-        .maybeSingle();
+
+      const { data } = await supabase.from("site_settings").select("value").eq("key", settingKey).maybeSingle();
 
       if (!isMounted) return;
 
@@ -79,9 +75,12 @@ export default function PageBackgroundSlideshow() {
   useEffect(() => {
     if (!settings.enabled || settings.images.length <= 1) return;
 
-    const timer = window.setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % settings.images.length);
-    }, Math.max(500, settings.intervalMs));
+    const timer = window.setInterval(
+      () => {
+        setCurrentIndex((prev) => (prev + 1) % settings.images.length);
+      },
+      Math.max(500, settings.intervalMs),
+    );
 
     return () => window.clearInterval(timer);
   }, [settings.enabled, settings.images.length, settings.intervalMs]);
@@ -99,11 +98,7 @@ export default function PageBackgroundSlideshow() {
         `}
       </style>
 
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 overflow-hidden"
-        style={{ zIndex: -1 }}
-      >
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
         {settings.images.map((src, index) => (
           <div
             key={`${src}-${index}`}
@@ -123,8 +118,7 @@ export default function PageBackgroundSlideshow() {
         <div
           className="absolute inset-0"
           style={{
-            background:
-              "linear-gradient(to bottom, rgba(0,0,0,0.10), rgba(0,0,0,0.18))",
+            background: "linear-gradient(to bottom, rgba(0,0,0,0.10), rgba(0,0,0,0.18))",
           }}
         />
       </div>

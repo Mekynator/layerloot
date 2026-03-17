@@ -1,0 +1,17 @@
+-- Optional helper rows / usage notes for global editable regions in site_blocks
+-- Use the PageEditor and create blocks under these page names:
+-- global_header_top
+-- global_header_bottom
+-- global_footer_top
+-- global_footer_bottom
+--
+-- Example:
+-- page = global_header_top
+-- block_type = shipping_banner
+-- content = {"text":"Free shipping on orders over 500 kr"}
+--
+-- Example placement ideas:
+-- global_header_top    -> announcement bars above the main header
+-- global_header_bottom -> banners or promo strips below the main header
+-- global_footer_top    -> newsletter or CTA above the footer
+-- global_footer_bottom -> trust badges / legal strip below the footer

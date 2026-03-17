@@ -1,24 +1,79 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 
-const DynamicPage = () => {
-  const { slug } = useParams<{ slug: string }>();
+type DynamicPageProps = {
+  slug: string;
+  emptyTitle?: string;
+  emptyDescription?: string;
+};
+
+const DynamicPage = ({
+  slug,
+  emptyTitle = "Page is empty",
+  emptyDescription = "Add blocks from the page editor to publish this page.",
+}: DynamicPageProps) => {
   const [blocks, setBlocks] = useState<SiteBlock[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!slug) return;
-    setLoading(true);
-    supabase.from("site_blocks").select("*").eq("page", slug).eq("is_active", true).order("sort_order")
-      .then(({ data }) => { setBlocks((data as SiteBlock[]) ?? []); setLoading(false); });
+    let mounted = true;
+
+    const fetchBlocks = async () => {
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from("site_blocks")
+        .select("*")
+        .eq("page", slug)
+        .eq("is_active", true)
+        .order("sort_order");
+
+      if (!mounted) return;
+
+      if (error) {
+        console.error(`Failed to load page blocks for "${slug}"`, error);
+        setBlocks([]);
+      } else {
+        setBlocks((data as SiteBlock[]) ?? []);
+      }
+
+      setLoading(false);
+    };
+
+    fetchBlocks();
+
+    return () => {
+      mounted = false;
+    };
   }, [slug]);
 
-  if (loading) return <div className="flex min-h-[50vh] items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
-  if (blocks.length === 0) return <div className="flex min-h-[50vh] items-center justify-center text-muted-foreground">Page not found</div>;
+  const visibleBlocks = useMemo(() => blocks.filter((block) => block.is_active !== false), [blocks]);
 
-  return <div>{blocks.map((block) => <div key={block.id}>{renderBlock(block)}</div>)}</div>;
+  if (loading) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (visibleBlocks.length === 0) {
+    return (
+      <div className="container py-20 text-center">
+        <h1 className="font-display text-3xl font-bold uppercase text-foreground">{emptyTitle}</h1>
+        <p className="mt-3 text-muted-foreground">{emptyDescription}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {visibleBlocks.map((block) => (
+        <div key={block.id}>{renderBlock(block)}</div>
+      ))}
+    </div>
+  );
 };
 
 export default DynamicPage;

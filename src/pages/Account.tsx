@@ -12,6 +12,7 @@ import {
   DollarSign,
   CheckCircle2,
   XCircle,
+  Truck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,8 +84,13 @@ interface CustomOrderMessage {
   created_at: string;
 }
 
-const POINTS_PER_KR = 0.25;
-const KR_PER_100_POINTS = 400;
+type RewardPreset = {
+  match: (voucher: Voucher) => boolean;
+  pointsCost: number;
+  label?: string;
+  sortOrder: number;
+  icon?: "gift" | "truck" | "discount";
+};
 
 const statusColors: Record<string, string> = {
   completed: "text-green-500",
@@ -92,6 +98,7 @@ const statusColors: Record<string, string> = {
   processing: "text-purple-500",
   cancelled: "text-destructive",
   pending: "text-muted-foreground",
+  delivered: "text-green-500",
 };
 
 const customStatusBadgeColors: Record<string, string> = {
@@ -103,6 +110,57 @@ const customStatusBadgeColors: Record<string, string> = {
   completed: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
   rejected: "bg-red-500/10 text-red-600 border-red-500/30",
 };
+
+const REWARD_PRESETS: RewardPreset[] = [
+  {
+    match: (v) => v.discount_type !== "gift_card" && Number(v.discount_value) === 25,
+    pointsCost: 200,
+    sortOrder: 1,
+    icon: "discount",
+  },
+  {
+    match: (v) => v.discount_type !== "gift_card" && Number(v.discount_value) === 50,
+    pointsCost: 400,
+    sortOrder: 2,
+    icon: "discount",
+  },
+  {
+    match: (v) => v.discount_type !== "gift_card" && Number(v.discount_value) === 100,
+    pointsCost: 800,
+    sortOrder: 3,
+    icon: "discount",
+  },
+  {
+    match: (v) => v.discount_type !== "gift_card" && Number(v.discount_value) === 150,
+    pointsCost: 1200,
+    sortOrder: 4,
+    icon: "discount",
+  },
+  {
+    match: (v) => v.discount_type !== "gift_card" && Number(v.discount_value) === 250,
+    pointsCost: 2000,
+    sortOrder: 5,
+    icon: "discount",
+  },
+  {
+    match: (v) => v.discount_type === "gift_card" && Number(v.discount_value) === 500,
+    pointsCost: 5000,
+    sortOrder: 6,
+    icon: "gift",
+  },
+  {
+    match: (v) =>
+      v.discount_type !== "gift_card" &&
+      ((v.name || "").toLowerCase().includes("free delivery") ||
+        (v.name || "").toLowerCase().includes("free shipping") ||
+        (v.description || "").toLowerCase().includes("free delivery") ||
+        (v.description || "").toLowerCase().includes("free shipping")),
+    pointsCost: 800,
+    label: "Free delivery discount",
+    sortOrder: 7,
+    icon: "truck",
+  },
+];
 
 function parseCustomOrderDescription(description: string) {
   const raw = description || "";
@@ -141,6 +199,25 @@ function parseCustomOrderDescription(description: string) {
     quantity: parsed.quantity,
     scale: parsed.scale,
   };
+}
+
+function getRewardPreset(voucher: Voucher) {
+  return REWARD_PRESETS.find((preset) => preset.match(voucher)) ?? null;
+}
+
+function getEffectivePointsCost(voucher: Voucher) {
+  const preset = getRewardPreset(voucher);
+  return preset?.pointsCost ?? voucher.points_cost;
+}
+
+function getRewardTitle(voucher: Voucher) {
+  const preset = getRewardPreset(voucher);
+  return preset?.label ?? voucher.name;
+}
+
+function getRewardSortOrder(voucher: Voucher) {
+  const preset = getRewardPreset(voucher);
+  return preset?.sortOrder ?? 999;
 }
 
 const Account = () => {
@@ -195,7 +272,13 @@ const Account = () => {
     const customOrdersData = (customOrdersRes.data as CustomOrder[]) ?? [];
     setCustomOrders(customOrdersData);
     setVouchers((vouchersRes.data as Voucher[]) ?? []);
-    setUserVouchers((userVouchersRes.data as any[]) ?? []);
+
+    const rawUserVouchers = ((userVouchersRes.data as UserVoucher[]) ?? []).filter((uv) => {
+      const hasRemainingGiftBalance = uv.balance !== null ? Number(uv.balance) > 0 : true;
+      return !uv.is_used && hasRemainingGiftBalance;
+    });
+
+    setUserVouchers(rawUserVouchers);
 
     if (customOrdersData.length > 0) {
       const ids = customOrdersData.map((o) => o.id);
@@ -210,6 +293,7 @@ const Account = () => {
         if (!grouped[msg.custom_order_id]) grouped[msg.custom_order_id] = [];
         grouped[msg.custom_order_id].push(msg);
       });
+
       setCustomOrderMessages(grouped);
     } else {
       setCustomOrderMessages({});
@@ -220,16 +304,22 @@ const Account = () => {
     fetchAll();
   }, [user]);
 
+  const displayRewards = useMemo(() => {
+    return [...vouchers].sort((a, b) => getRewardSortOrder(a) - getRewardSortOrder(b));
+  }, [vouchers]);
+
   const redeemVoucher = async (voucher: Voucher) => {
-    if (pointsBalance < voucher.points_cost) {
+    const effectivePointsCost = getEffectivePointsCost(voucher);
+
+    if (pointsBalance < effectivePointsCost) {
       toast({ title: "Not enough points", variant: "destructive" });
       return;
     }
 
     const { error: pointsError } = await supabase.from("loyalty_points").insert({
       user_id: user!.id,
-      points: -voucher.points_cost,
-      reason: `Redeemed: ${voucher.name}`,
+      points: -effectivePointsCost,
+      reason: `Redeemed: ${getRewardTitle(voucher)}`,
     });
 
     if (pointsError) {
@@ -240,14 +330,19 @@ const Account = () => {
     const code = `LL-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
     const isGiftCard = voucher.discount_type === "gift_card";
 
-    await supabase.from("user_vouchers").insert({
+    const { error: voucherError } = await supabase.from("user_vouchers").insert({
       user_id: user!.id,
       voucher_id: voucher.id,
       code,
       balance: isGiftCard ? voucher.discount_value : null,
     });
 
-    setPointsBalance((p) => p - voucher.points_cost);
+    if (voucherError) {
+      toast({ title: "Error", description: voucherError.message, variant: "destructive" });
+      return;
+    }
+
+    setPointsBalance((p) => p - effectivePointsCost);
     toast({ title: "Voucher redeemed!", description: `Your code: ${code}` });
     fetchAll();
   };
@@ -258,10 +353,15 @@ const Account = () => {
       return;
     }
 
-    await supabase
+    const { error } = await supabase
       .from("user_vouchers")
       .update({ recipient_email: giftEmail, recipient_name: giftName || null })
       .eq("id", uvId);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
 
     toast({ title: "Gift card details saved!", description: `Gift card will be sent to ${giftEmail}` });
     setGiftingVoucherId(null);
@@ -430,21 +530,15 @@ const Account = () => {
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="mb-8 border-primary/30 bg-primary/5">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-                  <Star className="h-7 w-7 text-primary" />
-                </div>
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                <Star className="h-7 w-7 text-primary" />
+              </div>
 
-                <div>
-                  <p className="text-sm text-muted-foreground">Loyalty Points Balance</p>
-                  <p className="font-display text-3xl font-bold text-primary">{pointsBalance}</p>
-                  <p className="text-xs text-muted-foreground">Earn 25 points for every 100 kr spent</p>
-                  <p className="text-xs text-muted-foreground">
-                    1 point is earned for every {KR_PER_100_POINTS / 100} kr spent? No. The tiny math goblin says: 1 kr
-                    = {POINTS_PER_KR} points.
-                  </p>
-                </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Loyalty Points Balance</p>
+                <p className="font-display text-3xl font-bold text-primary">{pointsBalance}</p>
+                <p className="text-xs text-muted-foreground">1 point is earned for every 4 kr spent</p>
               </div>
             </CardContent>
           </Card>
@@ -693,18 +787,16 @@ const Account = () => {
                                           {msg.proposed_price !== null && (
                                             <Badge
                                               variant="outline"
-                                              className="border-primary text-[10px] uppercase text-primary"
+                                              className="text-[10px] uppercase border-primary text-primary"
                                             >
                                               {Number(msg.proposed_price).toFixed(2)} kr
                                             </Badge>
                                           )}
                                         </div>
-
                                         <span className="text-xs text-muted-foreground">
                                           {new Date(msg.created_at).toLocaleString()}
                                         </span>
                                       </div>
-
                                       <p className="whitespace-pre-wrap text-foreground">{msg.message || "-"}</p>
                                     </div>
                                   ))
@@ -826,54 +918,79 @@ const Account = () => {
 
         {tab === "rewards" && (
           <div className="grid gap-4 sm:grid-cols-2">
-            {vouchers.length === 0 ? (
+            {displayRewards.length === 0 ? (
               <Card className="col-span-full">
                 <CardContent className="p-8 text-center text-muted-foreground">No rewards available.</CardContent>
               </Card>
             ) : (
-              vouchers.map((v) => (
-                <motion.div
-                  key={v.id}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="font-display text-lg uppercase">{v.name}</CardTitle>
-                        {v.discount_type === "gift_card" && (
-                          <Badge variant="outline" className="font-display text-xs">
-                            Gift Card
-                          </Badge>
-                        )}
-                      </div>
+              displayRewards.map((v) => {
+                const effectivePointsCost = getEffectivePointsCost(v);
+                const rewardTitle = getRewardTitle(v);
+                const isFreeDelivery =
+                  rewardTitle.toLowerCase().includes("free delivery") ||
+                  rewardTitle.toLowerCase().includes("free shipping");
 
-                      {v.description && <p className="text-sm text-muted-foreground">{v.description}</p>}
-                    </CardHeader>
+                return (
+                  <motion.div
+                    key={v.id}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="font-display text-lg uppercase">{rewardTitle}</CardTitle>
 
-                    <CardContent className="flex items-center justify-between">
-                      <div>
-                        <span className="font-display text-2xl font-bold text-primary">
-                          {Number(v.discount_value).toFixed(0)} kr
-                        </span>
-                        <span className="ml-1 text-sm text-muted-foreground">
-                          {v.discount_type === "gift_card" ? "gift card" : "off"}
-                        </span>
-                      </div>
+                          {v.discount_type === "gift_card" && (
+                            <Badge variant="outline" className="font-display text-xs">
+                              Gift Card
+                            </Badge>
+                          )}
 
-                      <Button
-                        size="sm"
-                        onClick={() => redeemVoucher(v)}
-                        disabled={pointsBalance < v.points_cost}
-                        className="font-display uppercase tracking-wider"
-                      >
-                        <Star className="mr-1 h-3 w-3" /> {v.points_cost} pts
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))
+                          {isFreeDelivery && (
+                            <Badge variant="outline" className="font-display text-xs">
+                              <Truck className="mr-1 h-3 w-3" />
+                              Shipping
+                            </Badge>
+                          )}
+                        </div>
+
+                        {v.description && <p className="text-sm text-muted-foreground">{v.description}</p>}
+                      </CardHeader>
+
+                      <CardContent className="flex items-center justify-between">
+                        <div>
+                          {isFreeDelivery ? (
+                            <>
+                              <span className="font-display text-2xl font-bold text-primary">Free delivery</span>
+                              <p className="text-sm text-muted-foreground">One-time voucher</p>
+                            </>
+                          ) : (
+                            <>
+                              <span className="font-display text-2xl font-bold text-primary">
+                                {Number(v.discount_value).toFixed(0)} kr
+                              </span>
+                              <span className="ml-1 text-sm text-muted-foreground">
+                                {v.discount_type === "gift_card" ? "gift card" : "discount"}
+                              </span>
+                            </>
+                          )}
+                        </div>
+
+                        <Button
+                          size="sm"
+                          onClick={() => redeemVoucher(v)}
+                          disabled={pointsBalance < effectivePointsCost}
+                          className="font-display uppercase tracking-wider"
+                        >
+                          <Star className="mr-1 h-3 w-3" /> {effectivePointsCost} pts
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })
             )}
           </div>
         )}
@@ -882,7 +999,9 @@ const Account = () => {
           <div className="space-y-3">
             {userVouchers.length === 0 ? (
               <Card>
-                <CardContent className="p-8 text-center text-muted-foreground">No vouchers redeemed yet.</CardContent>
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  No active vouchers available.
+                </CardContent>
               </Card>
             ) : (
               userVouchers.map((uv) => (
@@ -928,19 +1047,7 @@ const Account = () => {
                           </Button>
                         )}
 
-                        <Badge
-                          variant={
-                            uv.is_used && uv.balance === null
-                              ? "secondary"
-                              : uv.balance !== null && Number(uv.balance) > 0
-                                ? "default"
-                                : uv.is_used
-                                  ? "secondary"
-                                  : "default"
-                          }
-                        >
-                          {uv.balance !== null && Number(uv.balance) > 0 ? "Active" : uv.is_used ? "Used" : "Active"}
-                        </Badge>
+                        <Badge variant="default">Active</Badge>
                       </div>
                     </div>
 

@@ -1,19 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import {
-  Image,
-  Gift,
-  ArrowRight,
-  Sparkles,
-  Heart,
-  Gamepad2,
-  Swords,
-  Monitor,
-  Upload,
-  Send,
-  Box,
-  Star,
-} from "lucide-react";
+import { Image, Gift, Sparkles, Heart, Gamepad2, Swords, Monitor, Upload, Send, Box, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import ModelViewer from "@/components/ModelViewer";
 import Lithophane, { LithophaneSubmitPayload } from "@/components/Lithophane";
 import { motion } from "framer-motion";
+import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },
@@ -97,10 +85,7 @@ const ReviewSection = ({ toolType, title }: { toolType: "custom-print" | "lithop
         .order("created_at", { ascending: false })
         .limit(10);
 
-      if (!error) {
-        setReviews(data ?? []);
-      }
-
+      if (!error) setReviews(data ?? []);
       setLoading(false);
     };
 
@@ -141,7 +126,6 @@ const ReviewSection = ({ toolType, title }: { toolType: "custom-print" | "lithop
   );
 };
 
-/* ── Lithophane Generator ── */
 const LithophaneOrderSection = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -156,10 +140,7 @@ const LithophaneOrderSection = () => {
     const binary = atob(base64);
     const bytes = new Uint8Array(binary.length);
 
-    for (let i = 0; i < binary.length; i += 1) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-
+    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
     return new Blob([bytes], { type: mime });
   };
 
@@ -204,10 +185,7 @@ const LithophaneOrderSection = () => {
           upsert: false,
         });
 
-      if (sourceUploadError) {
-        throw sourceUploadError;
-      }
-
+      if (sourceUploadError) throw sourceUploadError;
       sourceImageUrl = supabase.storage.from("custom-order-files").getPublicUrl(sourcePath).data.publicUrl;
 
       if (payload.processedDataUrl) {
@@ -218,10 +196,7 @@ const LithophaneOrderSection = () => {
             upsert: false,
           });
 
-        if (processedUploadError) {
-          throw processedUploadError;
-        }
-
+        if (processedUploadError) throw processedUploadError;
         processedImageUrl = supabase.storage.from("custom-order-files").getPublicUrl(processedPath).data.publicUrl;
       }
 
@@ -233,10 +208,7 @@ const LithophaneOrderSection = () => {
             upsert: false,
           });
 
-        if (previewUploadError) {
-          throw previewUploadError;
-        }
-
+        if (previewUploadError) throw previewUploadError;
         previewImageUrl = supabase.storage.from("custom-order-files").getPublicUrl(previewPath).data.publicUrl;
       }
 
@@ -275,29 +247,10 @@ const LithophaneOrderSection = () => {
           estimated_price: payload.estimatedPrice,
           estimated_print_hours: payload.estimatedPrintHours,
           lithophane_config: payload.designJson,
-          lithophane_summary: {
-            shape: payload.shape,
-            orientation: payload.orientation,
-            width_mm: payload.widthMm,
-            height_mm: payload.heightMm,
-            min_thickness_mm: payload.minThicknessMm,
-            max_thickness_mm: payload.maxThicknessMm,
-            border_mm: payload.borderMm,
-            invert: payload.invert,
-            brightness: payload.brightness,
-            contrast: payload.contrast,
-            gamma: payload.gamma,
-            blur: payload.blur,
-            light_enabled: payload.lightEnabled,
-            light_tone: payload.lightTone,
-            notes: payload.notes,
-          },
         },
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       toast({
         title: "Lithophane submitted!",
@@ -343,12 +296,11 @@ const LithophaneOrderSection = () => {
   );
 };
 
-/* ── Gift Finder ── */
 const GIFT_CATEGORIES = [
-  { value: "gamer", label: "Gamer", icon: Gamepad2, tags: ["gaming", "controller", "miniature"] },
-  { value: "fantasy", label: "Fantasy Fan", icon: Swords, tags: ["dragon", "fantasy", "miniature", "figurine"] },
-  { value: "desk", label: "Desk Decoration", icon: Monitor, tags: ["desk", "organizer", "decoration", "stand"] },
-  { value: "personalized", label: "Personalized Gift", icon: Heart, tags: ["custom", "name", "sign", "personalized"] },
+  { value: "gamer", label: "Gamer", icon: Gamepad2 },
+  { value: "fantasy", label: "Fantasy Fan", icon: Swords },
+  { value: "desk", label: "Desk Decoration", icon: Monitor },
+  { value: "personalized", label: "Personalized Gift", icon: Heart },
 ];
 
 const GiftFinder = () => {
@@ -360,18 +312,15 @@ const GiftFinder = () => {
     if (!selected) return;
     setLoading(true);
 
-    const searchProducts = async () => {
-      const { data } = await supabase
-        .from("products")
-        .select("id, name, slug, price, images, is_featured")
-        .eq("is_active", true)
-        .limit(8);
-
-      setProducts(data ?? []);
-      setLoading(false);
-    };
-
-    searchProducts();
+    supabase
+      .from("products")
+      .select("id, name, slug, price, images, is_featured")
+      .eq("is_active", true)
+      .limit(8)
+      .then(({ data }) => {
+        setProducts(data ?? []);
+        setLoading(false);
+      });
   }, [selected]);
 
   return (
@@ -428,7 +377,6 @@ const GiftFinder = () => {
   );
 };
 
-/* ── Custom 3D Print Order ── */
 const CustomPrintOrder = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -451,9 +399,7 @@ const CustomPrintOrder = () => {
 
   useEffect(() => {
     return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
 
@@ -474,8 +420,7 @@ const CustomPrintOrder = () => {
     }
 
     setFile(selectedFile);
-    const url = URL.createObjectURL(selectedFile);
-    setPreviewUrl(url);
+    setPreviewUrl(URL.createObjectURL(selectedFile));
   };
 
   const handleSubmit = async () => {
@@ -513,10 +458,7 @@ const CustomPrintOrder = () => {
       const path = `${user.id}/${Date.now()}.${ext}`;
 
       const { error: uploadError } = await supabase.storage.from("custom-order-files").upload(path, file);
-
-      if (uploadError) {
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage.from("custom-order-files").getPublicUrl(path);
 
@@ -540,9 +482,7 @@ const CustomPrintOrder = () => {
         model_filename: file.name,
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       toast({
         title: "Order submitted!",
@@ -748,82 +688,110 @@ const CustomPrintOrder = () => {
   );
 };
 
-/* ── Main Page ── */
 const CreateYourOwn = () => {
+  const [pageBlocks, setPageBlocks] = useState<SiteBlock[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from("site_blocks")
+      .select("*")
+      .eq("page", "create-your-own")
+      .eq("is_active", true)
+      .order("sort_order")
+      .then(({ data }) => setPageBlocks((data as SiteBlock[]) ?? []));
+  }, []);
+
+  const topBlocks = pageBlocks.filter(
+    (block) => (block.content as Record<string, unknown> | null)?.placement !== "after_create_your_own",
+  );
+  const bottomBlocks = pageBlocks.filter(
+    (block) => (block.content as Record<string, unknown> | null)?.placement === "after_create_your_own",
+  );
+
   return (
-    <div className="py-8 lg:py-12">
-      <div className="container max-w-5xl">
-        <motion.div {...fadeUp}>
-          <div className="mb-2 flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <span className="font-display text-sm uppercase tracking-widest text-primary">Design Studio</span>
-          </div>
+    <div>
+      {topBlocks.map((block) => (
+        <div key={block.id}>{renderBlock(block)}</div>
+      ))}
 
-          <h1 className="mb-2 font-display text-3xl font-bold uppercase text-foreground lg:text-5xl">
-            Create Your <span className="text-primary">Own</span>
-          </h1>
+      <section className="py-8 lg:py-12">
+        <div className="container max-w-5xl">
+          <motion.div {...fadeUp}>
+            <div className="mb-2 flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <span className="font-display text-sm uppercase tracking-widest text-primary">Design Studio</span>
+            </div>
 
-          <p className="mb-8 max-w-2xl text-muted-foreground">
-            Use our tools to create custom 3D printed products. Upload a photo for a lithophane, explore gift ideas, or
-            submit a custom 3D print order directly from this page.
-          </p>
-        </motion.div>
+            <h1 className="mb-2 font-display text-3xl font-bold uppercase text-foreground lg:text-5xl">
+              Create Your <span className="text-primary">Own</span>
+            </h1>
 
-        <Tabs defaultValue="custom-print" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-1 gap-2 bg-muted/50 sm:grid-cols-3">
-            <TabsTrigger value="custom-print" className="gap-1.5 font-display text-xs uppercase tracking-wider">
-              <Box className="h-4 w-4" /> Custom 3D Print
-            </TabsTrigger>
+            <p className="mb-8 max-w-2xl text-muted-foreground">
+              Use our tools to create custom 3D printed products. Upload a photo for a lithophane, explore gift ideas,
+              or submit a custom 3D print order directly from this page.
+            </p>
+          </motion.div>
 
-            <TabsTrigger value="lithophane" className="gap-1.5 font-display text-xs uppercase tracking-wider">
-              <Image className="h-4 w-4" /> Lithophane
-            </TabsTrigger>
+          <Tabs defaultValue="custom-print" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-1 gap-2 bg-muted/50 sm:grid-cols-3">
+              <TabsTrigger value="custom-print" className="gap-1.5 font-display text-xs uppercase tracking-wider">
+                <Box className="h-4 w-4" /> Custom 3D Print
+              </TabsTrigger>
 
-            <TabsTrigger value="gift-finder" className="gap-1.5 font-display text-xs uppercase tracking-wider">
-              <Gift className="h-4 w-4" /> Gift Finder
-            </TabsTrigger>
-          </TabsList>
+              <TabsTrigger value="lithophane" className="gap-1.5 font-display text-xs uppercase tracking-wider">
+                <Image className="h-4 w-4" /> Lithophane
+              </TabsTrigger>
 
-          <TabsContent value="custom-print">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-display text-lg uppercase">
-                  <Send className="h-5 w-5 text-primary" /> Custom 3D Print Order
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CustomPrintOrder />
-              </CardContent>
-            </Card>
-          </TabsContent>
+              <TabsTrigger value="gift-finder" className="gap-1.5 font-display text-xs uppercase tracking-wider">
+                <Gift className="h-4 w-4" /> Gift Finder
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="lithophane">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-display text-lg uppercase">
-                  <Image className="h-5 w-5 text-primary" /> Lithophane Generator
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <LithophaneOrderSection />
-              </CardContent>
-            </Card>
-          </TabsContent>
+            <TabsContent value="custom-print">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 font-display text-lg uppercase">
+                    <Send className="h-5 w-5 text-primary" /> Custom 3D Print Order
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CustomPrintOrder />
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          <TabsContent value="gift-finder">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-display text-lg uppercase">
-                  <Gift className="h-5 w-5 text-primary" /> Gift Finder
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <GiftFinder />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+            <TabsContent value="lithophane">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 font-display text-lg uppercase">
+                    <Image className="h-5 w-5 text-primary" /> Lithophane Generator
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <LithophaneOrderSection />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="gift-finder">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 font-display text-lg uppercase">
+                    <Gift className="h-5 w-5 text-primary" /> Gift Finder
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <GiftFinder />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </section>
+
+      {bottomBlocks.map((block) => (
+        <div key={block.id}>{renderBlock(block)}</div>
+      ))}
     </div>
   );
 };

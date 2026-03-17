@@ -1,10 +1,9 @@
 // ModelViewer.tsx
-// Backward-compatible clean viewer for Lovable build
-// - Keeps only url functionally required
-// - Accepts old props so existing pages still build
-// - Fullscreen centered
-// - Mobile-friendly layout
-// - STL / OBJ / 3MF support
+// Fullscreen centering fix
+// - Keeps backward-compatible props for current Lovable pages
+// - Removes reference objects
+// - Raises model slightly so it sits visually centered
+// - Slightly wider camera framing for fullscreen/mobile
 
 import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -31,7 +30,7 @@ function getFileExtension(url: string, fileName?: string): string {
   return clean.split(".").pop()?.toLowerCase() ?? "";
 }
 
-function normalizeObject(obj: THREE.Object3D, targetSize = 3) {
+function normalizeObject(obj: THREE.Object3D, targetSize = 2.65) {
   const box = new THREE.Box3().setFromObject(obj);
   const size = new THREE.Vector3();
   box.getSize(size);
@@ -44,8 +43,15 @@ function normalizeObject(obj: THREE.Object3D, targetSize = 3) {
 
   const newBox = new THREE.Box3().setFromObject(obj);
   const center = new THREE.Vector3();
+  const scaledSize = new THREE.Vector3();
+
   newBox.getCenter(center);
+  newBox.getSize(scaledSize);
+
   obj.position.sub(center);
+
+  // Small upward visual bias so tall models don't look glued to the bottom.
+  obj.position.y += scaledSize.y * 0.12;
 }
 
 function LoadingFallback() {
@@ -96,7 +102,7 @@ function ModelMesh({
         }
       });
 
-      normalizeObject(obj, 3);
+      normalizeObject(obj);
 
       if (mounted) setObject(obj);
     };
@@ -146,16 +152,16 @@ function CameraControls({ resetKey, mobile }: { resetKey: number; mobile: boolea
 
   useEffect(() => {
     if (mobile) {
-      camera.position.set(3.6, 2.8, 4.4);
+      camera.position.set(4.2, 3.2, 5.2);
     } else {
-      camera.position.set(4.5, 3.5, 5.5);
+      camera.position.set(5.1, 4.0, 6.4);
     }
 
-    camera.lookAt(0, 0, 0);
+    camera.lookAt(0, 0.15, 0);
     camera.updateProjectionMatrix();
   }, [camera, resetKey, mobile]);
 
-  return <ArcballControls enablePan enableZoom enableRotate minDistance={2.2} maxDistance={12} />;
+  return <ArcballControls enablePan enableZoom enableRotate minDistance={2.4} maxDistance={14} />;
 }
 
 function ViewerCanvas({
@@ -181,11 +187,12 @@ function ViewerCanvas({
     <div className="h-full w-full">
       <Canvas
         dpr={[1, 2]}
+        style={{ touchAction: "none" }}
         camera={{
-          fov: mobile ? 52 : 45,
+          fov: mobile ? 50 : 42,
           near: 0.1,
           far: 100,
-          position: mobile ? [3.6, 2.8, 4.4] : [4.5, 3.5, 5.5],
+          position: mobile ? [4.2, 3.2, 5.2] : [5.1, 4.0, 6.4],
         }}
       >
         <ambientLight intensity={0.95} />
@@ -323,8 +330,8 @@ export default function ModelViewer({
 
       {showFullscreen && (
         <Dialog open={fullscreen} onOpenChange={setFullscreen}>
-          <DialogContent className="h-[100dvh] w-[100vw] max-w-none overflow-hidden border-0 p-0 sm:h-[88vh] sm:w-[94vw]">
-            <div className="flex h-full w-full items-center justify-center bg-black">{viewer(true)}</div>
+          <DialogContent className="max-w-none border-0 p-0 overflow-hidden h-[100dvh] w-[100vw] sm:h-[88vh] sm:w-[94vw]">
+            <div className="relative h-full w-full bg-black">{viewer(true)}</div>
           </DialogContent>
         </Dialog>
       )}

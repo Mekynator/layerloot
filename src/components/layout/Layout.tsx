@@ -2,6 +2,8 @@ import { ReactNode } from "react";
 import Header from "./Header";
 import Footer from "./Footer";
 import GlobalSectionRenderer from "./GlobalSectionRenderer";
+import PageBackgroundSlideshow from "@/components/layout/PageBackgroundSlideshow";
+
 
 const Layout = ({ children }: { children: ReactNode }) => {
   return (

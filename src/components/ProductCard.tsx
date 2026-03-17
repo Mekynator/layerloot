@@ -2,7 +2,8 @@ import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { ArrowRight, Eye, ShoppingBag, Sparkles } from "lucide-react";
+import { ArrowRight, ShoppingBag } from "lucide-react";
+import { useCart } from "@/contexts/CartContext";
 
 interface ProductCardProps {
   product: {
@@ -20,6 +21,7 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
+  const { addItem } = useCart();
   const images = product.images?.length ? product.images : ["/placeholder.svg"];
   const isNew = product.created_at ? Date.now() - new Date(product.created_at).getTime() < 14 * 86400000 : false;
   const hasModel = !!product.model_url;
@@ -28,6 +30,19 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
   const discountPct = hasSale
     ? Math.round(((Number(product.compare_at_price) - Number(product.price)) / Number(product.compare_at_price)) * 100)
     : 0;
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: Number(product.price),
+      image: images[0],
+      slug: product.slug,
+    });
+  };
 
   return (
     <motion.div
@@ -58,8 +73,7 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
             />
           )}
 
-          <div className="absolute inset-0 bg-gradient-to-t from-foreground/35 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+          <div className="absolute inset-0 bg-gradient-to-t from-foreground/20 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
           <div className="absolute left-3 top-3 flex flex-col gap-1.5">
             {hasSale && (
@@ -79,28 +93,6 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
                 New
               </Badge>
             )}
-
-            {hasModel && (
-              <Badge
-                variant="outline"
-                className="border-primary/50 bg-card/80 font-display text-[10px] uppercase tracking-wider text-primary backdrop-blur-sm"
-              >
-                3D Preview
-              </Badge>
-            )}
-          </div>
-
-          <div className="absolute inset-x-3 bottom-3 translate-y-4 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex items-center justify-center rounded-xl bg-background/90 px-3 py-2 text-xs font-medium text-foreground shadow-sm backdrop-blur">
-                <Eye className="mr-1.5 h-3.5 w-3.5" />
-                Quick View
-              </div>
-              <div className="flex items-center justify-center rounded-xl bg-primary px-3 py-2 text-xs font-medium text-primary-foreground shadow-sm">
-                <ShoppingBag className="mr-1.5 h-3.5 w-3.5" />
-                Open
-              </div>
-            </div>
           </div>
 
           {images.length > 2 && (
@@ -116,13 +108,10 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
         </div>
 
         <div className="flex flex-1 flex-col p-4">
-          <div className="mb-2 flex items-start justify-between gap-3">
+          <div className="mb-2">
             <h3 className="line-clamp-2 font-display text-sm font-semibold uppercase tracking-wide text-card-foreground transition-colors duration-300 group-hover:text-primary">
               {product.name}
             </h3>
-            {hasModel && (
-              <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary/70 transition-transform duration-300 group-hover:rotate-12" />
-            )}
           </div>
 
           <div className="mt-auto">
@@ -135,14 +124,20 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
               )}
             </div>
 
-            <div className="mt-3 flex items-center justify-between">
+            <div className="mt-3 flex items-center justify-between gap-3">
               <div className="text-[11px] text-muted-foreground">
                 {hasModel ? "Interactive model available" : "Ready to order"}
               </div>
-              <div className="inline-flex items-center text-xs font-medium text-primary transition-all duration-300 group-hover:gap-1">
-                View
-                <ArrowRight className="ml-1 h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
-              </div>
+
+              <Button type="button" size="sm" onClick={handleAddToCart} className="shrink-0 rounded-xl px-3">
+                <ShoppingBag className="mr-1.5 h-4 w-4" />
+                Add to cart
+              </Button>
+            </div>
+
+            <div className="mt-3 inline-flex items-center text-xs font-medium text-primary transition-all duration-300 group-hover:gap-1">
+              View
+              <ArrowRight className="ml-1 h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
             </div>
           </div>
         </div>

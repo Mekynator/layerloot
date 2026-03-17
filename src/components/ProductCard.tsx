@@ -22,15 +22,21 @@ interface ProductCardProps {
 
 const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
   const { addItem } = useCart();
-  const images = product.images?.length ? product.images : ["/placeholder.svg"];
+
+  const images = product.images && product.images.length > 0 ? product.images.filter(Boolean) : ["/placeholder.svg"];
+
+  const primaryImage = images[0] || "/placeholder.svg";
+  const secondaryImage = images[1] || null;
+
   const isNew = product.created_at ? Date.now() - new Date(product.created_at).getTime() < 14 * 86400000 : false;
-  const hasSale = !!product.compare_at_price && Number(product.compare_at_price) > Number(product.price);
+
+  const hasSale = product.compare_at_price != null && Number(product.compare_at_price) > Number(product.price);
 
   const discountPct = hasSale
     ? Math.round(((Number(product.compare_at_price) - Number(product.price)) / Number(product.compare_at_price)) * 100)
     : 0;
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -38,7 +44,7 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
       id: product.id,
       name: product.name,
       price: Number(product.price),
-      image: images[0],
+      image: primaryImage,
       slug: product.slug,
     });
   };
@@ -57,15 +63,15 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
       >
         <div className="relative aspect-square overflow-hidden bg-muted">
           <img
-            src={images[0]}
+            src={primaryImage}
             alt={product.name}
             className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
             loading="lazy"
           />
 
-          {images.length > 1 && (
+          {secondaryImage && (
             <img
-              src={images[1]}
+              src={secondaryImage}
               alt=""
               className="absolute inset-0 h-full w-full object-cover opacity-0 transition-all duration-700 group-hover:opacity-100"
               loading="lazy"
@@ -116,7 +122,8 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
           <div className="mt-auto">
             <div className="flex items-end gap-2">
               <span className="font-display text-xl font-bold text-primary">{Number(product.price).toFixed(2)} kr</span>
-              {product.compare_at_price && (
+
+              {hasSale && (
                 <span className="pb-0.5 text-sm text-muted-foreground line-through">
                   {Number(product.compare_at_price).toFixed(2)} kr
                 </span>

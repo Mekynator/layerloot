@@ -1,5 +1,3 @@
-
-
 # Admin Access and Visual Page Editor Overhaul
 
 ## Overview
@@ -15,6 +13,7 @@ This plan restructures how the admin accesses the dashboard and completely reima
 **New behavior:** A visible Shield icon button appears in the header, right next to the Cart icon, only for logged-in admin users. Clicking it navigates to `/admin`.
 
 **Changes:**
+
 - `src/components/layout/Header.tsx` -- Add a `<Link to="/admin">` with a Shield icon button between the Cart button and the User button, wrapped in `{isAdmin && (...)}`.
 
 ---
@@ -72,6 +71,7 @@ This plan restructures how the admin accesses the dashboard and completely reima
 - **`src/pages/Index.tsx`** -- Refactor block rendering into `BlockRenderer.tsx` and import it, so blocks look identical in both places.
 
 ### Page Management Features
+
 - **Create page**: Dialog with a text input for page name/slug. Saves the page list to `site_settings` under key `"custom_pages"`. Also adds a route dynamically.
 - **Delete page**: Confirmation dialog that deletes all `site_blocks` with that page value.
 - **Link buttons between pages**: The Button block type already supports `button_link` -- the editor will show a page selector dropdown for internal links.
@@ -89,30 +89,32 @@ This plan restructures how the admin accesses the dashboard and completely reima
 ## Technical Details
 
 ### Drag and Drop
+
 - Uses HTML5 native drag-and-drop (same approach as current implementation).
 - `onDragStart`, `onDragOver`, `onDragEnd` handlers update `sort_order` in the database via Supabase.
 
 ### Block Editing Flow
+
 1. Admin hovers over a block -- dashed outline + toolbar appears.
 2. Admin clicks "Edit" (pencil icon) -- right panel slides in with form fields.
 3. Admin modifies content -- changes auto-save or save on "Apply" button click.
 4. Block re-renders in real-time with updated content.
 
 ### Database
+
 - No schema changes needed. Uses existing `site_blocks` and `site_settings` tables.
 - Custom pages stored in `site_settings` with key `"custom_pages"` as a JSON array of `{ slug, title }`.
 
 ### Files Summary
 
-| Action | File |
-|--------|------|
-| Create | `src/pages/admin/PageEditor.tsx` |
-| Create | `src/components/admin/EditableBlockWrapper.tsx` |
-| Create | `src/components/admin/BlockEditorPanel.tsx` |
-| Create | `src/components/admin/BlockRenderer.tsx` |
-| Create | `src/pages/DynamicPage.tsx` |
-| Edit | `src/App.tsx` (add routes) |
-| Edit | `src/components/layout/Header.tsx` (admin icon next to cart) |
-| Edit | `src/components/admin/AdminLayout.tsx` (update page editor link) |
-| Edit | `src/pages/Index.tsx` (use shared BlockRenderer) |
-
+| Action | File                                                             |
+| ------ | ---------------------------------------------------------------- |
+| Create | `src/pages/admin/PageEditor.tsx`                                 |
+| Create | `src/components/admin/EditableBlockWrapper.tsx`                  |
+| Create | `src/components/admin/BlockEditorPanel.tsx`                      |
+| Create | `src/components/admin/BlockRenderer.tsx`                         |
+| Create | `src/pages/DynamicPage.tsx`                                      |
+| Edit   | `src/App.tsx` (add routes)                                       |
+| Edit   | `src/components/layout/Header.tsx` (admin icon next to cart)     |
+| Edit   | `src/components/admin/AdminLayout.tsx` (update page editor link) |
+| Edit   | `src/pages/Index.tsx` (use shared BlockRenderer)                 |

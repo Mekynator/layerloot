@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Eye,
   Box,
@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   XCircle,
   MessageSquare,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -81,6 +82,7 @@ const STATUSES = [
 
 const PAYMENT_STATUSES = ["unpaid", "awaiting_payment", "paid", "refunded", "cancelled"] as const;
 const PRODUCTION_STATUSES = ["pending", "queued", "in_production", "completed", "shipped", "cancelled"] as const;
+const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
 function parseCustomOrder(order: CustomOrder): ParsedCustomOrder {
   const raw = order.description || "";
@@ -123,6 +125,17 @@ function parseCustomOrder(order: CustomOrder): ParsedCustomOrder {
   };
 }
 
+function extractImageUrl(message: string | null): string | null {
+  if (!message) return null;
+  const match = message.match(/https?:\/\/\S+\.(?:png|jpg|jpeg|webp)(?:\?\S*)?/i);
+  return match ? match[0] : null;
+}
+
+function stripImageUrl(message: string | null): string {
+  if (!message) return "-";
+  return message.replace(/https?:\/\/\S+\.(?:png|jpg|jpeg|webp)(?:\?\S*)?/gi, "").trim() || "Image attachment";
+}
+
 const AdminCustomOrders = () => {
   const [orders, setOrders] = useState<CustomOrder[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<ParsedCustomOrder | null>(null);
@@ -138,6 +151,9 @@ const AdminCustomOrders = () => {
   const [quoteAmount, setQuoteAmount] = useState("");
   const [paymentStatusUpdate, setPaymentStatusUpdate] = useState<CustomOrder["payment_status"]>("unpaid");
   const [productionStatusUpdate, setProductionStatusUpdate] = useState<CustomOrder["production_status"]>("pending");
+  const [conversationImage, setConversationImage] = useState<File | null>(null);
+  const [conversationImagePreviewUrl, setConversationImagePreviewUrl] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
   const { toast } = useToast();
 
   const fetchOrders = async () => {
@@ -170,6 +186,12 @@ const AdminCustomOrders = () => {
     fetchOrders();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (conversationImagePreviewUrl) URL.revokeObjectURL(conversationImagePreviewUrl);
+    };
+  }, [conversationImagePreviewUrl]);
+
   const parsedOrders = useMemo(() => orders.map(parseCustomOrder), [orders]);
 
   const openDetail = async (order: ParsedCustomOrder) => {
@@ -180,8 +202,53 @@ const AdminCustomOrders = () => {
     setPaymentStatusUpdate(order.payment_status);
     setProductionStatusUpdate(order.production_status);
     setThreadMessage("");
+    setConversationImage(null);
+    setConversationImagePreviewUrl(null);
     setDetailOpen(true);
     await fetchMessages(order.id);
+  };
+
+  const handleConversationImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+
+    if (!ACCEPTED_IMAGE_TYPES.includes(selectedFile.type)) {
+      toast({
+        title: "Invalid image",
+        description: "Please upload PNG, JPG, JPEG, or WEBP.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (conversationImagePreviewUrl) URL.revokeObjectURL(conversationImagePreviewUrl);
+    setConversationImage(selectedFile);
+    setConversationImagePreviewUrl(URL.createObjectURL(selectedFile));
+  };
+
+  const clearConversationAttachment = () => {
+    if (conversationImagePreviewUrl) URL.revokeObjectURL(conversationImagePreviewUrl);
+    setConversationImage(null);
+    setConversationImagePreviewUrl(null);
+    if (imageInputRef.current) imageInputRef.current.value = "";
+  };
+
+  const uploadConversationImage = async (): Promise<string | null> => {
+    if (!selectedOrder || !conversationImage) return null;
+
+    const ext = conversationImage.name.split(".").pop() || "png";
+    const filePath = `${selectedOrder.user_id}/conversation-images/${selectedOrder.id}-${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("custom-order-files")
+      .upload(filePath, conversationImage, {
+        upsert: false,
+        contentType: conversationImage.type,
+      });
+
+    if (uploadError) throw uploadError;
+
+    return supabase.storage.from("custom-order-files").getPublicUrl(filePath).data.publicUrl;
   };
 
   const handleSave = async () => {
@@ -218,25 +285,32 @@ const AdminCustomOrders = () => {
   };
 
   const sendAdminMessage = async () => {
-    if (!selectedOrder || !threadMessage.trim()) return;
+    if (!selectedOrder || (!threadMessage.trim() && !conversationImage)) return;
 
     setSaving(true);
-    const { error } = await supabase.from("custom_order_messages").insert({
-      custom_order_id: selectedOrder.id,
-      sender_role: "admin",
-      message: threadMessage.trim(),
-      message_type: "note",
-    });
-    setSaving(false);
 
-    if (error) {
+    try {
+      const uploadedImageUrl = await uploadConversationImage();
+      const composedMessage = [threadMessage.trim(), uploadedImageUrl].filter(Boolean).join("\n");
+
+      const { error } = await supabase.from("custom_order_messages").insert({
+        custom_order_id: selectedOrder.id,
+        sender_role: "admin",
+        message: composedMessage || "Image attachment",
+        message_type: "note",
+      });
+
+      if (error) throw error;
+
+      setThreadMessage("");
+      clearConversationAttachment();
+      toast({ title: "Message sent" });
+      await fetchMessages(selectedOrder.id);
+    } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
-      return;
+    } finally {
+      setSaving(false);
     }
-
-    setThreadMessage("");
-    toast({ title: "Message sent" });
-    fetchMessages(selectedOrder.id);
   };
 
   const sendQuote = async () => {
@@ -250,40 +324,43 @@ const AdminCustomOrders = () => {
 
     setSaving(true);
 
-    const { error: updateError } = await supabase
-      .from("custom_orders")
-      .update({
-        quoted_price: amount,
-        status: "quoted",
-        customer_response_status: "pending",
-      })
-      .eq("id", selectedOrder.id);
+    try {
+      const { error: updateError } = await supabase
+        .from("custom_orders")
+        .update({
+          quoted_price: amount,
+          status: "quoted",
+          customer_response_status: "pending",
+        })
+        .eq("id", selectedOrder.id);
 
-    if (updateError) {
+      if (updateError) throw updateError;
+
+      const uploadedImageUrl = await uploadConversationImage();
+      const quoteMessage = [threadMessage.trim() || `Admin sent a quote of ${amount.toFixed(2)} kr.`, uploadedImageUrl]
+        .filter(Boolean)
+        .join("\n");
+
+      const { error: messageError } = await supabase.from("custom_order_messages").insert({
+        custom_order_id: selectedOrder.id,
+        sender_role: "admin",
+        message: quoteMessage,
+        message_type: "quote",
+        proposed_price: amount,
+      });
+
+      if (messageError) throw messageError;
+
+      setThreadMessage("");
+      clearConversationAttachment();
+      toast({ title: "Quote sent" });
+      await fetchOrders();
+      await fetchMessages(selectedOrder.id);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
       setSaving(false);
-      toast({ title: "Error", description: updateError.message, variant: "destructive" });
-      return;
     }
-
-    const { error: messageError } = await supabase.from("custom_order_messages").insert({
-      custom_order_id: selectedOrder.id,
-      sender_role: "admin",
-      message: threadMessage.trim() || `Admin sent a quote of ${amount.toFixed(2)} kr.`,
-      message_type: "quote",
-      proposed_price: amount,
-    });
-
-    setSaving(false);
-
-    if (messageError) {
-      toast({ title: "Error", description: messageError.message, variant: "destructive" });
-      return;
-    }
-
-    setThreadMessage("");
-    toast({ title: "Quote sent" });
-    await fetchOrders();
-    await fetchMessages(selectedOrder.id);
   };
 
   const respondToCustomerOffer = async (accept: boolean) => {
@@ -707,6 +784,53 @@ const AdminCustomOrders = () => {
                       />
                     </div>
 
+                    <div className="space-y-3 rounded-md border border-dashed border-border bg-background/60 p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <Label className="text-sm">Attach Picture to Conversation</Label>
+                          <p className="text-xs text-muted-foreground">
+                            PNG, JPG, JPEG, or WEBP. The customer will be able to view/download it from the chat.
+                          </p>
+                        </div>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => imageInputRef.current?.click()}
+                          className="font-display uppercase tracking-wider"
+                        >
+                          <ImageIcon className="mr-1 h-4 w-4" />
+                          Add Picture
+                        </Button>
+                      </div>
+
+                      <input
+                        ref={imageInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/webp"
+                        onChange={handleConversationImageChange}
+                        className="hidden"
+                      />
+
+                      {conversationImagePreviewUrl && (
+                        <div className="space-y-2">
+                          <div className="overflow-hidden rounded-md border border-border bg-muted/20">
+                            <img
+                              src={conversationImagePreviewUrl}
+                              alt="Conversation attachment preview"
+                              className="h-56 w-full object-contain bg-muted/10"
+                            />
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="truncate text-xs text-muted-foreground">{conversationImage?.name}</p>
+                            <Button type="button" variant="ghost" size="sm" onClick={clearConversationAttachment}>
+                              Remove
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="flex flex-wrap gap-2">
                       <Button
                         onClick={sendQuote}
@@ -720,7 +844,7 @@ const AdminCustomOrders = () => {
                       <Button
                         variant="outline"
                         onClick={sendAdminMessage}
-                        disabled={saving || !threadMessage.trim()}
+                        disabled={saving || (!threadMessage.trim() && !conversationImage)}
                         className="font-display uppercase tracking-wider"
                       >
                         <Send className="mr-1 h-4 w-4" />
@@ -803,53 +927,129 @@ const AdminCustomOrders = () => {
                   {messages.length === 0 ? (
                     <p className="text-sm text-muted-foreground">No conversation yet.</p>
                   ) : (
-                    messages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`rounded-md border p-3 text-sm ${
-                          msg.sender_role === "admin"
-                            ? "border-blue-500/20 bg-blue-500/5"
-                            : msg.sender_role === "user"
-                              ? "border-primary/20 bg-primary/5"
-                              : "border-border bg-card"
-                        }`}
-                      >
-                        <div className="mb-1 flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-[10px] uppercase">
-                              {msg.sender_role}
-                            </Badge>
-                            <Badge variant="outline" className="text-[10px] uppercase">
-                              {msg.message_type.replace(/_/g, " ")}
-                            </Badge>
-                            {msg.proposed_price !== null && (
-                              <Badge variant="outline" className="text-[10px] uppercase border-primary text-primary">
-                                {Number(msg.proposed_price).toFixed(2)} kr
+                    messages.map((msg) => {
+                      const imageUrl = extractImageUrl(msg.message);
+                      const messageText = stripImageUrl(msg.message);
+
+                      return (
+                        <div
+                          key={msg.id}
+                          className={`rounded-md border p-3 text-sm ${
+                            msg.sender_role === "admin"
+                              ? "border-blue-500/20 bg-blue-500/5"
+                              : msg.sender_role === "user"
+                                ? "border-primary/20 bg-primary/5"
+                                : "border-border bg-card"
+                          }`}
+                        >
+                          <div className="mb-1 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-[10px] uppercase">
+                                {msg.sender_role}
                               </Badge>
-                            )}
+                              <Badge variant="outline" className="text-[10px] uppercase">
+                                {msg.message_type.replace(/_/g, " ")}
+                              </Badge>
+                              {msg.proposed_price !== null && (
+                                <Badge variant="outline" className="text-[10px] uppercase border-primary text-primary">
+                                  {Number(msg.proposed_price).toFixed(2)} kr
+                                </Badge>
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(msg.created_at).toLocaleString()}
+                            </span>
                           </div>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(msg.created_at).toLocaleString()}
-                          </span>
+
+                          <p className="whitespace-pre-wrap text-foreground">{messageText}</p>
+
+                          {imageUrl && (
+                            <div className="mt-3 space-y-2">
+                              <div className="overflow-hidden rounded-md border border-border bg-background">
+                                <img
+                                  src={imageUrl}
+                                  alt="Conversation attachment"
+                                  className="h-72 w-full object-contain bg-muted/10"
+                                />
+                              </div>
+                              <a
+                                href={imageUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex text-xs text-primary hover:underline"
+                              >
+                                Open / download picture
+                              </a>
+                            </div>
+                          )}
                         </div>
-                        <p className="whitespace-pre-wrap text-foreground">{msg.message || "-"}</p>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
 
-                <div className="rounded-md border border-border bg-muted/40 p-4">
-                  <Label>Quick Admin Reply</Label>
-                  <Textarea
-                    value={threadMessage}
-                    onChange={(e) => setThreadMessage(e.target.value)}
-                    rows={4}
-                    placeholder="Reply to customer..."
-                  />
+                <div className="rounded-md border border-border bg-muted/40 p-4 space-y-4">
+                  <div>
+                    <Label>Quick Admin Reply</Label>
+                    <Textarea
+                      value={threadMessage}
+                      onChange={(e) => setThreadMessage(e.target.value)}
+                      rows={4}
+                      placeholder="Reply to customer..."
+                    />
+                  </div>
+
+                  <div className="space-y-3 rounded-md border border-dashed border-border bg-background/60 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <Label className="text-sm">Attach Picture</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Add a visual example, mockup, or production photo.
+                        </p>
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => imageInputRef.current?.click()}
+                        className="font-display uppercase tracking-wider"
+                      >
+                        <ImageIcon className="mr-1 h-4 w-4" />
+                        Add Picture
+                      </Button>
+                    </div>
+
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/webp"
+                      onChange={handleConversationImageChange}
+                      className="hidden"
+                    />
+
+                    {conversationImagePreviewUrl && (
+                      <div className="space-y-2">
+                        <div className="overflow-hidden rounded-md border border-border bg-muted/20">
+                          <img
+                            src={conversationImagePreviewUrl}
+                            alt="Conversation attachment preview"
+                            className="h-56 w-full object-contain bg-muted/10"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate text-xs text-muted-foreground">{conversationImage?.name}</p>
+                          <Button type="button" variant="ghost" size="sm" onClick={clearConversationAttachment}>
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="mt-3 flex gap-2">
                     <Button
                       onClick={sendAdminMessage}
-                      disabled={saving || !threadMessage.trim()}
+                      disabled={saving || (!threadMessage.trim() && !conversationImage)}
                       className="font-display uppercase tracking-wider"
                     >
                       <Send className="mr-1 h-4 w-4" />

@@ -677,10 +677,28 @@ const PageEditor = () => {
           )}
         </aside>
 
-        <main className="flex-1 overflow-hidden bg-background">
-          <EditorPreviewFrame page={activePage} />
-        </main>
-      </div>
+       <main className="flex-1 overflow-hidden bg-background">
+  <EditorPreviewFrame
+    page={activePage}
+    blocks={pageBlocks}
+    selectedBlockId={selectedBlockId}
+    onSelectBlock={(id) => setSelectedBlockId(id)}
+    onEditBlock={(id) => {
+      setSelectedBlockId(id);
+      setEditPanelOpen(true);
+    }}
+    onToggleActive={(id) => {
+      const block = pageBlocks.find((b) => b.id === id);
+      if (block) toggleActive(id, !(block.is_active ?? true));
+    }}
+    onAddBefore={(id) => {
+      const blockIndex = pageBlocks.findIndex((b) => b.id === id);
+      if (blockIndex === -1) return;
+      setInsertAtIndex(blockIndex > 0 ? pageBlocks[blockIndex - 1].sort_order + 1 : 0);
+      setAddBlockOpen(true);
+    }}
+  />
+</main>
 
       <BlockEditorPanel
         block={selectedBlock}

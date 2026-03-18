@@ -22,6 +22,11 @@ type BrandingSettings = {
   logo_text_right?: string;
 };
 
+type SeenState = {
+  ordersLastSeenAt: string | null;
+  customRequestsLastSeenAt: string | null;
+};
+
 const defaultBranding: BrandingSettings = {
   brand_name: "LayerLoot",
   brand_accent: "Loot",
@@ -29,10 +34,51 @@ const defaultBranding: BrandingSettings = {
   logo_text_right: "Loot",
 };
 
+const getNotificationsStorageKey = (userId: string) => `layerloot_account_notifications_${userId}`;
+
+const readSeenState = (userId: string): SeenState => {
+  try {
+    const raw = localStorage.getItem(getNotificationsStorageKey(userId));
+    if (!raw) {
+      return {
+        ordersLastSeenAt: null,
+        customRequestsLastSeenAt: null,
+      };
+    }
+
+    const parsed = JSON.parse(raw);
+    return {
+      ordersLastSeenAt: parsed?.ordersLastSeenAt ?? null,
+      customRequestsLastSeenAt: parsed?.customRequestsLastSeenAt ?? null,
+    };
+  } catch {
+    return {
+      ordersLastSeenAt: null,
+      customRequestsLastSeenAt: null,
+    };
+  }
+};
+
+const getLatestDate = (values: (string | null | undefined)[]) => {
+  const valid = values.filter(Boolean) as string[];
+  if (valid.length === 0) return null;
+
+  return valid.reduce((latest, current) =>
+    new Date(current).getTime() > new Date(latest).getTime() ? current : latest,
+  );
+};
+
+const isAfter = (dateStr?: string | null, compareStr?: string | null) => {
+  if (!dateStr) return false;
+  if (!compareStr) return true;
+  return new Date(dateStr).getTime() > new Date(compareStr).getTime();
+};
+
 const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [adminAlerts, setAdminAlerts] = useState(0);
   const [branding, setBranding] = useState<BrandingSettings>(defaultBranding);
+  const [hasAccountNotifications, setHasAccountNotifications] = useState(false);
 
   const location = useLocation();
   const { totalItems } = useCart();
@@ -60,6 +106,56 @@ const Header = () => {
 
     fetchAdminAlerts();
   }, [isAdmin, user]);
+
+  useEffect(() => {
+    const fetchAccountNotifications = async () => {
+      if (!user) {
+        setHasAccountNotifications(false);
+        return;
+      }
+
+      const seenState = readSeenState(user.id);
+
+      const [ordersRes, customOrdersRes] = await Promise.all([
+        supabase.from("orders").select("created_at").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase
+          .from("custom_orders")
+          .select("id, created_at, updated_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false }),
+      ]);
+
+      const customOrders = customOrdersRes.data ?? [];
+      const customOrderIds = customOrders.map((order) => order.id);
+
+      let messages: { created_at: string }[] = [];
+
+      if (customOrderIds.length > 0) {
+        const { data: msgData } = await supabase
+          .from("custom_order_messages")
+          .select("created_at, custom_order_id")
+          .in("custom_order_id", customOrderIds);
+
+        messages = msgData ?? [];
+      }
+
+      const latestOrderActivityAt = getLatestDate((ordersRes.data ?? []).map((order) => order.created_at));
+      const latestCustomActivityAt = getLatestDate([
+        ...customOrders.flatMap((order) => [order.created_at, order.updated_at]),
+        ...messages.map((msg) => msg.created_at),
+      ]);
+
+      const hasNewOrders = isAfter(latestOrderActivityAt, seenState.ordersLastSeenAt);
+      const hasNewCustomRequests = isAfter(latestCustomActivityAt, seenState.customRequestsLastSeenAt);
+
+      setHasAccountNotifications(hasNewOrders || hasNewCustomRequests);
+    };
+
+    fetchAccountNotifications();
+
+    const interval = window.setInterval(fetchAccountNotifications, 30000);
+    return () => window.clearInterval(interval);
+  }, [user]);
 
   useEffect(() => {
     supabase
@@ -142,8 +238,11 @@ const Header = () => {
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-secondary-foreground hover:text-primary">
+                  <Button variant="ghost" size="icon" className="relative text-secondary-foreground hover:text-primary">
                     <User className="h-5 w-5" />
+                    {hasAccountNotifications && (
+                      <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500" />
+                    )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">

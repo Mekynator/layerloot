@@ -1,6 +1,19 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Image, Gift, Sparkles, Heart, Gamepad2, Swords, Monitor, Upload, Send, Box, Star } from "lucide-react";
+import {
+  Image,
+  Gift,
+  Sparkles,
+  Heart,
+  Gamepad2,
+  Swords,
+  Monitor,
+  Upload,
+  Send,
+  Box,
+  Star,
+  CreditCard,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,6 +38,7 @@ const fadeUp = {
 
 const ACCEPTED_EXTENSIONS = ".stl,.obj,.3mf";
 const ACCEPTED_IMAGE_TYPES = "image/png,image/jpeg,image/jpg,image/webp";
+const REQUEST_FEE_DKK = 100;
 
 const MATERIALS = [
   { value: "pla", label: "PLA", desc: "Standard, biodegradable" },
@@ -69,6 +83,22 @@ const getUserDisplayName = (user: any) => {
     user.user_metadata?.first_name ||
     ""
   );
+};
+
+const startRequestFeeCheckout = async (customOrderId: string) => {
+  const { data, error } = await supabase.functions.invoke("create-request-fee-checkout", {
+    body: { customOrderId },
+  });
+
+  if (error) {
+    throw new Error(error.message || "Failed to start request fee checkout");
+  }
+
+  if (!data?.url) {
+    throw new Error("Stripe checkout URL was not returned");
+  }
+
+  window.location.href = data.url;
 };
 
 const ReviewSection = ({ toolType, title }: { toolType: "custom-print" | "lithophane"; title: string }) => {
@@ -519,45 +549,38 @@ const CustomPrintOrder = () => {
         ...(referenceImageUrl ? [`Reference Image URL: ${referenceImageUrl}`] : []),
       ].join("\n");
 
-      const { error } = await supabase.from("custom_orders").insert({
-        user_id: user.id,
-        name: userName || "Account User",
-        email: userEmail,
-        description: fullDescription,
-        model_url: modelUrl,
-        model_filename: modelFilename || referenceImage?.name || "reference-image",
-        metadata: {
-          order_type: "custom-print",
-          reference_image_url: referenceImageUrl,
-          reference_image_filename: referenceImage?.name ?? null,
-          uploaded_model_url: modelUrl,
-          uploaded_model_filename: modelFilename,
-        },
-      });
+      const { data: insertedOrder, error } = await supabase
+        .from("custom_orders")
+        .insert({
+          user_id: user.id,
+          name: userName || "Account User",
+          email: userEmail,
+          description: fullDescription,
+          model_url: modelUrl,
+          model_filename: modelFilename || referenceImage?.name || "reference-image",
+          status: "awaiting_request_fee",
+          request_fee_amount: REQUEST_FEE_DKK,
+          request_fee_status: "unpaid",
+          payment_status: "unpaid",
+          metadata: {
+            order_type: "custom-print",
+            reference_image_url: referenceImageUrl,
+            reference_image_filename: referenceImage?.name ?? null,
+            uploaded_model_url: modelUrl,
+            uploaded_model_filename: modelFilename,
+          },
+        })
+        .select("id")
+        .single();
 
       if (error) throw error;
+      if (!insertedOrder?.id) throw new Error("Order was created but ID was not returned");
 
-      toast({
-        title: "Order submitted!",
-        description: "We'll review your request and get back to you.",
-      });
-
-      setForm({
-        description: "",
-        material: "pla",
-        color: "white",
-        quality: "standard",
-        quantity: 1,
-        size_scale: "100",
-      });
-      setFile(null);
-      setReferenceImage(null);
-      setPreviewUrl(null);
-      setReferenceImagePreviewUrl(null);
+      await startRequestFeeCheckout(insertedOrder.id);
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error?.message || "Could not submit custom order.",
+        description: error?.message || "Could not start custom order payment.",
         variant: "destructive",
       });
     } finally {
@@ -764,14 +787,18 @@ const CustomPrintOrder = () => {
             disabled={submitting || (!file && !referenceImage) || !user}
             className="w-full font-display uppercase tracking-wider"
           >
-            {submitting ? "Submitting..." : "Submit Custom Order"}
+            {submitting ? "Preparing Payment..." : `Pay ${REQUEST_FEE_DKK} kr & Submit Custom Order`}
           </Button>
 
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
-            A <span className="font-semibold">100 kr custom request fee</span> applies when submitting this order. This
-            amount will be <span className="font-semibold">deducted from the final product price</span> if you proceed
-            with the order. If you decline the quoted offer, the 100 kr fee is{" "}
-            <span className="font-semibold">non-refundable</span>.
+            <div className="mb-2 flex items-center gap-2 font-semibold">
+              <CreditCard className="h-4 w-4" />
+              Request fee required before submission
+            </div>
+            A <span className="font-semibold">{REQUEST_FEE_DKK} kr custom request fee</span> is charged before the order
+            is submitted. After successful payment, your custom request is created and sent to the admin team for
+            review. This amount will later be{" "}
+            <span className="font-semibold">deducted from the final quoted price</span>.
           </div>
         </div>
       </div>

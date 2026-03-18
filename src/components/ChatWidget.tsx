@@ -13,6 +13,7 @@ import {
   X,
   Wand2,
   PackageSearch,
+  Clock3,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
@@ -31,7 +32,9 @@ type ChatProduct = {
   name: string;
   price: number;
   image?: string;
+  image_url?: string;
   url: string;
+  slug?: string;
 };
 
 type ChatOrder = {
@@ -49,6 +52,57 @@ type ChatCoupon = {
   expiresAt?: string;
 };
 
+type PointActivity = {
+  id: string;
+  points: number;
+  reason?: string | null;
+  created_at?: string;
+};
+
+type ChatContext = {
+  user?: {
+    id?: string;
+    email?: string | null;
+    name?: string | null;
+    last_sign_in_at?: string | null;
+  };
+  cart?: {
+    total?: number;
+    item_count?: number;
+    free_shipping_gap?: number;
+    qualifies_for_free_shipping?: boolean;
+  };
+  points?: {
+    balance?: number;
+    earned_total?: number;
+    spent_total?: number;
+    updated_at?: string | null;
+    recent_activity?: PointActivity[];
+  };
+  last_order?: {
+    id?: string;
+    status?: string;
+    total?: number;
+    created_at?: string;
+  } | null;
+  recent_orders?: Array<{
+    id?: string;
+    status?: string;
+    total?: number;
+    created_at?: string;
+  }>;
+  last_viewed_product?: {
+    id?: string;
+    name?: string;
+    slug?: string;
+    price?: number;
+    image_url?: string;
+    viewed_at?: string;
+  } | null;
+  recommended_products?: ChatProduct[];
+  current_page?: string | null;
+};
+
 type ChatPayload = {
   text?: string;
   suggestions?: string[];
@@ -57,6 +111,18 @@ type ChatPayload = {
   orders?: ChatOrder[];
   coupons?: ChatCoupon[];
   points?: number | null;
+  pointSummary?: {
+    earnedTotal?: number;
+    spentTotal?: number;
+  };
+  activity?: PointActivity[];
+  cart?: {
+    total?: number;
+    item_count?: number;
+    free_shipping_gap?: number;
+    qualifies_for_free_shipping?: boolean;
+  };
+  context?: ChatContext;
   status?: string;
 };
 
@@ -69,27 +135,47 @@ type Msg = {
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 const STORAGE_KEY = "layerloot-chat-history";
+const LAST_VIEWED_KEY = "layerloot-last-viewed-product";
 
 function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+function formatDate(value?: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("da-DK", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function formatPrice(value?: number) {
+  const amount = Number(value ?? 0);
+  return new Intl.NumberFormat("da-DK", {
+    style: "currency",
+    currency: "DKK",
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
 function getPageSuggestions(pathname: string, loggedIn: boolean): string[] {
-  if (pathname.startsWith("/products/")) {
+  if (pathname.startsWith("/products/") || pathname.startsWith("/product/")) {
     return ["Show similar items", "How long is delivery?", "Is this available painted?"];
   }
-  if (pathname.startsWith("/products")) {
+  if (pathname.startsWith("/products") || pathname.startsWith("/shop")) {
     return ["Show best sellers", "Find gifts under 200 DKK", "Custom print help"];
   }
   if (pathname.startsWith("/cart")) {
-    return ["Can I use a coupon?", "How much is shipping?", "Recommend one more item"];
+    return ["How far am I from free shipping?", "Can I use a coupon?", "Recommend one more item"];
   }
   if (pathname.startsWith("/account")) {
-    return ["Show my latest order", "How many points do I have?", "Do I have active coupons?"];
+    return ["Show my latest order", "How many points do I have?", "Recommended products for me"];
   }
 
   return loggedIn
-    ? ["Show best sellers", "Check my points", "Show my latest order"]
+    ? ["Show my points", "Show my latest order", "Recommended products for me"]
     : ["Show best sellers", "Custom print help", "Shipping information"];
 }
 
@@ -115,10 +201,14 @@ function getCartSnapshot() {
   const subtotal = normalized.reduce((sum, i) => sum + i.qty * i.price, 0);
 
   return {
-    itemCount: normalized.reduce((sum, i) => sum + i.qty, 0),
-    subtotal,
+    item_count: normalized.reduce((sum, i) => sum + i.qty, 0),
+    total: subtotal,
     items: normalized,
   };
+}
+
+function getLastViewedProductSnapshot() {
+  return safeJsonParse<Record<string, unknown> | null>(localStorage.getItem(LAST_VIEWED_KEY), null);
 }
 
 function AssistantExtras({
@@ -130,8 +220,28 @@ function AssistantExtras({
 }) {
   if (!payload) return null;
 
+  const context = payload.context;
+
   return (
     <div className="mt-3 space-y-3">
+      {context?.user?.name ? (
+        <div className="rounded-xl border bg-background/70 p-3 text-xs">
+          <div className="flex items-center gap-2 font-medium">
+            <User className="h-4 w-4" />
+            Welcome back
+          </div>
+          <div className="mt-1 text-muted-foreground">
+            Signed in as <span className="font-semibold text-foreground">{context.user.name}</span>
+            {context.user.last_sign_in_at ? (
+              <>
+                {" "}
+                · last login <span className="text-foreground">{formatDate(context.user.last_sign_in_at)}</span>
+              </>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
       {typeof payload.points === "number" && (
         <div className="rounded-xl border bg-background/70 p-3 text-xs">
           <div className="flex items-center gap-2 font-medium">
@@ -141,8 +251,48 @@ function AssistantExtras({
           <div className="mt-1 text-muted-foreground">
             You currently have <span className="font-semibold text-foreground">{payload.points}</span> points.
           </div>
+          {payload.pointSummary ? (
+            <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+              <div className="rounded-lg border px-2 py-1">
+                Earned: <span className="font-medium text-foreground">{payload.pointSummary.earnedTotal ?? 0}</span>
+              </div>
+              <div className="rounded-lg border px-2 py-1">
+                Spent: <span className="font-medium text-foreground">{payload.pointSummary.spentTotal ?? 0}</span>
+              </div>
+            </div>
+          ) : null}
         </div>
       )}
+
+      {payload.cart ? (
+        <div className="rounded-xl border bg-background/70 p-3 text-xs">
+          <div className="flex items-center gap-2 font-medium">
+            <ShoppingBag className="h-4 w-4" />
+            Cart status
+          </div>
+          <div className="mt-1 text-muted-foreground">
+            {payload.cart.item_count ?? 0} item(s) · {formatPrice(payload.cart.total ?? 0)}
+          </div>
+          <div className="mt-1 text-muted-foreground">
+            {payload.cart.qualifies_for_free_shipping
+              ? "You already qualify for free shipping."
+              : `You are ${formatPrice(payload.cart.free_shipping_gap ?? 0)} away from free shipping.`}
+          </div>
+        </div>
+      ) : null}
+
+      {context?.last_viewed_product?.name ? (
+        <Link
+          to={context.last_viewed_product.slug ? `/product/${context.last_viewed_product.slug}` : "/shop"}
+          className="block rounded-xl border bg-background/70 p-3 transition hover:bg-background"
+        >
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Clock3 className="h-4 w-4" />
+            Continue browsing
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">Last viewed: {context.last_viewed_product.name}</div>
+        </Link>
+      ) : null}
 
       {payload.links?.length ? (
         <div className="space-y-2">
@@ -164,25 +314,28 @@ function AssistantExtras({
 
       {payload.products?.length ? (
         <div className="space-y-2">
-          {payload.products.map((product) => (
-            <Link
-              key={product.id}
-              to={product.url}
-              className="flex items-center gap-3 rounded-xl border bg-background/70 p-3 transition hover:bg-background"
-            >
-              {product.image ? (
-                <img src={product.image} alt={product.name} className="h-14 w-14 rounded-lg object-cover" />
-              ) : (
-                <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-muted">
-                  <ShoppingBag className="h-5 w-5 text-muted-foreground" />
+          {payload.products.map((product) => {
+            const image = product.image ?? product.image_url;
+            return (
+              <Link
+                key={product.id}
+                to={product.url}
+                className="flex items-center gap-3 rounded-xl border bg-background/70 p-3 transition hover:bg-background"
+              >
+                {image ? (
+                  <img src={image} alt={product.name} className="h-14 w-14 rounded-lg object-cover" />
+                ) : (
+                  <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-muted">
+                    <ShoppingBag className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium">{product.name}</div>
+                  <div className="text-xs text-muted-foreground">{formatPrice(product.price)}</div>
                 </div>
-              )}
-              <div className="min-w-0">
-                <div className="truncate text-sm font-medium">{product.name}</div>
-                <div className="text-xs text-muted-foreground">{product.price} DKK</div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       ) : null}
 
@@ -194,8 +347,10 @@ function AssistantExtras({
               <div className="mt-1 text-muted-foreground">
                 Status: <span className="font-medium text-foreground">{order.status}</span>
               </div>
-              <div className="text-muted-foreground">Total: {order.total} DKK</div>
-              {order.createdAt ? <div className="text-muted-foreground">Placed: {order.createdAt}</div> : null}
+              <div className="text-muted-foreground">Total: {formatPrice(order.total)}</div>
+              {order.createdAt ? (
+                <div className="text-muted-foreground">Placed: {formatDate(order.createdAt)}</div>
+              ) : null}
               {order.url ? (
                 <Link to={order.url} className="mt-2 inline-flex text-primary hover:underline">
                   Open order
@@ -203,6 +358,28 @@ function AssistantExtras({
               ) : null}
             </div>
           ))}
+        </div>
+      ) : null}
+
+      {payload.activity?.length ? (
+        <div className="rounded-xl border bg-background/70 p-3 text-xs">
+          <div className="mb-2 flex items-center gap-2 font-medium">
+            <Gift className="h-4 w-4" />
+            Recent points activity
+          </div>
+          <div className="space-y-2">
+            {payload.activity.slice(0, 4).map((item) => (
+              <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border px-2 py-1.5">
+                <div className="min-w-0">
+                  <div className="truncate text-foreground">{item.reason || "Points update"}</div>
+                  <div className="text-muted-foreground">{formatDate(item.created_at)}</div>
+                </div>
+                <div className={`shrink-0 font-medium ${item.points >= 0 ? "text-green-600" : "text-red-600"}`}>
+                  {item.points >= 0 ? `+${item.points}` : item.points}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       ) : null}
 
@@ -216,7 +393,9 @@ function AssistantExtras({
               </div>
               {coupon.discountText ? <div className="mt-1 text-muted-foreground">{coupon.discountText}</div> : null}
               {coupon.description ? <div className="text-muted-foreground">{coupon.description}</div> : null}
-              {coupon.expiresAt ? <div className="text-muted-foreground">Expires: {coupon.expiresAt}</div> : null}
+              {coupon.expiresAt ? (
+                <div className="text-muted-foreground">Expires: {formatDate(coupon.expiresAt)}</div>
+              ) : null}
             </div>
           ))}
         </div>
@@ -261,7 +440,7 @@ const ChatWidget = () => {
         id: uid(),
         role: "assistant",
         content:
-          "Hi! I’m LayerLoot’s assistant. I can help with products, custom prints, shipping, coupons, and your orders.",
+          "Hi! I’m LayerLoot’s assistant. I can help with products, custom prints, shipping, points, and your orders.",
       },
     ];
   });
@@ -360,6 +539,7 @@ const ChatWidget = () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token ?? null;
       const cart = getCartSnapshot();
+      const lastViewedProduct = getLastViewedProductSnapshot();
 
       const resp = await fetch(CHAT_URL, {
         method: "POST",
@@ -372,6 +552,15 @@ const ChatWidget = () => {
             role: m.role,
             content: m.content,
           })),
+          page: location.pathname,
+          cart,
+          lastViewedProduct,
+          geo,
+          locale: {
+            language: navigator.language,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            currency: "DKK",
+          },
           context: {
             page: {
               path: location.pathname,
@@ -390,6 +579,7 @@ const ChatWidget = () => {
               timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
               currency: "DKK",
             },
+            lastViewedProduct,
           },
         }),
       });
@@ -533,7 +723,7 @@ const ChatWidget = () => {
         id: uid(),
         role: "assistant",
         content: userId
-          ? "Welcome back! I can help with your orders, points, coupons, products, and custom prints."
+          ? "Welcome back! I can help with your orders, points, cart progress, products, and custom prints."
           : "Hi! I’m LayerLoot’s assistant. I can help you find products, explain shipping, and guide custom print requests.",
       },
     ];
@@ -553,14 +743,14 @@ const ChatWidget = () => {
               setOpen(true);
               setShowPromptBubble(false);
             }}
-            className="fixed bottom-24 right-6 z-50 max-w-[250px] rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-xl"
+            className="fixed bottom-24 right-6 z-50 max-w-[260px] rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-xl"
           >
             <div className="mb-1 flex items-center gap-2 text-sm font-medium text-foreground">
               <Wand2 className="h-4 w-4 text-primary" />
               Need help choosing?
             </div>
             <div className="text-xs text-muted-foreground">
-              Ask about custom prints, best sellers, shipping, or gift ideas.
+              Ask about your points, latest order, free shipping, custom prints, or gift ideas.
             </div>
           </motion.button>
         )}
@@ -598,7 +788,7 @@ const ChatWidget = () => {
             initial={{ opacity: 0, y: 18, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 18, scale: 0.97 }}
-            className="fixed bottom-4 right-4 z-50 flex h-[42vh] min-h-[360px] w-[calc(100vw-2rem)] max-w-[430px] flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-2xl sm:h-[46vh]"
+            className="fixed bottom-4 right-4 z-50 flex h-[46vh] min-h-[380px] w-[calc(100vw-2rem)] max-w-[430px] flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-2xl sm:h-[52vh]"
           >
             <div className="flex items-center justify-between border-b border-border bg-primary px-4 py-2.5">
               <div className="flex items-center gap-2">
@@ -659,7 +849,7 @@ const ChatWidget = () => {
               <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                 <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1">
                   <Gift className="h-3 w-3" />
-                  Product help
+                  Points
                 </span>
                 <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1">
                   <TicketPercent className="h-3 w-3" />
@@ -670,8 +860,8 @@ const ChatWidget = () => {
                   Orders
                 </span>
                 <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1">
-                  <User className="h-3 w-3" />
-                  Account help
+                  <ShoppingBag className="h-3 w-3" />
+                  Cart help
                 </span>
               </div>
             </div>
@@ -707,7 +897,7 @@ const ChatWidget = () => {
 
               {loading && messages[messages.length - 1]?.role !== "assistant" && (
                 <div className="flex gap-2">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground text-xs">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs text-muted-foreground">
                     <Bot className="h-3.5 w-3.5" />
                   </div>
                   <div className="rounded-2xl bg-muted px-4 py-2.5 text-sm">

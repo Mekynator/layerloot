@@ -16,6 +16,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useCart } from "@/contexts/CartContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const FREE_SHIPPING_THRESHOLD = 500;
 const BASE_SHIPPING_PRICE = 5.99;
@@ -37,6 +39,7 @@ type RecommendedProduct = {
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, totalPrice, addItem } = useCart();
+  const { toast } = useToast();
 
   type CartItemExt = (typeof items)[number] & {
     material?: string;
@@ -133,24 +136,35 @@ export default function CartPage() {
     try {
       setIsCheckingOut(true);
 
-      // CHANGE THIS URL if your Supabase Edge Function name is different
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: session?.access_token
+            ? `Bearer ${session.access_token}`
+            : `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
           items: cartItems.map((item) => ({
             id: item.id,
+            product_id: item.id,
             name: item.name,
             image: item.image,
             price: item.price,
             quantity: item.quantity,
+            material: item.material || null,
+            color: item.color || null,
+            size: item.size || null,
           })),
           discountCode: selectedDiscountCode || manualDiscountCode || null,
           shippingCost,
+          success_url: `${window.location.origin}/checkout/success`,
+          cancel_url: `${window.location.origin}/cart`,
         }),
       });
 
@@ -166,9 +180,13 @@ export default function CartPage() {
       }
 
       throw new Error("No Stripe checkout URL returned.");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Checkout error:", error);
-      alert(error instanceof Error ? error.message : "Checkout failed.");
+      toast({
+        title: "Checkout error",
+        description: error?.message || "Unable to start Stripe checkout.",
+        variant: "destructive",
+      });
     } finally {
       setIsCheckingOut(false);
     }

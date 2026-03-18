@@ -826,7 +826,7 @@ const Account = () => {
                                     <span className="font-semibold text-foreground">
                                       {Number(order.quoted_price).toFixed(2)} kr
                                     </span>
-                                    . You can accept it, decline it, or send a counter-offer.
+                                    . You can accept it or decline it
                                   </p>
 
                                   <div className="flex flex-wrap gap-2">

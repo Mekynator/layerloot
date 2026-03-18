@@ -15,7 +15,6 @@ import {
   Truck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -66,9 +65,8 @@ interface CustomOrder {
   updated_at: string;
   user_id: string;
   quoted_price: number | null;
-  customer_offer_price: number | null;
   final_agreed_price: number | null;
-  customer_response_status: "pending" | "accepted" | "declined" | "countered";
+  customer_response_status: "pending" | "accepted" | "declined";
   payment_status: "unpaid" | "awaiting_payment" | "paid" | "refunded" | "cancelled";
   production_status: "pending" | "queued" | "in_production" | "completed" | "shipped" | "cancelled";
 }
@@ -79,7 +77,7 @@ interface CustomOrderMessage {
   sender_role: "user" | "admin" | "system";
   sender_user_id: string | null;
   message: string | null;
-  message_type: "note" | "quote" | "counter_offer" | "status_update" | "system";
+  message_type: "note" | "quote" | "status_update" | "system";
   proposed_price: number | null;
   created_at: string;
 }
@@ -249,7 +247,6 @@ const Account = () => {
 
   const [expandedCustomOrderId, setExpandedCustomOrderId] = useState<string | null>(null);
   const [replyMessage, setReplyMessage] = useState<Record<string, string>>({});
-  const [counterOffer, setCounterOffer] = useState<Record<string, string>>({});
   const [sendingReply, setSendingReply] = useState(false);
 
   useEffect(() => {
@@ -410,56 +407,6 @@ const Account = () => {
     fetchAll();
   };
 
-  const submitCounterOffer = async (order: CustomOrder) => {
-    if (!user) return;
-
-    const offerValue = parseFloat(counterOffer[order.id] || "");
-    const note = (replyMessage[order.id] || "").trim();
-
-    if (!offerValue || offerValue <= 0) {
-      toast({ title: "Invalid counter offer", description: "Please enter a valid amount.", variant: "destructive" });
-      return;
-    }
-
-    setSendingReply(true);
-
-    const { error: updateError } = await supabase
-      .from("custom_orders")
-      .update({
-        customer_offer_price: offerValue,
-        customer_response_status: "countered",
-        status: "reviewing",
-      })
-      .eq("id", order.id);
-
-    if (updateError) {
-      setSendingReply(false);
-      toast({ title: "Error", description: updateError.message, variant: "destructive" });
-      return;
-    }
-
-    const { error: msgError } = await supabase.from("custom_order_messages").insert({
-      custom_order_id: order.id,
-      sender_role: "user",
-      sender_user_id: user.id,
-      message: note || `Customer submitted a counter-offer of ${offerValue.toFixed(2)} kr.`,
-      message_type: "counter_offer",
-      proposed_price: offerValue,
-    });
-
-    setSendingReply(false);
-
-    if (msgError) {
-      toast({ title: "Error", description: msgError.message, variant: "destructive" });
-      return;
-    }
-
-    setCounterOffer((prev) => ({ ...prev, [order.id]: "" }));
-    setReplyMessage((prev) => ({ ...prev, [order.id]: "" }));
-    toast({ title: "Counter-offer sent" });
-    fetchAll();
-  };
-
   const respondToQuote = async (order: CustomOrder, accepted: boolean) => {
     if (!user) return;
 
@@ -489,15 +436,13 @@ const Account = () => {
       message: accepted
         ? `Customer accepted the quoted price of ${(order.quoted_price ?? 0).toFixed(2)} kr.`
         : "Customer declined the current quote.",
-      message_type: accepted ? "status_update" : "note",
+      message_type: "status_update",
       proposed_price: accepted ? order.quoted_price : null,
     });
 
     toast({
       title: accepted ? "Quote accepted" : "Quote declined",
-      description: accepted
-        ? "The request is now awaiting payment."
-        : "You can send a counter-offer or wait for an updated quote.",
+      description: accepted ? "The request is now awaiting payment." : "The request has been marked as declined.",
     });
 
     fetchAll();
@@ -745,12 +690,6 @@ const Account = () => {
                                         : "-"}
                                     </p>
                                     <p>
-                                      <span className="text-muted-foreground">Your Offer:</span>{" "}
-                                      {order.customer_offer_price !== null
-                                        ? `${Number(order.customer_offer_price).toFixed(2)} kr`
-                                        : "-"}
-                                    </p>
-                                    <p>
                                       <span className="text-muted-foreground">Final Agreed:</span>{" "}
                                       {order.final_agreed_price !== null
                                         ? `${Number(order.final_agreed_price).toFixed(2)} kr`
@@ -812,7 +751,8 @@ const Account = () => {
 
                             {order.status === "quoted" &&
                               order.quoted_price !== null &&
-                              order.customer_response_status !== "accepted" && (
+                              order.customer_response_status !== "accepted" &&
+                              order.customer_response_status !== "declined" && (
                                 <div className="rounded-md border border-primary/20 bg-primary/5 p-4">
                                   <div className="mb-3 flex items-center gap-2">
                                     <DollarSign className="h-4 w-4 text-primary" />
@@ -826,7 +766,7 @@ const Account = () => {
                                     <span className="font-semibold text-foreground">
                                       {Number(order.quoted_price).toFixed(2)} kr
                                     </span>
-                                    . You can accept it or decline it
+                                    . Please accept or decline the quote.
                                   </p>
 
                                   <div className="flex flex-wrap gap-2">
@@ -850,8 +790,8 @@ const Account = () => {
                                 </div>
                               )}
 
-                            <div className="grid gap-4 lg:grid-cols-2">
-                              <div className="space-y-3 rounded-md border border-border bg-muted/30 p-4">
+                            <div className="rounded-md border border-border bg-muted/30 p-4">
+                              <div className="space-y-3">
                                 <Label>Reply to Admin</Label>
                                 <Textarea
                                   value={replyMessage[order.id] || ""}
@@ -866,29 +806,6 @@ const Account = () => {
                                 >
                                   <Send className="mr-1 h-4 w-4" />
                                   Send Reply
-                                </Button>
-                              </div>
-
-                              <div className="space-y-3 rounded-md border border-border bg-muted/30 p-4">
-                                <Label>Send Counter-Offer</Label>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  placeholder="Your proposed amount"
-                                  value={counterOffer[order.id] || ""}
-                                  onChange={(e) => setCounterOffer((prev) => ({ ...prev, [order.id]: e.target.value }))}
-                                />
-                                <p className="text-xs text-muted-foreground">
-                                  Add an optional note in the reply box on the left, then send your counter-offer.
-                                </p>
-                                <Button
-                                  variant="outline"
-                                  onClick={() => submitCounterOffer(order)}
-                                  disabled={sendingReply || !counterOffer[order.id]}
-                                  className="font-display uppercase tracking-wider"
-                                >
-                                  <DollarSign className="mr-1 h-4 w-4" />
-                                  Submit Counter-Offer
                                 </Button>
                               </div>
                             </div>
@@ -907,7 +824,8 @@ const Account = () => {
                                     </span>
                                   </p>
                                   <p className="mt-2 text-xs text-muted-foreground">
-                                    Next step: connect this request to a payment flow or Stripe checkout.
+                                    The 100 kr custom request fee should be deducted from the final order total at
+                                    checkout.
                                   </p>
                                 </div>
                               )}
@@ -1053,15 +971,17 @@ const Account = () => {
                         className="mt-4 space-y-3 border-t border-border pt-4"
                       >
                         <p className="text-sm text-muted-foreground">Send this gift card to someone:</p>
-                        <Input
+                        <input
                           placeholder="Recipient email"
                           value={giftEmail}
                           onChange={(e) => setGiftEmail(e.target.value)}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
                         />
-                        <Input
+                        <input
                           placeholder="Recipient name (optional)"
                           value={giftName}
                           onChange={(e) => setGiftName(e.target.value)}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
                         />
                         <Button
                           size="sm"

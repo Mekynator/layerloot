@@ -156,6 +156,7 @@ const AdminCustomOrders = () => {
   const [adminNotes, setAdminNotes] = useState("");
   const [statusUpdate, setStatusUpdate] = useState("");
   const [saving, setSaving] = useState(false);
+  const [viewGroup, setViewGroup] = useState<"in-production" | "done">("in-production");
   const [filterStatus, setFilterStatus] = useState("all");
   const [convertOpen, setConvertOpen] = useState(false);
   const [convertForm, setConvertForm] = useState({ name: "", slug: "", price: 0, stock: 1 });
@@ -493,31 +494,50 @@ const AdminCustomOrders = () => {
     );
   };
 
-  const filtered = filterStatus === "all" ? parsedOrders : parsedOrders.filter((o) => o.status === filterStatus);
+  const groupedOrders = parsedOrders.filter((o) =>
+    viewGroup === "done"
+      ? o.status === "completed" || o.status === "rejected"
+      : o.status !== "completed" && o.status !== "rejected",
+  );
+
+  const filtered = filterStatus === "all" ? groupedOrders : groupedOrders.filter((o) => o.status === filterStatus);
 
   return (
     <AdminLayout>
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-3xl font-bold uppercase text-foreground">Custom Print Requests</h1>
-          <p className="text-sm text-muted-foreground">
-            Review uploaded 3D print requests before quoting or converting them into products.
-          </p>
+      <div className="mb-6 space-y-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="font-display text-3xl font-bold uppercase text-foreground">Custom Print Requests</h1>
+            <p className="text-sm text-muted-foreground">
+              Review uploaded 3D print requests before quoting or converting them into products.
+            </p>
+          </div>
+
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              {STATUSES.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            {STATUSES.map((s) => (
-              <SelectItem key={s.value} value={s.value}>
-                {s.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Tabs value={viewGroup} onValueChange={(v) => setViewGroup(v as "in-production" | "done")}>
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="in-production" className="font-display uppercase tracking-wider">
+              In Production
+            </TabsTrigger>
+            <TabsTrigger value="done" className="font-display uppercase tracking-wider">
+              Done
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       <Card>
@@ -577,7 +597,7 @@ const AdminCustomOrders = () => {
               {filtered.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={10} className="py-8 text-center text-muted-foreground">
-                    No custom print requests found.
+                    No custom print requests found in this tab.
                   </TableCell>
                 </TableRow>
               )}

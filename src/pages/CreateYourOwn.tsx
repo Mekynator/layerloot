@@ -680,6 +680,13 @@ const CustomPrintOrder = () => {
           >
             {submitting ? "Submitting..." : "Submit Custom Order"}
           </Button>
+
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+            A <span className="font-semibold">100 kr custom request fee</span> applies when submitting this order.
+            This amount will be <span className="font-semibold">deducted from the final product price</span> if you
+            proceed with the order. If you decline the quoted offer, the 100 kr fee is{" "}
+            <span className="font-semibold">non-refundable</span>.
+          </div>
         </div>
       </div>
 

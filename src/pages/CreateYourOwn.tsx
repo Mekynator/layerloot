@@ -621,7 +621,7 @@ const CustomPrintOrder = () => {
                 <img
                   src={referenceImagePreviewUrl}
                   alt="Reference preview"
-                  className="max-h-72 w-full object-cover"
+                  className="h-72 w-full object-contain bg-muted/20"
                 />
               </div>
             )}

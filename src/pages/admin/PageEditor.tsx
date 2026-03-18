@@ -51,7 +51,7 @@ import type { SiteBlock } from "@/components/admin/BlockRenderer";
 import BlockEditorPanel from "@/components/admin/BlockEditorPanel";
 import NavLinkEditor from "@/components/admin/NavLinkEditor";
 import PageBackgroundEditor from "@/components/admin/PageBackgroundEditor";
-import LivePagePreview from "@/components/admin/LivePagePreview";
+import EditorPreviewFrame from "@/components/admin/EditorPreviewFrame";
 
 const pageGroups = [
   {
@@ -678,7 +678,7 @@ const PageEditor = () => {
         </aside>
 
         <main className="flex-1 overflow-hidden bg-background">
-          <LivePagePreview page={activePage} />
+          <EditorPreviewFrame page={activePage} />
         </main>
       </div>
 

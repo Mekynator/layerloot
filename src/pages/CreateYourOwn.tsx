@@ -1,806 +1,766 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Image, Gift, Sparkles, Heart, Gamepad2, Swords, Monitor, Upload, Send, Box, Star } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Plus,
+  X,
+  Trash2,
+  ArrowLeft,
+  FileText,
+  Square,
+  Type,
+  Image,
+  Columns,
+  PlayCircle,
+  MousePointer,
+  Link2,
+  Code,
+  Globe,
+  Mail,
+  LayoutGrid,
+  Eye,
+  EyeOff,
+  GripVertical,
+  PanelLeft,
+  PanelLeftClose,
+  Truck,
+  Star,
+  HelpCircle,
+  ShieldCheck,
+  Layers,
+  Package,
+  FolderTree,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import ModelViewer from "@/components/ModelViewer";
-import Lithophane, { LithophaneSubmitPayload } from "@/components/Lithophane";
-import { motion } from "framer-motion";
-import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import type { SiteBlock } from "@/components/admin/BlockRenderer";
+import BlockEditorPanel from "@/components/admin/BlockEditorPanel";
+import NavLinkEditor from "@/components/admin/NavLinkEditor";
+import PageBackgroundEditor from "@/components/admin/PageBackgroundEditor";
+import EditorPreviewFrame from "@/components/admin/EditorPreviewFrame";
 
-const fadeUp = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.4 },
-};
-
-const ACCEPTED_EXTENSIONS = ".stl,.obj,.3mf";
-
-const MATERIALS = [
-  { value: "pla", label: "PLA", desc: "Standard, biodegradable" },
-  { value: "abs", label: "ABS", desc: "Strong, heat-resistant" },
-  { value: "petg", label: "PETG", desc: "Durable, flexible" },
-  { value: "tpu", label: "TPU", desc: "Flexible, rubber-like" },
-  { value: "resin", label: "Resin", desc: "High detail, smooth" },
+const pageGroups = [
+  {
+    label: "Main Pages",
+    pages: [
+      { value: "home", label: "Home" },
+      { value: "products", label: "Products" },
+      { value: "about", label: "About" },
+      { value: "contact", label: "Contact" },
+      { value: "gallery", label: "Gallery" },
+      { value: "create-your-own", label: "Create Your Own" },
+      { value: "submit-design", label: "Submit Design" },
+      { value: "faq", label: "FAQ" },
+      { value: "shipping-info", label: "Shipping Info" },
+      { value: "returns", label: "Returns" },
+    ],
+  },
+  {
+    label: "Global Layout",
+    pages: [
+      { value: "global_header_top", label: "Global Header Top" },
+      { value: "global_header_bottom", label: "Global Header Bottom" },
+      { value: "global_before_main", label: "Global Before Main" },
+      { value: "global_after_main", label: "Global After Main" },
+      { value: "global_footer_top", label: "Global Footer Top" },
+      { value: "global_footer_bottom", label: "Global Footer Bottom" },
+    ],
+  },
 ];
 
-const COLORS = [
-  { value: "white", label: "White", hex: "#f5f5f5" },
-  { value: "black", label: "Black", hex: "#1a1a1a" },
-  { value: "red", label: "Red", hex: "#ef4444" },
-  { value: "blue", label: "Blue", hex: "#3b82f6" },
-  { value: "green", label: "Green", hex: "#22c55e" },
-  { value: "yellow", label: "Yellow", hex: "#eab308" },
-  { value: "orange", label: "Orange", hex: "#f97316" },
-  { value: "gray", label: "Gray", hex: "#6b7280" },
+const defaultPages = pageGroups.flatMap((group) => group.pages.map((page) => page.value));
+
+const blockTypes = [
+  { value: "hero", label: "Hero Banner", icon: Square },
+  { value: "shipping_banner", label: "Shipping Banner", icon: Truck },
+  { value: "entry_cards", label: "Entry Cards", icon: Layers },
+  { value: "categories", label: "Categories Grid", icon: FolderTree },
+  { value: "featured_products", label: "Featured Products", icon: Star },
+  { value: "how_it_works", label: "How It Works", icon: Package },
+  { value: "faq", label: "FAQ Section", icon: HelpCircle },
+  { value: "trust_badges", label: "Trust Badges", icon: ShieldCheck },
+  { value: "text", label: "Text Block", icon: Type },
+  { value: "image", label: "Image Block", icon: Image },
+  { value: "carousel", label: "Image Carousel", icon: Columns },
+  { value: "video", label: "Video Section", icon: PlayCircle },
+  { value: "banner", label: "Promo Banner", icon: Square },
+  { value: "cta", label: "Call to Action", icon: MousePointer },
+  { value: "button", label: "Button with Link", icon: Link2 },
+  { value: "spacer", label: "Spacer", icon: Square },
+  { value: "html", label: "Custom HTML", icon: Code },
+  { value: "embed", label: "Embed / iFrame", icon: Globe },
+  { value: "newsletter", label: "Newsletter Form", icon: Mail },
 ];
 
-const QUALITIES = [
-  { value: "high", label: "High", desc: "0.2mm – Fine detail" },
-  { value: "standard", label: "Standard", desc: "0.4mm – Balanced" },
-  { value: "moderate", label: "Moderate", desc: "0.6mm – Faster print" },
-  { value: "low", label: "Low", desc: "0.8mm – Lowest detail" },
-];
-
-type ToolReview = {
-  id: string;
-  title: string | null;
-  comment: string | null;
-  rating: number;
-  created_at: string;
+const BLOCK_COLORS: Record<string, string> = {
+  hero: "border-l-primary bg-primary/5",
+  shipping_banner: "border-l-amber-500 bg-amber-500/5",
+  entry_cards: "border-l-cyan-500 bg-cyan-500/5",
+  categories: "border-l-violet-500 bg-violet-500/5",
+  featured_products: "border-l-yellow-500 bg-yellow-500/5",
+  how_it_works: "border-l-teal-500 bg-teal-500/5",
+  faq: "border-l-sky-500 bg-sky-500/5",
+  trust_badges: "border-l-emerald-500 bg-emerald-500/5",
+  text: "border-l-blue-500 bg-blue-500/5",
+  image: "border-l-green-500 bg-green-500/5",
+  carousel: "border-l-purple-500 bg-purple-500/5",
+  video: "border-l-red-500 bg-red-500/5",
+  banner: "border-l-amber-500 bg-amber-500/5",
+  cta: "border-l-emerald-500 bg-emerald-500/5",
+  button: "border-l-cyan-500 bg-cyan-500/5",
+  spacer: "border-l-muted-foreground bg-muted/30",
+  html: "border-l-orange-500 bg-orange-500/5",
+  embed: "border-l-indigo-500 bg-indigo-500/5",
+  newsletter: "border-l-pink-500 bg-pink-500/5",
 };
 
-const getUserDisplayName = (user: any) => {
-  if (!user) return "";
-  return (
-    user.user_metadata?.full_name ||
-    user.user_metadata?.name ||
-    user.user_metadata?.display_name ||
-    user.user_metadata?.first_name ||
-    ""
-  );
+const pageLabelMap = new Map(
+  pageGroups.flatMap((group) => group.pages.map((page) => [page.value, page.label] as const)),
+);
+
+const prettyPageLabel = (slug: string) =>
+  pageLabelMap.get(slug) ||
+  slug
+    .replace(/^global_/, "Global ")
+    .replace(/-/g, " ")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (m) => m.toUpperCase());
+
+const placementLabel = (page: string, placement?: string) => {
+  if (!placement) return "Default";
+  const map: Record<string, Record<string, string>> = {
+    products: { after_products: "After products" },
+    contact: { after_contact: "After contact" },
+    gallery: { after_gallery: "After gallery" },
+    "create-your-own": { after_create_your_own: "After tools" },
+    "submit-design": { after_submit_design: "After submit form" },
+  };
+  return map[page]?.[placement] || placement;
 };
 
-const ReviewSection = ({ toolType, title }: { toolType: "custom-print" | "lithophane"; title: string }) => {
-  const [reviews, setReviews] = useState<ToolReview[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchReviews = async () => {
-      setLoading(true);
-
-      const { data, error } = await supabase
-        .from("product_reviews")
-        .select("id, title, comment, rating, created_at")
-        .eq("is_approved", true)
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      if (!error) setReviews(data ?? []);
-      setLoading(false);
-    };
-
-    fetchReviews();
-  }, [toolType]);
-
-  return (
-    <div className="mt-8">
-      <div className="mb-4 flex items-center gap-2">
-        <Star className="h-5 w-5 text-primary" />
-        <h3 className="font-display text-lg font-bold uppercase text-foreground">{title}</h3>
-      </div>
-
-      {loading ? (
-        <div className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
-          Loading reviews...
-        </div>
-      ) : reviews.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">No reviews yet.</div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-3">
-          {reviews.map((review) => (
-            <div key={review.id} className="rounded-xl border border-border bg-card p-4">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <p className="font-medium text-foreground">{review.title || "Verified Customer"}</p>
-                <div className="flex gap-1">
-                  {Array.from({ length: review.rating }).map((_, i) => (
-                    <Star key={i} className="h-4 w-4 fill-primary text-primary" />
-                  ))}
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground">{review.comment}</p>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const LithophaneOrderSection = () => {
-  const { user } = useAuth();
+const PageEditor = () => {
+  const { isAdmin, loading, user } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
 
-  const userName = getUserDisplayName(user);
-  const userEmail = user?.email || "";
-  const [submittingLithophane, setSubmittingLithophane] = useState(false);
-
-  const dataUrlToBlob = (dataUrl: string) => {
-    const [meta, base64] = dataUrl.split(",");
-    const mime = meta.match(/data:(.*?);base64/)?.[1] ?? "application/octet-stream";
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-
-    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-    return new Blob([bytes], { type: mime });
-  };
-
-  const handleLithophaneSubmit = async (payload: LithophaneSubmitPayload) => {
-    if (!user) {
-      toast({
-        title: "Please sign in",
-        description: "You need to sign in to submit a lithophane order.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!payload.sourceDataUrl) {
-      toast({
-        title: "Missing image",
-        description: "Please upload a photo before submitting.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setSubmittingLithophane(true);
-
-    try {
-      const timestamp = Date.now();
-      const safeBaseName =
-        payload.sourceFileName?.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9-_]/g, "_") || "lithophane";
-
-      let sourceImageUrl: string | null = null;
-      let processedImageUrl: string | null = null;
-      let previewImageUrl: string | null = null;
-
-      const sourcePath = `${user.id}/lithophane/${timestamp}-${safeBaseName}-source.png`;
-      const processedPath = `${user.id}/lithophane/${timestamp}-${safeBaseName}-processed.png`;
-      const previewPath = `${user.id}/lithophane/${timestamp}-${safeBaseName}-preview.png`;
-
-      const { error: sourceUploadError } = await supabase.storage
-        .from("custom-order-files")
-        .upload(sourcePath, dataUrlToBlob(payload.sourceDataUrl), {
-          contentType: "image/png",
-          upsert: false,
-        });
-
-      if (sourceUploadError) throw sourceUploadError;
-      sourceImageUrl = supabase.storage.from("custom-order-files").getPublicUrl(sourcePath).data.publicUrl;
-
-      if (payload.processedDataUrl) {
-        const { error: processedUploadError } = await supabase.storage
-          .from("custom-order-files")
-          .upload(processedPath, dataUrlToBlob(payload.processedDataUrl), {
-            contentType: "image/png",
-            upsert: false,
-          });
-
-        if (processedUploadError) throw processedUploadError;
-        processedImageUrl = supabase.storage.from("custom-order-files").getPublicUrl(processedPath).data.publicUrl;
-      }
-
-      if (payload.previewScreenshotDataUrl) {
-        const { error: previewUploadError } = await supabase.storage
-          .from("custom-order-files")
-          .upload(previewPath, dataUrlToBlob(payload.previewScreenshotDataUrl), {
-            contentType: "image/png",
-            upsert: false,
-          });
-
-        if (previewUploadError) throw previewUploadError;
-        previewImageUrl = supabase.storage.from("custom-order-files").getPublicUrl(previewPath).data.publicUrl;
-      }
-
-      const fullDescription = [
-        "Lithophane custom order",
-        "",
-        `Shape: ${payload.shape}`,
-        `Orientation: ${payload.orientation}`,
-        `Size: ${payload.widthMm} x ${payload.heightMm} mm`,
-        `Thickness: ${payload.minThicknessMm}-${payload.maxThicknessMm} mm`,
-        `Border: ${payload.borderMm} mm`,
-        `Light enabled: ${payload.lightEnabled ? "Yes" : "No"}`,
-        `Light tone: ${payload.lightTone}`,
-        `Estimated price: ${payload.estimatedPrice} DKK`,
-        `Estimated print time: ${payload.estimatedPrintHours} hrs`,
-        "",
-        "Customer notes:",
-        payload.notes?.trim() || "No extra notes.",
-        "",
-        "--- Lithophane Config JSON ---",
-        JSON.stringify(payload.designJson, null, 2),
-      ].join("\n");
-
-      const { error } = await supabase.from("custom_orders").insert({
-        user_id: user.id,
-        name: userName || "Account User",
-        email: userEmail,
-        description: fullDescription,
-        model_url: sourceImageUrl,
-        model_filename: payload.sourceFileName || "lithophane-image.png",
-        metadata: {
-          order_type: "lithophane",
-          source_image_url: sourceImageUrl,
-          processed_image_url: processedImageUrl,
-          preview_image_url: previewImageUrl,
-          estimated_price: payload.estimatedPrice,
-          estimated_print_hours: payload.estimatedPrintHours,
-          lithophane_config: payload.designJson,
-        },
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Lithophane submitted!",
-        description: "Your lithophane design was added to custom orders successfully.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Submission failed",
-        description: error?.message || "Could not submit lithophane order.",
-        variant: "destructive",
-      });
-    } finally {
-      setSubmittingLithophane(false);
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      {!user && (
-        <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-          Please{" "}
-          <Link to="/auth" className="text-primary hover:underline">
-            sign in
-          </Link>{" "}
-          to submit a lithophane order.
-        </div>
-      )}
-
-      {user && (
-        <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-          Ordering as <span className="font-medium text-foreground">{userName || "Account User"}</span>
-          {userEmail ? <> · {userEmail}</> : null}
-        </div>
-      )}
-
-      <Lithophane
-        onSubmitDesign={handleLithophaneSubmit}
-        submitLabel={submittingLithophane ? "Submitting..." : "Order Lithophane"}
-      />
-
-      <ReviewSection toolType="lithophane" title="Lithophane Reviews" />
-    </div>
-  );
-};
-
-const GIFT_CATEGORIES = [
-  { value: "gamer", label: "Gamer", icon: Gamepad2 },
-  { value: "fantasy", label: "Fantasy Fan", icon: Swords },
-  { value: "desk", label: "Desk Decoration", icon: Monitor },
-  { value: "personalized", label: "Personalized Gift", icon: Heart },
-];
-
-const GiftFinder = () => {
-  const [selected, setSelected] = useState<string | null>(null);
-  const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [activePage, setActivePage] = useState("home");
+  const [blocks, setBlocks] = useState<SiteBlock[]>([]);
+  const [allPages, setAllPages] = useState<string[]>(defaultPages);
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [editPanelOpen, setEditPanelOpen] = useState(false);
+  const [addBlockOpen, setAddBlockOpen] = useState(false);
+  const [insertAtIndex, setInsertAtIndex] = useState<number | null>(null);
+  const [newPageOpen, setNewPageOpen] = useState(false);
+  const [newPageSlug, setNewPageSlug] = useState("");
+  const [deletePageOpen, setDeletePageOpen] = useState(false);
+  const [panelCollapsed, setPanelCollapsed] = useState(false);
+  const [sDragIndex, setSDragIndex] = useState<number | null>(null);
+  const [sDragOverIndex, setSDragOverIndex] = useState<number | null>(null);
+  const [backgroundEditorOpen, setBackgroundEditorOpen] = useState(false);
 
   useEffect(() => {
-    if (!selected) return;
-    setLoading(true);
+    if (!loading && (!user || !isAdmin)) navigate("/");
+  }, [isAdmin, loading, user, navigate]);
 
+  useEffect(() => {
     supabase
-      .from("products")
-      .select("id, name, slug, price, images, is_featured")
-      .eq("is_active", true)
-      .limit(8)
+      .from("site_settings")
+      .select("value")
+      .eq("key", "custom_pages")
+      .single()
       .then(({ data }) => {
-        setProducts(data ?? []);
-        setLoading(false);
+        if (data?.value && Array.isArray(data.value)) {
+          const customSlugs = (data.value as any[]).map((p: any) => p.slug);
+          const merged = Array.from(new Set([...defaultPages, ...customSlugs]));
+          setAllPages(merged);
+        }
       });
-  }, [selected]);
-
-  return (
-    <div className="space-y-6">
-      <p className="text-muted-foreground">Who are you shopping for?</p>
-
-      <div className="grid grid-cols-2 gap-3">
-        {GIFT_CATEGORIES.map(({ value, label, icon: Icon }) => (
-          <button
-            key={value}
-            onClick={() => setSelected(value)}
-            className={`flex items-center gap-3 rounded-lg border p-4 text-left transition-all ${
-              selected === value
-                ? "border-primary bg-primary/10 text-foreground"
-                : "border-border text-muted-foreground hover:border-primary/50"
-            }`}
-          >
-            <Icon className="h-6 w-6 text-primary" />
-            <span className="font-display text-sm uppercase tracking-wider">{label}</span>
-          </button>
-        ))}
-      </div>
-
-      {selected && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          {loading ? (
-            <div className="py-8 text-center text-muted-foreground">Searching...</div>
-          ) : products.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3">
-              {products.map((p) => (
-                <Link
-                  key={p.id}
-                  to={`/products/${p.slug}`}
-                  className="group overflow-hidden rounded-lg border border-border transition-all hover:-translate-y-1 hover:border-primary"
-                >
-                  {p.images?.[0] && (
-                    <img src={p.images[0]} alt={p.name} className="aspect-square w-full object-cover" />
-                  )}
-                  <div className="p-3">
-                    <p className="truncate text-sm font-medium text-foreground group-hover:text-primary">{p.name}</p>
-                    <p className="text-xs font-semibold text-primary">{p.price} kr</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="py-8 text-center">
-              <p className="mb-3 text-muted-foreground">No specific matches yet — request a custom 3D print instead.</p>
-            </div>
-          )}
-        </motion.div>
-      )}
-    </div>
-  );
-};
-
-const CustomPrintOrder = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
-
-  const userName = getUserDisplayName(user);
-  const userEmail = user?.email || "";
-
-  const [form, setForm] = useState({
-    description: "",
-    material: "pla",
-    color: "white",
-    quality: "standard",
-    quantity: 1,
-    size_scale: "100",
-  });
-
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
-
-  const selectedColorHex = COLORS.find((c) => c.value === form.color)?.hex || "#f5f5f5";
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (!selectedFile) return;
-
-    const ext = selectedFile.name.split(".").pop()?.toLowerCase();
-    if (!["stl", "obj", "3mf"].includes(ext ?? "")) {
-      toast({
-        title: "Invalid file",
-        description: "Please upload an STL, OBJ, or 3MF file.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setFile(selectedFile);
-    setPreviewUrl(URL.createObjectURL(selectedFile));
-  };
-
-  const handleSubmit = async () => {
-    if (!user) {
-      toast({
-        title: "Please sign in",
-        description: "You need to sign in to submit a custom order.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!file) {
-      toast({
-        title: "Missing file",
-        description: "Please upload a 3D model file.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!form.description.trim()) {
-      toast({
-        title: "Missing fields",
-        description: "Please fill in the additional details field.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setSubmitting(true);
-
-    try {
-      const ext = file.name.split(".").pop();
-      const path = `${user.id}/${Date.now()}.${ext}`;
-
-      const { error: uploadError } = await supabase.storage.from("custom-order-files").upload(path, file);
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage.from("custom-order-files").getPublicUrl(path);
-
-      const fullDescription = [
-        form.description.trim(),
-        "",
-        "--- Options ---",
-        `Material: ${MATERIALS.find((m) => m.value === form.material)?.label ?? form.material}`,
-        `Color: ${COLORS.find((c) => c.value === form.color)?.label ?? form.color}`,
-        `Quality: ${QUALITIES.find((q) => q.value === form.quality)?.label ?? form.quality}`,
-        `Quantity: ${form.quantity}`,
-        `Scale: ${form.size_scale}%`,
-      ].join("\n");
-
-      const { error } = await supabase.from("custom_orders").insert({
-        user_id: user.id,
-        name: userName || "Account User",
-        email: userEmail,
-        description: fullDescription,
-        model_url: urlData.publicUrl,
-        model_filename: file.name,
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Order submitted!",
-        description: "We'll review your 3D model and get back to you.",
-      });
-
-      setForm({
-        description: "",
-        material: "pla",
-        color: "white",
-        quality: "standard",
-        quantity: 1,
-        size_scale: "100",
-      });
-      setFile(null);
-      setPreviewUrl(null);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error?.message || "Could not submit custom order.",
-        variant: "destructive",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      {!user && (
-        <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-          Please{" "}
-          <Link to="/auth" className="text-primary hover:underline">
-            sign in
-          </Link>{" "}
-          to submit a custom 3D print order.
-        </div>
-      )}
-
-      {user && (
-        <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-          Ordering as <span className="font-medium text-foreground">{userName || "Account User"}</span>
-          {userEmail ? <> · {userEmail}</> : null}
-        </div>
-      )}
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-4">
-          <div>
-            <Label>Upload 3D Model</Label>
-            <div
-              className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-8 transition-colors hover:border-primary"
-              onClick={() => document.getElementById("custom-model-upload")?.click()}
-            >
-              <Upload className="mb-2 h-8 w-8 text-muted-foreground" />
-              <p className="text-sm font-medium text-foreground">{file ? file.name : "Click to upload"}</p>
-              <p className="text-xs text-muted-foreground">STL, OBJ, 3MF files supported</p>
-            </div>
-            <input
-              id="custom-model-upload"
-              type="file"
-              accept={ACCEPTED_EXTENSIONS}
-              onChange={handleFileChange}
-              className="hidden"
-            />
-          </div>
-
-          {previewUrl && (
-            <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}>
-              <div className="overflow-hidden rounded-xl border border-border">
-                <ModelViewer
-                  url={previewUrl}
-                  fileName={file?.name}
-                  className="aspect-square"
-                  selectedColor={selectedColorHex}
-                />
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                The colors may vary from real 3D printed colors and light sources.
-              </p>
-            </motion.div>
-          )}
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <Label>Material</Label>
-            <Select value={form.material} onValueChange={(value) => setForm({ ...form, material: value })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {MATERIALS.map((material) => (
-                  <SelectItem key={material.value} value={material.value}>
-                    <span className="font-medium">{material.label}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">– {material.desc}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label>Color</Label>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {COLORS.map((color) => (
-                <button
-                  key={color.value}
-                  type="button"
-                  onClick={() => setForm({ ...form, color: color.value })}
-                  className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-all ${
-                    form.color === color.value
-                      ? "border-primary bg-primary/10 text-foreground"
-                      : "border-border text-muted-foreground hover:border-primary"
-                  }`}
-                >
-                  <span
-                    className="inline-block h-3 w-3 rounded-full border border-border"
-                    style={{ backgroundColor: color.hex }}
-                  />
-                  {color.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <Label>Print Quality</Label>
-            <RadioGroup
-              value={form.quality}
-              onValueChange={(value) => setForm({ ...form, quality: value })}
-              className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2"
-            >
-              {QUALITIES.map((quality) => (
-                <label
-                  key={quality.value}
-                  className={`flex cursor-pointer items-center gap-2 rounded-md border p-3 transition-all ${
-                    form.quality === quality.value
-                      ? "border-primary bg-primary/10"
-                      : "border-border hover:border-primary"
-                  }`}
-                >
-                  <RadioGroupItem value={quality.value} />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{quality.label}</p>
-                    <p className="text-xs text-muted-foreground">{quality.desc}</p>
-                  </div>
-                </label>
-              ))}
-            </RadioGroup>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <Label>Quantity</Label>
-              <Input
-                type="number"
-                min={1}
-                value={form.quantity}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    quantity: Math.max(1, parseInt(e.target.value) || 1),
-                  })
-                }
-              />
-            </div>
-
-            <div>
-              <Label>Scale (%)</Label>
-              <Input
-                type="number"
-                min={10}
-                max={1000}
-                value={form.size_scale}
-                onChange={(e) => setForm({ ...form, size_scale: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label>Additional Details *</Label>
-            <Textarea
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder="Any special requirements, notes, or preferences..."
-              rows={5}
-            />
-          </div>
-
-          <Button
-            onClick={handleSubmit}
-            disabled={submitting || !file || !user}
-            className="w-full font-display uppercase tracking-wider"
-          >
-            {submitting ? "Submitting..." : "Submit Custom Order"}
-          </Button>
-
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
-            A <span className="font-semibold">100 kr custom request fee</span> applies when submitting this order.
-            This amount will be <span className="font-semibold">deducted from the final product price</span> if you
-            proceed with the order. If you decline the quoted offer, the 100 kr fee is{" "}
-            <span className="font-semibold">non-refundable</span>.
-          </div>
-        </div>
-      </div>
-
-      <ReviewSection toolType="custom-print" title="Custom 3D Print Reviews" />
-    </div>
-  );
-};
-
-const CreateYourOwn = () => {
-  const [pageBlocks, setPageBlocks] = useState<SiteBlock[]>([]);
-
-  useEffect(() => {
-    supabase
-      .from("site_blocks")
-      .select("*")
-      .eq("page", "create-your-own")
-      .eq("is_active", true)
-      .order("sort_order")
-      .then(({ data }) => setPageBlocks((data as SiteBlock[]) ?? []));
   }, []);
 
-  const topBlocks = pageBlocks.filter(
-    (block) => (block.content as Record<string, unknown> | null)?.placement !== "after_create_your_own",
-  );
-  const bottomBlocks = pageBlocks.filter(
-    (block) => (block.content as Record<string, unknown> | null)?.placement === "after_create_your_own",
-  );
+  const fetchBlocks = async () => {
+    const { data } = await supabase.from("site_blocks").select("*").eq("page", activePage).order("sort_order");
+    setBlocks((data as SiteBlock[]) ?? []);
+  };
+
+  useEffect(() => {
+    fetchBlocks();
+  }, [activePage]);
+
+  const pageBlocks = blocks.filter((b) => b.page === activePage).sort((a, b) => a.sort_order - b.sort_order);
+
+  const selectedBlock = pageBlocks.find((b) => b.id === selectedBlockId) || null;
+  const customPages = allPages.filter((p) => !defaultPages.includes(p));
+
+  const addBlock = async (type: string) => {
+    const sortOrder =
+      insertAtIndex !== null
+        ? insertAtIndex
+        : pageBlocks.length > 0
+          ? Math.max(...pageBlocks.map((b) => b.sort_order)) + 1
+          : 0;
+
+    if (insertAtIndex !== null) {
+      const toShift = pageBlocks.filter((b) => b.sort_order >= sortOrder);
+      await Promise.all(
+        toShift.map((b) =>
+          supabase
+            .from("site_blocks")
+            .update({ sort_order: b.sort_order + 1 })
+            .eq("id", b.id),
+        ),
+      );
+    }
+
+    let defaultContent: any = {};
+    switch (type) {
+      case "categories":
+        defaultContent = { heading: "Shop by Category", subheading: "Find exactly what you need", limit: 6 };
+        break;
+      case "featured_products":
+        defaultContent = { heading: "Best Sellers", subheading: "Our most popular 3D printed items", limit: 8 };
+        break;
+      case "how_it_works":
+        defaultContent = { heading: "How It Works", subheading: "From idea to your doorstep in 4 simple steps" };
+        break;
+      case "faq":
+        defaultContent = { heading: "Frequently Asked Questions" };
+        break;
+      case "shipping_banner":
+        defaultContent = { text: "Free shipping on orders over 500 kr" };
+        break;
+      case "hero":
+        defaultContent = {
+          eyebrow: "3D Printing Essentials",
+          heading: "New hero title",
+          subheading: "Describe the section here",
+          button_text: "Explore",
+          button_link: "/products",
+          secondary_button_text: "Custom Order",
+          secondary_button_link: "/create",
+        };
+        break;
+      case "entry_cards":
+        defaultContent = {
+          cards: [
+            { icon: "ShoppingBag", title: "Shop Products", desc: "Card description", link: "/products", cta: "Browse" },
+            { icon: "Palette", title: "Customize", desc: "Card description", link: "/create", cta: "Customize" },
+            { icon: "Upload", title: "Upload Idea", desc: "Card description", link: "/submit-design", cta: "Upload" },
+          ],
+        };
+        break;
+      case "trust_badges":
+        defaultContent = {
+          badges: [
+            { icon: "Truck", title: "Free Shipping", desc: "On orders over 500 kr" },
+            { icon: "Shield", title: "Secure Checkout", desc: "Protected checkout" },
+            { icon: "Star", title: "Rewards", desc: "Earn points on purchases" },
+          ],
+        };
+        break;
+    }
+
+    const { error } = await supabase.from("site_blocks").insert({
+      page: activePage,
+      block_type: type,
+      title: blockTypes.find((bt) => bt.value === type)?.label || type,
+      content: defaultContent,
+      sort_order: sortOrder,
+      is_active: true,
+    });
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Block added" });
+    setAddBlockOpen(false);
+    setInsertAtIndex(null);
+    fetchBlocks();
+  };
+
+  const deleteBlock = async (id: string) => {
+    await supabase.from("site_blocks").delete().eq("id", id);
+    setSelectedBlockId(null);
+    setEditPanelOpen(false);
+    toast({ title: "Block deleted" });
+    fetchBlocks();
+  };
+
+  const duplicateBlock = async (b: SiteBlock) => {
+    const maxOrder = pageBlocks.length > 0 ? Math.max(...pageBlocks.map((bl) => bl.sort_order)) + 1 : 0;
+    await supabase.from("site_blocks").insert({
+      page: b.page,
+      block_type: b.block_type,
+      title: (b.title ?? "") + " (copy)",
+      content: b.content,
+      sort_order: maxOrder,
+      is_active: b.is_active ?? true,
+    });
+    toast({ title: "Block duplicated" });
+    fetchBlocks();
+  };
+
+  const toggleActive = async (id: string, active: boolean) => {
+    await supabase.from("site_blocks").update({ is_active: active }).eq("id", id);
+    fetchBlocks();
+  };
+
+  const handleStructureDragEnd = async () => {
+    if (sDragIndex !== null && sDragOverIndex !== null && sDragIndex !== sDragOverIndex) {
+      const reordered = [...pageBlocks];
+      const [moved] = reordered.splice(sDragIndex, 1);
+      reordered.splice(sDragOverIndex, 0, moved);
+      await Promise.all(reordered.map((b, i) => supabase.from("site_blocks").update({ sort_order: i }).eq("id", b.id)));
+      toast({ title: "Layout updated" });
+      fetchBlocks();
+    }
+    setSDragIndex(null);
+    setSDragOverIndex(null);
+  };
+
+  const createPage = async () => {
+    const slug = newPageSlug
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+
+    if (!slug) return;
+
+    const updated = [...customPages.map((s) => ({ slug: s, title: prettyPageLabel(s) })), { slug, title: newPageSlug }];
+
+    await supabase.from("site_settings").upsert({ key: "custom_pages", value: updated as any }, { onConflict: "key" });
+
+    const merged = Array.from(new Set([...defaultPages, ...updated.map((p) => p.slug)]));
+    setAllPages(merged);
+    setActivePage(slug);
+    setNewPageOpen(false);
+    setNewPageSlug("");
+    toast({ title: "Page created" });
+  };
+
+  const deletePage = async () => {
+    await supabase.from("site_blocks").delete().eq("page", activePage);
+    const remainingCustomPages = customPages.filter((p) => p !== activePage);
+
+    await supabase.from("site_settings").upsert(
+      {
+        key: "custom_pages",
+        value: remainingCustomPages.map((s) => ({ slug: s, title: prettyPageLabel(s) })) as any,
+      },
+      { onConflict: "key" },
+    );
+
+    setAllPages([...defaultPages, ...remainingCustomPages]);
+    setActivePage("home");
+    setDeletePageOpen(false);
+    toast({ title: "Page deleted" });
+  };
+
+  if (loading || !isAdmin) return null;
 
   return (
-    <div>
-      {topBlocks.map((block) => (
-        <div key={block.id}>{renderBlock(block)}</div>
-      ))}
+    <div className="flex min-h-screen flex-col">
+      <div className="sticky top-16 z-40 border-b border-border bg-foreground text-background">
+        <div className="flex h-12 items-center justify-between gap-3 px-4">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/admin")}
+              className="text-background/70 hover:bg-background/10 hover:text-background"
+            >
+              <ArrowLeft className="mr-1 h-4 w-4" /> Admin
+            </Button>
 
-      <section className="py-8 lg:py-12">
-        <div className="container max-w-5xl">
-          <motion.div {...fadeUp}>
-            <div className="mb-2 flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              <span className="font-display text-sm uppercase tracking-widest text-primary">Design Studio</span>
-            </div>
+            <div className="h-5 w-px bg-background/20" />
 
-            <h1 className="mb-2 font-display text-3xl font-bold uppercase text-foreground lg:text-5xl">
-              Create Your <span className="text-primary">Own</span>
-            </h1>
+            <Select
+              value={activePage}
+              onValueChange={(v) => {
+                if (v === "__new__") {
+                  setNewPageOpen(true);
+                } else {
+                  setActivePage(v);
+                  setSelectedBlockId(null);
+                }
+              }}
+            >
+              <SelectTrigger className="w-56 border-background/20 bg-background/10 text-background">
+                <SelectValue />
+              </SelectTrigger>
 
-            <p className="mb-8 max-w-2xl text-muted-foreground">
-              Use our tools to create custom 3D printed products. Upload a photo for a lithophane, explore gift ideas,
-              or submit a custom 3D print order directly from this page.
-            </p>
-          </motion.div>
+              <SelectContent>
+                {pageGroups.map((group) => (
+                  <SelectGroup key={group.label}>
+                    <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      {group.label}
+                    </SelectLabel>
+                    {group.pages
+                      .filter((p) => allPages.includes(p.value))
+                      .map((p) => (
+                        <SelectItem key={p.value} value={p.value}>
+                          {p.label}
+                        </SelectItem>
+                      ))}
+                  </SelectGroup>
+                ))}
 
-          <Tabs defaultValue="custom-print" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-1 gap-2 bg-muted/50 sm:grid-cols-3">
-              <TabsTrigger value="custom-print" className="gap-1.5 font-display text-xs uppercase tracking-wider">
-                <Box className="h-4 w-4" /> Custom 3D Print
-              </TabsTrigger>
+                {customPages.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Custom Pages
+                    </SelectLabel>
+                    {customPages.map((p) => (
+                      <SelectItem key={p} value={p}>
+                        {prettyPageLabel(p)}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
 
-              <TabsTrigger value="lithophane" className="gap-1.5 font-display text-xs uppercase tracking-wider">
-                <Image className="h-4 w-4" /> Lithophane
-              </TabsTrigger>
+                <SelectItem value="__new__" className="font-semibold text-primary">
+                  + Create Page
+                </SelectItem>
+              </SelectContent>
+            </Select>
 
-              <TabsTrigger value="gift-finder" className="gap-1.5 font-display text-xs uppercase tracking-wider">
-                <Gift className="h-4 w-4" /> Gift Finder
-              </TabsTrigger>
-            </TabsList>
+            <Badge variant="secondary" className="hidden md:inline-flex">
+              {prettyPageLabel(activePage)}
+            </Badge>
 
-            <TabsContent value="custom-print">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 font-display text-lg uppercase">
-                    <Send className="h-5 w-5 text-primary" /> Custom 3D Print Order
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CustomPrintOrder />
-                </CardContent>
-              </Card>
-            </TabsContent>
+            {!defaultPages.includes(activePage) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDeletePageOpen(true)}
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive/80"
+              >
+                <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete Page
+              </Button>
+            )}
+          </div>
 
-            <TabsContent value="lithophane">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 font-display text-lg uppercase">
-                    <Image className="h-5 w-5 text-primary" /> Lithophane Generator
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <LithophaneOrderSection />
-                </CardContent>
-              </Card>
-            </TabsContent>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setPanelCollapsed(!panelCollapsed)}
+              className="text-background/70 hover:bg-background/10 hover:text-background"
+            >
+              {panelCollapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+            </Button>
 
-            <TabsContent value="gift-finder">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 font-display text-lg uppercase">
-                    <Gift className="h-5 w-5 text-primary" /> Gift Finder
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <GiftFinder />
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+            <NavLinkEditor />
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBackgroundEditorOpen(true)}
+              className="font-display text-xs uppercase tracking-wider text-foreground hover:text-primary-foreground"
+            >
+              Page Background
+            </Button>
+
+            <Button
+              size="sm"
+              onClick={() => {
+                setInsertAtIndex(null);
+                setAddBlockOpen(true);
+              }}
+              className="font-display text-xs uppercase tracking-wider"
+            >
+              <Plus className="mr-1 h-3.5 w-3.5" /> Add Block
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/")}
+              className="text-background/70 hover:bg-background/10 hover:text-background"
+            >
+              <X className="mr-1 h-4 w-4" /> Exit
+            </Button>
+          </div>
         </div>
-      </section>
+      </div>
 
-      {bottomBlocks.map((block) => (
-        <div key={block.id}>{renderBlock(block)}</div>
-      ))}
+      <div className="flex flex-1 overflow-hidden">
+        <aside
+          className={`shrink-0 overflow-y-auto border-r border-border bg-card transition-all duration-300 ${
+            panelCollapsed ? "w-0 overflow-hidden" : "w-72 lg:w-80"
+          }`}
+        >
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-4 py-3">
+            <div className="flex items-center gap-2">
+              <LayoutGrid className="h-4 w-4 text-primary" />
+              <span className="font-display text-xs font-bold uppercase tracking-widest text-foreground">
+                Structure
+              </span>
+            </div>
+            <Badge variant="secondary" className="font-mono text-[10px]">
+              {pageBlocks.length} blocks
+            </Badge>
+          </div>
+
+          <div className="border-b border-border bg-muted/30 px-4 py-3">
+            <p className="font-display text-[10px] uppercase tracking-widest text-muted-foreground">Editing</p>
+            <p className="mt-1 text-sm font-medium text-foreground">{prettyPageLabel(activePage)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {activePage.startsWith("global_")
+                ? "This area appears across the site."
+                : "This controls the live public page layout."}
+            </p>
+          </div>
+
+          {pageBlocks.length === 0 ? (
+            <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
+              <FileText className="mb-3 h-10 w-10 text-muted-foreground/30" />
+              <p className="font-display text-xs uppercase text-muted-foreground">Empty page</p>
+              <Button
+                size="sm"
+                className="mt-3"
+                onClick={() => {
+                  setInsertAtIndex(null);
+                  setAddBlockOpen(true);
+                }}
+              >
+                <Plus className="mr-1 h-3.5 w-3.5" /> Add Block
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-1 p-2">
+              {pageBlocks.map((block, index) => {
+                const bt = blockTypes.find((b) => b.value === block.block_type);
+                const Icon = bt?.icon ?? Square;
+                const colorClass = BLOCK_COLORS[block.block_type] ?? "border-l-muted-foreground bg-muted/30";
+                const isSelected = selectedBlockId === block.id;
+                const placement = block.content?.placement as string | undefined;
+
+                return (
+                  <div key={block.id}>
+                    {sDragOverIndex === index && sDragIndex !== index && (
+                      <div className="mx-2 h-0.5 rounded bg-primary" />
+                    )}
+
+                    <div
+                      draggable
+                      onDragStart={() => setSDragIndex(index)}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setSDragOverIndex(index);
+                      }}
+                      onDragEnd={handleStructureDragEnd}
+                      onClick={() => setSelectedBlockId(isSelected ? null : block.id)}
+                      className={`group cursor-pointer rounded-md border-l-[3px] px-2 py-2 text-sm transition-all ${colorClass} ${
+                        isSelected ? "ring-2 ring-primary ring-offset-1 ring-offset-card" : "hover:bg-accent/50"
+                      } ${!block.is_active ? "opacity-50" : ""}`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <GripVertical className="mt-0.5 h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground" />
+                        <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-foreground/60" />
+
+                        <div className="min-w-0 flex-1">
+                          <span className="block truncate font-display text-[11px] font-semibold uppercase tracking-wider text-foreground">
+                            {bt?.label ?? block.block_type}
+                          </span>
+                          {block.title && block.title !== bt?.label && (
+                            <span className="block truncate text-[10px] text-muted-foreground">{block.title}</span>
+                          )}
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            <span className="rounded bg-background/70 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-muted-foreground">
+                              {placementLabel(activePage, placement)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {!block.is_active && <EyeOff className="h-3 w-3 shrink-0 text-muted-foreground" />}
+
+                        <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleActive(block.id, !(block.is_active ?? true));
+                            }}
+                            className="rounded p-1 text-muted-foreground hover:text-foreground"
+                          >
+                            {block.is_active ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                          </button>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedBlockId(block.id);
+                              setEditPanelOpen(true);
+                            }}
+                            className="rounded p-1 text-muted-foreground hover:text-foreground"
+                          >
+                            <PanelLeft className="h-3 w-3" />
+                          </button>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteBlock(block.id);
+                            }}
+                            className="rounded p-1 text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {sDragOverIndex === pageBlocks.length && <div className="mx-2 h-0.5 rounded bg-primary" />}
+
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setSDragOverIndex(pageBlocks.length);
+                }}
+                className="h-2"
+              />
+
+              <button
+                onClick={() => {
+                  setInsertAtIndex(null);
+                  setAddBlockOpen(true);
+                }}
+                className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border py-2.5 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span className="font-display text-[10px] uppercase tracking-wider">Add Section</span>
+              </button>
+
+              <div className="mt-4 rounded-md border border-border bg-muted/30 p-3">
+                <h3 className="mb-2 font-display text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  Summary
+                </h3>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="font-display text-lg font-bold text-foreground">{pageBlocks.length}</p>
+                    <p className="text-[10px] text-muted-foreground">Total</p>
+                  </div>
+                  <div>
+                    <p className="font-display text-lg font-bold text-primary">
+                      {pageBlocks.filter((b) => b.is_active).length}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">Visible</p>
+                  </div>
+                  <div>
+                    <p className="font-display text-lg font-bold text-muted-foreground">
+                      {pageBlocks.filter((b) => !b.is_active).length}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">Hidden</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </aside>
+
+        <main className="flex-1 overflow-hidden bg-background">
+          <EditorPreviewFrame page={activePage} />
+        </main>
+      </div>
+
+      <BlockEditorPanel
+        block={selectedBlock}
+        open={editPanelOpen}
+        onClose={() => setEditPanelOpen(false)}
+        onSave={() => {
+          setEditPanelOpen(false);
+          fetchBlocks();
+        }}
+        pages={allPages}
+      />
+
+      <PageBackgroundEditor page={activePage} open={backgroundEditorOpen} onOpenChange={setBackgroundEditorOpen} />
+
+      <Dialog open={addBlockOpen} onOpenChange={setAddBlockOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display uppercase">Add Section · {prettyPageLabel(activePage)}</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-3 gap-2">
+            {blockTypes.map(({ value, label, icon: Icon }) => (
+              <Button
+                key={value}
+                variant="outline"
+                onClick={() => addBlock(value)}
+                className="h-auto flex-col gap-2 py-3 font-display text-[10px] uppercase tracking-wider"
+              >
+                <Icon className="h-5 w-5" />
+                {label}
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={newPageOpen} onOpenChange={setNewPageOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display uppercase">Create Page</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Page Name</Label>
+              <Input
+                value={newPageSlug}
+                onChange={(e) => setNewPageSlug(e.target.value)}
+                placeholder="e.g. campaigns/summer-drop"
+              />
+            </div>
+            <Button
+              onClick={createPage}
+              disabled={!newPageSlug.trim()}
+              className="w-full font-display uppercase tracking-wider"
+            >
+              Create
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deletePageOpen} onOpenChange={setDeletePageOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display uppercase">Delete Page</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This will permanently delete all blocks on "{prettyPageLabel(activePage)}".
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setDeletePageOpen(false)} className="flex-1">
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={deletePage} className="flex-1 font-display uppercase">
+              Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-export default CreateYourOwn;
+export default PageEditor;

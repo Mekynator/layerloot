@@ -24,7 +24,7 @@ const fadeUp = {
 };
 
 const ACCEPTED_EXTENSIONS = ".stl,.obj,.3mf";
-const ACCEPTED_IMAGE_EXTENSIONS = "image/png,image/jpeg,image/jpg,image/webp";
+const ACCEPTED_IMAGE_TYPES = "image/png,image/jpeg,image/jpg,image/webp";
 
 const MATERIALS = [
   { value: "pla", label: "PLA", desc: "Standard, biodegradable" },
@@ -454,10 +454,10 @@ const CustomPrintOrder = () => {
       return;
     }
 
-    if (!file) {
+    if (!file && !referenceImage) {
       toast({
         title: "Missing file",
-        description: "Please upload a 3D model file.",
+        description: "Please upload either a 3D model or a reference image.",
         variant: "destructive",
       });
       return;
@@ -475,15 +475,21 @@ const CustomPrintOrder = () => {
     setSubmitting(true);
 
     try {
-      const ext = file.name.split(".").pop();
-      const modelPath = `${user.id}/${Date.now()}-model.${ext}`;
-
-      const { error: uploadError } = await supabase.storage.from("custom-order-files").upload(modelPath, file);
-      if (uploadError) throw uploadError;
-
-      const { data: modelUrlData } = supabase.storage.from("custom-order-files").getPublicUrl(modelPath);
-
+      let modelUrl: string | null = null;
+      let modelFilename: string | null = null;
       let referenceImageUrl: string | null = null;
+
+      if (file) {
+        const ext = file.name.split(".").pop();
+        const modelPath = `${user.id}/${Date.now()}-model.${ext}`;
+
+        const { error: uploadError } = await supabase.storage.from("custom-order-files").upload(modelPath, file);
+        if (uploadError) throw uploadError;
+
+        const { data: modelUrlData } = supabase.storage.from("custom-order-files").getPublicUrl(modelPath);
+        modelUrl = modelUrlData.publicUrl;
+        modelFilename = file.name;
+      }
 
       if (referenceImage) {
         const imageExt = referenceImage.name.split(".").pop();
@@ -508,6 +514,7 @@ const CustomPrintOrder = () => {
         `Quality: ${QUALITIES.find((q) => q.value === form.quality)?.label ?? form.quality}`,
         `Quantity: ${form.quantity}`,
         `Scale: ${form.size_scale}%`,
+        `3D Model Attached: ${modelUrl ? "Yes" : "No"}`,
         `Reference Image Attached: ${referenceImageUrl ? "Yes" : "No"}`,
         ...(referenceImageUrl ? [`Reference Image URL: ${referenceImageUrl}`] : []),
       ].join("\n");
@@ -517,12 +524,14 @@ const CustomPrintOrder = () => {
         name: userName || "Account User",
         email: userEmail,
         description: fullDescription,
-        model_url: modelUrlData.publicUrl,
-        model_filename: file.name,
+        model_url: modelUrl,
+        model_filename: modelFilename || referenceImage?.name || "reference-image",
         metadata: {
           order_type: "custom-print",
           reference_image_url: referenceImageUrl,
           reference_image_filename: referenceImage?.name ?? null,
+          uploaded_model_url: modelUrl,
+          uploaded_model_filename: modelFilename,
         },
       });
 
@@ -530,7 +539,7 @@ const CustomPrintOrder = () => {
 
       toast({
         title: "Order submitted!",
-        description: "We'll review your 3D model and get back to you.",
+        description: "We'll review your request and get back to you.",
       });
 
       setForm({
@@ -611,7 +620,7 @@ const CustomPrintOrder = () => {
             <input
               id="custom-reference-image-upload"
               type="file"
-              accept={ACCEPTED_IMAGE_EXTENSIONS}
+              accept={ACCEPTED_IMAGE_TYPES}
               onChange={handleReferenceImageChange}
               className="hidden"
             />
@@ -752,16 +761,16 @@ const CustomPrintOrder = () => {
 
           <Button
             onClick={handleSubmit}
-            disabled={submitting || !file || !user}
+            disabled={submitting || (!file && !referenceImage) || !user}
             className="w-full font-display uppercase tracking-wider"
           >
             {submitting ? "Submitting..." : "Submit Custom Order"}
           </Button>
 
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
-            A <span className="font-semibold">100 kr custom request fee</span> applies when submitting this order.
-            This amount will be <span className="font-semibold">deducted from the final product price</span> if you
-            proceed with the order. If you decline the quoted offer, the 100 kr fee is{" "}
+            A <span className="font-semibold">100 kr custom request fee</span> applies when submitting this order. This
+            amount will be <span className="font-semibold">deducted from the final product price</span> if you proceed
+            with the order. If you decline the quoted offer, the 100 kr fee is{" "}
             <span className="font-semibold">non-refundable</span>.
           </div>
         </div>

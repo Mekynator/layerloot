@@ -35,7 +35,7 @@ interface CustomOrder {
   name: string;
   email: string;
   description: string;
-  model_url: string;
+  model_url: string | null;
   model_filename: string;
   status: string;
   admin_notes: string | null;
@@ -48,6 +48,13 @@ interface CustomOrder {
   customer_response_status: "pending" | "accepted" | "declined" | "countered";
   payment_status: "unpaid" | "awaiting_payment" | "paid" | "refunded" | "cancelled";
   production_status: "pending" | "queued" | "in_production" | "completed" | "shipped" | "cancelled";
+  metadata?: {
+    reference_image_url?: string | null;
+    reference_image_filename?: string | null;
+    uploaded_model_url?: string | null;
+    uploaded_model_filename?: string | null;
+    [key: string]: any;
+  } | null;
 }
 
 interface ParsedCustomOrder extends CustomOrder {
@@ -57,6 +64,8 @@ interface ParsedCustomOrder extends CustomOrder {
   quality: string;
   quantity: string;
   scale: string;
+  reference_image_url: string | null;
+  reference_image_filename: string | null;
 }
 
 interface CustomOrderMessage {
@@ -98,6 +107,7 @@ function parseCustomOrder(order: CustomOrder): ParsedCustomOrder {
     quality: "",
     quantity: "",
     scale: "",
+    referenceImageUrl: "",
   };
 
   optionsText.split("\n").forEach((line) => {
@@ -112,6 +122,7 @@ function parseCustomOrder(order: CustomOrder): ParsedCustomOrder {
     if (normalizedKey === "quality") parsed.quality = value;
     if (normalizedKey === "quantity") parsed.quantity = value;
     if (normalizedKey === "scale") parsed.scale = value;
+    if (normalizedKey === "reference image url") parsed.referenceImageUrl = value;
   });
 
   return {
@@ -122,6 +133,8 @@ function parseCustomOrder(order: CustomOrder): ParsedCustomOrder {
     quality: parsed.quality || "-",
     quantity: parsed.quantity || "-",
     scale: parsed.scale || "-",
+    reference_image_url: order.metadata?.reference_image_url || parsed.referenceImageUrl || null,
+    reference_image_filename: order.metadata?.reference_image_filename || null,
   };
 }
 
@@ -459,6 +472,18 @@ const AdminCustomOrders = () => {
     document.body.removeChild(link);
   };
 
+  const handleDownloadReferenceImage = () => {
+    if (!selectedOrder?.reference_image_url) return;
+
+    const link = document.createElement("a");
+    link.href = selectedOrder.reference_image_url;
+    link.download = selectedOrder.reference_image_filename || "reference-image";
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const getStatusBadge = (status: string) => {
     const s = STATUSES.find((st) => st.value === status);
     return (
@@ -649,6 +674,29 @@ const AdminCustomOrders = () => {
                   </pre>
                 </div>
 
+                {selectedOrder.reference_image_url && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <Label className="text-xs text-muted-foreground">Reference Picture</Label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleDownloadReferenceImage}
+                        className="font-display uppercase tracking-wider"
+                      >
+                        <Download className="mr-1 h-4 w-4" /> Download Picture
+                      </Button>
+                    </div>
+                    <div className="overflow-hidden rounded-xl border border-border bg-card">
+                      <img
+                        src={selectedOrder.reference_image_url}
+                        alt={selectedOrder.reference_image_filename || "Reference image"}
+                        className="h-80 w-full object-contain bg-muted/20"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid gap-4 lg:grid-cols-2">
                   <div className="space-y-4 rounded-md border border-border bg-muted/50 p-4">
                     <div>
@@ -724,13 +772,15 @@ const AdminCustomOrders = () => {
                         {saving ? "Saving..." : "Update Request"}
                       </Button>
 
-                      <Button
-                        variant="outline"
-                        onClick={handleDownloadModel}
-                        className="font-display uppercase tracking-wider"
-                      >
-                        <Download className="mr-1 h-4 w-4" /> Download File
-                      </Button>
+                      {selectedOrder.model_url ? (
+                        <Button
+                          variant="outline"
+                          onClick={handleDownloadModel}
+                          className="font-display uppercase tracking-wider"
+                        >
+                          <Download className="mr-1 h-4 w-4" /> Download File
+                        </Button>
+                      ) : null}
                     </div>
                   </div>
 
@@ -901,25 +951,58 @@ const AdminCustomOrders = () => {
                 </div>
               </TabsContent>
 
-              <TabsContent value="model" className="space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs text-muted-foreground">File: {selectedOrder.model_filename}</p>
+              <TabsContent value="model" className="space-y-4">
+                {selectedOrder.model_url ? (
+                  <>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs text-muted-foreground">File: {selectedOrder.model_filename}</p>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDownloadModel}
-                    className="font-display uppercase tracking-wider"
-                  >
-                    <Download className="mr-1 h-4 w-4" /> Download File
-                  </Button>
-                </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleDownloadModel}
+                        className="font-display uppercase tracking-wider"
+                      >
+                        <Download className="mr-1 h-4 w-4" /> Download File
+                      </Button>
+                    </div>
 
-                <ModelViewer
-                  url={selectedOrder.model_url}
-                  fileName={selectedOrder.model_filename}
-                  className="aspect-video"
-                />
+                    <ModelViewer
+                      url={selectedOrder.model_url}
+                      fileName={selectedOrder.model_filename}
+                      className="aspect-video"
+                    />
+                  </>
+                ) : selectedOrder.reference_image_url ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs text-muted-foreground">
+                        Picture: {selectedOrder.reference_image_filename || selectedOrder.model_filename}
+                      </p>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleDownloadReferenceImage}
+                        className="font-display uppercase tracking-wider"
+                      >
+                        <Download className="mr-1 h-4 w-4" /> Download Picture
+                      </Button>
+                    </div>
+
+                    <div className="overflow-hidden rounded-xl border border-border bg-card">
+                      <img
+                        src={selectedOrder.reference_image_url}
+                        alt={selectedOrder.reference_image_filename || "Reference image"}
+                        className="h-[28rem] w-full object-contain bg-muted/20"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-md border border-border bg-muted/20 p-6 text-sm text-muted-foreground">
+                    No 3D model or picture available.
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="conversation" className="space-y-4">

@@ -92,6 +92,13 @@ type RewardCatalogItem = {
   badge?: string;
 };
 
+type AccountTab = "orders" | "custom-requests" | "rewards" | "vouchers";
+
+type SeenState = {
+  ordersLastSeenAt: string | null;
+  customRequestsLastSeenAt: string | null;
+};
+
 const statusColors: Record<string, string> = {
   completed: "text-green-500",
   shipped: "text-blue-500",
@@ -228,6 +235,42 @@ function findMatchingVoucher(catalogItem: RewardCatalogItem, vouchers: Voucher[]
   });
 }
 
+function getNotificationsStorageKey(userId: string) {
+  return `layerloot_account_notifications_${userId}`;
+}
+
+function readSeenState(userId: string): SeenState {
+  try {
+    const raw = localStorage.getItem(getNotificationsStorageKey(userId));
+    if (!raw) return { ordersLastSeenAt: null, customRequestsLastSeenAt: null };
+    const parsed = JSON.parse(raw);
+    return {
+      ordersLastSeenAt: parsed?.ordersLastSeenAt ?? null,
+      customRequestsLastSeenAt: parsed?.customRequestsLastSeenAt ?? null,
+    };
+  } catch {
+    return { ordersLastSeenAt: null, customRequestsLastSeenAt: null };
+  }
+}
+
+function saveSeenState(userId: string, next: SeenState) {
+  localStorage.setItem(getNotificationsStorageKey(userId), JSON.stringify(next));
+}
+
+function isAfter(dateStr?: string | null, compareStr?: string | null) {
+  if (!dateStr) return false;
+  if (!compareStr) return true;
+  return new Date(dateStr).getTime() > new Date(compareStr).getTime();
+}
+
+function getLatestDate(values: (string | null | undefined)[]) {
+  const valid = values.filter(Boolean) as string[];
+  if (valid.length === 0) return null;
+  return valid.reduce((latest, current) =>
+    new Date(current).getTime() > new Date(latest).getTime() ? current : latest,
+  );
+}
+
 const Account = () => {
   const { user, isAdmin, signOut, loading } = useAuth();
   const navigate = useNavigate();
@@ -239,7 +282,7 @@ const Account = () => {
   const [customOrderMessages, setCustomOrderMessages] = useState<Record<string, CustomOrderMessage[]>>({});
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [userVouchers, setUserVouchers] = useState<UserVoucher[]>([]);
-  const [tab, setTab] = useState<"orders" | "custom-requests" | "rewards" | "vouchers">("orders");
+  const [tab, setTab] = useState<AccountTab>("orders");
   const [giftEmail, setGiftEmail] = useState("");
   const [giftName, setGiftName] = useState("");
   const [giftingVoucherId, setGiftingVoucherId] = useState<string | null>(null);
@@ -248,10 +291,19 @@ const Account = () => {
   const [expandedCustomOrderId, setExpandedCustomOrderId] = useState<string | null>(null);
   const [replyMessage, setReplyMessage] = useState<Record<string, string>>({});
   const [sendingReply, setSendingReply] = useState(false);
+  const [seenState, setSeenState] = useState<SeenState>({
+    ordersLastSeenAt: null,
+    customRequestsLastSeenAt: null,
+  });
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth");
   }, [user, loading, navigate]);
+
+  useEffect(() => {
+    if (!user) return;
+    setSeenState(readSeenState(user.id));
+  }, [user]);
 
   const fetchAll = async () => {
     if (!user) return;
@@ -316,6 +368,57 @@ const Account = () => {
       parsed: parseCustomOrderDescription(order.description),
     }));
   }, [customOrders]);
+
+  const latestOrderActivityAt = useMemo(() => getLatestDate(orders.map((order) => order.created_at)), [orders]);
+
+  const latestCustomActivityAt = useMemo(() => {
+    const dates: (string | null)[] = [];
+
+    customOrders.forEach((order) => {
+      dates.push(order.created_at, order.updated_at);
+      (customOrderMessages[order.id] || []).forEach((msg) => dates.push(msg.created_at));
+    });
+
+    return getLatestDate(dates);
+  }, [customOrders, customOrderMessages]);
+
+  const hasNewOrders = useMemo(
+    () => isAfter(latestOrderActivityAt, seenState.ordersLastSeenAt),
+    [latestOrderActivityAt, seenState.ordersLastSeenAt],
+  );
+
+  const hasNewCustomRequests = useMemo(
+    () => isAfter(latestCustomActivityAt, seenState.customRequestsLastSeenAt),
+    [latestCustomActivityAt, seenState.customRequestsLastSeenAt],
+  );
+
+  const markTabAsSeen = (targetTab: AccountTab) => {
+    if (!user) return;
+
+    const next: SeenState = { ...seenState };
+
+    if (targetTab === "orders" && latestOrderActivityAt) {
+      next.ordersLastSeenAt = latestOrderActivityAt;
+    }
+
+    if (targetTab === "custom-requests" && latestCustomActivityAt) {
+      next.customRequestsLastSeenAt = latestCustomActivityAt;
+    }
+
+    setSeenState(next);
+    saveSeenState(user.id, next);
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    if (tab === "orders" && latestOrderActivityAt && hasNewOrders) {
+      markTabAsSeen("orders");
+    }
+    if (tab === "custom-requests" && latestCustomActivityAt && hasNewCustomRequests) {
+      markTabAsSeen("custom-requests");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, user, latestOrderActivityAt, latestCustomActivityAt]);
 
   const redeemVoucher = async (voucher: Voucher, pointsCostOverride?: number) => {
     const pointsCost = pointsCostOverride ?? voucher.points_cost;
@@ -454,6 +557,17 @@ const Account = () => {
     </Badge>
   );
 
+  const hasUnreadActivityForOrder = (order: CustomOrder) => {
+    const seenAt = seenState.customRequestsLastSeenAt;
+    const latestForOrder = getLatestDate([
+      order.created_at,
+      order.updated_at,
+      ...(customOrderMessages[order.id] || []).map((msg) => msg.created_at),
+    ]);
+
+    return isAfter(latestForOrder, seenAt);
+  };
+
   if (loading || !user) return null;
 
   return (
@@ -497,19 +611,26 @@ const Account = () => {
 
         <div className="mb-6 flex flex-wrap gap-2">
           {[
-            { key: "orders" as const, label: "Orders", icon: Package },
-            { key: "custom-requests" as const, label: "Custom Requests", icon: MessageSquare },
-            { key: "rewards" as const, label: "Rewards Store", icon: Gift },
-            { key: "vouchers" as const, label: "My Vouchers", icon: Star },
-          ].map(({ key, label, icon: Icon }) => (
+            { key: "orders" as const, label: "Orders", icon: Package, hasDot: hasNewOrders },
+            {
+              key: "custom-requests" as const,
+              label: "Custom Requests",
+              icon: MessageSquare,
+              hasDot: hasNewCustomRequests,
+            },
+            { key: "rewards" as const, label: "Rewards Store", icon: Gift, hasDot: false },
+            { key: "vouchers" as const, label: "My Vouchers", icon: Star, hasDot: false },
+          ].map(({ key, label, icon: Icon, hasDot }) => (
             <Button
               key={key}
               variant={tab === key ? "default" : "outline"}
               size="sm"
               onClick={() => setTab(key)}
-              className="font-display uppercase tracking-wider"
+              className="relative font-display uppercase tracking-wider"
             >
-              <Icon className="mr-1 h-4 w-4" /> {label}
+              <Icon className="mr-1 h-4 w-4" />
+              {label}
+              {hasDot && <span className="ml-2 h-2.5 w-2.5 rounded-full bg-red-500" />}
             </Button>
           ))}
         </div>
@@ -527,62 +648,69 @@ const Account = () => {
               </Card>
             ) : (
               <div className="space-y-3">
-                {orders.map((order) => (
-                  <Card key={order.id} className="transition-all hover:border-primary hover:shadow-sm">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <Link to={`/orders/${order.id}`} className="flex flex-1 items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div>
-                              <p className="font-display text-sm font-semibold uppercase text-card-foreground">
-                                Order #{order.id.slice(0, 8)}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {new Date(order.created_at).toLocaleDateString()}
-                              </p>
-                            </div>
-                          </div>
+                {orders.map((order) => {
+                  const isNewOrder = isAfter(order.created_at, seenState.ordersLastSeenAt);
 
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <p className="font-display text-lg font-bold text-primary">
-                                {Number(order.total).toFixed(2)} kr
-                              </p>
-                              <p
-                                className={`font-display text-xs uppercase ${statusColors[order.status] || "text-muted-foreground"}`}
+                  return (
+                    <Card key={order.id} className="transition-all hover:border-primary hover:shadow-sm">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <Link to={`/orders/${order.id}`} className="flex flex-1 items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-display text-sm font-semibold uppercase text-card-foreground">
+                                    Order #{order.id.slice(0, 8)}
+                                  </p>
+                                  {isNewOrder && <span className="h-2.5 w-2.5 rounded-full bg-red-500" />}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(order.created_at).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-4">
+                              <div className="text-right">
+                                <p className="font-display text-lg font-bold text-primary">
+                                  {Number(order.total).toFixed(2)} kr
+                                </p>
+                                <p
+                                  className={`font-display text-xs uppercase ${statusColors[order.status] || "text-muted-foreground"}`}
+                                >
+                                  {order.status}
+                                </p>
+                              </div>
+                              <Eye className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          </Link>
+                        </div>
+
+                        {order.status === "delivered" &&
+                          (order.tool_type === "custom-print" || order.tool_type === "lithophane") && (
+                            <div className="mt-4 border-t border-border pt-4">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setReviewingOrderId(reviewingOrderId === order.id ? null : order.id)}
+                                className="font-display uppercase tracking-wider"
                               >
-                                {order.status}
-                              </p>
+                                {reviewingOrderId === order.id ? "Close Review" : "Leave Review"}
+                              </Button>
+
+                              {reviewingOrderId === order.id && (
+                                <ToolReviewForm
+                                  toolType={order.tool_type}
+                                  orderId={order.id}
+                                  onSubmitted={() => setReviewingOrderId(null)}
+                                />
+                              )}
                             </div>
-                            <Eye className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                        </Link>
-                      </div>
-
-                      {order.status === "delivered" &&
-                        (order.tool_type === "custom-print" || order.tool_type === "lithophane") && (
-                          <div className="mt-4 border-t border-border pt-4">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setReviewingOrderId(reviewingOrderId === order.id ? null : order.id)}
-                              className="font-display uppercase tracking-wider"
-                            >
-                              {reviewingOrderId === order.id ? "Close Review" : "Leave Review"}
-                            </Button>
-
-                            {reviewingOrderId === order.id && (
-                              <ToolReviewForm
-                                toolType={order.tool_type}
-                                orderId={order.id}
-                                onSubmitted={() => setReviewingOrderId(null)}
-                              />
-                            )}
-                          </div>
-                        )}
-                    </CardContent>
-                  </Card>
-                ))}
+                          )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </>
@@ -605,6 +733,7 @@ const Account = () => {
                   const expanded = expandedCustomOrderId === order.id;
                   const messages = customOrderMessages[order.id] || [];
                   const currentQuote = order.final_agreed_price ?? order.quoted_price ?? null;
+                  const hasUnreadForThisOrder = hasUnreadActivityForOrder(order);
 
                   return (
                     <Card key={order.id}>
@@ -615,6 +744,7 @@ const Account = () => {
                               <p className="font-display text-lg font-semibold uppercase text-card-foreground">
                                 Custom Request #{order.id.slice(0, 8)}
                               </p>
+                              {hasUnreadForThisOrder && <span className="h-2.5 w-2.5 rounded-full bg-red-500" />}
                               {customStatusBadge(order.status)}
                             </div>
 
@@ -710,41 +840,50 @@ const Account = () => {
                                 {messages.length === 0 ? (
                                   <p className="text-sm text-muted-foreground">No conversation yet.</p>
                                 ) : (
-                                  messages.map((msg) => (
-                                    <div
-                                      key={msg.id}
-                                      className={`rounded-md border p-3 text-sm ${
-                                        msg.sender_role === "admin"
-                                          ? "border-blue-500/20 bg-blue-500/5"
-                                          : msg.sender_role === "user"
-                                            ? "border-primary/20 bg-primary/5"
-                                            : "border-border bg-card"
-                                      }`}
-                                    >
-                                      <div className="mb-1 flex items-center justify-between gap-2">
-                                        <div className="flex items-center gap-2">
-                                          <Badge variant="outline" className="text-[10px] uppercase">
-                                            {msg.sender_role}
-                                          </Badge>
-                                          <Badge variant="outline" className="text-[10px] uppercase">
-                                            {msg.message_type.replace(/_/g, " ")}
-                                          </Badge>
-                                          {msg.proposed_price !== null && (
-                                            <Badge
-                                              variant="outline"
-                                              className="border-primary text-[10px] uppercase text-primary"
-                                            >
-                                              {Number(msg.proposed_price).toFixed(2)} kr
+                                  messages.map((msg) => {
+                                    const isUnreadMessage =
+                                      msg.sender_role === "admin" &&
+                                      isAfter(msg.created_at, seenState.customRequestsLastSeenAt);
+
+                                    return (
+                                      <div
+                                        key={msg.id}
+                                        className={`rounded-md border p-3 text-sm ${
+                                          msg.sender_role === "admin"
+                                            ? "border-blue-500/20 bg-blue-500/5"
+                                            : msg.sender_role === "user"
+                                              ? "border-primary/20 bg-primary/5"
+                                              : "border-border bg-card"
+                                        }`}
+                                      >
+                                        <div className="mb-1 flex items-center justify-between gap-2">
+                                          <div className="flex items-center gap-2">
+                                            <Badge variant="outline" className="text-[10px] uppercase">
+                                              {msg.sender_role}
                                             </Badge>
-                                          )}
+                                            <Badge variant="outline" className="text-[10px] uppercase">
+                                              {msg.message_type.replace(/_/g, " ")}
+                                            </Badge>
+                                            {isUnreadMessage && (
+                                              <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
+                                            )}
+                                            {msg.proposed_price !== null && (
+                                              <Badge
+                                                variant="outline"
+                                                className="border-primary text-[10px] uppercase text-primary"
+                                              >
+                                                {Number(msg.proposed_price).toFixed(2)} kr
+                                              </Badge>
+                                            )}
+                                          </div>
+                                          <span className="text-xs text-muted-foreground">
+                                            {new Date(msg.created_at).toLocaleString()}
+                                          </span>
                                         </div>
-                                        <span className="text-xs text-muted-foreground">
-                                          {new Date(msg.created_at).toLocaleString()}
-                                        </span>
+                                        <p className="whitespace-pre-wrap text-foreground">{msg.message || "-"}</p>
                                       </div>
-                                      <p className="whitespace-pre-wrap text-foreground">{msg.message || "-"}</p>
-                                    </div>
-                                  ))
+                                    );
+                                  })
                                 )}
                               </div>
                             </div>

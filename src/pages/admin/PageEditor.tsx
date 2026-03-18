@@ -201,7 +201,6 @@ const PageEditor = () => {
   }, [activePage]);
 
   const pageBlocks = blocks.filter((b) => b.page === activePage).sort((a, b) => a.sort_order - b.sort_order);
-
   const selectedBlock = pageBlocks.find((b) => b.id === selectedBlockId) || null;
   const customPages = allPages.filter((p) => !defaultPages.includes(p));
 
@@ -320,14 +319,39 @@ const PageEditor = () => {
     fetchBlocks();
   };
 
+  const reorderBlocks = async (nextBlocks: SiteBlock[]) => {
+    await Promise.all(
+      nextBlocks.map((block, index) =>
+        supabase.from("site_blocks").update({ sort_order: index }).eq("id", block.id),
+      ),
+    );
+    fetchBlocks();
+  };
+
+  const handleMoveBlock = async (draggedId: string, targetId: string) => {
+    if (draggedId === targetId) return;
+
+    const reordered = [...pageBlocks];
+    const draggedIndex = reordered.findIndex((block) => block.id === draggedId);
+    const targetIndex = reordered.findIndex((block) => block.id === targetId);
+
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    const [moved] = reordered.splice(draggedIndex, 1);
+    reordered.splice(targetIndex, 0, moved);
+
+    await reorderBlocks(reordered);
+    setSelectedBlockId(draggedId);
+    toast({ title: "Block reordered" });
+  };
+
   const handleStructureDragEnd = async () => {
     if (sDragIndex !== null && sDragOverIndex !== null && sDragIndex !== sDragOverIndex) {
       const reordered = [...pageBlocks];
       const [moved] = reordered.splice(sDragIndex, 1);
       reordered.splice(sDragOverIndex, 0, moved);
-      await Promise.all(reordered.map((b, i) => supabase.from("site_blocks").update({ sort_order: i }).eq("id", b.id)));
+      await reorderBlocks(reordered);
       toast({ title: "Layout updated" });
-      fetchBlocks();
     }
     setSDragIndex(null);
     setSDragOverIndex(null);
@@ -677,28 +701,30 @@ const PageEditor = () => {
           )}
         </aside>
 
-       <main className="flex-1 overflow-hidden bg-background">
-  <EditorPreviewFrame
-    page={activePage}
-    blocks={pageBlocks}
-    selectedBlockId={selectedBlockId}
-    onSelectBlock={(id) => setSelectedBlockId(id)}
-    onEditBlock={(id) => {
-      setSelectedBlockId(id);
-      setEditPanelOpen(true);
-    }}
-    onToggleActive={(id) => {
-      const block = pageBlocks.find((b) => b.id === id);
-      if (block) toggleActive(id, !(block.is_active ?? true));
-    }}
-    onAddBefore={(id) => {
-      const blockIndex = pageBlocks.findIndex((b) => b.id === id);
-      if (blockIndex === -1) return;
-      setInsertAtIndex(blockIndex > 0 ? pageBlocks[blockIndex - 1].sort_order + 1 : 0);
-      setAddBlockOpen(true);
-    }}
-  />
-</main>
+        <main className="flex-1 overflow-hidden bg-background">
+          <EditorPreviewFrame
+            page={activePage}
+            blocks={pageBlocks}
+            selectedBlockId={selectedBlockId}
+            onSelectBlock={(id) => setSelectedBlockId(id)}
+            onEditBlock={(id) => {
+              setSelectedBlockId(id);
+              setEditPanelOpen(true);
+            }}
+            onToggleActive={(id) => {
+              const block = pageBlocks.find((b) => b.id === id);
+              if (block) toggleActive(id, !(block.is_active ?? true));
+            }}
+            onAddBefore={(id) => {
+              const blockIndex = pageBlocks.findIndex((b) => b.id === id);
+              if (blockIndex === -1) return;
+              setInsertAtIndex(blockIndex > 0 ? pageBlocks[blockIndex - 1].sort_order + 1 : 0);
+              setAddBlockOpen(true);
+            }}
+            onMoveBlock={handleMoveBlock}
+          />
+        </main>
+      </div>
 
       <BlockEditorPanel
         block={selectedBlock}

@@ -47,18 +47,27 @@ serve(async (req) => {
 
     const body = await req.text();
 
-    const event = await stripe.webhooks.constructEventAsync(
-      body,
-      signature,
-      STRIPE_WEBHOOK_SECRET
-    );
+    const event = await stripe.webhooks.constructEventAsync(body, signature, STRIPE_WEBHOOK_SECRET);
 
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const customOrderId = session.metadata?.custom_order_id;
+        const paymentType = session.metadata?.payment_type;
 
-        if (!customOrderId) {
+        if (!customOrderId) break;
+
+        if (paymentType === "request_fee") {
+          const { error } = await supabase
+            .from("custom_orders")
+            .update({
+              request_fee_status: "paid",
+              status: "submitted",
+              stripe_checkout_session_id: session.id,
+            })
+            .eq("id", customOrderId);
+
+          if (error) throw error;
           break;
         }
 
@@ -71,7 +80,7 @@ serve(async (req) => {
             stripe_payment_intent_id:
               typeof session.payment_intent === "string"
                 ? session.payment_intent
-                : session.payment_intent?.id ?? null,
+                : (session.payment_intent?.id ?? null),
             paid_at: new Date().toISOString(),
           })
           .eq("id", customOrderId);
@@ -83,8 +92,21 @@ serve(async (req) => {
       case "checkout.session.async_payment_failed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const customOrderId = session.metadata?.custom_order_id;
+        const paymentType = session.metadata?.payment_type;
 
-        if (!customOrderId) {
+        if (!customOrderId) break;
+
+        if (paymentType === "request_fee") {
+          const { error } = await supabase
+            .from("custom_orders")
+            .update({
+              request_fee_status: "unpaid",
+              status: "awaiting_request_fee",
+              stripe_checkout_session_id: session.id,
+            })
+            .eq("id", customOrderId);
+
+          if (error) throw error;
           break;
         }
 
@@ -103,8 +125,21 @@ serve(async (req) => {
       case "checkout.session.expired": {
         const session = event.data.object as Stripe.Checkout.Session;
         const customOrderId = session.metadata?.custom_order_id;
+        const paymentType = session.metadata?.payment_type;
 
-        if (!customOrderId) {
+        if (!customOrderId) break;
+
+        if (paymentType === "request_fee") {
+          const { error } = await supabase
+            .from("custom_orders")
+            .update({
+              request_fee_status: "unpaid",
+              status: "awaiting_request_fee",
+              stripe_checkout_session_id: session.id,
+            })
+            .eq("id", customOrderId);
+
+          if (error) throw error;
           break;
         }
 
@@ -136,7 +171,7 @@ serve(async (req) => {
       {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      },
     );
   }
 });

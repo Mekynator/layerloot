@@ -1243,8 +1243,7 @@ const Account = () => {
               </Card>
             ) : (
               (voucherView === "active" ? activeVouchers : usedVouchers).map((uv) => {
-                const isGifted =
-                  !!uv.recipient_email || !!uv.gifted_at || (uv.gift_status || "").toLowerCase() === "gifted";
+                const isGifted = !!uv.recipient_email;
                 const isUsed = uv.is_used || !!uv.used_at || (uv.balance !== null && Number(uv.balance) <= 0);
 
                 return (

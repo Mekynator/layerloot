@@ -211,47 +211,46 @@ function getLastViewedProductSnapshot() {
   return safeJsonParse<Record<string, unknown> | null>(localStorage.getItem(LAST_VIEWED_KEY), null);
 }
 
-function DraggableSuggestions({ items, onPick }: { items: string[]; onPick: (value: string) => void }) {
+function HorizontalSuggestions({ items, onPick }: { items: string[]; onPick: (value: string) => void }) {
   const ref = useRef<HTMLDivElement>(null);
-  const dragging = useRef(false);
-  const moved = useRef(false);
+  const isDown = useRef(false);
   const startX = useRef(0);
   const startScrollLeft = useRef(0);
+  const moved = useRef(false);
 
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+  const startDrag = (clientX: number) => {
     if (!ref.current) return;
-    dragging.current = true;
+    isDown.current = true;
     moved.current = false;
-    startX.current = e.clientX;
+    startX.current = clientX;
     startScrollLeft.current = ref.current.scrollLeft;
-    ref.current.setPointerCapture?.(e.pointerId);
   };
 
-  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragging.current || !ref.current) return;
-    const dx = e.clientX - startX.current;
-    if (Math.abs(dx) > 4) moved.current = true;
-    ref.current.scrollLeft = startScrollLeft.current - dx;
+  const moveDrag = (clientX: number) => {
+    if (!isDown.current || !ref.current) return;
+    const delta = clientX - startX.current;
+    if (Math.abs(delta) > 6) moved.current = true;
+    ref.current.scrollLeft = startScrollLeft.current - delta;
   };
 
-  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    dragging.current = false;
-    ref.current?.releasePointerCapture?.(e.pointerId);
-  };
-
-  const onPointerLeave = () => {
-    dragging.current = false;
+  const endDrag = () => {
+    isDown.current = false;
+    window.setTimeout(() => {
+      moved.current = false;
+    }, 0);
   };
 
   return (
     <div
       ref={ref}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
-      onPointerLeave={onPointerLeave}
-      className="no-scrollbar overflow-x-auto overflow-y-hidden cursor-grab active:cursor-grabbing select-none"
+      onMouseDown={(e) => startDrag(e.clientX)}
+      onMouseMove={(e) => moveDrag(e.clientX)}
+      onMouseUp={endDrag}
+      onMouseLeave={endDrag}
+      onTouchStart={(e) => startDrag(e.touches[0].clientX)}
+      onTouchMove={(e) => moveDrag(e.touches[0].clientX)}
+      onTouchEnd={endDrag}
+      className="no-scrollbar overflow-x-auto overflow-y-hidden"
       style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
     >
       <div className="flex w-max gap-2 pr-4">
@@ -260,8 +259,7 @@ function DraggableSuggestions({ items, onPick }: { items: string[]; onPick: (val
             key={item}
             type="button"
             onClick={() => {
-              if (moved.current) return;
-              onPick(item);
+              if (!moved.current) onPick(item);
             }}
             className="whitespace-nowrap rounded-full border bg-background px-3 py-1.5 text-xs text-foreground transition hover:-translate-y-0.5 hover:bg-muted"
           >
@@ -445,26 +443,8 @@ function AssistantExtras({
         </div>
       ) : null}
 
-      {payload.coupons?.length ? (
-        <div className="space-y-2">
-          {payload.coupons.map((coupon, i) => (
-            <div key={`${coupon.code}-${i}`} className="rounded-xl border bg-background/70 p-3 text-xs">
-              <div className="flex items-center gap-2 font-medium">
-                <TicketPercent className="h-4 w-4" />
-                {coupon.code}
-              </div>
-              {coupon.discountText ? <div className="mt-1 text-muted-foreground">{coupon.discountText}</div> : null}
-              {coupon.description ? <div className="text-muted-foreground">{coupon.description}</div> : null}
-              {coupon.expiresAt ? (
-                <div className="text-muted-foreground">Expires: {formatDate(coupon.expiresAt)}</div>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      ) : null}
-
       {payload.suggestions?.length ? (
-        <DraggableSuggestions items={payload.suggestions} onPick={onSuggestionClick} />
+        <HorizontalSuggestions items={payload.suggestions} onPick={onSuggestionClick} />
       ) : null}
     </div>
   );
@@ -563,8 +543,6 @@ const ChatWidget = () => {
     const text = (forcedText ?? input).trim();
     if (!text || loading) return;
 
-    setShowPromptBubble(false);
-
     const userMsg: Msg = {
       id: uid(),
       role: "user",
@@ -585,6 +563,7 @@ const ChatWidget = () => {
     ]);
     setInput("");
     setLoading(true);
+    setShowPromptBubble(false);
 
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -612,35 +591,8 @@ const ChatWidget = () => {
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             currency: "DKK",
           },
-          context: {
-            page: {
-              path: location.pathname,
-              url: window.location.href,
-              title: document.title,
-            },
-            cart,
-            user: {
-              loggedIn: !!userId,
-              id: userId,
-              email: userEmail,
-            },
-            geo,
-            locale: {
-              language: navigator.language,
-              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-              currency: "DKK",
-            },
-            lastViewedProduct,
-          },
         }),
       });
-
-      if (!resp.ok) {
-        const errText = await resp.text().catch(() => "");
-        throw new Error(errText || "Failed to connect");
-      }
-
-      const contentType = resp.headers.get("content-type") || "";
 
       const updateAssistant = (partial: Partial<Msg>) => {
         setMessages((prev) =>
@@ -659,22 +611,30 @@ const ChatWidget = () => {
         );
       };
 
-      if (contentType.includes("application/json")) {
-        const json = await resp.json();
-        const payload = json.payload ?? {};
-        updateAssistant({
-          content: payload.text || "I can chat, but I couldn’t access your account details right now.",
-          payload: {
-            ...payload,
-            status: undefined,
-          },
-        });
-      } else {
-        updateAssistant({
-          content: "I can chat, but I couldn’t access your account details right now.",
-          payload: { status: undefined },
-        });
+      const rawText = await resp.text();
+
+      if (!resp.ok) {
+        throw new Error(rawText || "Failed to connect");
       }
+
+      let parsed: any = null;
+      try {
+        parsed = rawText ? JSON.parse(rawText) : null;
+      } catch (error) {
+        console.error("Chat response was not JSON:", rawText, error);
+      }
+
+      const payload = parsed?.payload ?? null;
+
+      updateAssistant({
+        content:
+          payload?.text ||
+          "The assistant responded, but the payload was not in the expected format. Check the chat function logs.",
+        payload: {
+          ...(payload ?? {}),
+          status: undefined,
+        },
+      });
     } catch (error) {
       console.error("Chat widget request failed:", error);
       setMessages((prev) =>
@@ -682,7 +642,8 @@ const ChatWidget = () => {
           m.id === assistantMsgId
             ? {
                 ...m,
-                content: "Sorry, I’m having trouble connecting right now. Please try again, or use the contact page.",
+                content:
+                  "Sorry, I’m having trouble connecting right now. Please check the Supabase chat function logs and try again.",
                 payload: {
                   ...(m.payload ?? {}),
                   status: undefined,
@@ -815,26 +776,7 @@ const ChatWidget = () => {
             </div>
 
             <div className="border-b border-border bg-muted/40 px-3 py-2.5">
-              <DraggableSuggestions items={starterSuggestions} onPick={send} />
-
-              <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1">
-                  <Gift className="h-3 w-3" />
-                  Points
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1">
-                  <TicketPercent className="h-3 w-3" />
-                  Coupons
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1">
-                  <PackageSearch className="h-3 w-3" />
-                  Orders
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1">
-                  <ShoppingBag className="h-3 w-3" />
-                  Cart help
-                </span>
-              </div>
+              <HorizontalSuggestions items={starterSuggestions} onPick={send} />
             </div>
 
             <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
@@ -865,17 +807,6 @@ const ChatWidget = () => {
                   </div>
                 </div>
               ))}
-
-              {loading && messages[messages.length - 1]?.role !== "assistant" && (
-                <div className="flex gap-2">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs text-muted-foreground">
-                    <Bot className="h-3.5 w-3.5" />
-                  </div>
-                  <div className="rounded-2xl bg-muted px-4 py-2.5 text-sm">
-                    <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
-                  </div>
-                </div>
-              )}
             </div>
 
             <form

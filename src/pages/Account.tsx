@@ -54,8 +54,6 @@ interface UserVoucher {
   redeemed_at: string;
   recipient_email: string | null;
   recipient_name?: string | null;
-  gifted_at?: string | null;
-  gift_status?: string | null;
   used_at?: string | null;
   vouchers: { name: string; discount_value: number; discount_type: string } | null;
 }

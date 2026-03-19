@@ -216,7 +216,7 @@ function parseCustomOrderDescription(description: string) {
   const customerDescription = (parts[0] || "").trim();
   const optionsText = (parts[1] || "").trim();
 
-  const parsed = {
+  const parsed: Record<string, string> = {
     material: "-",
     color: "-",
     quality: "-",
@@ -562,43 +562,45 @@ const Account = () => {
   };
 
   const sendGiftCard = async (uvId: string) => {
-    if (!user) return;
-    if (!giftEmail.trim()) {
+    if (!giftEmail) {
       toast({ title: "Enter recipient email", variant: "destructive" });
       return;
     }
 
-    const trimmedEmail = giftEmail.trim().toLowerCase();
-    const trimmedName = giftName.trim();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-    const { error: updateError } = await supabase
-      .from("user_vouchers")
-      .update({ recipient_email: trimmedEmail, recipient_name: trimmedName || null })
-      .eq("id", uvId);
+    const { data, error } = await supabase.functions.invoke("send-gift-card", {
+      body: {
+        userVoucherId: uvId,
+        recipientEmail: giftEmail,
+        recipientName: giftName || null,
+        giftMessage: "",
+      },
+      headers: session?.access_token
+        ? {
+            Authorization: `Bearer ${session.access_token}`,
+          }
+        : undefined,
+    });
 
-    if (updateError) {
-      toast({ title: "Error", description: updateError.message, variant: "destructive" });
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
       return;
     }
 
-    const { error: mailError } = await supabase.functions.invoke("send-gift-card", {
-      body: {
-        userVoucherId: uvId,
-        recipientEmail: trimmedEmail,
-        recipientName: trimmedName || null,
-        senderName: user.email,
-      },
-    });
-
-    if (mailError) {
-      toast({
-        title: "Gift saved, email not sent",
-        description: "Create the send-gift-card edge function to send the real gift email and recipient popup.",
-        variant: "destructive",
-      });
-    } else {
-      toast({ title: "Gift card sent", description: `Gift card email sent to ${trimmedEmail}` });
+    if (data?.error) {
+      toast({ title: "Error", description: data.error, variant: "destructive" });
+      return;
     }
+
+    toast({
+      title: "Gift card sent",
+      description: data?.matchedExistingUser
+        ? `Gift card sent to ${giftEmail}. The recipient also has an account notification.`
+        : `Gift card sent to ${giftEmail}.`,
+    });
 
     setGiftingVoucherId(null);
     setGiftEmail("");

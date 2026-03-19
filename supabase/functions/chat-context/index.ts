@@ -103,11 +103,11 @@ serve(async (req) => {
           "there",
         last_login_at: profile?.last_login_at ?? null,
       },
-     points: {
-  balance,
-  earned_total,
-  spent_total
-}
+      points: {
+        balance,
+        earned_total,
+        spent_total,
+      },
       last_order: lastOrder
         ? {
             id: lastOrder.id,

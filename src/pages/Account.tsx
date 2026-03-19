@@ -99,6 +99,13 @@ type SeenState = {
   customRequestsLastSeenAt: string | null;
 };
 
+type LoyaltyPointRow = {
+  id: string;
+  points: number;
+  reason: string | null;
+  created_at: string;
+};
+
 const statusColors: Record<string, string> = {
   completed: "text-green-500",
   shipped: "text-blue-500",
@@ -271,12 +278,27 @@ function getLatestDate(values: (string | null | undefined)[]) {
   );
 }
 
+function summarizeLoyalty(rows: LoyaltyPointRow[]) {
+  const balance = rows.reduce((sum, row) => sum + Number(row.points ?? 0), 0);
+  const earned = rows
+    .filter((row) => Number(row.points ?? 0) > 0)
+    .reduce((sum, row) => sum + Number(row.points ?? 0), 0);
+  const spent = Math.abs(
+    rows.filter((row) => Number(row.points ?? 0) < 0).reduce((sum, row) => sum + Number(row.points ?? 0), 0),
+  );
+
+  return { balance, earned, spent };
+}
+
 const Account = () => {
   const { user, isAdmin, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const [pointsBalance, setPointsBalance] = useState(0);
+  const [pointsEarned, setPointsEarned] = useState(0);
+  const [pointsSpent, setPointsSpent] = useState(0);
+  const [loyaltyHistory, setLoyaltyHistory] = useState<LoyaltyPointRow[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [customOrders, setCustomOrders] = useState<CustomOrder[]>([]);
   const [customOrderMessages, setCustomOrderMessages] = useState<Record<string, CustomOrderMessage[]>>({});
@@ -308,8 +330,12 @@ const Account = () => {
   const fetchAll = async () => {
     if (!user) return;
 
-    const [pointsRes, ordersRes, customOrdersRes, vouchersRes, userVouchersRes] = await Promise.all([
-      supabase.rpc("get_user_points_balance", { _user_id: user.id }),
+    const [loyaltyRes, ordersRes, customOrdersRes, vouchersRes, userVouchersRes] = await Promise.all([
+      supabase
+        .from("loyalty_points")
+        .select("id, points, reason, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false }),
       supabase
         .from("orders")
         .select("id, status, total, created_at, tool_type")
@@ -326,7 +352,18 @@ const Account = () => {
         .order("redeemed_at", { ascending: false }),
     ]);
 
-    setPointsBalance(pointsRes.data ?? 0);
+    if (loyaltyRes.error) {
+      toast({ title: "Points error", description: loyaltyRes.error.message, variant: "destructive" });
+    }
+
+    const loyaltyRows = (loyaltyRes.data as LoyaltyPointRow[]) ?? [];
+    const summary = summarizeLoyalty(loyaltyRows);
+
+    setLoyaltyHistory(loyaltyRows);
+    setPointsBalance(summary.balance);
+    setPointsEarned(summary.earned);
+    setPointsSpent(summary.spent);
+
     setOrders((ordersRes.data as Order[]) ?? []);
 
     const customOrdersData = (customOrdersRes.data as CustomOrder[]) ?? [];
@@ -456,7 +493,6 @@ const Account = () => {
       return;
     }
 
-    setPointsBalance((p) => p - pointsCost);
     toast({ title: "Voucher redeemed!", description: `Your code: ${code}` });
     fetchAll();
   };
@@ -596,15 +632,56 @@ const Account = () => {
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="mb-8 border-primary/30 bg-primary/5">
-            <CardContent className="flex items-center gap-4 p-6">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-                <Star className="h-7 w-7 text-primary" />
+            <CardContent className="p-6">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                  <Star className="h-7 w-7 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Loyalty Points Balance</p>
+                  <p className="font-display text-3xl font-bold text-primary">{pointsBalance}</p>
+                  <p className="text-xs text-muted-foreground">1 point is earned for every 4 kr spent</p>
+                </div>
+
+                <div className="ml-auto grid min-w-[220px] gap-2 sm:grid-cols-2">
+                  <div className="rounded-xl border border-primary/20 bg-background/70 p-3">
+                    <p className="text-xs text-muted-foreground">Earned total</p>
+                    <p className="font-display text-xl font-bold text-foreground">{pointsEarned}</p>
+                  </div>
+                  <div className="rounded-xl border border-primary/20 bg-background/70 p-3">
+                    <p className="text-xs text-muted-foreground">Spent total</p>
+                    <p className="font-display text-xl font-bold text-foreground">{pointsSpent}</p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Loyalty Points Balance</p>
-                <p className="font-display text-3xl font-bold text-primary">{pointsBalance}</p>
-                <p className="text-xs text-muted-foreground">1 point is earned for every 4 kr spent</p>
-              </div>
+
+              {loyaltyHistory.length > 0 && (
+                <div className="mt-5 border-t border-border pt-4">
+                  <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    Recent points activity
+                  </p>
+                  <div className="space-y-2">
+                    {loyaltyHistory.slice(0, 5).map((row) => (
+                      <div
+                        key={row.id}
+                        className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm text-foreground">{row.reason || "Points update"}</p>
+                          <p className="text-xs text-muted-foreground">{new Date(row.created_at).toLocaleString()}</p>
+                        </div>
+                        <div
+                          className={`font-display text-sm font-bold ${
+                            row.points >= 0 ? "text-green-600" : "text-destructive"
+                          }`}
+                        >
+                          {row.points >= 0 ? `+${row.points}` : row.points}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>

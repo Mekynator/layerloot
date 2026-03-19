@@ -11,6 +11,7 @@ import {
   Package,
   Bookmark,
   ArrowRight,
+  Star,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,22 @@ type RecommendedProduct = {
   href: string;
 };
 
+type UserVoucherRow = {
+  id: string;
+  code: string;
+  balance: number | null;
+  is_used: boolean;
+  vouchers: {
+    name: string;
+    discount_type: string;
+    discount_value: number;
+  } | null;
+};
+
+type LoyaltyPointRow = {
+  points: number;
+};
+
 export default function CartPage() {
   const { items, removeItem, updateQuantity, totalPrice, addItem } = useCart();
   const { toast } = useToast();
@@ -59,12 +76,8 @@ export default function CartPage() {
   const [selectedDiscountCode, setSelectedDiscountCode] = useState<string>("");
   const [manualDiscountCode, setManualDiscountCode] = useState("");
   const [isCheckingOut, setIsCheckingOut] = useState(false);
-
-  // Replace later with Supabase/account data
-  const availableDiscountCodes: DiscountCode[] = [
-    { code: "WELCOME10", label: "WELCOME10 - 10% off", type: "percent", value: 10 },
-    { code: "SAVE50", label: "SAVE50 - $50 off", type: "fixed", value: 50 },
-  ];
+  const [availableDiscountCodes, setAvailableDiscountCodes] = useState<DiscountCode[]>([]);
+  const [pointsBalance, setPointsBalance] = useState(0);
 
   useEffect(() => {
     const raw = localStorage.getItem("layerloot_saved_items");
@@ -81,14 +94,79 @@ export default function CartPage() {
     localStorage.setItem("layerloot_saved_items", JSON.stringify(savedItems));
   }, [savedItems]);
 
+  useEffect(() => {
+    const loadAccountDiscounts = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const userId = session?.user?.id;
+      if (!userId) {
+        setAvailableDiscountCodes([]);
+        setPointsBalance(0);
+        return;
+      }
+
+      const [loyaltyRes, vouchersRes] = await Promise.all([
+        supabase.from("loyalty_points").select("points").eq("user_id", userId),
+        supabase
+          .from("user_vouchers")
+          .select("id, code, balance, is_used, vouchers(name, discount_type, discount_value)")
+          .eq("user_id", userId)
+          .eq("is_used", false)
+          .order("redeemed_at", { ascending: false }),
+      ]);
+
+      const balance = ((loyaltyRes.data as LoyaltyPointRow[]) ?? []).reduce(
+        (sum, row) => sum + Number(row.points ?? 0),
+        0,
+      );
+      setPointsBalance(balance);
+
+      const mappedCodes: DiscountCode[] = ((vouchersRes.data as UserVoucherRow[]) ?? [])
+        .filter((row) => {
+          if (row.vouchers?.discount_type === "gift_card") {
+            return Number(row.balance ?? 0) > 0;
+          }
+          return true;
+        })
+        .map((row) => {
+          const voucher = row.vouchers;
+          const labelValue =
+            voucher?.discount_type === "free_shipping"
+              ? "Free delivery"
+              : voucher?.discount_type === "gift_card"
+                ? `${Number(row.balance ?? voucher?.discount_value ?? 0).toFixed(2)} kr gift card`
+                : `${Number(voucher?.discount_value ?? 0).toFixed(2)} kr off`;
+
+          return {
+            code: row.code,
+            label: `${row.code} - ${labelValue}`,
+            type: voucher?.discount_type === "percent_discount" ? "percent" : "fixed",
+            value:
+              voucher?.discount_type === "gift_card"
+                ? Number(row.balance ?? voucher?.discount_value ?? 0)
+                : voucher?.discount_type === "free_shipping"
+                  ? BASE_SHIPPING_PRICE
+                  : Number(voucher?.discount_value ?? 0),
+          };
+        });
+
+      setAvailableDiscountCodes(mappedCodes);
+    };
+
+    loadAccountDiscounts();
+  }, []);
+
   const selectedDiscount = useMemo(() => {
     return availableDiscountCodes.find((d) => d.code === selectedDiscountCode) ?? null;
-  }, [selectedDiscountCode]);
+  }, [selectedDiscountCode, availableDiscountCodes]);
 
   const shippingProgress = Math.min((totalPrice / FREE_SHIPPING_THRESHOLD) * 100, 100);
   const remainingForFreeShipping = Math.max(FREE_SHIPPING_THRESHOLD - totalPrice, 0);
 
   const shippingCost = totalPrice >= FREE_SHIPPING_THRESHOLD || totalPrice === 0 ? 0 : BASE_SHIPPING_PRICE;
+  const pointsToEarn = Math.floor(totalPrice / 4);
 
   const discountAmount = useMemo(() => {
     if (!selectedDiscount) return 0;
@@ -97,8 +175,8 @@ export default function CartPage() {
       return Number(((totalPrice * selectedDiscount.value) / 100).toFixed(2));
     }
 
-    return Math.min(selectedDiscount.value, totalPrice);
-  }, [selectedDiscount, totalPrice]);
+    return Math.min(selectedDiscount.value, totalPrice + shippingCost);
+  }, [selectedDiscount, totalPrice, shippingCost]);
 
   const finalTotal = Math.max(totalPrice + shippingCost - discountAmount, 0);
 
@@ -232,14 +310,13 @@ export default function CartPage() {
         <h1 className="mb-8 font-display text-4xl font-bold uppercase text-foreground">Shopping Cart</h1>
 
         <div className="grid gap-8 lg:grid-cols-[1.4fr_0.8fr]">
-          {/* LEFT SIDE */}
           <div className="space-y-6">
             <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
               <div className="mb-3 flex items-center gap-2">
                 <Truck className="h-4 w-4 text-primary" />
                 <span className="text-sm font-medium text-card-foreground">
                   {remainingForFreeShipping > 0
-                    ? `Add $${remainingForFreeShipping.toFixed(2)} more for free shipping`
+                    ? `Add ${remainingForFreeShipping.toFixed(2)} kr more for free shipping`
                     : "🎉 You qualify for free shipping!"}
                 </span>
               </div>
@@ -340,8 +417,8 @@ export default function CartPage() {
                         </div>
 
                         <div className="text-right">
-                          <p className="text-sm text-muted-foreground">${item.price.toFixed(2)} each</p>
-                          <p className="font-display text-lg font-bold text-foreground">${lineTotal.toFixed(2)}</p>
+                          <p className="text-sm text-muted-foreground">{item.price.toFixed(2)} kr each</p>
+                          <p className="font-display text-lg font-bold text-foreground">{lineTotal.toFixed(2)} kr</p>
                         </div>
 
                         <Button
@@ -373,7 +450,7 @@ export default function CartPage() {
                         <img src={item.image} alt={item.name} className="h-16 w-16 rounded-lg object-cover" />
                         <div>
                           <p className="font-display text-sm font-bold uppercase text-foreground">{item.name}</p>
-                          <p className="text-sm text-muted-foreground">${item.price.toFixed(2)}</p>
+                          <p className="text-sm text-muted-foreground">{item.price.toFixed(2)} kr</p>
                         </div>
                       </div>
 
@@ -406,7 +483,7 @@ export default function CartPage() {
                         />
                       </div>
                       <p className="font-display text-sm font-bold uppercase text-foreground">{product.name}</p>
-                      <p className="mt-1 text-sm font-semibold text-primary">${product.price.toFixed(2)}</p>
+                      <p className="mt-1 text-sm font-semibold text-primary">{product.price.toFixed(2)} kr</p>
                     </Link>
                   ))}
                 </div>
@@ -414,21 +491,33 @@ export default function CartPage() {
             )}
           </div>
 
-          {/* RIGHT SIDE */}
           <div className="space-y-6">
             <div className="rounded-2xl border border-border bg-card p-6 shadow-sm lg:sticky lg:top-24">
               <h2 className="mb-5 font-display text-2xl font-bold uppercase text-foreground">Order Summary</h2>
 
+              <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                <div className="flex items-center gap-2">
+                  <Star className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium text-foreground">Loyalty rewards</span>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Current balance: <span className="font-semibold text-foreground">{pointsBalance}</span> points
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  This order will earn about <span className="font-semibold text-primary">{pointsToEarn}</span> points
+                </p>
+              </div>
+
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span className="font-display font-bold text-foreground">${totalPrice.toFixed(2)}</span>
+                  <span className="font-display font-bold text-foreground">{totalPrice.toFixed(2)} kr</span>
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Shipping</span>
                   <span className="font-display font-bold text-foreground">
-                    {shippingCost === 0 ? "Free" : `$${shippingCost.toFixed(2)}`}
+                    {shippingCost === 0 ? "Free" : `${shippingCost.toFixed(2)} kr`}
                   </span>
                 </div>
 
@@ -438,10 +527,13 @@ export default function CartPage() {
                   {availableDiscountCodes.length > 0 ? (
                     <select
                       value={selectedDiscountCode}
-                      onChange={(e) => setSelectedDiscountCode(e.target.value)}
+                      onChange={(e) => {
+                        setSelectedDiscountCode(e.target.value);
+                        setManualDiscountCode("");
+                      }}
                       className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none"
                     >
-                      <option value="">Choose a saved discount</option>
+                      <option value="">Choose a saved voucher</option>
                       {availableDiscountCodes.map((discount) => (
                         <option key={discount.code} value={discount.code}>
                           {discount.label}
@@ -460,7 +552,7 @@ export default function CartPage() {
                   {selectedDiscount && (
                     <div className="mt-2 flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Applied</span>
-                      <span className="font-semibold text-primary">-${discountAmount.toFixed(2)}</span>
+                      <span className="font-semibold text-primary">-{discountAmount.toFixed(2)} kr</span>
                     </div>
                   )}
                 </div>
@@ -469,13 +561,13 @@ export default function CartPage() {
                   {discountAmount > 0 && (
                     <div className="mb-2 flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Discount</span>
-                      <span className="font-display font-bold text-primary">-${discountAmount.toFixed(2)}</span>
+                      <span className="font-display font-bold text-primary">-{discountAmount.toFixed(2)} kr</span>
                     </div>
                   )}
 
                   <div className="flex items-center justify-between">
                     <span className="font-display text-lg font-bold uppercase text-foreground">Total</span>
-                    <span className="font-display text-2xl font-bold text-primary">${finalTotal.toFixed(2)}</span>
+                    <span className="font-display text-2xl font-bold text-primary">{finalTotal.toFixed(2)} kr</span>
                   </div>
                 </div>
 

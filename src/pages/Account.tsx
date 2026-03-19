@@ -16,12 +16,16 @@ import {
   ChevronDown,
   ChevronUp,
   History,
+  Inbox,
+  Archive,
+  GiftIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -53,6 +57,8 @@ interface UserVoucher {
   balance: number | null;
   redeemed_at: string;
   recipient_email: string | null;
+  recipient_name?: string | null;
+  used_at?: string | null;
   vouchers: { name: string; discount_value: number; discount_type: string } | null;
 }
 
@@ -97,6 +103,8 @@ type RewardCatalogItem = {
 };
 
 type AccountTab = "orders" | "custom-requests" | "rewards" | "vouchers";
+type VoucherTab = "active" | "used";
+type CustomRequestTab = "ongoing" | "done";
 
 type SeenState = {
   ordersLastSeenAt: string | null;
@@ -107,6 +115,14 @@ type LoyaltyPointRow = {
   id: string;
   points: number;
   reason: string | null;
+  created_at: string;
+};
+
+type GiftNotification = {
+  id: string;
+  title: string;
+  message: string;
+  is_read: boolean;
   created_at: string;
 };
 
@@ -127,7 +143,10 @@ const customStatusBadgeColors: Record<string, string> = {
   in_production: "bg-orange-500/10 text-orange-600 border-orange-500/30",
   completed: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
   rejected: "bg-red-500/10 text-red-600 border-red-500/30",
+  shipped: "bg-sky-500/10 text-sky-600 border-sky-500/30",
 };
+
+const CUSTOM_REQUEST_DONE_STATUSES = new Set(["completed", "delivered", "done", "closed"]);
 
 const REWARD_CATALOG: RewardCatalogItem[] = [
   {
@@ -190,21 +209,14 @@ const REWARD_CATALOG: RewardCatalogItem[] = [
   },
 ];
 
-function parseCustomOrderDescription(description: string): {
-  customerDescription: string;
-  material: string;
-  color: string;
-  quality: string;
-  quantity: string;
-  scale: string;
-} {
+function parseCustomOrderDescription(description: string) {
   const raw = description || "";
   const marker = "\n--- Options ---";
   const parts = raw.split(marker);
   const customerDescription = (parts[0] || "").trim();
   const optionsText = (parts[1] || "").trim();
 
-  const parsed = {
+  const parsed: Record<string, string> = {
     material: "-",
     color: "-",
     quality: "-",
@@ -288,6 +300,43 @@ function summarizeLoyalty(rows: LoyaltyPointRow[]) {
   return { balance, earned, spent };
 }
 
+function isCustomRequestDone(order: CustomOrder) {
+  const normalizedStatus = (order.status || "").toLowerCase();
+  const productionStatus = (order.production_status || "").toLowerCase();
+  return CUSTOM_REQUEST_DONE_STATUSES.has(normalizedStatus) || productionStatus === "completed";
+}
+
+function isVoucherUsed(uv: UserVoucher) {
+  const usedByFlag = !!uv.is_used || !!uv.used_at;
+  const usedByBalance =
+    uv.vouchers?.discount_type === "gift_card" && uv.balance !== null ? Number(uv.balance) <= 0 : false;
+  return usedByFlag || usedByBalance;
+}
+
+async function fetchGiftNotifications(userId: string): Promise<GiftNotification[]> {
+  try {
+    const { data, error } = await (supabase as any)
+      .from("user_gift_notifications")
+      .select("id, title, message, is_read, created_at")
+      .eq("user_id", userId)
+      .eq("is_read", false)
+      .order("created_at", { ascending: false });
+
+    if (error) return [];
+    return (data as GiftNotification[]) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+async function markGiftNotificationAsRead(notificationId: string) {
+  try {
+    await (supabase as any).from("user_gift_notifications").update({ is_read: true }).eq("id", notificationId);
+  } catch {
+    // ignore until table exists
+  }
+}
+
 const Account = () => {
   const { user, isAdmin, signOut, loading } = useAuth();
   const navigate = useNavigate();
@@ -303,7 +352,11 @@ const Account = () => {
   const [customOrderMessages, setCustomOrderMessages] = useState<Record<string, CustomOrderMessage[]>>({});
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [userVouchers, setUserVouchers] = useState<UserVoucher[]>([]);
+  const [activeUserVouchers, setActiveUserVouchers] = useState<UserVoucher[]>([]);
+  const [usedUserVouchers, setUsedUserVouchers] = useState<UserVoucher[]>([]);
   const [tab, setTab] = useState<AccountTab>("orders");
+  const [voucherTab, setVoucherTab] = useState<VoucherTab>("active");
+  const [customRequestTab, setCustomRequestTab] = useState<CustomRequestTab>("ongoing");
   const [giftEmail, setGiftEmail] = useState("");
   const [giftName, setGiftName] = useState("");
   const [giftingVoucherId, setGiftingVoucherId] = useState<string | null>(null);
@@ -316,6 +369,7 @@ const Account = () => {
     ordersLastSeenAt: null,
     customRequestsLastSeenAt: null,
   });
+  const [giftNotification, setGiftNotification] = useState<GiftNotification | null>(null);
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth");
@@ -329,27 +383,30 @@ const Account = () => {
   const fetchAll = async () => {
     if (!user) return;
 
-    const [loyaltyRes, ordersRes, customOrdersRes, vouchersRes, userVouchersRes] = await Promise.all([
-      supabase
-        .from("loyalty_points")
-        .select("id, points, reason, created_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("orders")
-        .select("id, status, total, created_at, tool_type")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false }),
-      supabase.from("custom_orders").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("vouchers").select("*").eq("is_active", true).order("points_cost", { ascending: true }),
-      supabase
-        .from("user_vouchers")
-        .select(
-          "id, code, is_used, balance, redeemed_at, recipient_email, vouchers(name, discount_value, discount_type)",
-        )
-        .eq("user_id", user.id)
-        .order("redeemed_at", { ascending: false }),
-    ]);
+    const [loyaltyRes, ordersRes, customOrdersRes, vouchersRes, userVouchersRes, giftNotifications] = await Promise.all(
+      [
+        supabase
+          .from("loyalty_points")
+          .select("id, points, reason, created_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("orders")
+          .select("id, status, total, created_at, tool_type")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false }),
+        supabase.from("custom_orders").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("vouchers").select("*").eq("is_active", true).order("points_cost", { ascending: true }),
+        supabase
+          .from("user_vouchers")
+          .select(
+            "id, code, is_used, balance, redeemed_at, recipient_email, recipient_name, used_at, vouchers(name, discount_value, discount_type)",
+          )
+          .eq("user_id", user.id)
+          .order("redeemed_at", { ascending: false }),
+        fetchGiftNotifications(user.id),
+      ],
+    );
 
     if (loyaltyRes.error) {
       toast({ title: "Points error", description: loyaltyRes.error.message, variant: "destructive" });
@@ -369,11 +426,17 @@ const Account = () => {
     setCustomOrders((customOrdersRes.data as CustomOrder[]) ?? []);
     setVouchers((vouchersRes.data as Voucher[]) ?? []);
 
-    const activeUserVouchers = ((userVouchersRes.data as UserVoucher[]) ?? []).filter((uv) => {
-      const hasRemainingGiftBalance = uv.balance !== null ? Number(uv.balance) > 0 : true;
-      return !uv.is_used && hasRemainingGiftBalance;
-    });
-    setUserVouchers(activeUserVouchers);
+    const allUserVouchers = ((userVouchersRes.data as UserVoucher[]) ?? []).sort(
+      (a, b) => new Date(b.redeemed_at).getTime() - new Date(a.redeemed_at).getTime(),
+    );
+
+    setUserVouchers(allUserVouchers);
+    setActiveUserVouchers(allUserVouchers.filter((uv) => !isVoucherUsed(uv)));
+    setUsedUserVouchers(allUserVouchers.filter((uv) => isVoucherUsed(uv)));
+
+    if (giftNotifications.length > 0) {
+      setGiftNotification(giftNotifications[0]);
+    }
 
     const customOrdersData = (customOrdersRes.data as CustomOrder[]) ?? [];
     if (customOrdersData.length > 0) {
@@ -397,11 +460,22 @@ const Account = () => {
 
   useEffect(() => {
     fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const parsedCustomOrders = useMemo(
     () => customOrders.map((order) => ({ ...order, parsed: parseCustomOrderDescription(order.description) })),
     [customOrders],
+  );
+
+  const ongoingCustomOrders = useMemo(
+    () => parsedCustomOrders.filter((order) => !isCustomRequestDone(order)),
+    [parsedCustomOrders],
+  );
+
+  const doneCustomOrders = useMemo(
+    () => parsedCustomOrders.filter((order) => isCustomRequestDone(order)),
+    [parsedCustomOrders],
   );
 
   const latestOrderActivityAt = useMemo(() => getLatestDate(orders.map((order) => order.created_at)), [orders]);
@@ -429,8 +503,9 @@ const Account = () => {
     if (!user) return;
     const next: SeenState = { ...seenState };
     if (targetTab === "orders" && latestOrderActivityAt) next.ordersLastSeenAt = latestOrderActivityAt;
-    if (targetTab === "custom-requests" && latestCustomActivityAt)
+    if (targetTab === "custom-requests" && latestCustomActivityAt) {
       next.customRequestsLastSeenAt = latestCustomActivityAt;
+    }
     setSeenState(next);
     saveSeenState(user.id, next);
   };
@@ -487,22 +562,44 @@ const Account = () => {
   };
 
   const sendGiftCard = async (uvId: string) => {
-    if (!giftEmail) {
+    if (!user) return;
+    if (!giftEmail.trim()) {
       toast({ title: "Enter recipient email", variant: "destructive" });
       return;
     }
 
-    const { error } = await supabase
+    const trimmedEmail = giftEmail.trim().toLowerCase();
+    const trimmedName = giftName.trim();
+
+    const { error: updateError } = await supabase
       .from("user_vouchers")
-      .update({ recipient_email: giftEmail, recipient_name: giftName || null })
+      .update({ recipient_email: trimmedEmail, recipient_name: trimmedName || null })
       .eq("id", uvId);
 
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    if (updateError) {
+      toast({ title: "Error", description: updateError.message, variant: "destructive" });
       return;
     }
 
-    toast({ title: "Gift card details saved", description: `Gift card will be sent to ${giftEmail}` });
+    const { error: mailError } = await supabase.functions.invoke("send-gift-card", {
+      body: {
+        userVoucherId: uvId,
+        recipientEmail: trimmedEmail,
+        recipientName: trimmedName || null,
+        senderName: user.email,
+      },
+    });
+
+    if (mailError) {
+      toast({
+        title: "Gift saved, email not sent",
+        description: "Create the send-gift-card edge function to send the real gift email and recipient popup.",
+        variant: "destructive",
+      });
+    } else {
+      toast({ title: "Gift card sent", description: `Gift card email sent to ${trimmedEmail}` });
+    }
+
     setGiftingVoucherId(null);
     setGiftEmail("");
     setGiftName("");
@@ -592,636 +689,750 @@ const Account = () => {
     return isAfter(latestForOrder, seenAt);
   };
 
-  if (loading || !user) return null;
+  const renderCustomOrderList = (
+    items: Array<CustomOrder & { parsed: ReturnType<typeof parseCustomOrderDescription> }>,
+  ) => {
+    if (items.length === 0) {
+      return (
+        <Card>
+          <CardContent className="p-8 text-center text-muted-foreground">
+            {customRequestTab === "ongoing" ? "No ongoing custom requests." : "No completed custom requests yet."}
+          </CardContent>
+        </Card>
+      );
+    }
 
-  return (
-    <div className="py-8">
-      <div className="container max-w-5xl">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="font-display text-3xl font-bold uppercase text-foreground">My Account</h1>
-            <p className="text-sm text-muted-foreground">{user.email}</p>
-          </div>
+    return (
+      <div className="space-y-4">
+        {items.map((order) => {
+          const expanded = expandedCustomOrderId === order.id;
+          const messages = customOrderMessages[order.id] || [];
+          const currentQuote = order.final_agreed_price ?? order.quoted_price ?? null;
+          const hasUnreadForThisOrder = hasUnreadActivityForOrder(order);
 
-          <div className="flex gap-2">
-            {isAdmin && (
-              <Link to="/admin">
-                <Button variant="outline" size="sm" className="font-display uppercase tracking-wider">
-                  <Shield className="mr-1 h-4 w-4" /> Admin
-                </Button>
-              </Link>
-            )}
-            <Button variant="outline" size="sm" onClick={signOut} className="font-display uppercase tracking-wider">
-              <LogOut className="mr-1 h-4 w-4" /> Sign Out
-            </Button>
-          </div>
-        </div>
-
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="mb-8 border-primary/30 bg-primary/5">
-            <CardContent className="p-6">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-                  <Star className="h-7 w-7 text-primary" />
-                </div>
-
-                <div>
-                  <p className="text-sm text-muted-foreground">Loyalty Points Balance</p>
-                  <p className="font-display text-3xl font-bold text-primary">{pointsBalance}</p>
-                  <p className="text-xs text-muted-foreground">1 point is earned for every 4 kr spent</p>
-                </div>
-
-                <div className="ml-auto grid min-w-[220px] gap-2 sm:grid-cols-2">
-                  <div className="rounded-xl border border-primary/20 bg-background/70 p-3">
-                    <p className="text-xs text-muted-foreground">Earned total</p>
-                    <p className="font-display text-xl font-bold text-foreground">{pointsEarned}</p>
-                  </div>
-                  <div className="rounded-xl border border-primary/20 bg-background/70 p-3">
-                    <p className="text-xs text-muted-foreground">Spent total</p>
-                    <p className="font-display text-xl font-bold text-foreground">{pointsSpent}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-5 border-t border-border pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowHistory((prev) => !prev)}
-                  className="flex w-full items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3 text-left transition hover:bg-background"
-                >
-                  <div className="flex items-center gap-2">
-                    <History className="h-4 w-4 text-primary" />
-                    <div>
-                      <p className="text-sm font-medium text-foreground">Recent points activity</p>
-                      <p className="text-xs text-muted-foreground">
-                        Press to show redeemed discounts and earned points
+          return (
+            <Card key={order.id}>
+              <CardContent className="p-5">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <p className="font-display text-lg font-semibold uppercase text-card-foreground">
+                        Custom Request #{order.id.slice(0, 8)}
                       </p>
+                      {hasUnreadForThisOrder && <span className="h-2.5 w-2.5 rounded-full bg-red-500" />}
+                      {customStatusBadge(order.status)}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Submitted on {new Date(order.created_at).toLocaleString()}
+                    </p>
+
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Material:</span> {order.parsed.material}
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Color:</span> {order.parsed.color}
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Quality:</span> {order.parsed.quality}
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Qty:</span> {order.parsed.quantity}
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Scale:</span> {order.parsed.scale}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="outline">Payment: {order.payment_status.replace(/_/g, " ")}</Badge>
+                      <Badge variant="outline">Production: {order.production_status.replace(/_/g, " ")}</Badge>
+                      {currentQuote !== null && (
+                        <Badge variant="outline" className="border-primary text-primary">
+                          Quote: {Number(currentQuote).toFixed(2)} kr
+                        </Badge>
+                      )}
                     </div>
                   </div>
-                  {showHistory ? (
-                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </button>
 
-                {showHistory && (
-                  <div className="mt-3 space-y-2">
-                    {loyaltyHistory.length === 0 ? (
-                      <div className="rounded-xl border border-border bg-background/60 px-4 py-3 text-sm text-muted-foreground">
-                        No loyalty activity yet.
-                      </div>
-                    ) : (
-                      loyaltyHistory.slice(0, 8).map((row) => (
-                        <div
-                          key={row.id}
-                          className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3"
-                        >
-                          <div className="min-w-0">
-                            <p className="truncate text-sm text-foreground">{row.reason || "Points update"}</p>
-                            <p className="text-xs text-muted-foreground">{new Date(row.created_at).toLocaleString()}</p>
-                          </div>
-                          <div
-                            className={`font-display text-sm font-bold ${row.points >= 0 ? "text-green-600" : "text-destructive"}`}
-                          >
-                            {row.points >= 0 ? `+${row.points}` : row.points}
-                          </div>
-                        </div>
-                      ))
-                    )}
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setExpandedCustomOrderId(expanded ? null : order.id)}
+                      className="font-display uppercase tracking-wider"
+                    >
+                      {expanded ? "Hide Details" : "View Details"}
+                    </Button>
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+                </div>
 
-        <div className="mb-6 flex flex-wrap gap-2">
-          {[
-            { key: "orders" as const, label: "Orders", icon: Package, hasDot: hasNewOrders },
-            {
-              key: "custom-requests" as const,
-              label: "Custom Requests",
-              icon: MessageSquare,
-              hasDot: hasNewCustomRequests,
-            },
-            { key: "rewards" as const, label: "Rewards Store", icon: Gift, hasDot: false },
-            { key: "vouchers" as const, label: "My Vouchers", icon: Star, hasDot: false },
-          ].map(({ key, label, icon: Icon, hasDot }) => (
-            <Button
-              key={key}
-              variant={tab === key ? "default" : "outline"}
-              size="sm"
-              onClick={() => setTab(key)}
-              className="relative font-display uppercase tracking-wider"
-            >
-              <Icon className="mr-1 h-4 w-4" />
-              {label}
-              {hasDot && <span className="ml-2 h-2.5 w-2.5 rounded-full bg-red-500" />}
-            </Button>
-          ))}
-        </div>
+                {expanded && (
+                  <div className="mt-5 space-y-5 border-t border-border pt-5">
+                    <div className="grid gap-4 lg:grid-cols-2">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Your Original Request</Label>
+                        <pre className="mt-2 whitespace-pre-wrap rounded-md border border-border bg-muted p-3 text-sm text-foreground">
+                          {order.parsed.customerDescription || "-"}
+                        </pre>
+                      </div>
 
-        {tab === "orders" && (
-          <>
-            {orders.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center text-muted-foreground">
-                  No orders yet.{" "}
-                  <Link to="/products" className="text-primary hover:underline">
-                    Start shopping!
-                  </Link>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {orders.map((order) => {
-                  const isNewOrder = isAfter(order.created_at, seenState.ordersLastSeenAt);
-                  return (
-                    <Card key={order.id} className="transition-all hover:border-primary hover:shadow-sm">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <Link to={`/orders/${order.id}`} className="flex flex-1 items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <p className="font-display text-sm font-semibold uppercase text-card-foreground">
-                                    Order #{order.id.slice(0, 8)}
-                                  </p>
-                                  {isNewOrder && <span className="h-2.5 w-2.5 rounded-full bg-red-500" />}
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                  {new Date(order.created_at).toLocaleDateString()}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-4">
-                              <div className="text-right">
-                                <p className="font-display text-lg font-bold text-primary">
-                                  {Number(order.total).toFixed(2)} kr
-                                </p>
-                                <p
-                                  className={`font-display text-xs uppercase ${statusColors[order.status] || "text-muted-foreground"}`}
-                                >
-                                  {order.status}
-                                </p>
-                              </div>
-                              <Eye className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                          </Link>
+                      <div className="space-y-3">
+                        <div className="rounded-md border border-border bg-muted/40 p-3">
+                          <Label className="text-xs text-muted-foreground">Admin Notes</Label>
+                          <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
+                            {order.admin_notes || "No admin notes yet."}
+                          </p>
                         </div>
-
-                        {order.status === "delivered" &&
-                          (order.tool_type === "custom-print" || order.tool_type === "lithophane") && (
-                            <div className="mt-4 border-t border-border pt-4">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setReviewingOrderId(reviewingOrderId === order.id ? null : order.id)}
-                                className="font-display uppercase tracking-wider"
-                              >
-                                {reviewingOrderId === order.id ? "Close Review" : "Leave Review"}
-                              </Button>
-                              {reviewingOrderId === order.id && (
-                                <ToolReviewForm
-                                  toolType={order.tool_type}
-                                  orderId={order.id}
-                                  onSubmitted={() => setReviewingOrderId(null)}
-                                />
-                              )}
-                            </div>
-                          )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
-
-        {tab === "custom-requests" && (
-          <>
-            {parsedCustomOrders.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center text-muted-foreground">
-                  No custom requests yet.{" "}
-                  <Link to="/create" className="text-primary hover:underline">
-                    Submit your first custom 3D print request.
-                  </Link>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {parsedCustomOrders.map((order) => {
-                  const expanded = expandedCustomOrderId === order.id;
-                  const messages = customOrderMessages[order.id] || [];
-                  const currentQuote = order.final_agreed_price ?? order.quoted_price ?? null;
-                  const hasUnreadForThisOrder = hasUnreadActivityForOrder(order);
-
-                  return (
-                    <Card key={order.id}>
-                      <CardContent className="p-5">
-                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <p className="font-display text-lg font-semibold uppercase text-card-foreground">
-                                Custom Request #{order.id.slice(0, 8)}
-                              </p>
-                              {hasUnreadForThisOrder && <span className="h-2.5 w-2.5 rounded-full bg-red-500" />}
-                              {customStatusBadge(order.status)}
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              Submitted on {new Date(order.created_at).toLocaleString()}
+                        <div className="rounded-md border border-border bg-muted/40 p-3">
+                          <Label className="text-xs text-muted-foreground">Current Negotiation State</Label>
+                          <div className="mt-2 space-y-1 text-sm">
+                            <p>
+                              <span className="text-muted-foreground">Quoted Price:</span>{" "}
+                              {order.quoted_price !== null ? `${Number(order.quoted_price).toFixed(2)} kr` : "-"}
                             </p>
-
-                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-                              <div className="text-sm">
-                                <span className="text-muted-foreground">Material:</span> {order.parsed.material}
-                              </div>
-                              <div className="text-sm">
-                                <span className="text-muted-foreground">Color:</span> {order.parsed.color}
-                              </div>
-                              <div className="text-sm">
-                                <span className="text-muted-foreground">Quality:</span> {order.parsed.quality}
-                              </div>
-                              <div className="text-sm">
-                                <span className="text-muted-foreground">Qty:</span> {order.parsed.quantity}
-                              </div>
-                              <div className="text-sm">
-                                <span className="text-muted-foreground">Scale:</span> {order.parsed.scale}
-                              </div>
-                            </div>
-
-                            <div className="flex flex-wrap gap-2">
-                              <Badge variant="outline">Payment: {order.payment_status.replace(/_/g, " ")}</Badge>
-                              <Badge variant="outline">Production: {order.production_status.replace(/_/g, " ")}</Badge>
-                              {currentQuote !== null && (
-                                <Badge variant="outline" className="border-primary text-primary">
-                                  Quote: {Number(currentQuote).toFixed(2)} kr
-                                </Badge>
-                              )}
-                            </div>
+                            <p>
+                              <span className="text-muted-foreground">Final Agreed:</span>{" "}
+                              {order.final_agreed_price !== null
+                                ? `${Number(order.final_agreed_price).toFixed(2)} kr`
+                                : "-"}
+                            </p>
+                            <p>
+                              <span className="text-muted-foreground">Your Response:</span>{" "}
+                              {order.customer_response_status.replace(/_/g, " ")}
+                            </p>
                           </div>
+                        </div>
+                      </div>
+                    </div>
 
-                          <div className="flex gap-2">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Conversation History</Label>
+                      <div className="mt-2 space-y-3 rounded-md border border-border bg-muted/20 p-3">
+                        {messages.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">No conversation yet.</p>
+                        ) : (
+                          messages.map((msg) => {
+                            const isUnreadMessage =
+                              msg.sender_role === "admin" &&
+                              isAfter(msg.created_at, seenState.customRequestsLastSeenAt);
+                            return (
+                              <div
+                                key={msg.id}
+                                className={`rounded-md border p-3 text-sm ${
+                                  msg.sender_role === "admin"
+                                    ? "border-blue-500/20 bg-blue-500/5"
+                                    : msg.sender_role === "user"
+                                      ? "border-primary/20 bg-primary/5"
+                                      : "border-border bg-card"
+                                }`}
+                              >
+                                <div className="mb-1 flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="outline" className="text-[10px] uppercase">
+                                      {msg.sender_role}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-[10px] uppercase">
+                                      {msg.message_type.replace(/_/g, " ")}
+                                    </Badge>
+                                    {isUnreadMessage && <span className="h-2.5 w-2.5 rounded-full bg-red-500" />}
+                                    {msg.proposed_price !== null && (
+                                      <Badge
+                                        variant="outline"
+                                        className="border-primary text-[10px] uppercase text-primary"
+                                      >
+                                        {Number(msg.proposed_price).toFixed(2)} kr
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <span className="text-xs text-muted-foreground">
+                                    {new Date(msg.created_at).toLocaleString()}
+                                  </span>
+                                </div>
+                                <p className="whitespace-pre-wrap text-foreground">{msg.message || "-"}</p>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+
+                    {order.status === "quoted" &&
+                      order.quoted_price !== null &&
+                      order.customer_response_status !== "accepted" &&
+                      order.customer_response_status !== "declined" && (
+                        <div className="rounded-md border border-primary/20 bg-primary/5 p-4">
+                          <div className="mb-3 flex items-center gap-2">
+                            <DollarSign className="h-4 w-4 text-primary" />
+                            <p className="font-display text-sm font-semibold uppercase text-foreground">
+                              Quote Action Required
+                            </p>
+                          </div>
+                          <p className="mb-4 text-sm text-muted-foreground">
+                            Admin has quoted this request at{" "}
+                            <span className="font-semibold text-foreground">
+                              {Number(order.quoted_price).toFixed(2)} kr
+                            </span>
+                            . Please accept or decline the quote.
+                          </p>
+                          <div className="flex flex-wrap gap-2">
                             <Button
-                              variant="outline"
-                              onClick={() => setExpandedCustomOrderId(expanded ? null : order.id)}
+                              onClick={() => respondToQuote(order, true)}
                               className="font-display uppercase tracking-wider"
                             >
-                              {expanded ? "Hide Details" : "View Details"}
+                              <CheckCircle2 className="mr-1 h-4 w-4" />
+                              Accept Quote
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => respondToQuote(order, false)}
+                              className="font-display uppercase tracking-wider"
+                            >
+                              <XCircle className="mr-1 h-4 w-4" />
+                              Decline Quote
                             </Button>
                           </div>
                         </div>
+                      )}
 
-                        {expanded && (
-                          <div className="mt-5 space-y-5 border-t border-border pt-5">
-                            <div className="grid gap-4 lg:grid-cols-2">
-                              <div>
-                                <Label className="text-xs text-muted-foreground">Your Original Request</Label>
-                                <pre className="mt-2 whitespace-pre-wrap rounded-md border border-border bg-muted p-3 text-sm text-foreground">
-                                  {order.parsed.customerDescription || "-"}
-                                </pre>
-                              </div>
-
-                              <div className="space-y-3">
-                                <div className="rounded-md border border-border bg-muted/40 p-3">
-                                  <Label className="text-xs text-muted-foreground">Admin Notes</Label>
-                                  <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
-                                    {order.admin_notes || "No admin notes yet."}
-                                  </p>
-                                </div>
-                                <div className="rounded-md border border-border bg-muted/40 p-3">
-                                  <Label className="text-xs text-muted-foreground">Current Negotiation State</Label>
-                                  <div className="mt-2 space-y-1 text-sm">
-                                    <p>
-                                      <span className="text-muted-foreground">Quoted Price:</span>{" "}
-                                      {order.quoted_price !== null
-                                        ? `${Number(order.quoted_price).toFixed(2)} kr`
-                                        : "-"}
-                                    </p>
-                                    <p>
-                                      <span className="text-muted-foreground">Final Agreed:</span>{" "}
-                                      {order.final_agreed_price !== null
-                                        ? `${Number(order.final_agreed_price).toFixed(2)} kr`
-                                        : "-"}
-                                    </p>
-                                    <p>
-                                      <span className="text-muted-foreground">Your Response:</span>{" "}
-                                      {order.customer_response_status.replace(/_/g, " ")}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div>
-                              <Label className="text-xs text-muted-foreground">Conversation History</Label>
-                              <div className="mt-2 space-y-3 rounded-md border border-border bg-muted/20 p-3">
-                                {messages.length === 0 ? (
-                                  <p className="text-sm text-muted-foreground">No conversation yet.</p>
-                                ) : (
-                                  messages.map((msg) => {
-                                    const isUnreadMessage =
-                                      msg.sender_role === "admin" &&
-                                      isAfter(msg.created_at, seenState.customRequestsLastSeenAt);
-                                    return (
-                                      <div
-                                        key={msg.id}
-                                        className={`rounded-md border p-3 text-sm ${
-                                          msg.sender_role === "admin"
-                                            ? "border-blue-500/20 bg-blue-500/5"
-                                            : msg.sender_role === "user"
-                                              ? "border-primary/20 bg-primary/5"
-                                              : "border-border bg-card"
-                                        }`}
-                                      >
-                                        <div className="mb-1 flex items-center justify-between gap-2">
-                                          <div className="flex items-center gap-2">
-                                            <Badge variant="outline" className="text-[10px] uppercase">
-                                              {msg.sender_role}
-                                            </Badge>
-                                            <Badge variant="outline" className="text-[10px] uppercase">
-                                              {msg.message_type.replace(/_/g, " ")}
-                                            </Badge>
-                                            {isUnreadMessage && (
-                                              <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
-                                            )}
-                                            {msg.proposed_price !== null && (
-                                              <Badge
-                                                variant="outline"
-                                                className="border-primary text-[10px] uppercase text-primary"
-                                              >
-                                                {Number(msg.proposed_price).toFixed(2)} kr
-                                              </Badge>
-                                            )}
-                                          </div>
-                                          <span className="text-xs text-muted-foreground">
-                                            {new Date(msg.created_at).toLocaleString()}
-                                          </span>
-                                        </div>
-                                        <p className="whitespace-pre-wrap text-foreground">{msg.message || "-"}</p>
-                                      </div>
-                                    );
-                                  })
-                                )}
-                              </div>
-                            </div>
-
-                            {order.status === "quoted" &&
-                              order.quoted_price !== null &&
-                              order.customer_response_status !== "accepted" &&
-                              order.customer_response_status !== "declined" && (
-                                <div className="rounded-md border border-primary/20 bg-primary/5 p-4">
-                                  <div className="mb-3 flex items-center gap-2">
-                                    <DollarSign className="h-4 w-4 text-primary" />
-                                    <p className="font-display text-sm font-semibold uppercase text-foreground">
-                                      Quote Action Required
-                                    </p>
-                                  </div>
-                                  <p className="mb-4 text-sm text-muted-foreground">
-                                    Admin has quoted this request at{" "}
-                                    <span className="font-semibold text-foreground">
-                                      {Number(order.quoted_price).toFixed(2)} kr
-                                    </span>
-                                    . Please accept or decline the quote.
-                                  </p>
-                                  <div className="flex flex-wrap gap-2">
-                                    <Button
-                                      onClick={() => respondToQuote(order, true)}
-                                      className="font-display uppercase tracking-wider"
-                                    >
-                                      <CheckCircle2 className="mr-1 h-4 w-4" />
-                                      Accept Quote
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      onClick={() => respondToQuote(order, false)}
-                                      className="font-display uppercase tracking-wider"
-                                    >
-                                      <XCircle className="mr-1 h-4 w-4" />
-                                      Decline Quote
-                                    </Button>
-                                  </div>
-                                </div>
-                              )}
-
-                            <div className="rounded-md border border-border bg-muted/30 p-4">
-                              <div className="space-y-3">
-                                <Label>Reply to Admin</Label>
-                                <Textarea
-                                  value={replyMessage[order.id] || ""}
-                                  onChange={(e) => setReplyMessage((prev) => ({ ...prev, [order.id]: e.target.value }))}
-                                  placeholder="Write a message to admin..."
-                                  rows={4}
-                                />
-                                <Button
-                                  onClick={() => sendCustomOrderReply(order.id)}
-                                  disabled={sendingReply || !(replyMessage[order.id] || "").trim()}
-                                  className="font-display uppercase tracking-wider"
-                                >
-                                  <Send className="mr-1 h-4 w-4" />
-                                  Send Reply
-                                </Button>
-                              </div>
-                            </div>
-
-                            {order.customer_response_status === "accepted" &&
-                              order.payment_status === "awaiting_payment" &&
-                              order.final_agreed_price !== null && (
-                                <div className="rounded-md border border-green-500/20 bg-green-500/5 p-4">
-                                  <p className="font-display text-sm font-semibold uppercase text-foreground">
-                                    Payment Pending
-                                  </p>
-                                  <p className="mt-1 text-sm text-muted-foreground">
-                                    Final agreed amount:{" "}
-                                    <span className="font-semibold text-foreground">
-                                      {Number(order.final_agreed_price).toFixed(2)} kr
-                                    </span>
-                                  </p>
-                                  <p className="mt-2 text-xs text-muted-foreground">
-                                    The 100 kr custom request fee should be deducted from the final order total at
-                                    checkout.
-                                  </p>
-                                </div>
-                              )}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
-
-        {tab === "rewards" && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {REWARD_CATALOG.map((reward) => {
-              const matchedVoucher = findMatchingVoucher(reward, vouchers);
-              const canRedeem = !!matchedVoucher && pointsBalance >= reward.pointsCost;
-
-              return (
-                <motion.div
-                  key={reward.key}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Card className="h-full">
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="font-display text-lg uppercase">{reward.name}</CardTitle>
-                        {reward.badge && (
-                          <Badge variant="outline" className="font-display text-xs">
-                            {reward.badge === "Shipping" ? <Truck className="mr-1 h-3 w-3" /> : null}
-                            {reward.badge}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">{reward.description}</p>
-                    </CardHeader>
-
-                    <CardContent className="space-y-4">
-                      <div className="flex items-end justify-between gap-4">
-                        <div>
-                          {reward.discountType === "free_shipping" ? (
-                            <>
-                              <span className="font-display text-2xl font-bold text-primary">Free delivery</span>
-                              <span className="ml-1 text-sm text-muted-foreground">discount</span>
-                            </>
-                          ) : (
-                            <>
-                              <span className="font-display text-2xl font-bold text-primary">
-                                {reward.discountValue} kr
-                              </span>
-                              <span className="ml-1 text-sm text-muted-foreground">
-                                {reward.discountType === "gift_card" ? "gift card" : "discount"}
-                              </span>
-                            </>
-                          )}
-                        </div>
-
+                    <div className="rounded-md border border-border bg-muted/30 p-4">
+                      <div className="space-y-3">
+                        <Label>Reply to Admin</Label>
+                        <Textarea
+                          value={replyMessage[order.id] || ""}
+                          onChange={(e) => setReplyMessage((prev) => ({ ...prev, [order.id]: e.target.value }))}
+                          placeholder="Write a message to admin..."
+                          rows={4}
+                        />
                         <Button
-                          size="sm"
-                          onClick={() => matchedVoucher && redeemVoucher(matchedVoucher, reward.pointsCost)}
-                          disabled={!canRedeem || redeemingKey === matchedVoucher?.id}
+                          onClick={() => sendCustomOrderReply(order.id)}
+                          disabled={sendingReply || !(replyMessage[order.id] || "").trim()}
                           className="font-display uppercase tracking-wider"
                         >
-                          <Star className="mr-1 h-3 w-3" />
-                          {redeemingKey === matchedVoucher?.id ? "Redeeming..." : `${reward.pointsCost} pts`}
+                          <Send className="mr-1 h-4 w-4" />
+                          Send Reply
                         </Button>
-                      </div>
-
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">
-                          {matchedVoucher ? "Connected to voucher database" : "Reward not connected in database yet"}
-                        </span>
-                        <span className={canRedeem ? "font-medium text-green-600" : "text-muted-foreground"}>
-                          {canRedeem
-                            ? "Ready to redeem"
-                            : pointsBalance < reward.pointsCost
-                              ? "Not enough points"
-                              : "Unavailable"}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              );
-            })}
-          </div>
-        )}
-
-        {tab === "vouchers" && (
-          <div className="space-y-3">
-            {userVouchers.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center text-muted-foreground">
-                  No active vouchers available.
-                </CardContent>
-              </Card>
-            ) : (
-              userVouchers.map((uv) => (
-                <Card key={uv.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-display text-sm font-semibold uppercase text-card-foreground">
-                            {uv.vouchers?.name ?? "Voucher"}
-                          </p>
-                          {uv.vouchers?.discount_type === "gift_card" && (
-                            <Badge variant="outline" className="text-xs">
-                              Gift Card
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="font-mono text-lg font-bold text-primary">{uv.code}</p>
-                        {uv.balance !== null && (
-                          <p className="text-sm text-muted-foreground">
-                            Balance:{" "}
-                            <span className="font-bold text-foreground">{Number(uv.balance).toFixed(2)} kr</span>
-                          </p>
-                        )}
-                        {uv.recipient_email && (
-                          <p className="text-xs text-muted-foreground">Sent to: {uv.recipient_email}</p>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {uv.vouchers?.discount_type === "gift_card" && !uv.recipient_email && !uv.is_used && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setGiftingVoucherId(giftingVoucherId === uv.id ? null : uv.id)}
-                            className="font-display text-xs uppercase tracking-wider"
-                          >
-                            <Send className="mr-1 h-3 w-3" /> Gift
-                          </Button>
-                        )}
-                        <Badge variant="default">Active</Badge>
                       </div>
                     </div>
 
-                    {giftingVoucherId === uv.id && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        className="mt-4 space-y-3 border-t border-border pt-4"
-                      >
-                        <p className="text-sm text-muted-foreground">Send this gift card to someone:</p>
-                        <input
-                          placeholder="Recipient email"
-                          value={giftEmail}
-                          onChange={(e) => setGiftEmail(e.target.value)}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                        />
-                        <input
-                          placeholder="Recipient name (optional)"
-                          value={giftName}
-                          onChange={(e) => setGiftName(e.target.value)}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                        />
-                        <Button
-                          size="sm"
-                          onClick={() => sendGiftCard(uv.id)}
-                          className="font-display uppercase tracking-wider"
-                        >
-                          <Send className="mr-1 h-3 w-3" /> Send Gift Card
-                        </Button>
-                      </motion.div>
+                    {order.customer_response_status === "accepted" &&
+                      order.payment_status === "awaiting_payment" &&
+                      order.final_agreed_price !== null && (
+                        <div className="rounded-md border border-green-500/20 bg-green-500/5 p-4">
+                          <p className="font-display text-sm font-semibold uppercase text-foreground">
+                            Payment Pending
+                          </p>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            Final agreed amount:{" "}
+                            <span className="font-semibold text-foreground">
+                              {Number(order.final_agreed_price).toFixed(2)} kr
+                            </span>
+                          </p>
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            The 100 kr custom request fee should be deducted from the final order total at checkout.
+                          </p>
+                        </div>
+                      )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    );
+  };
+
+  if (loading || !user) return null;
+
+  return (
+    <>
+      <Dialog
+        open={!!giftNotification}
+        onOpenChange={(open) => {
+          if (!open && giftNotification) {
+            markGiftNotificationAsRead(giftNotification.id);
+            setGiftNotification(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-display uppercase">
+              <GiftIcon className="h-5 w-5 text-primary" />
+              {giftNotification?.title || "You received a gift"}
+            </DialogTitle>
+            <DialogDescription className="pt-2 text-sm text-muted-foreground">
+              {giftNotification?.message || "A gift voucher has been added to your account."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button
+              onClick={() => {
+                if (giftNotification) markGiftNotificationAsRead(giftNotification.id);
+                setGiftNotification(null);
+                setTab("vouchers");
+                setVoucherTab("active");
+              }}
+              className="font-display uppercase tracking-wider"
+            >
+              View voucher
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <div className="py-8">
+        <div className="container max-w-5xl">
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h1 className="font-display text-3xl font-bold uppercase text-foreground">My Account</h1>
+              <p className="text-sm text-muted-foreground">{user.email}</p>
+            </div>
+
+            <div className="flex gap-2">
+              {isAdmin && (
+                <Link to="/admin">
+                  <Button variant="outline" size="sm" className="font-display uppercase tracking-wider">
+                    <Shield className="mr-1 h-4 w-4" /> Admin
+                  </Button>
+                </Link>
+              )}
+              <Button variant="outline" size="sm" onClick={signOut} className="font-display uppercase tracking-wider">
+                <LogOut className="mr-1 h-4 w-4" /> Sign Out
+              </Button>
+            </div>
+          </div>
+
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <Card className="mb-8 border-primary/30 bg-primary/5">
+              <CardContent className="p-6">
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                    <Star className="h-7 w-7 text-primary" />
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-muted-foreground">Loyalty Points Balance</p>
+                    <p className="font-display text-3xl font-bold text-primary">{pointsBalance}</p>
+                    <p className="text-xs text-muted-foreground">1 point is earned for every 4 kr spent</p>
+                  </div>
+
+                  <div className="ml-auto grid min-w-[220px] gap-2 sm:grid-cols-2">
+                    <div className="rounded-xl border border-primary/20 bg-background/70 p-3">
+                      <p className="text-xs text-muted-foreground">Earned total</p>
+                      <p className="font-display text-xl font-bold text-foreground">{pointsEarned}</p>
+                    </div>
+                    <div className="rounded-xl border border-primary/20 bg-background/70 p-3">
+                      <p className="text-xs text-muted-foreground">Spent total</p>
+                      <p className="font-display text-xl font-bold text-foreground">{pointsSpent}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 border-t border-border pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowHistory((prev) => !prev)}
+                    className="flex w-full items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3 text-left transition hover:bg-background"
+                  >
+                    <div className="flex items-center gap-2">
+                      <History className="h-4 w-4 text-primary" />
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Recent points activity</p>
+                        <p className="text-xs text-muted-foreground">
+                          Press to show redeemed discounts and earned points
+                        </p>
+                      </div>
+                    </div>
+                    {showHistory ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
                     )}
+                  </button>
+
+                  {showHistory && (
+                    <div className="mt-3 space-y-2">
+                      {loyaltyHistory.length === 0 ? (
+                        <div className="rounded-xl border border-border bg-background/60 px-4 py-3 text-sm text-muted-foreground">
+                          No loyalty activity yet.
+                        </div>
+                      ) : (
+                        loyaltyHistory.slice(0, 8).map((row) => (
+                          <div
+                            key={row.id}
+                            className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3"
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-sm text-foreground">{row.reason || "Points update"}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(row.created_at).toLocaleString()}
+                              </p>
+                            </div>
+                            <div
+                              className={`font-display text-sm font-bold ${row.points >= 0 ? "text-green-600" : "text-destructive"}`}
+                            >
+                              {row.points >= 0 ? `+${row.points}` : row.points}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <div className="mb-6 flex flex-wrap gap-2">
+            {[
+              { key: "orders" as const, label: "Orders", icon: Package, hasDot: hasNewOrders },
+              {
+                key: "custom-requests" as const,
+                label: "Custom Requests",
+                icon: MessageSquare,
+                hasDot: hasNewCustomRequests,
+              },
+              { key: "rewards" as const, label: "Rewards Store", icon: Gift, hasDot: false },
+              { key: "vouchers" as const, label: "My Vouchers", icon: Star, hasDot: false },
+            ].map(({ key, label, icon: Icon, hasDot }) => (
+              <Button
+                key={key}
+                variant={tab === key ? "default" : "outline"}
+                size="sm"
+                onClick={() => setTab(key)}
+                className="relative font-display uppercase tracking-wider"
+              >
+                <Icon className="mr-1 h-4 w-4" />
+                {label}
+                {hasDot && <span className="ml-2 h-2.5 w-2.5 rounded-full bg-red-500" />}
+              </Button>
+            ))}
+          </div>
+
+          {tab === "orders" && (
+            <>
+              {orders.length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center text-muted-foreground">
+                    No orders yet.{" "}
+                    <Link to="/products" className="text-primary hover:underline">
+                      Start shopping!
+                    </Link>
                   </CardContent>
                 </Card>
-              ))
-            )}
-          </div>
-        )}
+              ) : (
+                <div className="space-y-3">
+                  {orders.map((order) => {
+                    const isNewOrder = isAfter(order.created_at, seenState.ordersLastSeenAt);
+                    return (
+                      <Card key={order.id} className="transition-all hover:border-primary hover:shadow-sm">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <Link to={`/orders/${order.id}`} className="flex flex-1 items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-display text-sm font-semibold uppercase text-card-foreground">
+                                      Order #{order.id.slice(0, 8)}
+                                    </p>
+                                    {isNewOrder && <span className="h-2.5 w-2.5 rounded-full bg-red-500" />}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">
+                                    {new Date(order.created_at).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <div className="text-right">
+                                  <p className="font-display text-lg font-bold text-primary">
+                                    {Number(order.total).toFixed(2)} kr
+                                  </p>
+                                  <p
+                                    className={`font-display text-xs uppercase ${statusColors[order.status] || "text-muted-foreground"}`}
+                                  >
+                                    {order.status}
+                                  </p>
+                                </div>
+                                <Eye className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                            </Link>
+                          </div>
+
+                          {order.status === "delivered" &&
+                            (order.tool_type === "custom-print" || order.tool_type === "lithophane") && (
+                              <div className="mt-4 border-t border-border pt-4">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setReviewingOrderId(reviewingOrderId === order.id ? null : order.id)}
+                                  className="font-display uppercase tracking-wider"
+                                >
+                                  {reviewingOrderId === order.id ? "Close Review" : "Leave Review"}
+                                </Button>
+                                {reviewingOrderId === order.id && (
+                                  <ToolReviewForm
+                                    toolType={order.tool_type}
+                                    orderId={order.id}
+                                    onSubmitted={() => setReviewingOrderId(null)}
+                                  />
+                                )}
+                              </div>
+                            )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          {tab === "custom-requests" && (
+            <>
+              {parsedCustomOrders.length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center text-muted-foreground">
+                    No custom requests yet.{" "}
+                    <Link to="/create" className="text-primary hover:underline">
+                      Submit your first custom 3D print request.
+                    </Link>
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant={customRequestTab === "ongoing" ? "default" : "outline"}
+                      onClick={() => setCustomRequestTab("ongoing")}
+                      className="font-display uppercase tracking-wider"
+                    >
+                      <Inbox className="mr-1 h-4 w-4" /> Ongoing
+                      <Badge variant="secondary" className="ml-2">
+                        {ongoingCustomOrders.length}
+                      </Badge>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={customRequestTab === "done" ? "default" : "outline"}
+                      onClick={() => setCustomRequestTab("done")}
+                      className="font-display uppercase tracking-wider"
+                    >
+                      <Archive className="mr-1 h-4 w-4" /> Done
+                      <Badge variant="secondary" className="ml-2">
+                        {doneCustomOrders.length}
+                      </Badge>
+                    </Button>
+                  </div>
+
+                  {customRequestTab === "ongoing"
+                    ? renderCustomOrderList(ongoingCustomOrders)
+                    : renderCustomOrderList(doneCustomOrders)}
+                </>
+              )}
+            </>
+          )}
+
+          {tab === "rewards" && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {REWARD_CATALOG.map((reward) => {
+                const matchedVoucher = findMatchingVoucher(reward, vouchers);
+                const canRedeem = !!matchedVoucher && pointsBalance >= reward.pointsCost;
+
+                return (
+                  <motion.div
+                    key={reward.key}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Card className="h-full">
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="font-display text-lg uppercase">{reward.name}</CardTitle>
+                          {reward.badge && (
+                            <Badge variant="outline" className="font-display text-xs">
+                              {reward.badge === "Shipping" ? <Truck className="mr-1 h-3 w-3" /> : null}
+                              {reward.badge}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{reward.description}</p>
+                      </CardHeader>
+
+                      <CardContent className="space-y-4">
+                        <div className="flex items-end justify-between gap-4">
+                          <div>
+                            {reward.discountType === "free_shipping" ? (
+                              <>
+                                <span className="font-display text-2xl font-bold text-primary">Free delivery</span>
+                                <span className="ml-1 text-sm text-muted-foreground">discount</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="font-display text-2xl font-bold text-primary">
+                                  {reward.discountValue} kr
+                                </span>
+                                <span className="ml-1 text-sm text-muted-foreground">
+                                  {reward.discountType === "gift_card" ? "gift card" : "discount"}
+                                </span>
+                              </>
+                            )}
+                          </div>
+
+                          <Button
+                            size="sm"
+                            onClick={() => matchedVoucher && redeemVoucher(matchedVoucher, reward.pointsCost)}
+                            disabled={!canRedeem || redeemingKey === matchedVoucher?.id}
+                            className="font-display uppercase tracking-wider"
+                          >
+                            <Star className="mr-1 h-3 w-3" />
+                            {redeemingKey === matchedVoucher?.id ? "Redeeming..." : `${reward.pointsCost} pts`}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+
+          {tab === "vouchers" && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant={voucherTab === "active" ? "default" : "outline"}
+                  onClick={() => setVoucherTab("active")}
+                  className="font-display uppercase tracking-wider"
+                >
+                  <Inbox className="mr-1 h-4 w-4" /> Active
+                  <Badge variant="secondary" className="ml-2">
+                    {activeUserVouchers.length}
+                  </Badge>
+                </Button>
+                <Button
+                  size="sm"
+                  variant={voucherTab === "used" ? "default" : "outline"}
+                  onClick={() => setVoucherTab("used")}
+                  className="font-display uppercase tracking-wider"
+                >
+                  <Archive className="mr-1 h-4 w-4" /> Used
+                  <Badge variant="secondary" className="ml-2">
+                    {usedUserVouchers.length}
+                  </Badge>
+                </Button>
+              </div>
+
+              {(voucherTab === "active" ? activeUserVouchers : usedUserVouchers).length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center text-muted-foreground">
+                    {voucherTab === "active" ? "No active vouchers available." : "No used vouchers yet."}
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  {(voucherTab === "active" ? activeUserVouchers : usedUserVouchers).map((uv) => {
+                    const isUsed = isVoucherUsed(uv);
+                    return (
+                      <Card key={uv.id}>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-display text-sm font-semibold uppercase text-card-foreground">
+                                  {uv.vouchers?.name ?? "Voucher"}
+                                </p>
+                                {uv.vouchers?.discount_type === "gift_card" && (
+                                  <Badge variant="outline" className="text-xs">
+                                    Gift Card
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="font-mono text-lg font-bold text-primary">{uv.code}</p>
+                              {uv.balance !== null && (
+                                <p className="text-sm text-muted-foreground">
+                                  Balance:{" "}
+                                  <span className="font-bold text-foreground">{Number(uv.balance).toFixed(2)} kr</span>
+                                </p>
+                              )}
+                              {uv.recipient_email && (
+                                <p className="text-xs text-muted-foreground">
+                                  Sent to:{" "}
+                                  {uv.recipient_name
+                                    ? `${uv.recipient_name} (${uv.recipient_email})`
+                                    : uv.recipient_email}
+                                </p>
+                              )}
+                              <p className="text-xs text-muted-foreground">
+                                Redeemed: {new Date(uv.redeemed_at).toLocaleString()}
+                              </p>
+                              {uv.used_at && (
+                                <p className="text-xs text-muted-foreground">
+                                  Used: {new Date(uv.used_at).toLocaleString()}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              {voucherTab === "active" &&
+                                uv.vouchers?.discount_type === "gift_card" &&
+                                !uv.recipient_email &&
+                                !uv.is_used && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setGiftingVoucherId(giftingVoucherId === uv.id ? null : uv.id)}
+                                    className="font-display text-xs uppercase tracking-wider"
+                                  >
+                                    <Send className="mr-1 h-3 w-3" /> Gift
+                                  </Button>
+                                )}
+                              <Badge variant={isUsed ? "secondary" : "default"}>{isUsed ? "Used" : "Active"}</Badge>
+                            </div>
+                          </div>
+
+                          {voucherTab === "active" && giftingVoucherId === uv.id && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              className="mt-4 space-y-3 border-t border-border pt-4"
+                            >
+                              <p className="text-sm text-muted-foreground">Send this gift card to someone:</p>
+                              <input
+                                placeholder="Recipient email"
+                                value={giftEmail}
+                                onChange={(e) => setGiftEmail(e.target.value)}
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                              />
+                              <input
+                                placeholder="Recipient name (optional)"
+                                value={giftName}
+                                onChange={(e) => setGiftName(e.target.value)}
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                              />
+                              <Button
+                                size="sm"
+                                onClick={() => sendGiftCard(uv.id)}
+                                className="font-display uppercase tracking-wider"
+                              >
+                                <Send className="mr-1 h-3 w-3" /> Send Gift Card
+                              </Button>
+                            </motion.div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

@@ -206,16 +206,10 @@ function isCustomOrderDone(order: CustomOrder) {
 
 function isVoucherUsedOrArchived(voucher: UserVoucher) {
   const remainingBalance = voucher.balance !== null ? Number(voucher.balance) : null;
-  const giftStatus = (voucher.gift_status || "").toLowerCase();
-
   return (
     voucher.is_used ||
     !!voucher.used_at ||
     !!voucher.recipient_email ||
-    !!voucher.gifted_at ||
-    giftStatus === "gifted" ||
-    giftStatus === "used" ||
-    giftStatus === "claimed" ||
     (remainingBalance !== null && remainingBalance <= 0)
   );
 }

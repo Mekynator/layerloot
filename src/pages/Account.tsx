@@ -190,14 +190,21 @@ const REWARD_CATALOG: RewardCatalogItem[] = [
   },
 ];
 
-function parseCustomOrderDescription(description: string) {
+function parseCustomOrderDescription(description: string): {
+  customerDescription: string;
+  material: string;
+  color: string;
+  quality: string;
+  quantity: string;
+  scale: string;
+} {
   const raw = description || "";
   const marker = "\n--- Options ---";
   const parts = raw.split(marker);
   const customerDescription = (parts[0] || "").trim();
   const optionsText = (parts[1] || "").trim();
 
-  const parsed: Record<string, string> = {
+  const parsed = {
     material: "-",
     color: "-",
     quality: "-",

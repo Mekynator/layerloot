@@ -54,8 +54,6 @@ interface UserVoucher {
   redeemed_at: string;
   recipient_email: string | null;
   recipient_name?: string | null;
-  gifted_at?: string | null;
-  gift_status?: string | null;
   used_at?: string | null;
   vouchers: { name: string; discount_value: number; discount_type: string } | null;
 }
@@ -208,16 +206,10 @@ function isCustomOrderDone(order: CustomOrder) {
 
 function isVoucherUsedOrArchived(voucher: UserVoucher) {
   const remainingBalance = voucher.balance !== null ? Number(voucher.balance) : null;
-  const giftStatus = (voucher.gift_status || "").toLowerCase();
-
   return (
     voucher.is_used ||
     !!voucher.used_at ||
     !!voucher.recipient_email ||
-    !!voucher.gifted_at ||
-    giftStatus === "gifted" ||
-    giftStatus === "used" ||
-    giftStatus === "claimed" ||
     (remainingBalance !== null && remainingBalance <= 0)
   );
 }
@@ -229,7 +221,7 @@ function parseCustomOrderDescription(description: string) {
   const customerDescription = (parts[0] || "").trim();
   const optionsText = (parts[1] || "").trim();
 
-  const parsed: Record<string, string> = {
+  const parsed = {
     material: "-",
     color: "-",
     quality: "-",
@@ -372,7 +364,7 @@ const Account = () => {
       supabase
         .from("user_vouchers")
         .select(
-          "id, code, is_used, balance, redeemed_at, recipient_email, recipient_name, gifted_at, gift_status, used_at, vouchers(name, discount_value, discount_type)",
+          "id, code, is_used, balance, redeemed_at, recipient_email, recipient_name, used_at, vouchers(name, discount_value, discount_type)",
         )
         .eq("user_id", user.id)
         .order("redeemed_at", { ascending: false }),
@@ -1251,8 +1243,7 @@ const Account = () => {
               </Card>
             ) : (
               (voucherView === "active" ? activeVouchers : usedVouchers).map((uv) => {
-                const isGifted =
-                  !!uv.recipient_email || !!uv.gifted_at || (uv.gift_status || "").toLowerCase() === "gifted";
+                const isGifted = !!uv.recipient_email;
                 const isUsed = uv.is_used || !!uv.used_at || (uv.balance !== null && Number(uv.balance) <= 0);
 
                 return (
@@ -1285,11 +1276,6 @@ const Account = () => {
                           <p className="text-xs text-muted-foreground">
                             Redeemed: {new Date(uv.redeemed_at).toLocaleString()}
                           </p>
-                          {uv.gifted_at && (
-                            <p className="text-xs text-muted-foreground">
-                              Gifted: {new Date(uv.gifted_at).toLocaleString()}
-                            </p>
-                          )}
                           {uv.used_at && (
                             <p className="text-xs text-muted-foreground">
                               Used: {new Date(uv.used_at).toLocaleString()}

@@ -181,7 +181,7 @@ async function tryOrders(userId: string) {
 async function tryProductViews(userId: string) {
   try {
     const { data, error } = await serviceSupabase
-      .from("product_views")
+      .from("products_views")
       .select(
         `
         viewed_at,
@@ -204,9 +204,9 @@ async function tryProductViews(userId: string) {
     return {
       ok: true,
       error: null,
-      data: data?.product
+      data: data?.products
         ? {
-            ...(data.product as Record<string, unknown>),
+            ...(data.products as Record<string, unknown>),
             viewed_at: data.viewed_at,
           }
         : null,
@@ -214,7 +214,7 @@ async function tryProductViews(userId: string) {
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Unknown product_views crash",
+      error: error instanceof Error ? error.message : "Unknown products_views crash",
       data: null,
     };
   }
@@ -239,7 +239,7 @@ async function tryRecommendedProducts(excludeId?: string | null) {
         usedActiveFilter: true,
         data: (activeData ?? []).map((row: any) => ({
           ...row,
-          url: row.slug ? `/product/${row.slug}` : "/product",
+          url: row.slug ? `/products/${row.slug}` : "/products",
         })),
       };
     }
@@ -265,7 +265,7 @@ async function tryRecommendedProducts(excludeId?: string | null) {
       usedActiveFilter: false,
       data: (fallbackData ?? []).map((row: any) => ({
         ...row,
-        url: row.slug ? `/product/${row.slug}` : "/product",
+        url: row.slug ? `/products/${row.slug}` : "/products",
       })),
     };
   } catch (error) {
@@ -323,7 +323,7 @@ serve(async (req) => {
     const profile = await tryProfile(user.id);
     const points = await tryPoints(user.id);
     const orders = await tryOrders(user.id);
-    const lastViewed = await tryProductViews(user.id);
+    const lastViewed = await tryProductViewsViews(user.id);
     const recommended = await tryRecommendedProducts((lastViewed.data as any)?.id as string | null);
 
     const context = {
@@ -414,7 +414,7 @@ serve(async (req) => {
             : "I could not build recommendations from the database right now, but the chat connection is working.",
           products: recommended.data,
           cart: context.cart,
-          links: [{ label: "Browse shop", url: "/product" }],
+          links: [{ label: "Browse shop", url: "/products" }],
           suggestions: ["Show my points", "Show my latest order"],
           context,
         },

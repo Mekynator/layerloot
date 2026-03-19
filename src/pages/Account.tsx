@@ -372,7 +372,7 @@ const Account = () => {
       supabase
         .from("user_vouchers")
         .select(
-          "id, code, is_used, balance, redeemed_at, recipient_email, recipient_name, gifted_at, gift_status, used_at, vouchers(name, discount_value, discount_type)",
+          "id, code, is_used, balance, redeemed_at, recipient_email, recipient_name, used_at, vouchers(name, discount_value, discount_type)",
         )
         .eq("user_id", user.id)
         .order("redeemed_at", { ascending: false }),

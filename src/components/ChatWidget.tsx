@@ -211,6 +211,68 @@ function getLastViewedProductSnapshot() {
   return safeJsonParse<Record<string, unknown> | null>(localStorage.getItem(LAST_VIEWED_KEY), null);
 }
 
+function DraggableSuggestions({ items, onPick }: { items: string[]; onPick: (value: string) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
+  const moved = useRef(false);
+  const startX = useRef(0);
+  const startScrollLeft = useRef(0);
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!ref.current) return;
+    dragging.current = true;
+    moved.current = false;
+    startX.current = e.clientX;
+    startScrollLeft.current = ref.current.scrollLeft;
+    ref.current.setPointerCapture?.(e.pointerId);
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragging.current || !ref.current) return;
+    const dx = e.clientX - startX.current;
+    if (Math.abs(dx) > 4) moved.current = true;
+    ref.current.scrollLeft = startScrollLeft.current - dx;
+  };
+
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    dragging.current = false;
+    ref.current?.releasePointerCapture?.(e.pointerId);
+  };
+
+  const onPointerLeave = () => {
+    dragging.current = false;
+  };
+
+  return (
+    <div
+      ref={ref}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      onPointerLeave={onPointerLeave}
+      className="no-scrollbar overflow-x-auto overflow-y-hidden cursor-grab active:cursor-grabbing select-none"
+      style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+    >
+      <div className="flex w-max gap-2 pr-4">
+        {items.map((item) => (
+          <button
+            key={item}
+            type="button"
+            onClick={() => {
+              if (moved.current) return;
+              onPick(item);
+            }}
+            className="whitespace-nowrap rounded-full border bg-background px-3 py-1.5 text-xs text-foreground transition hover:-translate-y-0.5 hover:bg-muted"
+          >
+            {item}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function AssistantExtras({
   payload,
   onSuggestionClick,
@@ -402,18 +464,7 @@ function AssistantExtras({
       ) : null}
 
       {payload.suggestions?.length ? (
-        <div className="flex flex-wrap gap-2">
-          {payload.suggestions.map((suggestion) => (
-            <button
-              key={suggestion}
-              type="button"
-              onClick={() => onSuggestionClick(suggestion)}
-              className="rounded-full border bg-background/80 px-3 py-1 text-[11px] text-muted-foreground transition hover:bg-background hover:text-foreground"
-            >
-              {suggestion}
-            </button>
-          ))}
-        </div>
+        <DraggableSuggestions items={payload.suggestions} onPick={onSuggestionClick} />
       ) : null}
     </div>
   );
@@ -618,78 +669,6 @@ const ChatWidget = () => {
             status: undefined,
           },
         });
-      } else if (resp.body) {
-        const reader = resp.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let assistantText = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-
-          let newlineIndex = buffer.indexOf("\n");
-          while (newlineIndex !== -1) {
-            let line = buffer.slice(0, newlineIndex);
-            buffer = buffer.slice(newlineIndex + 1);
-            if (line.endsWith("\r")) line = line.slice(0, -1);
-
-            if (!line.trim() || line.startsWith(":")) {
-              newlineIndex = buffer.indexOf("\n");
-              continue;
-            }
-
-            if (!line.startsWith("data: ")) {
-              newlineIndex = buffer.indexOf("\n");
-              continue;
-            }
-
-            const raw = line.slice(6).trim();
-            if (raw === "[DONE]") {
-              newlineIndex = buffer.indexOf("\n");
-              continue;
-            }
-
-            try {
-              const event = JSON.parse(raw);
-
-              if (event.type === "status") {
-                updateAssistant({ payload: { status: event.status } });
-              }
-
-              if (event.type === "delta") {
-                assistantText += event.content ?? "";
-                updateAssistant({
-                  content: assistantText,
-                  payload: { status: undefined },
-                });
-              }
-
-              if (event.type === "final") {
-                updateAssistant({
-                  content: event.payload?.text ?? assistantText,
-                  payload: {
-                    ...event.payload,
-                    status: undefined,
-                  },
-                });
-              }
-            } catch {
-              // ignore malformed event chunks
-            }
-
-            newlineIndex = buffer.indexOf("\n");
-          }
-        }
-
-        if (!assistantText) {
-          updateAssistant({
-            content: "I can chat, but I couldn’t access your account details right now.",
-            payload: { status: undefined },
-          });
-        }
       } else {
         updateAssistant({
           content: "I can chat, but I couldn’t access your account details right now.",
@@ -733,6 +712,8 @@ const ChatWidget = () => {
 
   return (
     <>
+      <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
+
       <AnimatePresence>
         {!open && showPromptBubble && (
           <motion.button
@@ -834,19 +815,9 @@ const ChatWidget = () => {
             </div>
 
             <div className="border-b border-border bg-muted/40 px-3 py-2.5">
-              <div className="mb-2 flex flex-wrap gap-2">
-                {starterSuggestions.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => send(s)}
-                    className="rounded-full border bg-background px-3 py-1.5 text-xs text-foreground transition hover:-translate-y-0.5 hover:bg-muted"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
+              <DraggableSuggestions items={starterSuggestions} onPick={send} />
 
-              <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+              <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                 <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1">
                   <Gift className="h-3 w-3" />
                   Points

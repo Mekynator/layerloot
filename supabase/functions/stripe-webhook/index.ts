@@ -20,6 +20,24 @@ serve(async (req) => {
     });
   }
 
+  async function addPointsForOrder(adminClient, userId, amountDKK, orderId) {
+    const points = Math.floor(amountDKK / 4);
+
+    if (points <= 0) return;
+
+    const { error } = await adminClient.from("loyalty_points").insert({
+      user_id: userId,
+      points: points,
+      reason: `Order reward (${orderId})`,
+    });
+
+    if (error) {
+      console.error("Failed to insert loyalty points:", error);
+    } else {
+      console.log(`Added ${points} points to user ${userId}`);
+    }
+  }
+
   try {
     const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
     const STRIPE_WEBHOOK_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET");

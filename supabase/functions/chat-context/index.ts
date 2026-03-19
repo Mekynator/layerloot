@@ -52,7 +52,7 @@ serve(async (req) => {
         .maybeSingle(),
 
       adminClient
-        .from("user_points")
+        .from("loyalty_points")
         .select("balance, earned_total, spent_total")
         .eq("user_id", userId)
         .maybeSingle(),
@@ -103,11 +103,11 @@ serve(async (req) => {
           "there",
         last_login_at: profile?.last_login_at ?? null,
       },
-      points: {
-        balance: points?.balance ?? 0,
-        earned_total: points?.earned_total ?? 0,
-        spent_total: points?.spent_total ?? 0,
-      },
+     points: {
+  balance,
+  earned_total,
+  spent_total
+}
       last_order: lastOrder
         ? {
             id: lastOrder.id,

@@ -1276,11 +1276,6 @@ const Account = () => {
                           <p className="text-xs text-muted-foreground">
                             Redeemed: {new Date(uv.redeemed_at).toLocaleString()}
                           </p>
-                          {uv.gifted_at && (
-                            <p className="text-xs text-muted-foreground">
-                              Gifted: {new Date(uv.gifted_at).toLocaleString()}
-                            </p>
-                          )}
                           {uv.used_at && (
                             <p className="text-xs text-muted-foreground">
                               Used: {new Date(uv.used_at).toLocaleString()}

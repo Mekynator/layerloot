@@ -216,7 +216,7 @@ function parseCustomOrderDescription(description: string) {
   const customerDescription = (parts[0] || "").trim();
   const optionsText = (parts[1] || "").trim();
 
-  const parsed: Record<string, string> = {
+  const parsed = {
     material: "-",
     color: "-",
     quality: "-",

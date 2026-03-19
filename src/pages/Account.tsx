@@ -13,6 +13,9 @@ import {
   CheckCircle2,
   XCircle,
   Truck,
+  ChevronDown,
+  ChevronUp,
+  History,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,6 +43,7 @@ interface Voucher {
   points_cost: number;
   discount_type: string;
   discount_value: number;
+  is_active?: boolean;
 }
 
 interface UserVoucher {
@@ -190,7 +194,6 @@ function parseCustomOrderDescription(description: string) {
   const raw = description || "";
   const marker = "\n--- Options ---";
   const parts = raw.split(marker);
-
   const customerDescription = (parts[0] || "").trim();
   const optionsText = (parts[1] || "").trim();
 
@@ -205,10 +208,8 @@ function parseCustomOrderDescription(description: string) {
   optionsText.split("\n").forEach((line) => {
     const [key, ...rest] = line.split(":");
     if (!key || rest.length === 0) return;
-
     const normalizedKey = key.trim().toLowerCase();
     const value = rest.join(":").trim();
-
     if (normalizedKey === "material") parsed.material = value;
     if (normalizedKey === "color") parsed.color = value;
     if (normalizedKey === "quality") parsed.quality = value;
@@ -216,28 +217,19 @@ function parseCustomOrderDescription(description: string) {
     if (normalizedKey === "scale") parsed.scale = value;
   });
 
-  return {
-    customerDescription,
-    material: parsed.material,
-    color: parsed.color,
-    quality: parsed.quality,
-    quantity: parsed.quantity,
-    scale: parsed.scale,
-  };
+  return { customerDescription, ...parsed };
 }
 
 function findMatchingVoucher(catalogItem: RewardCatalogItem, vouchers: Voucher[]) {
   return vouchers.find((voucher) => {
     if (catalogItem.discountType === "free_shipping") {
-      return (
-        voucher.discount_type === "free_shipping" ||
-        voucher.name.toLowerCase().includes("free delivery") ||
-        voucher.name.toLowerCase().includes("free shipping")
-      );
+      return voucher.discount_type === "free_shipping";
     }
 
     return (
-      voucher.discount_type === catalogItem.discountType && Number(voucher.discount_value) === catalogItem.discountValue
+      voucher.discount_type === catalogItem.discountType &&
+      Number(voucher.discount_value) === Number(catalogItem.discountValue) &&
+      Number(voucher.points_cost) === Number(catalogItem.pointsCost)
     );
   });
 }
@@ -286,7 +278,6 @@ function summarizeLoyalty(rows: LoyaltyPointRow[]) {
   const spent = Math.abs(
     rows.filter((row) => Number(row.points ?? 0) < 0).reduce((sum, row) => sum + Number(row.points ?? 0), 0),
   );
-
   return { balance, earned, spent };
 }
 
@@ -299,6 +290,7 @@ const Account = () => {
   const [pointsEarned, setPointsEarned] = useState(0);
   const [pointsSpent, setPointsSpent] = useState(0);
   const [loyaltyHistory, setLoyaltyHistory] = useState<LoyaltyPointRow[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [customOrders, setCustomOrders] = useState<CustomOrder[]>([]);
   const [customOrderMessages, setCustomOrderMessages] = useState<Record<string, CustomOrderMessage[]>>({});
@@ -309,10 +301,10 @@ const Account = () => {
   const [giftName, setGiftName] = useState("");
   const [giftingVoucherId, setGiftingVoucherId] = useState<string | null>(null);
   const [reviewingOrderId, setReviewingOrderId] = useState<string | null>(null);
-
   const [expandedCustomOrderId, setExpandedCustomOrderId] = useState<string | null>(null);
   const [replyMessage, setReplyMessage] = useState<Record<string, string>>({});
   const [sendingReply, setSendingReply] = useState(false);
+  const [redeemingKey, setRedeemingKey] = useState<string | null>(null);
   const [seenState, setSeenState] = useState<SeenState>({
     ordersLastSeenAt: null,
     customRequestsLastSeenAt: null,
@@ -342,7 +334,7 @@ const Account = () => {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false }),
       supabase.from("custom_orders").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("vouchers").select("*").eq("is_active", true),
+      supabase.from("vouchers").select("*").eq("is_active", true).order("points_cost", { ascending: true }),
       supabase
         .from("user_vouchers")
         .select(
@@ -355,6 +347,9 @@ const Account = () => {
     if (loyaltyRes.error) {
       toast({ title: "Points error", description: loyaltyRes.error.message, variant: "destructive" });
     }
+    if (vouchersRes.error) {
+      toast({ title: "Voucher error", description: vouchersRes.error.message, variant: "destructive" });
+    }
 
     const loyaltyRows = (loyaltyRes.data as LoyaltyPointRow[]) ?? [];
     const summary = summarizeLoyalty(loyaltyRows);
@@ -363,11 +358,8 @@ const Account = () => {
     setPointsBalance(summary.balance);
     setPointsEarned(summary.earned);
     setPointsSpent(summary.spent);
-
     setOrders((ordersRes.data as Order[]) ?? []);
-
-    const customOrdersData = (customOrdersRes.data as CustomOrder[]) ?? [];
-    setCustomOrders(customOrdersData);
+    setCustomOrders((customOrdersRes.data as CustomOrder[]) ?? []);
     setVouchers((vouchersRes.data as Voucher[]) ?? []);
 
     const activeUserVouchers = ((userVouchersRes.data as UserVoucher[]) ?? []).filter((uv) => {
@@ -376,6 +368,7 @@ const Account = () => {
     });
     setUserVouchers(activeUserVouchers);
 
+    const customOrdersData = (customOrdersRes.data as CustomOrder[]) ?? [];
     if (customOrdersData.length > 0) {
       const ids = customOrdersData.map((o) => o.id);
       const { data: msgData } = await supabase
@@ -399,23 +392,19 @@ const Account = () => {
     fetchAll();
   }, [user]);
 
-  const parsedCustomOrders = useMemo(() => {
-    return customOrders.map((order) => ({
-      ...order,
-      parsed: parseCustomOrderDescription(order.description),
-    }));
-  }, [customOrders]);
+  const parsedCustomOrders = useMemo(
+    () => customOrders.map((order) => ({ ...order, parsed: parseCustomOrderDescription(order.description) })),
+    [customOrders],
+  );
 
   const latestOrderActivityAt = useMemo(() => getLatestDate(orders.map((order) => order.created_at)), [orders]);
 
   const latestCustomActivityAt = useMemo(() => {
     const dates: (string | null)[] = [];
-
     customOrders.forEach((order) => {
       dates.push(order.created_at, order.updated_at);
       (customOrderMessages[order.id] || []).forEach((msg) => dates.push(msg.created_at));
     });
-
     return getLatestDate(dates);
   }, [customOrders, customOrderMessages]);
 
@@ -431,41 +420,34 @@ const Account = () => {
 
   const markTabAsSeen = (targetTab: AccountTab) => {
     if (!user) return;
-
     const next: SeenState = { ...seenState };
-
-    if (targetTab === "orders" && latestOrderActivityAt) {
-      next.ordersLastSeenAt = latestOrderActivityAt;
-    }
-
-    if (targetTab === "custom-requests" && latestCustomActivityAt) {
+    if (targetTab === "orders" && latestOrderActivityAt) next.ordersLastSeenAt = latestOrderActivityAt;
+    if (targetTab === "custom-requests" && latestCustomActivityAt)
       next.customRequestsLastSeenAt = latestCustomActivityAt;
-    }
-
     setSeenState(next);
     saveSeenState(user.id, next);
   };
 
   useEffect(() => {
     if (!user) return;
-    if (tab === "orders" && latestOrderActivityAt && hasNewOrders) {
-      markTabAsSeen("orders");
-    }
-    if (tab === "custom-requests" && latestCustomActivityAt && hasNewCustomRequests) {
-      markTabAsSeen("custom-requests");
-    }
+    if (tab === "orders" && latestOrderActivityAt && hasNewOrders) markTabAsSeen("orders");
+    if (tab === "custom-requests" && latestCustomActivityAt && hasNewCustomRequests) markTabAsSeen("custom-requests");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, user, latestOrderActivityAt, latestCustomActivityAt]);
 
   const redeemVoucher = async (voucher: Voucher, pointsCostOverride?: number) => {
     const pointsCost = pointsCostOverride ?? voucher.points_cost;
-
     if (!user) return;
 
     if (pointsBalance < pointsCost) {
       toast({ title: "Not enough points", variant: "destructive" });
       return;
     }
+
+    setRedeemingKey(voucher.id);
+
+    const code = `LL-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const isGiftCard = voucher.discount_type === "gift_card";
 
     const { error: pointsError } = await supabase.from("loyalty_points").insert({
       user_id: user.id,
@@ -474,12 +456,10 @@ const Account = () => {
     });
 
     if (pointsError) {
+      setRedeemingKey(null);
       toast({ title: "Error", description: pointsError.message, variant: "destructive" });
       return;
     }
-
-    const code = `LL-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    const isGiftCard = voucher.discount_type === "gift_card";
 
     const { error: voucherError } = await supabase.from("user_vouchers").insert({
       user_id: user.id,
@@ -489,11 +469,13 @@ const Account = () => {
     });
 
     if (voucherError) {
+      setRedeemingKey(null);
       toast({ title: "Error", description: voucherError.message, variant: "destructive" });
       return;
     }
 
-    toast({ title: "Voucher redeemed!", description: `Your code: ${code}` });
+    setRedeemingKey(null);
+    toast({ title: "Voucher redeemed", description: `Your code: ${code}` });
     fetchAll();
   };
 
@@ -513,7 +495,7 @@ const Account = () => {
       return;
     }
 
-    toast({ title: "Gift card details saved!", description: `Gift card will be sent to ${giftEmail}` });
+    toast({ title: "Gift card details saved", description: `Gift card will be sent to ${giftEmail}` });
     setGiftingVoucherId(null);
     setGiftEmail("");
     setGiftName("");
@@ -600,7 +582,6 @@ const Account = () => {
       order.updated_at,
       ...(customOrderMessages[order.id] || []).map((msg) => msg.created_at),
     ]);
-
     return isAfter(latestForOrder, seenAt);
   };
 
@@ -623,7 +604,6 @@ const Account = () => {
                 </Button>
               </Link>
             )}
-
             <Button variant="outline" size="sm" onClick={signOut} className="font-display uppercase tracking-wider">
               <LogOut className="mr-1 h-4 w-4" /> Sign Out
             </Button>
@@ -637,6 +617,7 @@ const Account = () => {
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
                   <Star className="h-7 w-7 text-primary" />
                 </div>
+
                 <div>
                   <p className="text-sm text-muted-foreground">Loyalty Points Balance</p>
                   <p className="font-display text-3xl font-bold text-primary">{pointsBalance}</p>
@@ -655,33 +636,55 @@ const Account = () => {
                 </div>
               </div>
 
-              {loyaltyHistory.length > 0 && (
-                <div className="mt-5 border-t border-border pt-4">
-                  <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Recent points activity
-                  </p>
-                  <div className="space-y-2">
-                    {loyaltyHistory.slice(0, 5).map((row) => (
-                      <div
-                        key={row.id}
-                        className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-3 py-2"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate text-sm text-foreground">{row.reason || "Points update"}</p>
-                          <p className="text-xs text-muted-foreground">{new Date(row.created_at).toLocaleString()}</p>
-                        </div>
-                        <div
-                          className={`font-display text-sm font-bold ${
-                            row.points >= 0 ? "text-green-600" : "text-destructive"
-                          }`}
-                        >
-                          {row.points >= 0 ? `+${row.points}` : row.points}
-                        </div>
-                      </div>
-                    ))}
+              <div className="mt-5 border-t border-border pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowHistory((prev) => !prev)}
+                  className="flex w-full items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3 text-left transition hover:bg-background"
+                >
+                  <div className="flex items-center gap-2">
+                    <History className="h-4 w-4 text-primary" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Recent points activity</p>
+                      <p className="text-xs text-muted-foreground">
+                        Press to show redeemed discounts and earned points
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
+                  {showHistory ? (
+                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </button>
+
+                {showHistory && (
+                  <div className="mt-3 space-y-2">
+                    {loyaltyHistory.length === 0 ? (
+                      <div className="rounded-xl border border-border bg-background/60 px-4 py-3 text-sm text-muted-foreground">
+                        No loyalty activity yet.
+                      </div>
+                    ) : (
+                      loyaltyHistory.slice(0, 8).map((row) => (
+                        <div
+                          key={row.id}
+                          className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm text-foreground">{row.reason || "Points update"}</p>
+                            <p className="text-xs text-muted-foreground">{new Date(row.created_at).toLocaleString()}</p>
+                          </div>
+                          <div
+                            className={`font-display text-sm font-bold ${row.points >= 0 ? "text-green-600" : "text-destructive"}`}
+                          >
+                            {row.points >= 0 ? `+${row.points}` : row.points}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </motion.div>
@@ -727,7 +730,6 @@ const Account = () => {
               <div className="space-y-3">
                 {orders.map((order) => {
                   const isNewOrder = isAfter(order.created_at, seenState.ordersLastSeenAt);
-
                   return (
                     <Card key={order.id} className="transition-all hover:border-primary hover:shadow-sm">
                       <CardContent className="p-4">
@@ -746,7 +748,6 @@ const Account = () => {
                                 </p>
                               </div>
                             </div>
-
                             <div className="flex items-center gap-4">
                               <div className="text-right">
                                 <p className="font-display text-lg font-bold text-primary">
@@ -774,7 +775,6 @@ const Account = () => {
                               >
                                 {reviewingOrderId === order.id ? "Close Review" : "Leave Review"}
                               </Button>
-
                               {reviewingOrderId === order.id && (
                                 <ToolReviewForm
                                   toolType={order.tool_type}
@@ -824,7 +824,6 @@ const Account = () => {
                               {hasUnreadForThisOrder && <span className="h-2.5 w-2.5 rounded-full bg-red-500" />}
                               {customStatusBadge(order.status)}
                             </div>
-
                             <p className="text-sm text-muted-foreground">
                               Submitted on {new Date(order.created_at).toLocaleString()}
                             </p>
@@ -886,7 +885,6 @@ const Account = () => {
                                     {order.admin_notes || "No admin notes yet."}
                                   </p>
                                 </div>
-
                                 <div className="rounded-md border border-border bg-muted/40 p-3">
                                   <Label className="text-xs text-muted-foreground">Current Negotiation State</Label>
                                   <div className="mt-2 space-y-1 text-sm">
@@ -921,7 +919,6 @@ const Account = () => {
                                     const isUnreadMessage =
                                       msg.sender_role === "admin" &&
                                       isAfter(msg.created_at, seenState.customRequestsLastSeenAt);
-
                                     return (
                                       <div
                                         key={msg.id}
@@ -976,7 +973,6 @@ const Account = () => {
                                       Quote Action Required
                                     </p>
                                   </div>
-
                                   <p className="mb-4 text-sm text-muted-foreground">
                                     Admin has quoted this request at{" "}
                                     <span className="font-semibold text-foreground">
@@ -984,7 +980,6 @@ const Account = () => {
                                     </span>
                                     . Please accept or decline the quote.
                                   </p>
-
                                   <div className="flex flex-wrap gap-2">
                                     <Button
                                       onClick={() => respondToQuote(order, true)}
@@ -993,7 +988,6 @@ const Account = () => {
                                       <CheckCircle2 className="mr-1 h-4 w-4" />
                                       Accept Quote
                                     </Button>
-
                                     <Button
                                       variant="outline"
                                       onClick={() => respondToQuote(order, false)}
@@ -1069,11 +1063,10 @@ const Account = () => {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <Card>
+                  <Card className="h-full">
                     <CardHeader className="pb-2">
                       <div className="flex items-center gap-2">
                         <CardTitle className="font-display text-lg uppercase">{reward.name}</CardTitle>
-
                         {reward.badge && (
                           <Badge variant="outline" className="font-display text-xs">
                             {reward.badge === "Shipping" ? <Truck className="mr-1 h-3 w-3" /> : null}
@@ -1081,44 +1074,53 @@ const Account = () => {
                           </Badge>
                         )}
                       </div>
-
                       <p className="text-sm text-muted-foreground">{reward.description}</p>
                     </CardHeader>
 
-                    <CardContent className="flex items-center justify-between">
-                      <div>
-                        {reward.discountType === "free_shipping" ? (
-                          <>
-                            <span className="font-display text-2xl font-bold text-primary">Free delivery</span>
-                            <span className="ml-1 text-sm text-muted-foreground">discount</span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="font-display text-2xl font-bold text-primary">
-                              {reward.discountValue} kr
-                            </span>
-                            <span className="ml-1 text-sm text-muted-foreground">
-                              {reward.discountType === "gift_card" ? "gift card" : "discount"}
-                            </span>
-                          </>
-                        )}
+                    <CardContent className="space-y-4">
+                      <div className="flex items-end justify-between gap-4">
+                        <div>
+                          {reward.discountType === "free_shipping" ? (
+                            <>
+                              <span className="font-display text-2xl font-bold text-primary">Free delivery</span>
+                              <span className="ml-1 text-sm text-muted-foreground">discount</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="font-display text-2xl font-bold text-primary">
+                                {reward.discountValue} kr
+                              </span>
+                              <span className="ml-1 text-sm text-muted-foreground">
+                                {reward.discountType === "gift_card" ? "gift card" : "discount"}
+                              </span>
+                            </>
+                          )}
+                        </div>
+
+                        <Button
+                          size="sm"
+                          onClick={() => matchedVoucher && redeemVoucher(matchedVoucher, reward.pointsCost)}
+                          disabled={!canRedeem || redeemingKey === matchedVoucher?.id}
+                          className="font-display uppercase tracking-wider"
+                        >
+                          <Star className="mr-1 h-3 w-3" />
+                          {redeemingKey === matchedVoucher?.id ? "Redeeming..." : `${reward.pointsCost} pts`}
+                        </Button>
                       </div>
 
-                      <Button
-                        size="sm"
-                        onClick={() => matchedVoucher && redeemVoucher(matchedVoucher, reward.pointsCost)}
-                        disabled={!canRedeem}
-                        className="font-display uppercase tracking-wider"
-                      >
-                        <Star className="mr-1 h-3 w-3" /> {reward.pointsCost} pts
-                      </Button>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">
+                          {matchedVoucher ? "Connected to voucher database" : "Reward not connected in database yet"}
+                        </span>
+                        <span className={canRedeem ? "font-medium text-green-600" : "text-muted-foreground"}>
+                          {canRedeem
+                            ? "Ready to redeem"
+                            : pointsBalance < reward.pointsCost
+                              ? "Not enough points"
+                              : "Unavailable"}
+                        </span>
+                      </div>
                     </CardContent>
-
-                    {!matchedVoucher && (
-                      <div className="px-6 pb-4 text-xs text-muted-foreground">
-                        Reward not connected in database yet
-                      </div>
-                    )}
                   </Card>
                 </motion.div>
               );
@@ -1150,16 +1152,13 @@ const Account = () => {
                             </Badge>
                           )}
                         </div>
-
                         <p className="font-mono text-lg font-bold text-primary">{uv.code}</p>
-
                         {uv.balance !== null && (
                           <p className="text-sm text-muted-foreground">
                             Balance:{" "}
                             <span className="font-bold text-foreground">{Number(uv.balance).toFixed(2)} kr</span>
                           </p>
                         )}
-
                         {uv.recipient_email && (
                           <p className="text-xs text-muted-foreground">Sent to: {uv.recipient_email}</p>
                         )}

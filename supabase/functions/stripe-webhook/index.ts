@@ -8,6 +8,46 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+type SupabaseAdminClient = ReturnType<typeof createClient>;
+
+async function addPointsForOrder(adminClient: SupabaseAdminClient, userId: string, amountDKK: number, orderId: string) {
+  const points = Math.floor(amountDKK / 4);
+
+  if (points <= 0) return;
+
+  const rewardReason = `Order reward (${orderId})`;
+
+  const { data: existingReward, error: existingError } = await adminClient
+    .from("loyalty_points")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("reason", rewardReason)
+    .maybeSingle();
+
+  if (existingError) {
+    console.error("Failed to check existing loyalty reward:", existingError);
+    throw existingError;
+  }
+
+  if (existingReward) {
+    console.log(`Points already granted for order ${orderId}`);
+    return;
+  }
+
+  const { error } = await adminClient.from("loyalty_points").insert({
+    user_id: userId,
+    points,
+    reason: rewardReason,
+  });
+
+  if (error) {
+    console.error("Failed to insert loyalty points:", error);
+    throw error;
+  }
+
+  console.log(`Added ${points} points to user ${userId} for order ${orderId}`);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -18,24 +58,6 @@ serve(async (req) => {
       status: 405,
       headers: corsHeaders,
     });
-  }
-
-  async function addPointsForOrder(adminClient, userId, amountDKK, orderId) {
-    const points = Math.floor(amountDKK / 4);
-
-    if (points <= 0) return;
-
-    const { error } = await adminClient.from("loyalty_points").insert({
-      user_id: userId,
-      points: points,
-      reason: `Order reward (${orderId})`,
-    });
-
-    if (error) {
-      console.error("Failed to insert loyalty points:", error);
-    } else {
-      console.log(`Added ${points} points to user ${userId}`);
-    }
   }
 
   try {
@@ -53,7 +75,12 @@ serve(async (req) => {
       apiVersion: "2025-02-24.acacia",
     });
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
 
     const signature = req.headers.get("stripe-signature");
     if (!signature) {
@@ -64,7 +91,6 @@ serve(async (req) => {
     }
 
     const body = await req.text();
-
     const event = await stripe.webhooks.constructEventAsync(body, signature, STRIPE_WEBHOOK_SECRET);
 
     switch (event.type) {
@@ -72,8 +98,13 @@ serve(async (req) => {
         const session = event.data.object as Stripe.Checkout.Session;
         const customOrderId = session.metadata?.custom_order_id;
         const paymentType = session.metadata?.payment_type;
+        const userId = session.metadata?.user_id;
+        const amountDKK = Number((session.amount_total ?? 0) / 100);
 
-        if (!customOrderId) break;
+        if (!customOrderId) {
+          console.log("checkout.session.completed without custom_order_id");
+          break;
+        }
 
         if (paymentType === "request_fee") {
           const { error } = await supabase
@@ -104,6 +135,13 @@ serve(async (req) => {
           .eq("id", customOrderId);
 
         if (error) throw error;
+
+        if (!userId) {
+          console.log(`Paid order ${customOrderId} has no user_id metadata. Skipping loyalty points.`);
+          break;
+        }
+
+        await addPointsForOrder(supabase, userId, amountDKK, customOrderId);
         break;
       }
 
@@ -182,6 +220,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
+    console.error("stripe-webhook error:", error);
+
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : "Unknown webhook error",

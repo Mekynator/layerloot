@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -239,7 +239,7 @@ async function tryRecommendedProducts(excludeId?: string | null) {
         usedActiveFilter: true,
         data: (activeData ?? []).map((row: any) => ({
           ...row,
-          url: row.slug ? `/product/${row.slug}` : "/shop",
+          url: row.slug ? `/product/${row.slug}` : "/product",
         })),
       };
     }
@@ -265,7 +265,7 @@ async function tryRecommendedProducts(excludeId?: string | null) {
       usedActiveFilter: false,
       data: (fallbackData ?? []).map((row: any) => ({
         ...row,
-        url: row.slug ? `/product/${row.slug}` : "/shop",
+        url: row.slug ? `/product/${row.slug}` : "/product",
       })),
     };
   } catch (error) {
@@ -414,7 +414,7 @@ serve(async (req) => {
             : "I could not build recommendations from the database right now, but the chat connection is working.",
           products: recommended.data,
           cart: context.cart,
-          links: [{ label: "Browse shop", url: "/shop" }],
+          links: [{ label: "Browse shop", url: "/product" }],
           suggestions: ["Show my points", "Show my latest order"],
           context,
         },

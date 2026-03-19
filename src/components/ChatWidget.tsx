@@ -164,7 +164,7 @@ function getPageSuggestions(pathname: string, loggedIn: boolean): string[] {
   if (pathname.startsWith("/products/") || pathname.startsWith("/product/")) {
     return ["Show similar items", "How long is delivery?", "Is this available painted?"];
   }
-  if (pathname.startsWith("/products") || pathname.startsWith("/shop")) {
+  if (pathname.startsWith("/products") || pathname.startsWith("/products")) {
     return ["Show best sellers", "Find gifts under 200 DKK", "Custom print help"];
   }
   if (pathname.startsWith("/cart")) {
@@ -343,7 +343,7 @@ function AssistantExtras({
 
       {context?.last_viewed_product?.name ? (
         <Link
-          to={context.last_viewed_product.slug ? `/product/${context.last_viewed_product.slug}` : "/shop"}
+          to={context.last_viewed_product.slug ? `/product/${context.last_viewed_product.slug}` : "/products"}
           className="block rounded-xl border bg-background/70 p-3 transition hover:bg-background"
         >
           <div className="flex items-center gap-2 text-sm font-medium">

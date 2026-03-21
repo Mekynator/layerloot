@@ -20,39 +20,52 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization") ?? "";
-    if (!authHeader.startsWith("Bearer ")) {
-      return jsonResponse({ error: "Unauthorized" }, 401);
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return jsonResponse({ error: "Missing or invalid Authorization header" }, 401);
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    const authClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+    const authClient = createClient(supabaseUrl, anonKey);
     const serviceClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    const {
-      data: { user },
-      error: userError,
-    } = await authClient.auth.getUser();
+    const jwt = authHeader.replace("Bearer ", "").trim();
+    let userId: string | null = null;
+    let userEmail = "";
 
-    if (userError || !user) {
-      return jsonResponse({ error: "Unauthorized" }, 401);
+    try {
+      const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(jwt);
+      if (!claimsError && claimsData?.claims?.sub) {
+        userId = claimsData.claims.sub;
+      }
+      if (!claimsError && typeof claimsData?.claims?.email === "string") {
+        userEmail = claimsData.claims.email;
+      }
+    } catch {
+      // fall back to getUser below
     }
 
-    const normalizedEmail = (user.email || "").trim();
+    if (!userId) {
+      const { data: userData, error: userError } = await authClient.auth.getUser(jwt);
+      if (userError || !userData?.user?.id) {
+        return jsonResponse({ error: "Invalid or expired JWT" }, 401);
+      }
+      userId = userData.user.id;
+      userEmail = userData.user.email || "";
+    }
+
+    const normalizedEmail = userEmail.trim();
 
     const [ownedOrdersRes, emailOrdersRes] = await Promise.all([
       serviceClient
         .from("custom_orders")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("request_fee_status", "paid")
         .order("created_at", { ascending: false }),
       normalizedEmail
@@ -72,6 +85,7 @@ serve(async (req) => {
     [...(ownedOrdersRes.data ?? []), ...(emailOrdersRes.data ?? [])].forEach((order) => {
       ordersMap.set(order.id, order);
     });
+
     const orders = Array.from(ordersMap.values()).sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     );

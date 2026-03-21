@@ -115,7 +115,7 @@ serve(async (req) => {
         user_id: userId,
         request_fee_amount: String(REQUEST_FEE_DKK),
       },
-      success_url: `${successBase}/account?requestFee=success&orderId=${order.id}`,
+      success_url: `${successBase}/account?requestFee=success&orderId=${order.id}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${successBase}/account?requestFee=cancel&orderId=${order.id}`,
     });
 

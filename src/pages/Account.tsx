@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import {
   Star,
   Package,
@@ -326,6 +326,7 @@ function groupVouchersByDefinition(vouchers: UserVoucher[]) {
 const Account = () => {
   const { user, isAdmin, signOut, loading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } = useAccountOverview(user?.id, user?.email);
 
@@ -356,6 +357,76 @@ const Account = () => {
     if (!user) return;
     setSeenState(readSeenState(user.id));
   }, [user]);
+
+  useEffect(() => {
+    const confirmReturnPayment = async () => {
+      if (!user) return;
+
+      const requestFeeStatus = searchParams.get("requestFee");
+      const customPaymentSuccess = searchParams.get("custom_payment_success");
+      const orderId = searchParams.get("orderId") || searchParams.get("order_id");
+      const sessionId = searchParams.get("session_id");
+
+      const shouldConfirmRequestFee = requestFeeStatus === "success" && !!orderId;
+      const shouldConfirmFinalPayment = customPaymentSuccess === "1" && !!orderId;
+
+      if (!shouldConfirmRequestFee && !shouldConfirmFinalPayment) return;
+
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        const { error } = await supabase.functions.invoke("confirm-custom-order-payment", {
+          body: {
+            orderId,
+            sessionId,
+            paymentKind: shouldConfirmFinalPayment ? "final" : "request_fee",
+          },
+          headers: session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : undefined,
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        await refetchOverview();
+
+        if (shouldConfirmRequestFee) {
+          toast({
+            title: "Request received",
+            description: "Your custom request is now visible in your account and has been sent to admin.",
+          });
+        }
+
+        if (shouldConfirmFinalPayment) {
+          toast({
+            title: "Payment received",
+            description: "Your custom order payment was confirmed.",
+          });
+        }
+      } catch (error: any) {
+        toast({
+          title: "Payment confirmation pending",
+          description: error?.message || "We could not confirm the Stripe payment yet. Refresh the page in a moment.",
+          variant: "destructive",
+        });
+      } finally {
+        const next = new URLSearchParams(searchParams);
+        next.delete("requestFee");
+        next.delete("orderId");
+        next.delete("custom_payment_success");
+        next.delete("custom_payment_cancelled");
+        next.delete("order_id");
+        next.delete("session_id");
+        setSearchParams(next, { replace: true });
+      }
+    };
+
+    void confirmReturnPayment();
+  }, [user?.id, searchParams, setSearchParams, refetchOverview, toast]);
 
   const pointsBalance = overview?.pointsBalance ?? 0;
   const pointsEarned = overview?.pointsEarned ?? 0;

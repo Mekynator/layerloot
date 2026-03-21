@@ -12,8 +12,8 @@ type DynamicPageProps = {
 
 const DynamicPage = ({
   slug: slugProp,
-  emptyTitle = "Page is empty",
-  emptyDescription = "Add blocks from the page editor to publish this page.",
+  emptyTitle = "Coming soon",
+  emptyDescription = "Content coming soon.",
 }: DynamicPageProps) => {
   const params = useParams();
   const slug = slugProp ?? params.slug ?? "";

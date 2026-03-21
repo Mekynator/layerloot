@@ -906,11 +906,6 @@ const CreateYourOwn = () => {
       <section className="py-8 lg:py-12">
         <div className="container max-w-5xl">
           <motion.div {...fadeUp}>
-            <div className="mb-2 flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              <span className="font-display text-sm uppercase tracking-widest text-primary">Design Studio</span>
-            </div>
-
             <h1 className="mb-2 font-display text-3xl font-bold uppercase text-foreground lg:text-5xl">
               Create Your <span className="text-primary">Own</span>
             </h1>

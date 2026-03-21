@@ -6,8 +6,8 @@ const Index = () => {
     <>
       <DynamicPage
         slug="home"
-        emptyTitle="Home page is empty"
-        emptyDescription="Add hero banners, categories, featured products, and other sections from the page editor."
+        emptyTitle="Home"
+        emptyDescription="New arrivals and featured pieces are on the way."
       />
       <HomeSocialProof />
     </>

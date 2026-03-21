@@ -51,6 +51,8 @@ interface Voucher {
 
 interface UserVoucher {
   id: string;
+  user_id: string;
+  voucher_id: string;
   code: string;
   is_used: boolean;
   balance: number | null;
@@ -200,12 +202,16 @@ function isCustomOrderDone(order: CustomOrder) {
   );
 }
 
-function isVoucherUsedOrArchived(voucher: UserVoucher) {
+function isVoucherUsedOrArchived(voucher: UserVoucher, currentUserId: string, currentUserEmail?: string | null) {
   const remainingBalance = voucher.balance !== null ? Number(voucher.balance) : null;
+  const normalizedEmail = (currentUserEmail || "").trim().toLowerCase();
+  const recipientEmail = (voucher.recipient_email || "").trim().toLowerCase();
+  const giftedAway = Boolean(recipientEmail) && voucher.user_id === currentUserId && recipientEmail !== normalizedEmail;
+
   return (
     voucher.is_used ||
     !!voucher.used_at ||
-    !!voucher.recipient_email ||
+    giftedAway ||
     (remainingBalance !== null && remainingBalance <= 0)
   );
 }
@@ -294,7 +300,7 @@ const Account = () => {
   const { user, isAdmin, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } = useAccountOverview(user?.id);
+  const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } = useAccountOverview(user?.id, user?.email);
 
   const [showHistory, setShowHistory] = useState(false);
   const [tab, setTab] = useState<AccountTab>("orders");
@@ -354,14 +360,23 @@ const Account = () => {
   );
 
   const activeVouchers = useMemo(
-    () => userVouchers.filter((voucher) => !isVoucherUsedOrArchived(voucher)),
-    [userVouchers],
+    () => userVouchers.filter((voucher) => user && !isVoucherUsedOrArchived(voucher, user.id, user.email)),
+    [user, userVouchers],
   );
 
   const usedVouchers = useMemo(
-    () => userVouchers.filter((voucher) => isVoucherUsedOrArchived(voucher)),
-    [userVouchers],
+    () => userVouchers.filter((voucher) => !user || isVoucherUsedOrArchived(voucher, user.id, user.email)),
+    [user, userVouchers],
   );
+
+  const voucherCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    userVouchers.forEach((voucher) => {
+      const key = voucher.voucher_id || voucher.vouchers?.name || voucher.id;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    return counts;
+  }, [userVouchers]);
 
   const latestOrderActivityAt = useMemo(() => getLatestDate(orders.map((order) => order.created_at)), [orders]);
 
@@ -1220,8 +1235,11 @@ const Account = () => {
               </Card>
             ) : (
               (voucherView === "active" ? activeVouchers : usedVouchers).map((uv) => {
-                const isGifted = !!uv.recipient_email;
+                const recipientEmail = (uv.recipient_email || "").trim().toLowerCase();
+                const isReceived = recipientEmail !== "" && recipientEmail === (user?.email || "").trim().toLowerCase();
+                const isGifted = !!uv.recipient_email && !isReceived;
                 const isUsed = uv.is_used || !!uv.used_at || (uv.balance !== null && Number(uv.balance) <= 0);
+                const duplicateCount = voucherCounts.get(uv.voucher_id || uv.vouchers?.name || uv.id) || 0;
 
                 return (
                   <Card key={uv.id}>
@@ -1231,6 +1249,7 @@ const Account = () => {
                           <div className="flex items-center gap-2">
                             <p className="font-display text-sm font-semibold uppercase text-card-foreground">
                               {uv.vouchers?.name ?? "Voucher"}
+                              {duplicateCount > 1 ? <span className="ml-2 text-xs text-muted-foreground">(x{duplicateCount})</span> : null}
                             </p>
                             {uv.vouchers?.discount_type === "gift_card" && (
                               <Badge variant="outline" className="text-xs">
@@ -1245,11 +1264,14 @@ const Account = () => {
                               <span className="font-bold text-foreground">{Number(uv.balance).toFixed(2)} kr</span>
                             </p>
                           )}
-                          {uv.recipient_email && (
+                          {isGifted && uv.recipient_email ? (
                             <p className="text-xs text-muted-foreground">
                               Sent to: {uv.recipient_name ? `${uv.recipient_name} ` : ""}({uv.recipient_email})
                             </p>
-                          )}
+                          ) : null}
+                          {isReceived ? (
+                            <p className="text-xs text-muted-foreground">Received gift card</p>
+                          ) : null}
                           <p className="text-xs text-muted-foreground">
                             Redeemed: {new Date(uv.redeemed_at).toLocaleString()}
                           </p>
@@ -1264,6 +1286,7 @@ const Account = () => {
                           {voucherView === "active" &&
                             uv.vouchers?.discount_type === "gift_card" &&
                             !uv.recipient_email &&
+                            uv.user_id === user?.id &&
                             !uv.is_used && (
                               <Button
                                 variant="outline"

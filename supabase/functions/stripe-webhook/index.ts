@@ -2,6 +2,23 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "npm:stripe@14.25.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+async function markVoucherUsed(supabase: ReturnType<typeof createClient>, userVoucherId: string, voucherType: string | undefined) {
+  const updates: Record<string, string | boolean | number | null> = {
+    is_used: true,
+    used_at: new Date().toISOString(),
+  };
+
+  if (voucherType === "gift_card") {
+    updates.balance = 0;
+  }
+
+  await supabase
+    .from("user_vouchers")
+    .update(updates)
+    .eq("id", userVoucherId)
+    .eq("is_used", false);
+}
+
 serve(async (req) => {
   try {
     if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
@@ -30,6 +47,9 @@ serve(async (req) => {
       const session = event.data.object as Stripe.Checkout.Session;
       const type = session.metadata?.type;
       const orderId = session.metadata?.order_id;
+      const source = session.metadata?.source;
+      const userVoucherId = session.metadata?.user_voucher_id;
+      const voucherType = session.metadata?.voucher_type;
 
       if (type === "request_fee" && orderId) {
         await supabase
@@ -37,10 +57,14 @@ serve(async (req) => {
           .update({
             request_fee_status: "paid",
             request_fee_paid_at: new Date().toISOString(),
-            status: "pending_review", // ONLY now visible to admin review
+            status: "pending_review",
             stripe_payment_intent_id: String(session.payment_intent ?? ""),
           })
           .eq("id", orderId);
+      }
+
+      if (source === "cart" && userVoucherId) {
+        await markVoucherUsed(supabase, userVoucherId, voucherType);
       }
     }
 

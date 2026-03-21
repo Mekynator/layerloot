@@ -590,7 +590,7 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
       <div className="container text-center">
         <h2 className="font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">{c.heading || "Shop by Category"}</h2>
         <p className="mt-2 text-muted-foreground">{c.subheading || "Find exactly what you need"}</p>
-        <p className="mt-8 text-sm italic text-muted-foreground">No categories yet — add some in the admin panel.</p>
+        <p className="mt-8 text-sm italic text-muted-foreground">No categories available.</p>
       </div>,
     );
   }
@@ -637,7 +637,7 @@ const FeaturedProductsBlock = ({ block }: { block: SiteBlock; disableAnimations?
       <div className="container text-center">
         <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{c.heading || "Best Sellers"}</h2>
         <p className="mt-2 text-muted-foreground">{c.subheading || "Our most popular 3D printed items"}</p>
-        <p className="mt-8 text-sm italic text-muted-foreground">No featured products yet — mark products as featured in the admin panel.</p>
+        <p className="mt-8 text-sm italic text-muted-foreground">No featured products available.</p>
       </div>,
     );
   }

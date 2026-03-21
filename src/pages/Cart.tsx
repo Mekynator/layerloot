@@ -38,7 +38,7 @@ export default function CartPage() {
   const { items, removeItem, updateQuantity, totalPrice, addItem } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { data: accountData, isLoading: accountLoading } = useCartAccountData(user?.id);
+  const { data: accountData, isLoading: accountLoading } = useCartAccountData(user?.id, user?.email);
 
   type CartItemExt = (typeof items)[number] & {
     material?: string;
@@ -131,6 +131,15 @@ export default function CartPage() {
 
   const handleCheckout = async () => {
     try {
+      if (!user && (selectedDiscountCode || manualDiscountCode.trim())) {
+        toast({
+          title: "Sign in required",
+          description: "Sign in to use a voucher or gift card.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setIsCheckingOut(true);
 
       const {

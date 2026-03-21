@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, SlidersHorizontal, Sparkles } from "lucide-react";
+import { Search, SlidersHorizontal } from "lucide-react";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import ProductCard from "@/components/ProductCard";
@@ -49,9 +49,6 @@ const Products = () => {
       <section className="py-8 md:py-10">
         <div className="container space-y-8">
           <div className="flex flex-col gap-3">
-            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-primary">
-              <Sparkles className="h-3.5 w-3.5" /> Curated catalog
-            </div>
             <div className="space-y-2">
               <h1 className="font-display text-4xl font-bold uppercase text-foreground">Products</h1>
               <p className="max-w-2xl text-balance text-muted-foreground">
@@ -128,11 +125,7 @@ const Products = () => {
                       className="h-11 rounded-xl border-border/70 bg-background/80 pl-10"
                     />
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                    <span>{filtered.length} products</span>
-                    <span className="hidden h-1 w-1 rounded-full bg-muted-foreground md:block" />
-                    <span className="hidden md:block">Social proof enabled</span>
-                  </div>
+                  <div className="text-sm text-muted-foreground">{filtered.length} products</div>
                 </div>
               </div>
 

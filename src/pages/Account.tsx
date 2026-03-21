@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import ToolReviewForm from "@/components/reviews/ToolReviewForm";
+import { payCustomOrder } from "@/lib/payCustomOrder";
 
 interface Order {
   id: string;
@@ -330,6 +331,7 @@ const Account = () => {
   const [expandedCustomOrderId, setExpandedCustomOrderId] = useState<string | null>(null);
   const [replyMessage, setReplyMessage] = useState<Record<string, string>>({});
   const [sendingReply, setSendingReply] = useState(false);
+  const [processingCustomPaymentOrderId, setProcessingCustomPaymentOrderId] = useState<string | null>(null);
   const [redeemingKey, setRedeemingKey] = useState<string | null>(null);
   const [seenState, setSeenState] = useState<SeenState>({
     ordersLastSeenAt: null,
@@ -626,9 +628,26 @@ const Account = () => {
       proposed_price: accepted ? order.quoted_price : null,
     });
 
+    if (accepted) {
+      try {
+        setProcessingCustomPaymentOrderId(order.id);
+        await payCustomOrder(order.id);
+      } catch (paymentError: any) {
+        toast({
+          title: "Quote accepted, payment not started",
+          description: paymentError?.message || "Please click Pay Now to complete payment.",
+          variant: "destructive",
+        });
+        await fetchAll();
+      } finally {
+        setProcessingCustomPaymentOrderId(null);
+      }
+      return;
+    }
+
     toast({
-      title: accepted ? "Quote accepted" : "Quote declined",
-      description: accepted ? "The request is now awaiting payment." : "The request has been marked as declined.",
+      title: "Quote declined",
+      description: "The request has been marked as declined.",
     });
 
     fetchAll();
@@ -836,10 +855,11 @@ const Account = () => {
                           <div className="flex flex-wrap gap-2">
                             <Button
                               onClick={() => respondToQuote(order, true)}
+                              disabled={processingCustomPaymentOrderId === order.id}
                               className="font-display uppercase tracking-wider"
                             >
                               <CheckCircle2 className="mr-1 h-4 w-4" />
-                              Accept Quote
+                              {processingCustomPaymentOrderId === order.id ? "Redirecting..." : "Accept Quote"}
                             </Button>
                             <Button
                               variant="outline"
@@ -889,6 +909,26 @@ const Account = () => {
                           <p className="mt-2 text-xs text-muted-foreground">
                             The 100 kr custom request fee should be deducted from the final order total at checkout.
                           </p>
+                          <Button
+                            onClick={async () => {
+                              try {
+                                setProcessingCustomPaymentOrderId(order.id);
+                                await payCustomOrder(order.id);
+                              } catch (paymentError: any) {
+                                toast({
+                                  title: "Payment error",
+                                  description: paymentError?.message || "Could not open checkout.",
+                                  variant: "destructive",
+                                });
+                              } finally {
+                                setProcessingCustomPaymentOrderId(null);
+                              }
+                            }}
+                            disabled={processingCustomPaymentOrderId === order.id}
+                            className="mt-3 font-display uppercase tracking-wider"
+                          >
+                            {processingCustomPaymentOrderId === order.id ? "Redirecting..." : "Pay Now"}
+                          </Button>
                         </div>
                       )}
                   </div>

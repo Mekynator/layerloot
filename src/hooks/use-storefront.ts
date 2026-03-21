@@ -57,25 +57,25 @@ export type StorefrontCatalogData = {
 };
 
 async function fetchStorefrontCatalog(page?: string): Promise<StorefrontCatalogData> {
-  const requests: Promise<any>[] = [
-    supabase
-      .from("products")
-      .select("id, name, slug, description, price, compare_at_price, images, is_featured, category_id, model_url, created_at, stock")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false }),
-    supabase.from("categories").select("id, name, slug, parent_id").order("sort_order"),
-    supabase
-      .from("product_reviews")
-      .select("id, product_id, rating, title, comment, created_at, user_id, reviewer_name, image_url")
-      .eq("is_approved", true)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("gallery_posts")
-      .select("id, image_url, product_id, product_name, comment, created_at")
-      .eq("is_approved", true)
-      .order("created_at", { ascending: false })
-      .limit(8),
-  ];
+  const productsReq = supabase
+    .from("products")
+    .select("id, name, slug, description, price, compare_at_price, images, is_featured, category_id, model_url, created_at, stock")
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
+  const categoriesReq = supabase.from("categories").select("id, name, slug, parent_id").order("sort_order");
+  const reviewsReq = supabase
+    .from("product_reviews")
+    .select("id, product_id, rating, title, comment, created_at, user_id, is_approved")
+    .eq("is_approved", true)
+    .order("created_at", { ascending: false });
+  const galleryReq = supabase
+    .from("gallery_posts")
+    .select("id, image_url, product_id, product_name, comment, created_at")
+    .eq("is_approved", true)
+    .order("created_at", { ascending: false })
+    .limit(8);
+
+  const requests: Promise<any>[] = [productsReq, categoriesReq, reviewsReq, galleryReq];
 
   if (page) {
     requests.push(

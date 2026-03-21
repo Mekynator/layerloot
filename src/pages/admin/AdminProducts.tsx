@@ -84,7 +84,7 @@ const AdminProducts = () => {
     const ext = imageFile.name.split(".").pop();
     const path = `${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from("product-images").upload(path, imageFile);
-    if (error) { toast({ title: "Upload failed", description: error.message, variant: "destructive" }); return null; }
+    if (error) throw new Error(`Image upload failed: ${error.message}`);
     const { data } = supabase.storage.from("product-images").getPublicUrl(path);
     return data.publicUrl;
   };
@@ -94,7 +94,7 @@ const AdminProducts = () => {
     const ext = modelFile.name.split(".").pop();
     const path = `${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from("3d-models").upload(path, modelFile);
-    if (error) { toast({ title: "Model upload failed", description: error.message, variant: "destructive" }); return null; }
+    if (error) throw new Error(`Model upload failed: ${error.message}`);
     const { data } = supabase.storage.from("3d-models").getPublicUrl(path);
     return data.publicUrl;
   };
@@ -110,51 +110,66 @@ const AdminProducts = () => {
   };
 
   const handleSubmit = async () => {
-    let images = form.images;
-    const uploadedUrl = await uploadImage();
-    if (uploadedUrl) images = [...images, uploadedUrl];
+    try {
+      let images = form.images;
+      const uploadedUrl = await uploadImage();
+      if (uploadedUrl) images = [...images, uploadedUrl];
 
-    let model_url = form.model_url || null;
-    const uploadedModelUrl = await uploadModel();
-    if (uploadedModelUrl) {
-      if (model_url) await deleteOldModel(model_url);
-      model_url = uploadedModelUrl;
+      let model_url = form.model_url || null;
+      const uploadedModelUrl = await uploadModel();
+      if (uploadedModelUrl) {
+        if (model_url) await deleteOldModel(model_url);
+        model_url = uploadedModelUrl;
+      }
+
+      const payload = {
+        name: form.name,
+        slug: form.slug || generateSlug(form.name),
+        description: form.description || null,
+        price: form.price,
+        compare_at_price: form.compare_at_price || null,
+        category_id: form.category_id || null,
+        images,
+        stock: form.stock,
+        is_featured: form.is_featured,
+        is_active: form.is_active,
+        model_url,
+        print_time_hours: form.print_time_hours || null,
+        dimensions_cm: form.dimensions_cm || null,
+        weight_grams: form.weight_grams || null,
+        finish_type: form.finish_type || null,
+        material_type: form.material_type || null,
+      };
+
+      if (editingId) {
+        const { error } = await supabase.from("products").update(payload).eq("id", editingId);
+        if (error) {
+          toast({ title: "Error", description: error.message, variant: "destructive" });
+          return;
+        }
+        toast({ title: "Product updated" });
+      } else {
+        const { error } = await supabase.from("products").insert(payload);
+        if (error) {
+          toast({ title: "Error", description: error.message, variant: "destructive" });
+          return;
+        }
+        toast({ title: "Product created" });
+      }
+
+      setOpen(false);
+      setForm(emptyProduct);
+      setEditingId(null);
+      setImageFile(null);
+      setModelFile(null);
+      fetchProducts();
+    } catch (error: any) {
+      toast({
+        title: "Upload error",
+        description: error?.message || "Failed to upload selected files.",
+        variant: "destructive",
+      });
     }
-
-    const payload = {
-      name: form.name,
-      slug: form.slug || generateSlug(form.name),
-      description: form.description || null,
-      price: form.price,
-      compare_at_price: form.compare_at_price || null,
-      category_id: form.category_id || null,
-      images,
-      stock: form.stock,
-      is_featured: form.is_featured,
-      is_active: form.is_active,
-      model_url,
-      print_time_hours: form.print_time_hours || null,
-      dimensions_cm: form.dimensions_cm || null,
-      weight_grams: form.weight_grams || null,
-      finish_type: form.finish_type || null,
-      material_type: form.material_type || null,
-    };
-
-    if (editingId) {
-      const { error } = await supabase.from("products").update(payload).eq("id", editingId);
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-      toast({ title: "Product updated" });
-    } else {
-      const { error } = await supabase.from("products").insert(payload);
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-      toast({ title: "Product created" });
-    }
-    setOpen(false);
-    setForm(emptyProduct);
-    setEditingId(null);
-    setImageFile(null);
-    setModelFile(null);
-    fetchProducts();
   };
 
   const editProduct = (p: Product) => {

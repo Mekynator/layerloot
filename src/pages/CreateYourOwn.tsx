@@ -97,6 +97,27 @@ const cleanupUploadedFiles = async (paths: string[]) => {
   }
 };
 
+const readFunctionErrorMessage = async (error: any) => {
+  try {
+    const context = error?.context;
+    if (context && typeof context.text === "function") {
+      const body = await context.text();
+      if (body) {
+        try {
+          const parsed = JSON.parse(body);
+          return parsed?.error || parsed?.message || body;
+        } catch {
+          return body;
+        }
+      }
+    }
+  } catch {
+    // fall through to default message
+  }
+
+  return error?.message || "Edge function call failed";
+};
+
 const startRequestFeeCheckout = async (customOrderId: string) => {
   const {
     data: { session },
@@ -114,7 +135,8 @@ const startRequestFeeCheckout = async (customOrderId: string) => {
   });
 
   if (error) {
-    throw new Error(error.message || "Failed to start request fee checkout");
+    const message = await readFunctionErrorMessage(error);
+    throw new Error(message || "Failed to start request fee checkout");
   }
 
   if (!data?.url) {

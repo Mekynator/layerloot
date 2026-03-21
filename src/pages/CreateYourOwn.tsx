@@ -39,6 +39,7 @@ const fadeUp = {
 const ACCEPTED_EXTENSIONS = ".stl,.obj,.3mf";
 const ACCEPTED_IMAGE_TYPES = "image/png,image/jpeg,image/jpg,image/webp";
 const REQUEST_FEE_DKK = 100;
+const CUSTOM_ORDER_FILES_BUCKET = "custom-order-files";
 
 const MATERIALS = [
   { value: "pla", label: "PLA", desc: "Standard, biodegradable" },
@@ -83,6 +84,17 @@ const getUserDisplayName = (user: any) => {
     user.user_metadata?.first_name ||
     ""
   );
+};
+
+const cleanupUploadedFiles = async (paths: string[]) => {
+  if (paths.length === 0) return;
+
+  const uniquePaths = Array.from(new Set(paths.filter(Boolean)));
+  const { error } = await supabase.storage.from(CUSTOM_ORDER_FILES_BUCKET).remove(uniquePaths);
+
+  if (error) {
+    console.error("Failed to clean up temporary custom-order files:", error.message);
+  }
 };
 
 const startRequestFeeCheckout = async (customOrderId: string) => {
@@ -196,6 +208,9 @@ const LithophaneOrderSection = () => {
 
     setSubmittingLithophane(true);
 
+    const uploadedPaths: string[] = [];
+    let orderCreated = false;
+
     try {
       const timestamp = Date.now();
       const safeBaseName =
@@ -210,37 +225,40 @@ const LithophaneOrderSection = () => {
       const previewPath = `${user.id}/lithophane/${timestamp}-${safeBaseName}-preview.png`;
 
       const { error: sourceUploadError } = await supabase.storage
-        .from("custom-order-files")
+        .from(CUSTOM_ORDER_FILES_BUCKET)
         .upload(sourcePath, dataUrlToBlob(payload.sourceDataUrl), {
           contentType: "image/png",
           upsert: false,
         });
 
       if (sourceUploadError) throw sourceUploadError;
-      sourceImageUrl = supabase.storage.from("custom-order-files").getPublicUrl(sourcePath).data.publicUrl;
+      uploadedPaths.push(sourcePath);
+      sourceImageUrl = supabase.storage.from(CUSTOM_ORDER_FILES_BUCKET).getPublicUrl(sourcePath).data.publicUrl;
 
       if (payload.processedDataUrl) {
         const { error: processedUploadError } = await supabase.storage
-          .from("custom-order-files")
+          .from(CUSTOM_ORDER_FILES_BUCKET)
           .upload(processedPath, dataUrlToBlob(payload.processedDataUrl), {
             contentType: "image/png",
             upsert: false,
           });
 
         if (processedUploadError) throw processedUploadError;
-        processedImageUrl = supabase.storage.from("custom-order-files").getPublicUrl(processedPath).data.publicUrl;
+        uploadedPaths.push(processedPath);
+        processedImageUrl = supabase.storage.from(CUSTOM_ORDER_FILES_BUCKET).getPublicUrl(processedPath).data.publicUrl;
       }
 
       if (payload.previewScreenshotDataUrl) {
         const { error: previewUploadError } = await supabase.storage
-          .from("custom-order-files")
+          .from(CUSTOM_ORDER_FILES_BUCKET)
           .upload(previewPath, dataUrlToBlob(payload.previewScreenshotDataUrl), {
             contentType: "image/png",
             upsert: false,
           });
 
         if (previewUploadError) throw previewUploadError;
-        previewImageUrl = supabase.storage.from("custom-order-files").getPublicUrl(previewPath).data.publicUrl;
+        uploadedPaths.push(previewPath);
+        previewImageUrl = supabase.storage.from(CUSTOM_ORDER_FILES_BUCKET).getPublicUrl(previewPath).data.publicUrl;
       }
 
       const fullDescription = [
@@ -282,12 +300,17 @@ const LithophaneOrderSection = () => {
       });
 
       if (error) throw error;
+      orderCreated = true;
 
       toast({
         title: "Lithophane submitted!",
         description: "Your lithophane design was added to custom orders successfully.",
       });
     } catch (error: any) {
+      if (!orderCreated) {
+        await cleanupUploadedFiles(uploadedPaths);
+      }
+
       toast({
         title: "Submission failed",
         description: error?.message || "Could not submit lithophane order.",
@@ -504,6 +527,9 @@ const CustomPrintOrder = () => {
 
     setSubmitting(true);
 
+    const uploadedPaths: string[] = [];
+    let orderCreated = false;
+
     try {
       let modelUrl: string | null = null;
       let modelFilename: string | null = null;
@@ -513,10 +539,11 @@ const CustomPrintOrder = () => {
         const ext = file.name.split(".").pop();
         const modelPath = `${user.id}/${Date.now()}-model.${ext}`;
 
-        const { error: uploadError } = await supabase.storage.from("custom-order-files").upload(modelPath, file);
+        const { error: uploadError } = await supabase.storage.from(CUSTOM_ORDER_FILES_BUCKET).upload(modelPath, file);
         if (uploadError) throw uploadError;
+        uploadedPaths.push(modelPath);
 
-        const { data: modelUrlData } = supabase.storage.from("custom-order-files").getPublicUrl(modelPath);
+        const { data: modelUrlData } = supabase.storage.from(CUSTOM_ORDER_FILES_BUCKET).getPublicUrl(modelPath);
         modelUrl = modelUrlData.publicUrl;
         modelFilename = file.name;
       }
@@ -526,12 +553,13 @@ const CustomPrintOrder = () => {
         const imagePath = `${user.id}/${Date.now()}-reference.${imageExt}`;
 
         const { error: imageUploadError } = await supabase.storage
-          .from("custom-order-files")
+          .from(CUSTOM_ORDER_FILES_BUCKET)
           .upload(imagePath, referenceImage);
 
         if (imageUploadError) throw imageUploadError;
+        uploadedPaths.push(imagePath);
 
-        const { data: imageUrlData } = supabase.storage.from("custom-order-files").getPublicUrl(imagePath);
+        const { data: imageUrlData } = supabase.storage.from(CUSTOM_ORDER_FILES_BUCKET).getPublicUrl(imagePath);
         referenceImageUrl = imageUrlData.publicUrl;
       }
 
@@ -556,7 +584,7 @@ const CustomPrintOrder = () => {
           name: userName || "Account User",
           email: userEmail,
           description: fullDescription,
-          model_url: modelUrl,
+          model_url: modelUrl || referenceImageUrl,
           model_filename: modelFilename || referenceImage?.name || "reference-image",
           status: "awaiting_request_fee",
           request_fee_amount: REQUEST_FEE_DKK,
@@ -575,9 +603,14 @@ const CustomPrintOrder = () => {
 
       if (error) throw error;
       if (!insertedOrder?.id) throw new Error("Order was created but ID was not returned");
+      orderCreated = true;
 
       await startRequestFeeCheckout(insertedOrder.id);
     } catch (error: any) {
+      if (!orderCreated) {
+        await cleanupUploadedFiles(uploadedPaths);
+      }
+
       toast({
         title: "Error",
         description: error?.message || "Could not start custom order payment.",

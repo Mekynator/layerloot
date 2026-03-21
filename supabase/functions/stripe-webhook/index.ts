@@ -2,8 +2,8 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.0.0?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-async function markVoucherUsed(supabase: ReturnType<typeof createClient>, userVoucherId: string, voucherType: string | undefined) {
-  const updates: Record<string, string | boolean | number | null> = {
+async function markVoucherUsed(supabase: any, userVoucherId: string, voucherType: string | undefined) {
+  const updates: Record<string, any> = {
     is_used: true,
     used_at: new Date().toISOString(),
   };

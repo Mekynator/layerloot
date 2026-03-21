@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Star, ShoppingCart, ChevronLeft, ChevronRight, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Star, ShoppingCart, ChevronLeft, ChevronRight, ShieldCheck, Upload } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,6 +22,31 @@ import ProductTrustBadges from "@/components/social/ProductTrustBadges";
 import ReviewCard from "@/components/social/ReviewCard";
 import ProductCard from "@/components/ProductCard";
 import { useProductDetailQuery } from "@/hooks/use-storefront";
+import { uploadReviewImage } from "@/lib/review-images";
+
+const REVIEW_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+function prettifyVariantKey(key: string) {
+  return key.replace(/_/g, " ");
+}
+
+function parseVariantSize(value?: string) {
+  if (!value) return null;
+  const normalized = value.toLowerCase().replace(/,/g, ".");
+  const cubeMatch = normalized.match(/(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)/);
+  if (cubeMatch) {
+    return {
+      length: Number(cubeMatch[1]),
+      width: Number(cubeMatch[2]),
+      height: Number(cubeMatch[3]),
+    };
+  }
+
+  const singleMatch = normalized.match(/(\d+(?:\.\d+)?)/);
+  if (!singleMatch) return null;
+  const size = Number(singleMatch[1]);
+  return { length: size, width: size, height: size };
+}
 
 const ProductDetail = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -33,7 +58,9 @@ const ProductDetail = () => {
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
   const [currentImage, setCurrentImage] = useState(0);
   const [show3D, setShow3D] = useState(false);
-  const [reviewForm, setReviewForm] = useState({ rating: 5, title: "", comment: "", imageUrl: "" });
+  const [reviewForm, setReviewForm] = useState({ rating: 5, title: "", comment: "" });
+  const [reviewImageFile, setReviewImageFile] = useState<File | null>(null);
+  const [reviewImagePreview, setReviewImagePreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const product = data?.product ?? null;
@@ -43,14 +70,75 @@ const ProductDetail = () => {
   const socialProof = data?.socialProof;
   const selectedVariant = variants.find((variant) => variant.id === selectedVariantId) ?? null;
 
+  useEffect(() => {
+    if (variants.length === 0) {
+      setSelectedVariantId(null);
+      return;
+    }
+
+    const stillExists = variants.some((variant) => variant.id === selectedVariantId);
+    if (stillExists) return;
+
+    const firstAvailable = variants.find((variant) => variant.stock > 0) ?? variants[0] ?? null;
+    setSelectedVariantId(firstAvailable?.id ?? null);
+  }, [variants, selectedVariantId]);
+
+  useEffect(() => {
+    return () => {
+      if (reviewImagePreview) URL.revokeObjectURL(reviewImagePreview);
+    };
+  }, [reviewImagePreview]);
+
+  const activeAttributes = selectedVariant?.attributes || {};
+  const activePrice = selectedVariant ? Number(selectedVariant.price) : product ? Number(product.price) : 0;
+  const activeStock = selectedVariant ? selectedVariant.stock : product?.stock ?? 0;
+  const activeCompareAtPrice = selectedVariant ? null : product?.compare_at_price ?? null;
+  const activeName = selectedVariant ? `${product?.name ?? "Product"} - ${selectedVariant.name}` : product?.name ?? "Product";
+  const activeMaterialType = typeof activeAttributes.material === "string" && activeAttributes.material.length > 0
+    ? activeAttributes.material
+    : product?.material_type ?? null;
+  const activeDimensions = useMemo(() => {
+    const variantSize = parseVariantSize(typeof activeAttributes.size === "string" ? activeAttributes.size : undefined);
+    return variantSize ?? product?.dimensions_cm ?? null;
+  }, [activeAttributes.size, product?.dimensions_cm]);
+  const activeVariantSummary = Object.entries(activeAttributes).filter(([, value]) => Boolean(value));
+  const images = product?.images?.length ? product.images : ["/placeholder.svg"];
+  const hasConfiguratorAttrs = variants.length > 0 && variants.some((v) => Object.keys(v.attributes || {}).length > 0);
+  const hasSimpleVariants = variants.length > 0 && !hasConfiguratorAttrs;
+  const trustBadges = [
+    ...(product?.is_featured ? ["best seller"] : []),
+    ...(socialProof?.badges ?? []),
+    ...(socialProof?.reviewCount ? [`${socialProof.reviewCount} sold signals`] : []),
+  ].slice(0, 3);
+
   const handleAddToCart = () => {
     if (!product) return;
     const variant = selectedVariant;
     const price = variant ? Number(variant.price) : Number(product.price);
     const name = variant ? `${product.name} - ${variant.name}` : product.name;
     const id = variant ? `${product.id}-${variant.id}` : product.id;
-    addItem({ id, name, price, image: product.images?.[0] || "/placeholder.svg", slug: product.slug });
+    addItem({ id, name, price, image: images[currentImage] || images[0] || "/placeholder.svg", slug: product.slug });
     toast({ title: "Added to cart!", description: name });
+  };
+
+  const handleReviewImageChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    if (!file) return;
+
+    if (!REVIEW_IMAGE_TYPES.includes(file.type)) {
+      toast({ title: "Unsupported image", description: "Use JPG, PNG, or WEBP.", variant: "destructive" });
+      return;
+    }
+
+    if (reviewImagePreview) URL.revokeObjectURL(reviewImagePreview);
+    setReviewImageFile(file);
+    setReviewImagePreview(URL.createObjectURL(file));
+  };
+
+  const clearReviewImage = () => {
+    if (reviewImagePreview) URL.revokeObjectURL(reviewImagePreview);
+    setReviewImageFile(null);
+    setReviewImagePreview(null);
   };
 
   const handleSubmitReview = async () => {
@@ -62,36 +150,39 @@ const ProductDetail = () => {
       user.email ||
       "LayerLoot Customer";
 
-    const { error } = await supabase.from("product_reviews").insert({
-      product_id: product.id,
-      user_id: user.id,
-      rating: reviewForm.rating,
-      title: reviewForm.title || null,
-      comment: reviewForm.comment || null,
-      reviewer_name: reviewerName,
-      image_url: reviewForm.imageUrl || null,
-    });
-    setSubmitting(false);
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      let imageUrl: string | null = null;
+      if (reviewImageFile) {
+        imageUrl = await uploadReviewImage({
+          file: reviewImageFile,
+          userId: user.id,
+          productId: product.id,
+        });
+      }
+
+      const { error } = await supabase.from("product_reviews").insert({
+        product_id: product.id,
+        user_id: user.id,
+        rating: reviewForm.rating,
+        title: reviewForm.title || null,
+        comment: reviewForm.comment || null,
+        reviewer_name: reviewerName,
+        image_url: imageUrl,
+      });
+
+      if (error) throw error;
+
       toast({ title: "Review submitted!", description: "It will appear after admin approval." });
-      setReviewForm({ rating: 5, title: "", comment: "", imageUrl: "" });
+      setReviewForm({ rating: 5, title: "", comment: "" });
+      clearReviewImage();
       queryClient.invalidateQueries({ queryKey: ["product-detail", slug] });
       queryClient.invalidateQueries({ queryKey: ["storefront-catalog"] });
+    } catch (error: any) {
+      toast({ title: "Error", description: error?.message || "Could not submit review.", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
     }
   };
-
-  const activePrice = selectedVariant ? Number(selectedVariant.price) : product ? Number(product.price) : 0;
-  const activeStock = selectedVariant ? selectedVariant.stock : product?.stock ?? 0;
-  const images = product?.images?.length ? product.images : ["/placeholder.svg"];
-  const hasConfiguratorAttrs = variants.length > 0 && variants.some((v) => Object.keys(v.attributes || {}).length > 0);
-  const hasSimpleVariants = variants.length > 0 && !hasConfiguratorAttrs;
-  const trustBadges = [
-    ...(product?.is_featured ? ["best seller"] : []),
-    ...(socialProof?.badges ?? []),
-    ...(socialProof?.reviewCount ? [`${socialProof.reviewCount} sold signals`] : []),
-  ].slice(0, 3);
 
   if (isLoading) {
     return (
@@ -127,7 +218,7 @@ const ProductDetail = () => {
                   <motion.img
                     key={currentImage}
                     src={images[currentImage]}
-                    alt={product.name}
+                    alt={activeName}
                     className="h-full w-full object-cover"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -147,7 +238,7 @@ const ProductDetail = () => {
                     </Button>
                   </>
                 )}
-                {product.compare_at_price && (
+                {activeCompareAtPrice && (
                   <Badge className="absolute left-4 top-4 bg-primary font-display uppercase">Sale</Badge>
                 )}
               </div>
@@ -175,18 +266,29 @@ const ProductDetail = () => {
             <div className="space-y-3">
               <Badge variant="outline" className="rounded-full border-primary/20 bg-primary/5 uppercase tracking-[0.2em] text-primary">Premium print</Badge>
               <h1 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{product.name}</h1>
+              {selectedVariant ? <p className="font-display text-sm uppercase tracking-[0.18em] text-muted-foreground">{selectedVariant.name}</p> : null}
               <RatingStars rating={socialProof?.averageRating} count={socialProof?.reviewCount} />
               <ProductTrustBadges badges={trustBadges} />
             </div>
 
             <div className="flex items-baseline gap-3">
               <span className="font-display text-3xl font-bold text-primary">{activePrice.toFixed(2)} kr</span>
-              {product.compare_at_price && !selectedVariant && (
-                <span className="text-lg text-muted-foreground line-through">{Number(product.compare_at_price).toFixed(2)} kr</span>
+              {activeCompareAtPrice && (
+                <span className="text-lg text-muted-foreground line-through">{Number(activeCompareAtPrice).toFixed(2)} kr</span>
               )}
             </div>
 
             {product.description && <p className="max-w-2xl leading-relaxed text-muted-foreground">{product.description}</p>}
+
+            {activeVariantSummary.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {activeVariantSummary.map(([key, value]) => (
+                  <Badge key={key} variant="outline" className="font-display text-xs uppercase tracking-wider">
+                    {prettifyVariantKey(key)}: {value}
+                  </Badge>
+                ))}
+              </div>
+            ) : null}
 
             <div className="section-surface p-4">
               <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
@@ -203,7 +305,7 @@ const ProductDetail = () => {
                     {variants.map((variant) => (
                       <button
                         key={variant.id}
-                        onClick={() => setSelectedVariantId(selectedVariant?.id === variant.id ? null : variant.id)}
+                        onClick={() => setSelectedVariantId(variant.id)}
                         className={`rounded-xl border px-4 py-2 font-display text-sm uppercase transition-all duration-200 ${
                           selectedVariant?.id === variant.id
                             ? "border-primary bg-primary text-primary-foreground shadow-md"
@@ -223,12 +325,12 @@ const ProductDetail = () => {
             <div className="grid gap-4 lg:grid-cols-2">
               <PrintInfo
                 printTimeHours={product.print_time_hours}
-                dimensionsCm={product.dimensions_cm}
+                dimensionsCm={activeDimensions}
                 weightGrams={product.weight_grams}
                 finishType={product.finish_type}
-                materialType={product.material_type}
+                materialType={activeMaterialType}
               />
-              <SizePreview dimensionsCm={product.dimensions_cm} />
+              <SizePreview dimensionsCm={activeDimensions} />
             </div>
 
             <div className="flex items-center gap-3 text-sm">
@@ -242,10 +344,10 @@ const ProductDetail = () => {
               size="lg"
               className="w-full font-display uppercase tracking-wider"
               onClick={handleAddToCart}
-              disabled={activeStock <= 0 || (variants.length > 0 && !selectedVariant && !hasConfiguratorAttrs)}
+              disabled={activeStock <= 0 || (variants.length > 0 && !selectedVariant)}
             >
               <ShoppingCart className="mr-2 h-5 w-5" />
-              {variants.length > 0 && !selectedVariant && !hasConfiguratorAttrs ? "Select an option" : "Add to Cart"}
+              {variants.length > 0 && !selectedVariant ? "Select an option" : "Add to Cart"}
             </Button>
           </motion.div>
         </div>
@@ -267,7 +369,7 @@ const ProductDetail = () => {
                   <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-foreground">Write a Review</h3>
                   <div className="flex items-center gap-1">
                     {[1, 2, 3, 4, 5].map((s) => (
-                      <button key={s} onClick={() => setReviewForm({ ...reviewForm, rating: s })}>
+                      <button key={s} type="button" onClick={() => setReviewForm({ ...reviewForm, rating: s })}>
                         <Star className={`h-6 w-6 transition-colors ${s <= reviewForm.rating ? "fill-primary text-primary" : "text-muted-foreground hover:text-primary"}`} />
                       </button>
                     ))}
@@ -276,14 +378,24 @@ const ProductDetail = () => {
                   <Textarea placeholder="Your review..." value={reviewForm.comment} onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })} rows={4} />
                 </div>
                 <div className="space-y-4">
-                  <Input
-                    placeholder="Optional image URL"
-                    value={reviewForm.imageUrl}
-                    onChange={(e) => setReviewForm({ ...reviewForm, imageUrl: e.target.value })}
-                  />
-                  <div className="rounded-2xl border border-border/70 bg-muted/30 p-4 text-sm text-muted-foreground">
-                    Add a public image URL if you want your finished print to appear alongside your review.
+                  <div className="space-y-2">
+                    <label className="font-display text-sm font-semibold uppercase tracking-wider text-foreground">Photo (optional)</label>
+                    <Input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleReviewImageChange} />
+                    <p className="text-sm text-muted-foreground">Images are compressed before upload to keep storage usage small.</p>
                   </div>
+                  {reviewImagePreview ? (
+                    <div className="space-y-3 rounded-2xl border border-border/70 bg-muted/30 p-4">
+                      <img src={reviewImagePreview} alt="Review preview" className="h-40 w-full rounded-xl object-cover" />
+                      <Button type="button" variant="outline" onClick={clearReviewImage}>Remove Photo</Button>
+                    </div>
+                  ) : (
+                    <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/20 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <Upload className="h-4 w-4" />
+                        Upload a photo of your print
+                      </div>
+                    </div>
+                  )}
                   <Button onClick={handleSubmitReview} disabled={submitting} className="font-display uppercase tracking-wider">
                     {submitting ? "Submitting..." : "Submit Review"}
                   </Button>

@@ -43,7 +43,7 @@ async function fetchAccountOverview(userId: string, userEmail?: string): Promise
   const [loyaltyRes, ordersRes, customOrdersRes, vouchersRes, ownedVouchersRes, receivedVouchersRes] = await Promise.all([
     supabase.from("loyalty_points").select("id, points, reason, created_at").eq("user_id", userId).order("created_at", { ascending: false }),
     supabase.from("orders").select("id, status, total, created_at, tool_type").eq("user_id", userId).order("created_at", { ascending: false }),
-    supabase.from("custom_orders").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+    supabase.from("custom_orders").select("*").eq("user_id", userId).eq("request_fee_status", "paid").order("created_at", { ascending: false }),
     supabase.from("vouchers").select("*").eq("is_active", true).order("points_cost", { ascending: true }),
     supabase.from("user_vouchers").select(voucherSelect).eq("user_id", userId).order("redeemed_at", { ascending: false }),
     userEmail

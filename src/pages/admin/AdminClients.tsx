@@ -254,6 +254,7 @@ const AdminClients = () => {
       supabase
         .from("custom_orders")
         .select("id, user_id, name, email, status, created_at, updated_at, final_agreed_price, quoted_price, customer_offer_price, payment_status, production_status")
+        .eq("request_fee_status", "paid")
         .order("updated_at", { ascending: false }),
       supabase.from("loyalty_points").select("id, user_id, points, reason, created_at").order("created_at", { ascending: false }),
       supabase

@@ -111,6 +111,7 @@ const AdminOrders = () => {
         .select(
           "id, name, email, status, created_at, final_agreed_price, quoted_price, customer_offer_price, payment_status, production_status, model_filename, admin_notes",
         )
+        .eq("request_fee_status", "paid")
         .in("status", ["in_production", "completed"])
         .order("created_at", { ascending: false }),
     ]);

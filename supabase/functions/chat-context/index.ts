@@ -53,9 +53,8 @@ serve(async (req) => {
 
       adminClient
         .from("loyalty_points")
-        .select("balance, earned_total, spent_total")
-        .eq("user_id", userId)
-        .maybeSingle(),
+        .select("points")
+        .eq("user_id", userId),
 
       adminClient
         .from("orders")

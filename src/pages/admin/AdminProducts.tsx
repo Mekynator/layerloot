@@ -42,6 +42,9 @@ interface Category {
   name: string;
 }
 
+const MAX_PRODUCT_IMAGE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
+const MAX_PRODUCT_MODEL_SIZE_BYTES = 100 * 1024 * 1024; // 100 MB
+
 const emptyProduct = {
   name: "", slug: "", description: "", price: 0, compare_at_price: null as number | null,
   category_id: null as string | null, images: [] as string[], stock: 0, is_featured: false, is_active: true,
@@ -81,6 +84,9 @@ const AdminProducts = () => {
 
   const uploadImage = async (): Promise<string | null> => {
     if (!imageFile) return null;
+    if (imageFile.size > MAX_PRODUCT_IMAGE_SIZE_BYTES) {
+      throw new Error("Image file is too large. Maximum allowed size is 20 MB.");
+    }
     const ext = imageFile.name.split(".").pop();
     const path = `${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from("product-images").upload(path, imageFile);
@@ -91,6 +97,9 @@ const AdminProducts = () => {
 
   const uploadModel = async (): Promise<string | null> => {
     if (!modelFile) return null;
+    if (modelFile.size > MAX_PRODUCT_MODEL_SIZE_BYTES) {
+      throw new Error("3D model file is too large. Maximum allowed size is 100 MB.");
+    }
     const ext = modelFile.name.split(".").pop();
     const path = `${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from("3d-models").upload(path, modelFile);
@@ -251,11 +260,11 @@ const AdminProducts = () => {
                   </div>
                 </div>
                 <div>
-                  <Label>Product Image</Label>
+                  <Label>Product Image (max 20 MB)</Label>
                   <Input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] ?? null)} />
                 </div>
                 <div>
-                  <Label>3D Model (STL, OBJ, 3MF)</Label>
+                  <Label>3D Model (STL, OBJ, 3MF, max 100 MB)</Label>
                   <Input type="file" accept=".stl,.obj,.3mf" onChange={(e) => setModelFile(e.target.files?.[0] ?? null)} />
                   {form.model_url && <p className="mt-1 text-xs text-muted-foreground">Current model uploaded ✓</p>}
                 </div>

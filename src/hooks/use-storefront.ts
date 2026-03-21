@@ -34,8 +34,7 @@ export type ProductReview = {
   comment: string | null;
   created_at: string;
   user_id: string;
-  reviewer_name: string | null;
-  image_url: string | null;
+  is_approved: boolean;
 };
 
 export type GalleryShowcaseItem = {

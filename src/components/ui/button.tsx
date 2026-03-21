@@ -52,7 +52,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(buttonVariants({ variant, size, className }))}
         whileHover={prefersReducedMotion || props.disabled ? undefined : { scale: 1.01, y: -1 }}
         whileTap={prefersReducedMotion || props.disabled ? undefined : { scale: 0.985 }}
-        {...props}
+        {...(props as any)}
       />
     );
   },

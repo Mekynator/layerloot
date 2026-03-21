@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import AdminLayout from "@/components/admin/AdminLayout";
 
 interface AuthUser {
@@ -233,6 +234,7 @@ const AdminClients = () => {
   const [savingProfile, setSavingProfile] = useState(false);
   const [adjustingPoints, setAdjustingPoints] = useState(false);
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -261,16 +263,6 @@ const AdminClients = () => {
       supabase.from("user_roles").select("user_id, role"),
     ]);
 
-    if (authUsersRes.error) {
-      setLoading(false);
-      toast({
-        title: "Error loading users",
-        description: authUsersRes.error.message || "Admin user directory is not available yet.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     const tableErrors = [
       profilesRes.error,
       ordersRes.error,
@@ -290,7 +282,39 @@ const AdminClients = () => {
       return;
     }
 
-    const authUsers = ((authUsersRes.data as { users?: AuthUser[] } | null)?.users ?? []) as AuthUser[];
+    const authUsersFromFunction = ((authUsersRes.data as { users?: AuthUser[] } | null)?.users ?? []) as AuthUser[];
+    const currentAuthUser = currentUser
+      ? ({
+          id: currentUser.id,
+          email: currentUser.email ?? null,
+          created_at: currentUser.created_at,
+          last_sign_in_at: currentUser.last_sign_in_at ?? null,
+          role:
+            currentUser.app_metadata?.role === "admin" ||
+            (Array.isArray(currentUser.app_metadata?.roles) && currentUser.app_metadata.roles.includes("admin"))
+              ? "admin"
+              : null,
+          user_metadata: {
+            full_name: typeof currentUser.user_metadata?.full_name === "string" ? currentUser.user_metadata.full_name : undefined,
+          },
+        } satisfies AuthUser)
+      : null;
+
+    const authUsers = [
+      ...authUsersFromFunction,
+      ...(currentAuthUser && !authUsersFromFunction.some((authUser) => authUser.id === currentAuthUser.id) ? [currentAuthUser] : []),
+    ];
+
+    if (authUsersRes.error && authUsers.length === 0) {
+      setLoading(false);
+      toast({
+        title: "Error loading users",
+        description: authUsersRes.error.message || "Admin user directory is not available yet.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const profiles = (profilesRes.data ?? []) as ProfileRow[];
     const orders = (ordersRes.data ?? []) as OrderRow[];
     const customOrders = (customOrdersRes.data ?? []) as CustomOrderRow[];
@@ -300,6 +324,7 @@ const AdminClients = () => {
 
     const profileMap = new Map(profiles.map((profile) => [profile.user_id, profile]));
     const roleMap = new Map(roles.map((role) => [role.user_id, role.role]));
+    const authUserMap = new Map(authUsers.map((authUser) => [authUser.id, authUser]));
     const ordersMap = new Map<string, OrderRow[]>();
     const customOrdersMap = new Map<string, CustomOrderRow[]>();
     const pointsMap = new Map<string, LoyaltyRow[]>();
@@ -322,12 +347,33 @@ const AdminClients = () => {
       voucherMap.set(voucher.user_id, [...(voucherMap.get(voucher.user_id) ?? []), voucher]);
     });
 
-    const nextUsers = authUsers.map((authUser) => {
-      const profile = profileMap.get(authUser.id) ?? null;
-      const userOrders = ordersMap.get(authUser.id) ?? [];
-      const userCustomOrders = customOrdersMap.get(authUser.id) ?? [];
-      const userLoyalty = pointsMap.get(authUser.id) ?? [];
-      const userVouchers = voucherMap.get(authUser.id) ?? [];
+    const allUserIds = new Set<string>([
+      ...authUsers.map((authUser) => authUser.id),
+      ...profiles.map((profile) => profile.user_id),
+      ...orders.map((order) => order.user_id).filter((value): value is string => Boolean(value)),
+      ...customOrders.map((order) => order.user_id),
+      ...loyaltyRows.map((row) => row.user_id),
+      ...vouchers.map((voucher) => voucher.user_id),
+      ...roles.map((role) => role.user_id),
+    ]);
+
+    const nextUsers = Array.from(allUserIds).map((userId) => {
+      const authUser =
+        authUserMap.get(userId) ??
+        ({
+          id: userId,
+          email: null,
+          created_at: profileMap.get(userId)?.created_at || ordersMap.get(userId)?.[0]?.created_at || customOrdersMap.get(userId)?.[0]?.created_at || new Date().toISOString(),
+          last_sign_in_at: null,
+          role: null,
+          user_metadata: null,
+        } satisfies AuthUser);
+
+      const profile = profileMap.get(userId) ?? null;
+      const userOrders = ordersMap.get(userId) ?? [];
+      const userCustomOrders = customOrdersMap.get(userId) ?? [];
+      const userLoyalty = pointsMap.get(userId) ?? [];
+      const userVouchers = voucherMap.get(userId) ?? [];
       const pointsBalance = userLoyalty.reduce((sum, row) => sum + Number(row.points ?? 0), 0);
       const totalSpent = userOrders.reduce((sum, row) => sum + Number(row.total ?? 0), 0);
       const activity = buildActivityItems({
@@ -340,13 +386,13 @@ const AdminClients = () => {
       });
 
       return {
-        id: authUser.id,
+        id: userId,
         email: authUser.email,
         full_name: profile?.full_name || authUser.user_metadata?.full_name || authUser.email?.split("@")[0] || "Unnamed user",
         joined_at: authUser.created_at,
         last_sign_in_at: authUser.last_sign_in_at,
         last_activity_at: activity[0]?.created_at ?? authUser.last_sign_in_at ?? authUser.created_at,
-        role: roleMap.get(authUser.id) === "admin" || authUser.role === "admin" ? "admin" : "user",
+        role: roleMap.get(userId) === "admin" || authUser.role === "admin" ? "admin" : "user",
         profile,
         points_balance: pointsBalance,
         order_count: userOrders.length,
@@ -372,7 +418,7 @@ const AdminClients = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [currentUser?.id]);
 
   const filteredUsers = useMemo(() => {
     const query = search.trim().toLowerCase();

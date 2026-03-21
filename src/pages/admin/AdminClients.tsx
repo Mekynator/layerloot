@@ -1,203 +1,571 @@
 import { useEffect, useMemo, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Activity, Clock3, Gift, Mail, Pencil, Plus, Minus, ShieldCheck, ShoppingBag, Ticket } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { Pencil, Plus, Minus, History } from "lucide-react";
 
-interface Client {
+interface AuthUser {
+  id: string;
+  email: string | null;
+  created_at: string;
+  last_sign_in_at: string | null;
+  role: string | null;
+  user_metadata?: {
+    full_name?: string;
+  } | null;
+}
+
+interface ProfileRow {
   id: string;
   user_id: string;
   full_name: string | null;
   created_at: string;
-  order_count: number;
-  total_spent: number;
-  points_balance: number;
+  updated_at: string;
+}
+
+interface OrderRow {
+  id: string;
+  user_id: string | null;
+  status: string;
+  total: number;
+  created_at: string;
+  tool_type: string | null;
+}
+
+interface CustomOrderRow {
+  id: string;
+  user_id: string;
+  name: string;
+  email: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  final_agreed_price: number | null;
+  quoted_price: number | null;
+  customer_offer_price: number | null;
+  payment_status: string;
+  production_status: string;
 }
 
 interface LoyaltyRow {
   id: string;
   user_id: string;
   points: number;
-  reason: string | null;
+  reason: string;
   created_at: string;
 }
 
+interface VoucherDefinition {
+  id: string;
+  name: string;
+  discount_type: string;
+  discount_value: number;
+  points_cost: number;
+}
+
+interface VoucherRow {
+  id: string;
+  user_id: string;
+  code: string;
+  is_used: boolean;
+  balance: number | null;
+  recipient_email: string | null;
+  recipient_name: string | null;
+  redeemed_at: string;
+  used_at: string | null;
+  vouchers: VoucherDefinition | VoucherDefinition[] | null;
+}
+
+interface UserRoleRow {
+  user_id: string;
+  role: "admin" | "user";
+}
+
+interface ActivityItem {
+  id: string;
+  label: string;
+  detail: string;
+  created_at: string;
+  tone?: "default" | "positive" | "negative";
+}
+
+interface AdminUser {
+  id: string;
+  email: string | null;
+  full_name: string;
+  joined_at: string;
+  last_sign_in_at: string | null;
+  last_activity_at: string | null;
+  role: "admin" | "user";
+  profile: ProfileRow | null;
+  points_balance: number;
+  order_count: number;
+  total_spent: number;
+  active_vouchers: number;
+  used_vouchers: number;
+  custom_order_count: number;
+  orders: OrderRow[];
+  customOrders: CustomOrderRow[];
+  loyaltyHistory: LoyaltyRow[];
+  vouchers: VoucherRow[];
+  activity: ActivityItem[];
+}
+
+const currency = new Intl.NumberFormat("da-DK", {
+  style: "currency",
+  currency: "DKK",
+  maximumFractionDigits: 2,
+});
+
+const dateTime = (value: string | null) => (value ? new Date(value).toLocaleString() : "—");
+const dateOnly = (value: string | null) => (value ? new Date(value).toLocaleDateString() : "—");
+
+function getVoucherDefinition(voucher: VoucherRow): VoucherDefinition | null {
+  if (!voucher.vouchers) return null;
+  return Array.isArray(voucher.vouchers) ? voucher.vouchers[0] ?? null : voucher.vouchers;
+}
+
+function getVoucherSummary(voucher: VoucherRow) {
+  const definition = getVoucherDefinition(voucher);
+  if (!definition) return "Voucher";
+  if (definition.discount_type === "gift_card") {
+    return `${definition.name} · ${Number(voucher.balance ?? definition.discount_value).toFixed(0)} kr`;
+  }
+  if (definition.discount_type === "percentage") {
+    return `${definition.name} · ${Number(definition.discount_value).toFixed(0)}%`;
+  }
+  return `${definition.name} · ${Number(definition.discount_value).toFixed(0)} kr`;
+}
+
+function buildActivityItems(args: {
+  user: AuthUser;
+  profile: ProfileRow | null;
+  orders: OrderRow[];
+  customOrders: CustomOrderRow[];
+  loyaltyHistory: LoyaltyRow[];
+  vouchers: VoucherRow[];
+}): ActivityItem[] {
+  const items: ActivityItem[] = [
+    {
+      id: `joined-${args.user.id}`,
+      label: "Account created",
+      detail: args.user.email || "Registered user",
+      created_at: args.user.created_at,
+    },
+  ];
+
+  if (args.user.last_sign_in_at) {
+    items.push({
+      id: `signin-${args.user.id}`,
+      label: "Last sign-in",
+      detail: "User authenticated successfully",
+      created_at: args.user.last_sign_in_at,
+    });
+  }
+
+  if (args.profile?.updated_at) {
+    items.push({
+      id: `profile-${args.user.id}`,
+      label: "Profile updated",
+      detail: args.profile.full_name || "Profile details changed",
+      created_at: args.profile.updated_at,
+    });
+  }
+
+  args.orders.forEach((order) => {
+    items.push({
+      id: `order-${order.id}`,
+      label: "Store order",
+      detail: `#${order.id.slice(0, 8)} · ${order.status} · ${currency.format(Number(order.total || 0))}`,
+      created_at: order.created_at,
+    });
+  });
+
+  args.customOrders.forEach((order) => {
+    const amount = Number(order.final_agreed_price ?? order.quoted_price ?? order.customer_offer_price ?? 0);
+    items.push({
+      id: `custom-${order.id}`,
+      label: "Custom request",
+      detail: `${order.production_status || order.status} · ${currency.format(amount)}`,
+      created_at: order.updated_at || order.created_at,
+    });
+  });
+
+  args.loyaltyHistory.forEach((row) => {
+    items.push({
+      id: `points-${row.id}`,
+      label: "Points update",
+      detail: `${row.reason} · ${row.points > 0 ? `+${row.points}` : row.points} pts`,
+      created_at: row.created_at,
+      tone: row.points >= 0 ? "positive" : "negative",
+    });
+  });
+
+  args.vouchers.forEach((voucher) => {
+    items.push({
+      id: `voucher-${voucher.id}`,
+      label: voucher.is_used ? "Voucher used" : "Voucher redeemed",
+      detail: `${getVoucherSummary(voucher)} · ${voucher.code}`,
+      created_at: voucher.used_at || voucher.redeemed_at,
+    });
+  });
+
+  return items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
+
 const AdminClients = () => {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [editClient, setEditClient] = useState<Client | null>(null);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [editUser, setEditUser] = useState<AdminUser | null>(null);
   const [editName, setEditName] = useState("");
   const [pointsAmount, setPointsAmount] = useState(0);
   const [pointsReason, setPointsReason] = useState("");
-  const [history, setHistory] = useState<LoyaltyRow[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [adjustingPoints, setAdjustingPoints] = useState(false);
   const { toast } = useToast();
 
-  const fetchClients = async () => {
-    const [{ data: profiles, error: profilesError }, { data: orders }, { data: points }] = await Promise.all([
-      supabase.from("profiles").select("id, user_id, full_name, created_at").order("created_at", { ascending: false }),
-      supabase.from("orders").select("user_id, total"),
-      supabase.from("loyalty_points").select("user_id, points"),
+  const fetchUsers = async () => {
+    setLoading(true);
+
+    const [
+      authUsersRes,
+      profilesRes,
+      ordersRes,
+      customOrdersRes,
+      loyaltyRes,
+      vouchersRes,
+      rolesRes,
+    ] = await Promise.all([
+      supabase.functions.invoke("admin-users"),
+      supabase.from("profiles").select("id, user_id, full_name, created_at, updated_at"),
+      supabase.from("orders").select("id, user_id, status, total, created_at, tool_type").order("created_at", { ascending: false }),
+      supabase
+        .from("custom_orders")
+        .select("id, user_id, name, email, status, created_at, updated_at, final_agreed_price, quoted_price, customer_offer_price, payment_status, production_status")
+        .order("updated_at", { ascending: false }),
+      supabase.from("loyalty_points").select("id, user_id, points, reason, created_at").order("created_at", { ascending: false }),
+      supabase
+        .from("user_vouchers")
+        .select("id, user_id, code, is_used, balance, recipient_email, recipient_name, redeemed_at, used_at, vouchers(id, name, discount_type, discount_value, points_cost)")
+        .order("redeemed_at", { ascending: false }),
+      supabase.from("user_roles").select("user_id, role"),
     ]);
 
-    if (profilesError) {
-      toast({ title: "Error loading clients", description: profilesError.message, variant: "destructive" });
+    if (authUsersRes.error) {
+      setLoading(false);
+      toast({
+        title: "Error loading users",
+        description: authUsersRes.error.message || "Admin user directory is not available yet.",
+        variant: "destructive",
+      });
       return;
     }
 
-    const orderMap = new Map<string, { count: number; spent: number }>();
-    (orders ?? []).forEach((o) => {
-      if (!o.user_id) return;
-      const curr = orderMap.get(o.user_id) ?? { count: 0, spent: 0 };
-      orderMap.set(o.user_id, {
-        count: curr.count + 1,
-        spent: curr.spent + Number(o.total ?? 0),
+    const tableErrors = [
+      profilesRes.error,
+      ordersRes.error,
+      customOrdersRes.error,
+      loyaltyRes.error,
+      vouchersRes.error,
+      rolesRes.error,
+    ].filter(Boolean);
+
+    if (tableErrors.length > 0) {
+      setLoading(false);
+      toast({
+        title: "Error loading admin data",
+        description: tableErrors[0]?.message || "One of the admin queries failed.",
+        variant: "destructive",
       });
+      return;
+    }
+
+    const authUsers = ((authUsersRes.data as { users?: AuthUser[] } | null)?.users ?? []) as AuthUser[];
+    const profiles = (profilesRes.data ?? []) as ProfileRow[];
+    const orders = (ordersRes.data ?? []) as OrderRow[];
+    const customOrders = (customOrdersRes.data ?? []) as CustomOrderRow[];
+    const loyaltyRows = (loyaltyRes.data ?? []) as LoyaltyRow[];
+    const vouchers = (vouchersRes.data ?? []) as VoucherRow[];
+    const roles = (rolesRes.data ?? []) as UserRoleRow[];
+
+    const profileMap = new Map(profiles.map((profile) => [profile.user_id, profile]));
+    const roleMap = new Map(roles.map((role) => [role.user_id, role.role]));
+    const ordersMap = new Map<string, OrderRow[]>();
+    const customOrdersMap = new Map<string, CustomOrderRow[]>();
+    const pointsMap = new Map<string, LoyaltyRow[]>();
+    const voucherMap = new Map<string, VoucherRow[]>();
+
+    orders.forEach((order) => {
+      if (!order.user_id) return;
+      ordersMap.set(order.user_id, [...(ordersMap.get(order.user_id) ?? []), order]);
     });
 
-    const pointsMap = new Map<string, number>();
-    (points ?? []).forEach((p) => {
-      if (!p.user_id) return;
-      pointsMap.set(p.user_id, (pointsMap.get(p.user_id) ?? 0) + Number(p.points ?? 0));
+    customOrders.forEach((order) => {
+      customOrdersMap.set(order.user_id, [...(customOrdersMap.get(order.user_id) ?? []), order]);
     });
 
-    setClients(
-      (profiles ?? []).map((p) => ({
-        ...p,
-        order_count: orderMap.get(p.user_id)?.count ?? 0,
-        total_spent: orderMap.get(p.user_id)?.spent ?? 0,
-        points_balance: pointsMap.get(p.user_id) ?? 0,
-      })),
+    loyaltyRows.forEach((row) => {
+      pointsMap.set(row.user_id, [...(pointsMap.get(row.user_id) ?? []), row]);
+    });
+
+    vouchers.forEach((voucher) => {
+      voucherMap.set(voucher.user_id, [...(voucherMap.get(voucher.user_id) ?? []), voucher]);
+    });
+
+    const nextUsers = authUsers.map((authUser) => {
+      const profile = profileMap.get(authUser.id) ?? null;
+      const userOrders = ordersMap.get(authUser.id) ?? [];
+      const userCustomOrders = customOrdersMap.get(authUser.id) ?? [];
+      const userLoyalty = pointsMap.get(authUser.id) ?? [];
+      const userVouchers = voucherMap.get(authUser.id) ?? [];
+      const pointsBalance = userLoyalty.reduce((sum, row) => sum + Number(row.points ?? 0), 0);
+      const totalSpent = userOrders.reduce((sum, row) => sum + Number(row.total ?? 0), 0);
+      const activity = buildActivityItems({
+        user: authUser,
+        profile,
+        orders: userOrders,
+        customOrders: userCustomOrders,
+        loyaltyHistory: userLoyalty,
+        vouchers: userVouchers,
+      });
+
+      return {
+        id: authUser.id,
+        email: authUser.email,
+        full_name: profile?.full_name || authUser.user_metadata?.full_name || authUser.email?.split("@")[0] || "Unnamed user",
+        joined_at: authUser.created_at,
+        last_sign_in_at: authUser.last_sign_in_at,
+        last_activity_at: activity[0]?.created_at ?? authUser.last_sign_in_at ?? authUser.created_at,
+        role: roleMap.get(authUser.id) === "admin" || authUser.role === "admin" ? "admin" : "user",
+        profile,
+        points_balance: pointsBalance,
+        order_count: userOrders.length,
+        total_spent: totalSpent,
+        active_vouchers: userVouchers.filter((voucher) => !voucher.is_used).length,
+        used_vouchers: userVouchers.filter((voucher) => voucher.is_used).length,
+        custom_order_count: userCustomOrders.length,
+        orders: userOrders,
+        customOrders: userCustomOrders,
+        loyaltyHistory: userLoyalty,
+        vouchers: userVouchers,
+        activity,
+      } satisfies AdminUser;
+    });
+
+    setUsers(
+      nextUsers.sort(
+        (a, b) => new Date(b.last_activity_at || b.joined_at).getTime() - new Date(a.last_activity_at || a.joined_at).getTime(),
+      ),
     );
+    setLoading(false);
   };
 
   useEffect(() => {
-    fetchClients();
+    fetchUsers();
   }, []);
 
-  const loadHistory = async (userId: string) => {
-    setLoadingHistory(true);
-    const { data, error } = await supabase
-      .from("loyalty_points")
-      .select("id, user_id, points, reason, created_at")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(10);
+  const filteredUsers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return users;
+    return users.filter((user) => [user.full_name, user.email || "", user.id].some((value) => value.toLowerCase().includes(query)));
+  }, [search, users]);
 
-    setLoadingHistory(false);
+  const summary = useMemo(() => {
+    const totalRevenue = users.reduce((sum, user) => sum + user.total_spent, 0);
+    const activeUsers = users.filter((user) => {
+      if (!user.last_activity_at) return false;
+      const activityDate = new Date(user.last_activity_at);
+      const threshold = new Date();
+      threshold.setDate(threshold.getDate() - 30);
+      return activityDate >= threshold;
+    }).length;
 
-    if (error) {
-      toast({ title: "Error loading history", description: error.message, variant: "destructive" });
-      setHistory([]);
-      return;
-    }
+    return {
+      users: users.length,
+      admins: users.filter((user) => user.role === "admin").length,
+      activeUsers,
+      totalRevenue,
+    };
+  }, [users]);
 
-    setHistory((data as LoyaltyRow[]) ?? []);
-  };
-
-  const openEdit = async (client: Client) => {
-    setEditClient(client);
-    setEditName(client.full_name ?? "");
+  const openEdit = (user: AdminUser) => {
+    setEditUser(user);
+    setEditName(user.profile?.full_name || user.full_name || "");
     setPointsAmount(0);
     setPointsReason("");
-    await loadHistory(client.user_id);
   };
 
   const saveProfile = async () => {
-    if (!editClient) return;
-    const { error } = await supabase.from("profiles").update({ full_name: editName }).eq("user_id", editClient.user_id);
+    if (!editUser) return;
+    setSavingProfile(true);
+
+    const payload = {
+      full_name: editName.trim() || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const query = editUser.profile
+      ? supabase.from("profiles").update(payload).eq("user_id", editUser.id)
+      : supabase.from("profiles").insert({
+          user_id: editUser.id,
+          full_name: editName.trim() || null,
+        });
+
+    const { error } = await query;
+    setSavingProfile(false);
 
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error updating profile", description: error.message, variant: "destructive" });
       return;
     }
 
     toast({ title: "Profile updated" });
-    fetchClients();
+    await fetchUsers();
   };
 
   const adjustPoints = async (positive: boolean) => {
-    if (!editClient || pointsAmount <= 0 || !pointsReason.trim()) {
-      toast({ title: "Enter amount and reason", variant: "destructive" });
+    if (!editUser || pointsAmount <= 0 || !pointsReason.trim()) {
+      toast({ title: "Enter an amount and reason", variant: "destructive" });
       return;
     }
 
-    const pts = positive ? pointsAmount : -pointsAmount;
+    setAdjustingPoints(true);
     const { error } = await supabase.from("loyalty_points").insert({
-      user_id: editClient.user_id,
-      points: pts,
+      user_id: editUser.id,
+      points: positive ? pointsAmount : -pointsAmount,
       reason: pointsReason.trim(),
     });
+    setAdjustingPoints(false);
 
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error updating points", description: error.message, variant: "destructive" });
       return;
     }
 
     toast({ title: `${positive ? "Added" : "Removed"} ${pointsAmount} points` });
     setPointsAmount(0);
     setPointsReason("");
-    await Promise.all([fetchClients(), loadHistory(editClient.user_id)]);
+    await fetchUsers();
   };
 
-  const currentBalance = useMemo(() => {
-    if (!editClient) return 0;
-    const refreshed = clients.find((c) => c.user_id === editClient.user_id);
-    return refreshed?.points_balance ?? editClient.points_balance;
-  }, [clients, editClient]);
+  const selectedUser = useMemo(() => (editUser ? users.find((user) => user.id === editUser.id) ?? editUser : null), [editUser, users]);
 
   return (
     <AdminLayout>
-      <h1 className="mb-6 font-display text-3xl font-bold uppercase text-foreground">Clients</h1>
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-bold uppercase text-foreground">Users</h1>
+          <p className="text-sm text-muted-foreground">Registered accounts, orders, rewards, and recent activity in one place.</p>
+        </div>
+        <div className="w-full max-w-sm">
+          <Label htmlFor="user-search" className="sr-only">
+            Search users
+          </Label>
+          <Input
+            id="user-search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by name, email, or user id"
+          />
+        </div>
+      </div>
+
+      <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Card>
+          <CardContent className="p-5">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Registered users</p>
+            <p className="mt-2 font-display text-3xl font-bold">{summary.users}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Admins</p>
+            <p className="mt-2 font-display text-3xl font-bold">{summary.admins}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Active last 30 days</p>
+            <p className="mt-2 font-display text-3xl font-bold">{summary.activeUsers}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Store revenue</p>
+            <p className="mt-2 font-display text-3xl font-bold">{currency.format(summary.totalRevenue)}</p>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
+                <TableHead>User</TableHead>
                 <TableHead>Orders</TableHead>
-                <TableHead>Total Spent</TableHead>
-                <TableHead>Loyalty Points</TableHead>
+                <TableHead>Spent</TableHead>
+                <TableHead>Points</TableHead>
+                <TableHead>Rewards</TableHead>
+                <TableHead>Last Activity</TableHead>
                 <TableHead>Joined</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {clients.map((client) => (
-                <TableRow key={client.id}>
-                  <TableCell className="font-display text-sm font-semibold uppercase">
-                    {client.full_name || "—"}
-                  </TableCell>
-                  <TableCell>{client.order_count}</TableCell>
-                  <TableCell className="font-display font-bold text-primary">
-                    {client.total_spent.toFixed(2)} kr
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{client.points_balance} pts</Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {new Date(client.created_at).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(client)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {clients.length === 0 && (
+              {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
-                    No clients yet.
+                  <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
+                    Loading users...
                   </TableCell>
                 </TableRow>
+              ) : filteredUsers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
+                    No matching users found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-display text-sm font-semibold uppercase">{user.full_name}</p>
+                          <Badge variant={user.role === "admin" ? "default" : "secondary"}>
+                            {user.role === "admin" ? "Admin" : "User"}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{user.email || "No email available"}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>{user.order_count + user.custom_order_count}</TableCell>
+                    <TableCell className="font-display font-bold text-primary">{currency.format(user.total_spent)}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{user.points_balance} pts</Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {user.active_vouchers} active · {user.used_vouchers} used
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{dateTime(user.last_activity_at)}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{dateOnly(user.joined_at)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(user)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
               )}
             </TableBody>
           </Table>
@@ -205,102 +573,338 @@ const AdminClients = () => {
       </Card>
 
       <Dialog
-        open={!!editClient}
+        open={!!selectedUser}
         onOpenChange={(open) => {
-          if (!open) {
-            setEditClient(null);
-            setHistory([]);
-          }
+          if (!open) setEditUser(null);
         }}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-hidden sm:max-w-5xl">
           <DialogHeader>
-            <DialogTitle className="font-display uppercase">Edit Client</DialogTitle>
+            <DialogTitle className="font-display uppercase">User details</DialogTitle>
           </DialogHeader>
 
-          {editClient && (
-            <div className="space-y-5">
-              <div>
-                <Label>Full Name</Label>
-                <div className="flex gap-2">
-                  <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
-                  <Button onClick={saveProfile} size="sm">
-                    Save
-                  </Button>
-                </div>
-              </div>
+          {selectedUser && (
+            <Tabs defaultValue="overview" className="space-y-4">
+              <TabsList className="flex w-full flex-wrap justify-start gap-2 bg-transparent p-0">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="orders">Orders</TabsTrigger>
+                <TabsTrigger value="rewards">Rewards</TabsTrigger>
+                <TabsTrigger value="activity">Activity</TabsTrigger>
+              </TabsList>
 
-              <div className="border-t border-border pt-4">
-                <p className="mb-2 font-display text-sm font-semibold uppercase">
-                  Loyalty Points: <span className="text-primary">{currentBalance} pts</span>
-                </p>
-                <div className="space-y-2">
-                  <Input
-                    type="number"
-                    min={1}
-                    value={pointsAmount || ""}
-                    onChange={(e) => setPointsAmount(parseInt(e.target.value, 10) || 0)}
-                    placeholder="Amount"
-                  />
-                  <Input
-                    value={pointsReason}
-                    onChange={(e) => setPointsReason(e.target.value)}
-                    placeholder="Reason (e.g. Manual loyalty adjustment)"
-                  />
-                  <div className="flex gap-2">
-                    <Button onClick={() => adjustPoints(true)} className="flex-1" variant="default">
-                      <Plus className="mr-1 h-4 w-4" /> Add
-                    </Button>
-                    <Button onClick={() => adjustPoints(false)} className="flex-1" variant="destructive">
-                      <Minus className="mr-1 h-4 w-4" /> Remove
-                    </Button>
+              <TabsContent value="overview" className="space-y-4">
+                <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="font-display uppercase">Account</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div>
+                          <Label>Full name</Label>
+                          <div className="mt-2 flex gap-2">
+                            <Input value={editName} onChange={(event) => setEditName(event.target.value)} />
+                            <Button onClick={saveProfile} disabled={savingProfile}>
+                              {savingProfile ? "Saving..." : "Save"}
+                            </Button>
+                          </div>
+                        </div>
+                        <div>
+                          <Label>Email</Label>
+                          <div className="mt-2 flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-muted-foreground">
+                            <Mail className="h-4 w-4" />
+                            <span>{selectedUser.email || "No email available"}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        <div className="rounded-lg border border-border bg-muted/30 p-4">
+                          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Joined</p>
+                          <p className="mt-2 text-sm font-medium">{dateTime(selectedUser.joined_at)}</p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-muted/30 p-4">
+                          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Last sign-in</p>
+                          <p className="mt-2 text-sm font-medium">{dateTime(selectedUser.last_sign_in_at)}</p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-muted/30 p-4">
+                          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Last activity</p>
+                          <p className="mt-2 text-sm font-medium">{dateTime(selectedUser.last_activity_at)}</p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-muted/30 p-4">
+                          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Role</p>
+                          <p className="mt-2 flex items-center gap-2 text-sm font-medium">
+                            <ShieldCheck className="h-4 w-4 text-primary" />
+                            {selectedUser.role}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="font-display uppercase">Snapshot</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid gap-3">
+                      <div className="rounded-lg border border-border p-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Orders</p>
+                        <p className="mt-2 font-display text-2xl font-bold">{selectedUser.order_count}</p>
+                      </div>
+                      <div className="rounded-lg border border-border p-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Store spend</p>
+                        <p className="mt-2 font-display text-2xl font-bold">{currency.format(selectedUser.total_spent)}</p>
+                      </div>
+                      <div className="rounded-lg border border-border p-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Custom requests</p>
+                        <p className="mt-2 font-display text-2xl font-bold">{selectedUser.custom_order_count}</p>
+                      </div>
+                      <div className="rounded-lg border border-border p-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Active rewards</p>
+                        <p className="mt-2 font-display text-2xl font-bold">{selectedUser.active_vouchers}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="orders" className="space-y-4">
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="font-display uppercase">Store orders</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ScrollArea className="h-[420px] pr-4">
+                        <div className="space-y-3">
+                          {selectedUser.orders.length === 0 ? (
+                            <div className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
+                              No store orders yet.
+                            </div>
+                          ) : (
+                            selectedUser.orders.map((order) => (
+                              <div key={order.id} className="rounded-lg border border-border p-4">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div>
+                                    <p className="font-display text-sm font-semibold uppercase">#{order.id.slice(0, 8)}</p>
+                                    <p className="text-xs text-muted-foreground">{dateTime(order.created_at)}</p>
+                                  </div>
+                                  <Badge variant="outline">{order.status}</Badge>
+                                </div>
+                                <div className="mt-3 flex items-center justify-between text-sm">
+                                  <span className="text-muted-foreground">{order.tool_type || "Store"}</span>
+                                  <span className="font-semibold text-primary">{currency.format(Number(order.total || 0))}</span>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="font-display uppercase">Custom requests</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ScrollArea className="h-[420px] pr-4">
+                        <div className="space-y-3">
+                          {selectedUser.customOrders.length === 0 ? (
+                            <div className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
+                              No custom requests yet.
+                            </div>
+                          ) : (
+                            selectedUser.customOrders.map((order) => {
+                              const amount = Number(order.final_agreed_price ?? order.quoted_price ?? order.customer_offer_price ?? 0);
+                              return (
+                                <div key={order.id} className="rounded-lg border border-border p-4">
+                                  <div className="flex items-center justify-between gap-3">
+                                    <div>
+                                      <p className="font-display text-sm font-semibold uppercase">#{order.id.slice(0, 8)}</p>
+                                      <p className="text-xs text-muted-foreground">{dateTime(order.updated_at || order.created_at)}</p>
+                                    </div>
+                                    <Badge variant="outline">{order.production_status || order.status}</Badge>
+                                  </div>
+                                  <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
+                                    <span>{order.payment_status}</span>
+                                    <span>{currency.format(amount)}</span>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="rewards" className="space-y-4">
+                <div className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="font-display uppercase">Loyalty controls</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="rounded-lg border border-border bg-muted/30 p-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Current balance</p>
+                        <p className="mt-2 font-display text-3xl font-bold">{selectedUser.points_balance} pts</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Amount</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={pointsAmount || ""}
+                          onChange={(event) => setPointsAmount(parseInt(event.target.value, 10) || 0)}
+                          placeholder="Points amount"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Reason</Label>
+                        <Input
+                          value={pointsReason}
+                          onChange={(event) => setPointsReason(event.target.value)}
+                          placeholder="Reason for the adjustment"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button onClick={() => adjustPoints(true)} disabled={adjustingPoints} className="flex-1">
+                          <Plus className="mr-1 h-4 w-4" /> Add
+                        </Button>
+                        <Button onClick={() => adjustPoints(false)} disabled={adjustingPoints} variant="destructive" className="flex-1">
+                          <Minus className="mr-1 h-4 w-4" /> Remove
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <div className="grid gap-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="font-display uppercase">Vouchers and gift cards</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ScrollArea className="h-[220px] pr-4">
+                          <div className="space-y-3">
+                            {selectedUser.vouchers.length === 0 ? (
+                              <div className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
+                                No rewards redeemed yet.
+                              </div>
+                            ) : (
+                              selectedUser.vouchers.map((voucher) => (
+                                <div key={voucher.id} className="rounded-lg border border-border p-4">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                      <p className="font-medium text-foreground">{getVoucherSummary(voucher)}</p>
+                                      <p className="mt-1 text-xs text-muted-foreground">{voucher.code}</p>
+                                      {voucher.recipient_email && (
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                          Gifted to {voucher.recipient_name || voucher.recipient_email}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <Badge variant={voucher.is_used ? "secondary" : "outline"}>
+                                      {voucher.is_used ? "Used" : "Active"}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </ScrollArea>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="font-display uppercase">Points history</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ScrollArea className="h-[220px] pr-4">
+                          <div className="space-y-3">
+                            {selectedUser.loyaltyHistory.length === 0 ? (
+                              <div className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
+                                No loyalty activity yet.
+                              </div>
+                            ) : (
+                              selectedUser.loyaltyHistory.map((row) => (
+                                <div key={row.id} className="flex items-center justify-between rounded-lg border border-border p-4 text-sm">
+                                  <div>
+                                    <p className="font-medium text-foreground">{row.reason}</p>
+                                    <p className="text-xs text-muted-foreground">{dateTime(row.created_at)}</p>
+                                  </div>
+                                  <span className={row.points >= 0 ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
+                                    {row.points > 0 ? `+${row.points}` : row.points} pts
+                                  </span>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </ScrollArea>
+                      </CardContent>
+                    </Card>
                   </div>
                 </div>
-              </div>
+              </TabsContent>
 
-              <div className="border-t border-border pt-4">
-                <div className="mb-3 flex items-center gap-2">
-                  <History className="h-4 w-4 text-primary" />
-                  <p className="font-display text-sm font-semibold uppercase">Recent Loyalty Activity</p>
-                </div>
-
-                <div className="max-h-64 space-y-2 overflow-y-auto">
-                  {loadingHistory ? (
-                    <div className="rounded-md border border-border p-3 text-sm text-muted-foreground">
-                      Loading history...
-                    </div>
-                  ) : history.length === 0 ? (
-                    <div className="rounded-md border border-border p-3 text-sm text-muted-foreground">
-                      No loyalty activity yet.
-                    </div>
-                  ) : (
-                    history.map((row) => (
-                      <div
-                        key={row.id}
-                        className="flex items-center justify-between rounded-md border border-border p-3 text-sm"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate text-foreground">{row.reason || "Points update"}</p>
-                          <p className="text-xs text-muted-foreground">{new Date(row.created_at).toLocaleString()}</p>
-                        </div>
-                        <span
-                          className={row.points >= 0 ? "font-semibold text-green-600" : "font-semibold text-red-600"}
-                        >
-                          {row.points >= 0 ? `+${row.points}` : row.points}
-                        </span>
+              <TabsContent value="activity">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="font-display uppercase">Recent activity</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[520px] pr-4">
+                      <div className="space-y-3">
+                        {selectedUser.activity.length === 0 ? (
+                          <div className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
+                            No activity recorded yet.
+                          </div>
+                        ) : (
+                          selectedUser.activity.map((item) => (
+                            <div key={item.id} className="flex items-start gap-3 rounded-lg border border-border p-4">
+                              <div className="mt-0.5 rounded-full bg-primary/10 p-2 text-primary">
+                                {item.label.includes("order") ? (
+                                  <ShoppingBag className="h-4 w-4" />
+                                ) : item.label.includes("Voucher") ? (
+                                  <Ticket className="h-4 w-4" />
+                                ) : item.label.includes("Points") ? (
+                                  <Gift className="h-4 w-4" />
+                                ) : item.label.includes("sign") ? (
+                                  <Clock3 className="h-4 w-4" />
+                                ) : (
+                                  <Activity className="h-4 w-4" />
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="font-medium text-foreground">{item.label}</p>
+                                  <span className="text-xs text-muted-foreground">{dateTime(item.created_at)}</span>
+                                </div>
+                                <p
+                                  className={`mt-1 text-sm ${
+                                    item.tone === "positive"
+                                      ? "text-green-600"
+                                      : item.tone === "negative"
+                                        ? "text-red-600"
+                                        : "text-muted-foreground"
+                                  }`}
+                                >
+                                  {item.detail}
+                                </p>
+                              </div>
+                            </div>
+                          ))
+                        )}
                       </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <div className="border-t border-border pt-4 text-sm text-muted-foreground">
-                <p>
-                  Orders: {editClient.order_count} · Spent: {editClient.total_spent.toFixed(2)} kr
-                </p>
-                <p>Joined: {new Date(editClient.created_at).toLocaleDateString()}</p>
-              </div>
-            </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           )}
         </DialogContent>
       </Dialog>

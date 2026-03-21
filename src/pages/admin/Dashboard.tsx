@@ -183,7 +183,7 @@ const Dashboard = () => {
       alert: alerts.orders,
     },
     { label: "Products", value: stats.products, icon: Package, sub: "Active catalog", to: "/admin/products", alert: 0 },
-    { label: "Clients", value: stats.clients, icon: Users, sub: "Registered users", to: "/admin/clients", alert: 0 },
+    { label: "Users", value: stats.clients, icon: Users, sub: "Registered accounts", to: "/admin/clients", alert: 0 },
     {
       label: "Custom Orders",
       value: stats.customOrders,

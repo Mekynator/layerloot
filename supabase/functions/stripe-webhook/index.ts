@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import Stripe from "npm:stripe@14.25.0";
+import Stripe from "https://esm.sh/stripe@18.0.0?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 async function markVoucherUsed(supabase: ReturnType<typeof createClient>, userVoucherId: string, voucherType: string | undefined) {
@@ -28,7 +28,7 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    const stripe = new Stripe(stripeSecret, { apiVersion: "2024-04-10" });
+    const stripe = new Stripe(stripeSecret, { apiVersion: "2025-02-24.acacia" });
     const sig = req.headers.get("stripe-signature");
     if (!sig) return new Response("Missing signature", { status: 400 });
 

@@ -43,7 +43,7 @@ interface Category {
 }
 
 const MAX_PRODUCT_IMAGE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
-const MAX_PRODUCT_MODEL_SIZE_BYTES = 100 * 1024 * 1024; // 100 MB
+const MAX_PRODUCT_MODEL_SIZE_BYTES = 500 * 1024 * 1024; // 500 MB
 
 const emptyProduct = {
   name: "", slug: "", description: "", price: 0, compare_at_price: null as number | null,
@@ -98,7 +98,7 @@ const AdminProducts = () => {
   const uploadModel = async (): Promise<string | null> => {
     if (!modelFile) return null;
     if (modelFile.size > MAX_PRODUCT_MODEL_SIZE_BYTES) {
-      throw new Error("3D model file is too large. Maximum allowed size is 100 MB.");
+      throw new Error("3D model file is too large. Maximum allowed size is 500 MB.");
     }
     const ext = modelFile.name.split(".").pop();
     const path = `${Date.now()}.${ext}`;
@@ -264,7 +264,7 @@ const AdminProducts = () => {
                   <Input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] ?? null)} />
                 </div>
                 <div>
-                  <Label>3D Model (STL, OBJ, 3MF, max 100 MB)</Label>
+                  <Label>3D Model (STL, OBJ, 3MF, max 500 MB)</Label>
                   <Input type="file" accept=".stl,.obj,.3mf" onChange={(e) => setModelFile(e.target.files?.[0] ?? null)} />
                   {form.model_url && <p className="mt-1 text-xs text-muted-foreground">Current model uploaded ✓</p>}
                 </div>

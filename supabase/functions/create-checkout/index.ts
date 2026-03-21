@@ -131,7 +131,7 @@ async function resolveVoucher(args: {
     if (args.shippingCost <= 0) {
       throw new Error("Free delivery can only be used when shipping is charged");
     }
-    discountAmount = Math.min(args.shippingCost, Math.max(0, Number(voucher.discount_value ?? args.shippingCost || 0)) || args.shippingCost);
+    discountAmount = Math.min(args.shippingCost, Math.max(0, Number(voucher.discount_value ?? args.shippingCost) || args.shippingCost));
   } else if (voucher.discount_type === "gift_card") {
     const availableBalance = Number(row.balance ?? voucher.discount_value ?? 0);
     if (availableBalance <= 0) throw new Error("This gift card has no balance left");

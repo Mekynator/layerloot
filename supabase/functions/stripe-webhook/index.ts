@@ -75,8 +75,8 @@ serve(async (req) => {
         await supabase
           .from("custom_orders")
           .update({
-            request_fee_status: "failed",
-            status: "payment_pending",
+            payment_status: "failed",
+            status: "pending",
           })
           .eq("id", orderId);
       }

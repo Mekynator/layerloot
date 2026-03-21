@@ -206,7 +206,7 @@ async function tryProductViews(userId: string) {
       error: null,
       data: data?.product
         ? {
-            ...(data.product as Record<string, unknown>),
+            ...(data.product as unknown as Record<string, unknown>),
             viewed_at: data.viewed_at,
           }
         : null,

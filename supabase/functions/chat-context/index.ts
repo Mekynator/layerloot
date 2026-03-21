@@ -53,9 +53,8 @@ serve(async (req) => {
 
       adminClient
         .from("loyalty_points")
-        .select("balance, earned_total, spent_total")
-        .eq("user_id", userId)
-        .maybeSingle(),
+        .select("points")
+        .eq("user_id", userId),
 
       adminClient
         .from("orders")
@@ -87,7 +86,8 @@ serve(async (req) => {
     ]);
 
     const profile = profileRes.data;
-    const points = pointsRes.data;
+    const pointsRows = pointsRes.data ?? [];
+    const pointsBalance = pointsRows.reduce((sum: number, r: any) => sum + (r.points ?? 0), 0);
     const lastOrder = lastOrderRes.data;
     const lastViewed = lastViewedRes.data?.product ?? null;
     const recommendedProducts = recommendedRes.data ?? [];
@@ -104,9 +104,7 @@ serve(async (req) => {
         last_login_at: profile?.last_login_at ?? null,
       },
       points: {
-        balance,
-        earned_total,
-        spent_total,
+        balance: pointsBalance,
       },
       last_order: lastOrder
         ? {

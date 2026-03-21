@@ -8,9 +8,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-type SupabaseAdminClient = ReturnType<typeof createClient>;
-
-async function addPointsForOrder(adminClient: SupabaseAdminClient, userId: string, amountDKK: number, orderId: string) {
+async function addPointsForOrder(adminClient: any, userId: string, amountDKK: number, orderId: string) {
   const points = Math.floor(amountDKK / 4);
 
   if (points <= 0) return;

@@ -30,14 +30,26 @@ serve(async (req) => {
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRole);
 
     const jwt = authHeader.replace("Bearer ", "").trim();
-    const { data: claimsData, error: claimsErr } = await supabaseUser.auth.getClaims(jwt);
-    const userId = claimsData?.claims?.sub;
+    let userId: string | null = null;
 
-    if (claimsErr || !userId) {
-      return new Response(JSON.stringify({ error: "Invalid JWT" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    try {
+      const { data: claimsData, error: claimsErr } = await supabaseUser.auth.getClaims(jwt);
+      if (!claimsErr && claimsData?.claims?.sub) {
+        userId = claimsData.claims.sub;
+      }
+    } catch {
+      // fallback below
+    }
+
+    if (!userId) {
+      const { data: userData, error: userErr } = await supabaseUser.auth.getUser(jwt);
+      if (userErr || !userData?.user?.id) {
+        return new Response(JSON.stringify({ error: "Invalid or expired JWT" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      userId = userData.user.id;
     }
 
     const body = await req.json();

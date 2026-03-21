@@ -296,6 +296,33 @@ function getLatestDate(values: (string | null | undefined)[]) {
   );
 }
 
+function groupVouchersByDefinition(vouchers: UserVoucher[]) {
+  const groups = new Map<string, { key: string; label: string; type: string | null; items: UserVoucher[] }>();
+
+  vouchers.forEach((voucher) => {
+    const key = voucher.voucher_id || voucher.vouchers?.name || voucher.id;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.items.push(voucher);
+      return;
+    }
+
+    groups.set(key, {
+      key,
+      label: voucher.vouchers?.name ?? "Voucher",
+      type: voucher.vouchers?.discount_type ?? null,
+      items: [voucher],
+    });
+  });
+
+  return Array.from(groups.values()).map((group) => ({
+    ...group,
+    items: [...group.items].sort(
+      (a, b) => new Date(b.redeemed_at).getTime() - new Date(a.redeemed_at).getTime(),
+    ),
+  }));
+}
+
 const Account = () => {
   const { user, isAdmin, signOut, loading } = useAuth();
   const navigate = useNavigate();
@@ -309,6 +336,7 @@ const Account = () => {
   const [giftEmail, setGiftEmail] = useState("");
   const [giftName, setGiftName] = useState("");
   const [giftingVoucherId, setGiftingVoucherId] = useState<string | null>(null);
+  const [expandedVoucherGroupKey, setExpandedVoucherGroupKey] = useState<string | null>(null);
   const [reviewingOrderId, setReviewingOrderId] = useState<string | null>(null);
   const [expandedCustomOrderId, setExpandedCustomOrderId] = useState<string | null>(null);
   const [replyMessage, setReplyMessage] = useState<Record<string, string>>({});
@@ -369,14 +397,9 @@ const Account = () => {
     [user, userVouchers],
   );
 
-  const voucherCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    userVouchers.forEach((voucher) => {
-      const key = voucher.voucher_id || voucher.vouchers?.name || voucher.id;
-      counts.set(key, (counts.get(key) || 0) + 1);
-    });
-    return counts;
-  }, [userVouchers]);
+  const activeVoucherGroups = useMemo(() => groupVouchersByDefinition(activeVouchers), [activeVouchers]);
+
+  const usedVoucherGroups = useMemo(() => groupVouchersByDefinition(usedVouchers), [usedVouchers]);
 
   const latestOrderActivityAt = useMemo(() => getLatestDate(orders.map((order) => order.created_at)), [orders]);
 
@@ -1227,116 +1250,135 @@ const Account = () => {
               </Button>
             </div>
 
-            {(voucherView === "active" ? activeVouchers : usedVouchers).length === 0 ? (
+            {(voucherView === "active" ? activeVoucherGroups : usedVoucherGroups).length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center text-muted-foreground">
                   {voucherView === "active" ? "No active vouchers available." : "No used vouchers yet."}
                 </CardContent>
               </Card>
             ) : (
-              (voucherView === "active" ? activeVouchers : usedVouchers).map((uv) => {
-                const recipientEmail = (uv.recipient_email || "").trim().toLowerCase();
-                const isReceived = recipientEmail !== "" && recipientEmail === (user?.email || "").trim().toLowerCase();
-                const isGifted = !!uv.recipient_email && !isReceived;
-                const isUsed = uv.is_used || !!uv.used_at || (uv.balance !== null && Number(uv.balance) <= 0);
-                const duplicateCount = voucherCounts.get(uv.voucher_id || uv.vouchers?.name || uv.id) || 0;
+              (voucherView === "active" ? activeVoucherGroups : usedVoucherGroups).map((group) => {
+                const isGiftCard = group.type === "gift_card";
+                const giftCardBalance = group.items.reduce((sum, item) => sum + Number(item.balance ?? 0), 0);
+                const isExpanded = expandedVoucherGroupKey === group.key;
 
                 return (
-                  <Card key={uv.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-display text-sm font-semibold uppercase text-card-foreground">
-                              {uv.vouchers?.name ?? "Voucher"}
-                              {duplicateCount > 1 ? <span className="ml-2 text-xs text-muted-foreground">(x{duplicateCount})</span> : null}
-                            </p>
-                            {uv.vouchers?.discount_type === "gift_card" && (
-                              <Badge variant="outline" className="text-xs">
-                                Gift Card
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="font-mono text-lg font-bold text-primary">{uv.code}</p>
-                          {uv.balance !== null && (
-                            <p className="text-sm text-muted-foreground">
-                              Balance:{" "}
-                              <span className="font-bold text-foreground">{Number(uv.balance).toFixed(2)} kr</span>
-                            </p>
-                          )}
-                          {isGifted && uv.recipient_email ? (
-                            <p className="text-xs text-muted-foreground">
-                              Sent to: {uv.recipient_name ? `${uv.recipient_name} ` : ""}({uv.recipient_email})
-                            </p>
-                          ) : null}
-                          {isReceived ? (
-                            <p className="text-xs text-muted-foreground">Received gift card</p>
-                          ) : null}
-                          <p className="text-xs text-muted-foreground">
-                            Redeemed: {new Date(uv.redeemed_at).toLocaleString()}
+                  <Card key={group.key} className="overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedVoucherGroupKey(isExpanded ? null : group.key)}
+                      className="flex w-full items-center justify-between gap-4 p-4 text-left transition-colors hover:bg-muted/20"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-display text-sm font-semibold uppercase text-card-foreground">
+                            {group.label}
+                            <span className="ml-2 text-xs text-muted-foreground">(x{group.items.length})</span>
                           </p>
-                          {uv.used_at && (
-                            <p className="text-xs text-muted-foreground">
-                              Used: {new Date(uv.used_at).toLocaleString()}
-                            </p>
-                          )}
+                          {isGiftCard ? <Badge variant="outline" className="text-xs">Gift Card</Badge> : null}
                         </div>
-
-                        <div className="flex items-center gap-2">
-                          {voucherView === "active" &&
-                            uv.vouchers?.discount_type === "gift_card" &&
-                            !uv.recipient_email &&
-                            uv.user_id === user?.id &&
-                            !uv.is_used && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setGiftingVoucherId(giftingVoucherId === uv.id ? null : uv.id)}
-                                className="font-display text-xs uppercase tracking-wider"
-                              >
-                                <Send className="mr-1 h-3 w-3" /> Gift
-                              </Button>
-                            )}
-
-                          {isUsed ? (
-                            <Badge variant="secondary">Used</Badge>
-                          ) : isGifted ? (
-                            <Badge variant="secondary">Gifted</Badge>
-                          ) : (
-                            <Badge variant="default">Active</Badge>
-                          )}
-                        </div>
+                        {isGiftCard ? (
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            Balance: <span className="font-bold text-foreground">{giftCardBalance.toFixed(2)} kr</span>
+                          </p>
+                        ) : null}
                       </div>
+                      <div className="flex items-center gap-3">
+                        <Badge variant={voucherView === "active" ? "default" : "secondary"}>
+                          {voucherView === "active" ? "Active" : "Used"}
+                        </Badge>
+                        {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                      </div>
+                    </button>
 
-                      {voucherView === "active" && giftingVoucherId === uv.id && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          className="mt-4 space-y-3 border-t border-border pt-4"
-                        >
-                          <p className="text-sm text-muted-foreground">Send this gift card to someone:</p>
-                          <input
-                            placeholder="Recipient email"
-                            value={giftEmail}
-                            onChange={(e) => setGiftEmail(e.target.value)}
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                          />
-                          <input
-                            placeholder="Recipient name (optional)"
-                            value={giftName}
-                            onChange={(e) => setGiftName(e.target.value)}
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                          />
-                          <Button
-                            size="sm"
-                            onClick={() => sendGiftCard(uv.id)}
-                            className="font-display uppercase tracking-wider"
-                          >
-                            <Send className="mr-1 h-3 w-3" /> Send Gift Card
-                          </Button>
-                        </motion.div>
-                      )}
-                    </CardContent>
+                    {isExpanded ? (
+                      <CardContent className="space-y-3 border-t border-border bg-background/40 p-4">
+                        {group.items.map((uv) => {
+                          const recipientEmail = (uv.recipient_email || "").trim().toLowerCase();
+                          const isReceived = recipientEmail !== "" && recipientEmail === (user?.email || "").trim().toLowerCase();
+                          const isGifted = !!uv.recipient_email && !isReceived;
+                          const isUsed = uv.is_used || !!uv.used_at || (uv.balance !== null && Number(uv.balance) <= 0);
+
+                          return (
+                            <div key={uv.id} className="rounded-2xl border border-border/70 bg-card/80 p-4">
+                              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                                <div className="space-y-1">
+                                  <p className="font-mono text-lg font-bold text-primary">{uv.code}</p>
+                                  {uv.balance !== null ? (
+                                    <p className="text-sm text-muted-foreground">
+                                      Balance: <span className="font-bold text-foreground">{Number(uv.balance).toFixed(2)} kr</span>
+                                    </p>
+                                  ) : null}
+                                  {isGifted && uv.recipient_email ? (
+                                    <p className="text-xs text-muted-foreground">
+                                      Sent to: {uv.recipient_name ? `${uv.recipient_name} ` : ""}({uv.recipient_email})
+                                    </p>
+                                  ) : null}
+                                  {isReceived ? <p className="text-xs text-muted-foreground">Received gift card</p> : null}
+                                  <p className="text-xs text-muted-foreground">Redeemed: {new Date(uv.redeemed_at).toLocaleString()}</p>
+                                  {uv.used_at ? <p className="text-xs text-muted-foreground">Used: {new Date(uv.used_at).toLocaleString()}</p> : null}
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-2">
+                                  {voucherView === "active" &&
+                                    uv.vouchers?.discount_type === "gift_card" &&
+                                    !uv.recipient_email &&
+                                    uv.user_id === user?.id &&
+                                    !uv.is_used ? (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setGiftingVoucherId(giftingVoucherId === uv.id ? null : uv.id)}
+                                        className="font-display text-xs uppercase tracking-wider"
+                                      >
+                                        <Send className="mr-1 h-3 w-3" /> Gift
+                                      </Button>
+                                    ) : null}
+
+                                  {isUsed ? (
+                                    <Badge variant="secondary">Used</Badge>
+                                  ) : isGifted ? (
+                                    <Badge variant="secondary">Gifted</Badge>
+                                  ) : isReceived ? (
+                                    <Badge variant="secondary">Received</Badge>
+                                  ) : (
+                                    <Badge variant="default">Active</Badge>
+                                  )}
+                                </div>
+                              </div>
+
+                              {voucherView === "active" && giftingVoucherId === uv.id ? (
+                                <motion.div
+                                  initial={{ opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: "auto" }}
+                                  className="mt-4 space-y-3 border-t border-border pt-4"
+                                >
+                                  <input
+                                    placeholder="Recipient email"
+                                    value={giftEmail}
+                                    onChange={(e) => setGiftEmail(e.target.value)}
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                                  />
+                                  <input
+                                    placeholder="Recipient name (optional)"
+                                    value={giftName}
+                                    onChange={(e) => setGiftName(e.target.value)}
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                                  />
+                                  <Button
+                                    size="sm"
+                                    onClick={() => sendGiftCard(uv.id)}
+                                    className="font-display uppercase tracking-wider"
+                                  >
+                                    <Send className="mr-1 h-3 w-3" /> Send Gift Card
+                                  </Button>
+                                </motion.div>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </CardContent>
+                    ) : null}
                   </Card>
                 );
               })

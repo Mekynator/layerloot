@@ -151,6 +151,7 @@ export type Database = {
           email: string
           final_agreed_price: number | null
           id: string
+          metadata: Json
           model_filename: string
           model_url: string
           name: string
@@ -170,6 +171,7 @@ export type Database = {
           email: string
           final_agreed_price?: number | null
           id?: string
+          metadata?: Json
           model_filename: string
           model_url: string
           name: string
@@ -189,6 +191,7 @@ export type Database = {
           email?: string
           final_agreed_price?: number | null
           id?: string
+          metadata?: Json
           model_filename?: string
           model_url?: string
           name?: string

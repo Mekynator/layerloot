@@ -37,13 +37,29 @@ function mergeUserVouchers(owned: any[], received: any[], userId: string, userEm
   );
 }
 
+function mergeCustomOrders(owned: any[], emailMatched: any[]) {
+  const unique = new Map<string, any>();
+
+  [...owned, ...emailMatched].filter(Boolean).forEach((order) => {
+    unique.set(order.id, order);
+  });
+
+  return Array.from(unique.values()).sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  );
+}
+
 async function fetchAccountOverview(userId: string, userEmail?: string): Promise<AccountOverviewData> {
   const voucherSelect = "id, user_id, voucher_id, code, is_used, balance, redeemed_at, recipient_email, recipient_name, used_at, vouchers(name, discount_value, discount_type)";
+  const normalizedEmail = (userEmail || "").trim();
 
-  const [loyaltyRes, ordersRes, customOrdersRes, vouchersRes, ownedVouchersRes, receivedVouchersRes] = await Promise.all([
+  const [loyaltyRes, ordersRes, ownedCustomOrdersRes, emailCustomOrdersRes, vouchersRes, ownedVouchersRes, receivedVouchersRes] = await Promise.all([
     supabase.from("loyalty_points").select("id, points, reason, created_at").eq("user_id", userId).order("created_at", { ascending: false }),
     supabase.from("orders").select("id, status, total, created_at, tool_type").eq("user_id", userId).order("created_at", { ascending: false }),
     supabase.from("custom_orders").select("*").eq("user_id", userId).eq("request_fee_status", "paid").order("created_at", { ascending: false }),
+    normalizedEmail
+      ? supabase.from("custom_orders").select("*").ilike("email", normalizedEmail).eq("request_fee_status", "paid").order("created_at", { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
     supabase.from("vouchers").select("*").eq("is_active", true).order("points_cost", { ascending: true }),
     supabase.from("user_vouchers").select(voucherSelect).eq("user_id", userId).order("redeemed_at", { ascending: false }),
     userEmail
@@ -53,12 +69,13 @@ async function fetchAccountOverview(userId: string, userEmail?: string): Promise
 
   if (loyaltyRes.error) throw loyaltyRes.error;
   if (ordersRes.error) throw ordersRes.error;
-  if (customOrdersRes.error) throw customOrdersRes.error;
+  if (ownedCustomOrdersRes.error) throw ownedCustomOrdersRes.error;
+  if (emailCustomOrdersRes.error) throw emailCustomOrdersRes.error;
   if (vouchersRes.error) throw vouchersRes.error;
   if (ownedVouchersRes.error) throw ownedVouchersRes.error;
   if (receivedVouchersRes.error) throw receivedVouchersRes.error;
 
-  const customOrders = customOrdersRes.data ?? [];
+  const customOrders = mergeCustomOrders(ownedCustomOrdersRes.data ?? [], emailCustomOrdersRes.data ?? []);
   let customOrderMessages: Record<string, any[]> = {};
 
   if (customOrders.length > 0) {

@@ -8,3 +8,18 @@ verify_jwt = false
 
 [functions.create-checkout]
 verify_jwt = false
+
+[functions.create-request-fee-checkout]
+verify_jwt = false
+
+[functions.create-custom-order-checkout]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.chat-context]
+verify_jwt = false
+
+[functions.send-gift-card]
+verify_jwt = false

@@ -1,7 +1,10 @@
-project_id = "rvdafdqibsqvnngbwcnd"
+project_id = "mjvwltgomifrsivtzaki"
 
 [functions.generate-receipt]
 verify_jwt = false
 
 [functions.chat]
+verify_jwt = false
+
+[functions.create-checkout]
 verify_jwt = false

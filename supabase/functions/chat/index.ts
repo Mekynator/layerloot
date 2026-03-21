@@ -323,7 +323,7 @@ serve(async (req) => {
     const profile = await tryProfile(user.id);
     const points = await tryPoints(user.id);
     const orders = await tryOrders(user.id);
-    const lastViewed = await tryProductViewsViews(user.id);
+    const lastViewed = await tryProductViews(user.id);
     const recommended = await tryRecommendedProducts((lastViewed.data as any)?.id as string | null);
 
     const context = {

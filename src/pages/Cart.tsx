@@ -218,16 +218,8 @@ export default function CartPage() {
         data: { session },
       } = await supabase.auth.getSession();
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          Authorization: session?.access_token
-            ? `Bearer ${session.access_token}`
-            : `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: {
           items: cartItems.map((item) => ({
             id: item.id,
             product_id: item.id,
@@ -243,13 +235,14 @@ export default function CartPage() {
           shippingCost,
           success_url: `${window.location.origin}/checkout/success`,
           cancel_url: `${window.location.origin}/cart`,
-        }),
+        },
+        headers: session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : undefined,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.error || "Failed to create Stripe checkout session.");
+      if (error) {
+        throw new Error(error.message || "Failed to create Stripe checkout session.");
       }
 
       if (data?.url) {

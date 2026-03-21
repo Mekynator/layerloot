@@ -305,7 +305,7 @@ const ProductDetail = () => {
         </div>
 
         {/* Reviews Section */}
-        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mt-16">
+        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mt-24 pt-4 lg:mt-28">
           <h2 className="mb-6 font-display text-2xl font-bold uppercase text-foreground">
             Customer Reviews {reviews.length > 0 && `(${reviews.length})`}
           </h2>

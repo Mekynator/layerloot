@@ -506,11 +506,9 @@ export type Database = {
           comment: string | null
           created_at: string
           id: string
-          image_url: string | null
           is_approved: boolean
           product_id: string
           rating: number
-          reviewer_name: string | null
           title: string | null
           user_id: string
         }
@@ -518,11 +516,9 @@ export type Database = {
           comment?: string | null
           created_at?: string
           id?: string
-          image_url?: string | null
           is_approved?: boolean
           product_id: string
           rating: number
-          reviewer_name?: string | null
           title?: string | null
           user_id: string
         }
@@ -530,11 +526,9 @@ export type Database = {
           comment?: string | null
           created_at?: string
           id?: string
-          image_url?: string | null
           is_approved?: boolean
           product_id?: string
           rating?: number
-          reviewer_name?: string | null
           title?: string | null
           user_id?: string
         }

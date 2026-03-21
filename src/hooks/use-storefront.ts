@@ -75,7 +75,7 @@ async function fetchStorefrontCatalog(page?: string): Promise<StorefrontCatalogD
     .order("created_at", { ascending: false })
     .limit(8);
 
-  const requests: Promise<any>[] = [productsReq, categoriesReq, reviewsReq, galleryReq];
+  const requests: PromiseLike<any>[] = [productsReq, categoriesReq, reviewsReq, galleryReq];
 
   if (page) {
     requests.push(

@@ -324,11 +324,11 @@ function groupVouchersByDefinition(vouchers: UserVoucher[]) {
 }
 
 const Account = () => {
-  const { user, session, isAdmin, signOut, loading } = useAuth();
+  const { user, isAdmin, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
-  const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } = useAccountOverview(user?.id, user?.email, session?.access_token);
+  const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } = useAccountOverview(user?.id, user?.email);
 
   const [showHistory, setShowHistory] = useState(false);
   const [tab, setTab] = useState<AccountTab>("orders");

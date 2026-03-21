@@ -57,12 +57,23 @@ function mapMessages(rows: any[]) {
   }, {});
 }
 
-async function fetchCustomOrdersFallback(userId: string, userEmail?: string) {
+async function fetchCustomOrders(userId: string, userEmail?: string) {
   const normalizedEmail = (userEmail || "").trim();
+
   const [ownedCustomOrdersRes, emailCustomOrdersRes] = await Promise.all([
-    supabase.from("custom_orders").select("*").eq("user_id", userId).eq("request_fee_status", "paid").order("created_at", { ascending: false }),
+    supabase
+      .from("custom_orders")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("request_fee_status", "paid")
+      .order("created_at", { ascending: false }),
     normalizedEmail
-      ? supabase.from("custom_orders").select("*").ilike("email", normalizedEmail).eq("request_fee_status", "paid").order("created_at", { ascending: false })
+      ? supabase
+          .from("custom_orders")
+          .select("*")
+          .ilike("email", normalizedEmail)
+          .eq("request_fee_status", "paid")
+          .order("created_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
   ]);
 
@@ -89,32 +100,13 @@ async function fetchCustomOrdersFallback(userId: string, userEmail?: string) {
   };
 }
 
-async function fetchCustomOrders(userId: string, userEmail?: string, accessToken?: string | null) {
-  if (accessToken) {
-    const customOrdersRes = await supabase.functions.invoke("get-account-custom-orders", {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!customOrdersRes.error) {
-      return {
-        customOrders: customOrdersRes.data?.orders ?? [],
-        customOrderMessages: mapMessages(customOrdersRes.data?.messages ?? []),
-      };
-    }
-  }
-
-  return fetchCustomOrdersFallback(userId, userEmail);
-}
-
-async function fetchAccountOverview(userId: string, userEmail?: string, accessToken?: string | null): Promise<AccountOverviewData> {
+async function fetchAccountOverview(userId: string, userEmail?: string): Promise<AccountOverviewData> {
   const voucherSelect = "id, user_id, voucher_id, code, is_used, balance, redeemed_at, recipient_email, recipient_name, used_at, vouchers(name, discount_value, discount_type)";
 
   const [loyaltyRes, ordersRes, customOrdersData, vouchersRes, ownedVouchersRes, receivedVouchersRes] = await Promise.all([
     supabase.from("loyalty_points").select("id, points, reason, created_at").eq("user_id", userId).order("created_at", { ascending: false }),
     supabase.from("orders").select("id, status, total, created_at, tool_type").eq("user_id", userId).order("created_at", { ascending: false }),
-    fetchCustomOrders(userId, userEmail, accessToken),
+    fetchCustomOrders(userId, userEmail),
     supabase.from("vouchers").select("*").eq("is_active", true).order("points_cost", { ascending: true }),
     supabase.from("user_vouchers").select(voucherSelect).eq("user_id", userId).order("redeemed_at", { ascending: false }),
     userEmail
@@ -144,10 +136,10 @@ async function fetchAccountOverview(userId: string, userEmail?: string, accessTo
   };
 }
 
-export function useAccountOverview(userId?: string, userEmail?: string, accessToken?: string | null) {
+export function useAccountOverview(userId?: string, userEmail?: string) {
   return useQuery({
-    queryKey: ["account-overview", userId, userEmail ?? "", accessToken ? "token" : "no-token"],
-    queryFn: () => fetchAccountOverview(userId as string, userEmail, accessToken),
+    queryKey: ["account-overview", userId, userEmail ?? ""],
+    queryFn: () => fetchAccountOverview(userId as string, userEmail),
     enabled: Boolean(userId),
     staleTime: 1000 * 30,
   });

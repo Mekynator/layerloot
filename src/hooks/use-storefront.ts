@@ -202,7 +202,7 @@ async function fetchProductDetail(slug: string): Promise<ProductDetailData | nul
       .order("sort_order"),
     supabase
       .from("product_reviews")
-      .select("id, product_id, rating, title, comment, created_at, user_id, reviewer_name, image_url")
+      .select("id, product_id, rating, title, comment, created_at, user_id, is_approved")
       .eq("product_id", product.id)
       .eq("is_approved", true)
       .order("created_at", { ascending: false }),

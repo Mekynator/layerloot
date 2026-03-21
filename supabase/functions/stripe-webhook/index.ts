@@ -55,10 +55,8 @@ serve(async (req) => {
         await supabase
           .from("custom_orders")
           .update({
-            request_fee_status: "paid",
-            request_fee_paid_at: new Date().toISOString(),
+            payment_status: "paid",
             status: "pending_review",
-            stripe_payment_intent_id: String(session.payment_intent ?? ""),
           })
           .eq("id", orderId);
       }

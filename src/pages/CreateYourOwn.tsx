@@ -128,7 +128,7 @@ const startRequestFeeCheckout = async (customOrderId: string) => {
   }
 
   const { data, error } = await supabase.functions.invoke("create-request-fee-checkout", {
-    body: { customOrderId },
+    body: { orderId: customOrderId },
     headers: {
       Authorization: `Bearer ${session.access_token}`,
     },
@@ -314,7 +314,7 @@ const LithophaneOrderSection = () => {
         JSON.stringify(payload.designJson, null, 2),
       ].join("\n");
 
-      const { error } = await supabase.from("custom_orders").insert({
+      const { error } = await supabase.from("custom_orders" as any).insert({
         user_id: user.id,
         name: userName || "Account User",
         email: userEmail,

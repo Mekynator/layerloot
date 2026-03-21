@@ -9,6 +9,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+const REQUEST_FEE_DKK = 100;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -22,9 +24,10 @@ serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseAnon = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseAnon = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
     const supabaseServiceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const stripeSecret = Deno.env.get("STRIPE_SECRET_KEY")!;
+    const siteUrl = (Deno.env.get("SITE_URL") || "https://layerloot.com").replace(/\/$/, "");
 
     const supabaseUser = createClient(supabaseUrl, supabaseAnon);
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRole);
@@ -63,7 +66,7 @@ serve(async (req) => {
 
     const { data: order, error: orderErr } = await supabaseAdmin
       .from("custom_orders")
-      .select("id,user_id,request_fee_amount,request_fee_status,status")
+      .select("id,user_id,request_fee_status,status,payment_status")
       .eq("id", orderId)
       .single();
 
@@ -88,19 +91,19 @@ serve(async (req) => {
       });
     }
 
-    const stripe = new Stripe(stripeSecret, { apiVersion: "2024-04-10" });
+    const stripe = new Stripe(stripeSecret, { apiVersion: "2025-02-24.acacia" });
 
-    const origin = req.headers.get("origin") ?? "https://layerloot.com";
-    const fee = Number(order.request_fee_amount ?? 100);
-    const amountOre = Math.max(1, Math.round(fee * 100));
+    const successBase = req.headers.get("origin")?.replace(/\/$/, "") || siteUrl;
+    const amountOre = REQUEST_FEE_DKK * 100;
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
+      customer_creation: "if_required",
       line_items: [
         {
           quantity: 1,
           price_data: {
-            currency: "sek",
+            currency: "dkk",
             unit_amount: amountOre,
             product_data: { name: "Custom 3D Print Request Fee" },
           },
@@ -110,21 +113,28 @@ serve(async (req) => {
         type: "request_fee",
         order_id: order.id,
         user_id: userId,
+        request_fee_amount: String(REQUEST_FEE_DKK),
       },
-      success_url: `${origin}/account?requestFee=success&orderId=${order.id}`,
-      cancel_url: `${origin}/account?requestFee=cancel&orderId=${order.id}`,
+      success_url: `${successBase}/account?requestFee=success&orderId=${order.id}`,
+      cancel_url: `${successBase}/account?requestFee=cancel&orderId=${order.id}`,
     });
 
-    await supabaseAdmin
+    const { error: updateError } = await supabaseAdmin
       .from("custom_orders")
       .update({
         stripe_checkout_session_id: session.id,
+        request_fee_amount: REQUEST_FEE_DKK,
         request_fee_status: "unpaid",
+        payment_status: order.payment_status ?? "unpaid",
         status: "payment_pending",
       })
       .eq("id", order.id);
 
-    return new Response(JSON.stringify({ url: session.url }), {
+    if (updateError) {
+      throw updateError;
+    }
+
+    return new Response(JSON.stringify({ url: session.url, sessionId: session.id, amount: REQUEST_FEE_DKK }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

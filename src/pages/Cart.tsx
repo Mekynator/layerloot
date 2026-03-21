@@ -161,7 +161,7 @@ export default function CartPage() {
           })),
           discountCode: selectedDiscountCode || manualDiscountCode || null,
           shippingCost,
-          success_url: `${window.location.origin}/checkout/success`,
+          success_url: `${window.location.origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${window.location.origin}/cart`,
         },
         headers: session?.access_token

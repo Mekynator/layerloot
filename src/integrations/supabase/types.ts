@@ -383,6 +383,7 @@ export type Database = {
           shipping_address: Json | null
           shipping_cost: number
           status: string
+          stripe_checkout_session_id: string | null
           subtotal: number
           tool_type: string | null
           total: number
@@ -398,6 +399,7 @@ export type Database = {
           shipping_address?: Json | null
           shipping_cost?: number
           status?: string
+          stripe_checkout_session_id?: string | null
           subtotal?: number
           tool_type?: string | null
           total?: number
@@ -413,6 +415,7 @@ export type Database = {
           shipping_address?: Json | null
           shipping_cost?: number
           status?: string
+          stripe_checkout_session_id?: string | null
           subtotal?: number
           tool_type?: string | null
           total?: number

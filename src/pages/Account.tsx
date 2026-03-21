@@ -820,7 +820,7 @@ const Account = () => {
                               className="font-display uppercase tracking-wider"
                             >
                               <CheckCircle2 className="mr-1 h-4 w-4" />
-                              {processingCustomPaymentOrderId === order.id ? "Redirecting..." : "Accept Quote"}
+                              {processingCustomPaymentOrderId === order.id ? "Redirecting..." : "Accept & Pay"}
                             </Button>
                             <Button
                               variant="outline"

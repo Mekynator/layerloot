@@ -172,7 +172,7 @@ serve(async (req) => {
 
     const successUrl = typeof body?.success_url === "string" && body.success_url.trim().length > 0
       ? body.success_url
-      : normalizedOrigin + "/checkout/success";
+      : normalizedOrigin + "/checkout/success?session_id={CHECKOUT_SESSION_ID}";
 
     const cancelUrl = typeof body?.cancel_url === "string" && body.cancel_url.trim().length > 0
       ? body.cancel_url
@@ -264,6 +264,7 @@ serve(async (req) => {
       mode: "payment",
       success_url: successUrl,
       cancel_url: cancelUrl,
+      customer_email: authUser?.email || undefined,
       line_items: lineItems,
       discounts: couponId ? [{ coupon: couponId }] : undefined,
       metadata: {

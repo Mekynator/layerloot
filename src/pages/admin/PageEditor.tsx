@@ -239,7 +239,13 @@ const PageEditor = () => {
         defaultContent = { heading: "Frequently Asked Questions" };
         break;
       case "shipping_banner":
-        defaultContent = { text: "Free shipping on orders over 500 kr" };
+        defaultContent = {
+          text: "Free shipping on orders over 500 kr",
+          section_actionType: "none",
+          section_actionTarget: "",
+          section_openInNewTab: false,
+          visibility: true,
+        };
         break;
       case "hero":
         defaultContent = {
@@ -250,6 +256,31 @@ const PageEditor = () => {
           button_link: "/products",
           secondary_button_text: "Custom Order",
           secondary_button_link: "/create",
+          alignment: "left",
+          buttonAlignment: "left",
+          visibility: true,
+          buttons: [
+            {
+              text: "Explore",
+              icon: "ArrowRight",
+              iconPosition: "right",
+              variant: "default",
+              actionType: "internal_link",
+              actionTarget: "/products",
+              openInNewTab: false,
+              visible: true,
+            },
+            {
+              text: "Custom Order",
+              icon: "",
+              iconPosition: "left",
+              variant: "outline",
+              actionType: "internal_link",
+              actionTarget: "/create",
+              openInNewTab: false,
+              visible: true,
+            },
+          ],
         };
         break;
       case "entry_cards":
@@ -264,10 +295,12 @@ const PageEditor = () => {
       case "trust_badges":
         defaultContent = {
           badges: [
-            { icon: "Truck", title: "Free Shipping", desc: "On orders over 500 kr" },
-            { icon: "Shield", title: "Secure Checkout", desc: "Protected checkout" },
-            { icon: "Star", title: "Rewards", desc: "Earn points on purchases" },
+            { icon: "Truck", title: "Free Shipping", desc: "On orders over 500 kr", visible: true },
+            { icon: "Shield", title: "Secure Checkout", desc: "Protected checkout", visible: true },
+            { icon: "Star", title: "Rewards", desc: "Earn points on purchases", visible: true },
           ],
+          columns: 3,
+          visibility: true,
         };
         break;
     }

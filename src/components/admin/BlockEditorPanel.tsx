@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Plus } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Trash2, Plus, ArrowUp, ArrowDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { SiteBlock } from "./BlockRenderer";
@@ -19,7 +20,33 @@ interface BlockEditorPanelProps {
   pages: string[];
 }
 
-const ICON_OPTIONS = ["ShoppingBag", "Palette", "Upload", "Printer", "Package", "Truck", "Shield", "Star"];
+type ActionType = "none" | "internal_link" | "external_link";
+
+const ICON_OPTIONS = [
+  "ShoppingBag",
+  "Palette",
+  "Upload",
+  "Printer",
+  "Package",
+  "Truck",
+  "Shield",
+  "Star",
+  "Mail",
+  "ExternalLink",
+  "Box",
+  "Sparkles",
+  "CheckCircle2",
+  "HelpCircle",
+  "Gem",
+  "Wrench",
+  "Home",
+  "Gift",
+  "BadgeCheck",
+];
+
+const BLOCKS_WITH_BUTTONS = new Set(["hero", "cta", "button", "banner", "featured_products"]);
+const BLOCKS_WITH_REPEATERS = new Set(["entry_cards", "how_it_works", "faq", "trust_badges"]);
+const DEFAULT_PLACEMENT = "__default__";
 
 const prettyPageLabel = (page: string) =>
   page
@@ -32,6 +59,11 @@ const routeFromPage = (page: string) => {
   if (page === "home") return "/";
   if (page.startsWith("global_")) return "";
   return `/${page}`;
+};
+
+const toActionType = (value: unknown): ActionType => {
+  if (value === "internal_link" || value === "external_link") return value;
+  return "none";
 };
 
 const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPanelProps) => {
@@ -49,12 +81,47 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
   useEffect(() => {
     if (!block) return;
 
+    const content = { ...(block.content || {}) };
+
+    if (!Array.isArray(content.buttons) && BLOCKS_WITH_BUTTONS.has(block.block_type)) {
+      const fallbackButtons: any[] = [];
+      if (content.button_text) {
+        fallbackButtons.push({
+          text: content.button_text,
+          icon: content.button_icon || "",
+          iconPosition: "left",
+          variant: content.button_variant || (content.style === "outline" ? "outline" : content.style === "ghost" ? "ghost" : "default"),
+          actionType: /^https?:\/\//i.test(content.button_link || "") ? "external_link" : "internal_link",
+          actionTarget: content.button_link || "",
+          openInNewTab: false,
+          visible: true,
+        });
+      }
+
+      if (content.secondary_button_text) {
+        fallbackButtons.push({
+          text: content.secondary_button_text,
+          icon: "",
+          iconPosition: "left",
+          variant: "outline",
+          actionType: /^https?:\/\//i.test(content.secondary_button_link || "") ? "external_link" : "internal_link",
+          actionTarget: content.secondary_button_link || "",
+          openInNewTab: false,
+          visible: true,
+        });
+      }
+
+      if (fallbackButtons.length > 0) {
+        content.buttons = fallbackButtons;
+      }
+    }
+
     setForm({
       title: block.title ?? "",
       page: block.page ?? "home",
       block_type: block.block_type,
       is_active: block.is_active ?? true,
-      content: { ...(block.content || {}) },
+      content,
     });
   }, [block]);
 
@@ -73,8 +140,6 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
 
     return Array.from(new Set([...pages, ...extras]));
   }, [pages]);
-
-  const DEFAULT_PLACEMENT = "__default__";
 
   const placementOptions = useMemo(() => {
     const page = form.page || block?.page || "home";
@@ -110,57 +175,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
     }
   }, [form.page, block?.page]);
 
-  const uploadFile = async (file: File): Promise<string | null> => {
-    setUploading(true);
-    const ext = file.name.split(".").pop();
-    const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-
-    const { error } = await supabase.storage.from("site-assets").upload(path, file);
-
-    setUploading(false);
-
-    if (error) {
-      toast({
-        title: "Upload failed",
-        description: error.message,
-        variant: "destructive",
-      });
-      return null;
-    }
-
-    const { data } = supabase.storage.from("site-assets").getPublicUrl(path);
-    return data.publicUrl;
-  };
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const url = await uploadFile(file);
-    if (url) {
-      setForm((prev: any) => ({
-        ...prev,
-        content: { ...prev.content, [field]: url },
-      }));
-    }
-  };
-
-  const handleCarouselUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    const urls: string[] = [];
-
-    for (const file of files) {
-      const url = await uploadFile(file);
-      if (url) urls.push(url);
-    }
-
-    setForm((prev: any) => ({
-      ...prev,
-      content: {
-        ...prev.content,
-        images: [...(prev.content.images || []), ...urls],
-      },
-    }));
-  };
+  const buttonTargetPages = availablePages.filter((p) => !p.startsWith("global_"));
 
   const updateForm = (key: string, value: any) => {
     setForm((prev: any) => ({ ...prev, [key]: value }));
@@ -173,9 +188,68 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
     }));
   };
 
+  const updateArrayItem = (key: string, index: number, patch: any) => {
+    const current = [...(form.content?.[key] || [])];
+    current[index] = { ...current[index], ...patch };
+    updateContent(key, current);
+  };
+
+  const addArrayItem = (key: string, item: any) => {
+    updateContent(key, [...(form.content?.[key] || []), item]);
+  };
+
+  const removeArrayItem = (key: string, index: number) => {
+    const current = [...(form.content?.[key] || [])];
+    current.splice(index, 1);
+    updateContent(key, current);
+  };
+
+  const reorderArrayItem = (key: string, index: number, direction: "up" | "down") => {
+    const current = [...(form.content?.[key] || [])];
+    const target = direction === "up" ? index - 1 : index + 1;
+    if (target < 0 || target >= current.length) return;
+    [current[index], current[target]] = [current[target], current[index]];
+    updateContent(key, current);
+  };
+
+  const uploadFile = async (file: File): Promise<string | null> => {
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+    const { error } = await supabase.storage.from("site-assets").upload(path, file);
+    setUploading(false);
+
+    if (error) {
+      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+      return null;
+    }
+
+    const { data } = supabase.storage.from("site-assets").getPublicUrl(path);
+    return data.publicUrl;
+  };
+
+  const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>, field: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = await uploadFile(file);
+    if (url) updateContent(field, url);
+  };
+
+  const handleCarouselUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const urls: string[] = [];
+
+    for (const file of files) {
+      const url = await uploadFile(file);
+      if (url) urls.push(url);
+    }
+
+    updateContent("images", [...(form.content.images || []), ...urls]);
+  };
+
   const handleSave = async () => {
     if (!block) return;
-
     setSaving(true);
 
     const payload = {
@@ -186,15 +260,10 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
     };
 
     const { error } = await supabase.from("site_blocks").update(payload).eq("id", block.id);
-
     setSaving(false);
 
     if (error) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
       return;
     }
 
@@ -202,29 +271,594 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
     onSave();
   };
 
-  const addArrayItem = (key: string, item: any) => {
-    const current = form.content?.[key] || [];
-    updateContent(key, [...current, item]);
+  const renderActionEditor = (prefix: "section" | "button", data: any, onChange: (patch: any) => void) => (
+    <div className="space-y-2 rounded-md border border-border p-3">
+      <div>
+        <Label>{prefix === "section" ? "Section click action" : "Button action"}</Label>
+        <Select value={toActionType(data?.actionType)} onValueChange={(v) => onChange({ actionType: v })}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">None</SelectItem>
+            <SelectItem value="internal_link">Internal Link</SelectItem>
+            <SelectItem value="external_link">External URL</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {toActionType(data?.actionType) !== "none" && (
+        <>
+          <div>
+            <Label>Target</Label>
+            <Input
+              placeholder={toActionType(data?.actionType) === "internal_link" ? "/products" : "https://example.com"}
+              value={data?.actionTarget || ""}
+              onChange={(e) => onChange({ actionTarget: e.target.value })}
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <Switch checked={Boolean(data?.openInNewTab)} onCheckedChange={(v) => onChange({ openInNewTab: v })} />
+            Open in new tab
+          </label>
+        </>
+      )}
+    </div>
+  );
+
+  const renderButtonsEditor = () => (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <Label>Buttons</Label>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() =>
+            addArrayItem("buttons", {
+              text: "New Button",
+              icon: "",
+              iconPosition: "left",
+              variant: "default",
+              actionType: "internal_link",
+              actionTarget: "/",
+              openInNewTab: false,
+              visible: true,
+            })
+          }
+        >
+          <Plus className="mr-1 h-3.5 w-3.5" /> Add Button
+        </Button>
+      </div>
+
+      {(form.content.buttons || []).map((btn: any, index: number) => (
+        <div key={index} className="space-y-2 rounded-md border border-border p-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">Button {index + 1}</p>
+            <div className="flex items-center gap-1">
+              <Button type="button" variant="ghost" size="icon" onClick={() => reorderArrayItem("buttons", index, "up")}>
+                <ArrowUp className="h-4 w-4" />
+              </Button>
+              <Button type="button" variant="ghost" size="icon" onClick={() => reorderArrayItem("buttons", index, "down")}>
+                <ArrowDown className="h-4 w-4" />
+              </Button>
+              <Button type="button" variant="ghost" size="icon" onClick={() => removeArrayItem("buttons", index)}>
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm">
+            <Switch checked={btn.visible !== false} onCheckedChange={(v) => updateArrayItem("buttons", index, { visible: v })} />
+            Visible
+          </label>
+
+          <div>
+            <Label>Text</Label>
+            <Input value={btn.text || ""} onChange={(e) => updateArrayItem("buttons", index, { text: e.target.value })} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label>Icon</Label>
+              <Select value={btn.icon || "__none__"} onValueChange={(v) => updateArrayItem("buttons", index, { icon: v === "__none__" ? "" : v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="No icon" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">No icon</SelectItem>
+                  {ICON_OPTIONS.map((icon) => (
+                    <SelectItem key={icon} value={icon}>
+                      {icon}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Icon Position</Label>
+              <Select value={btn.iconPosition || "left"} onValueChange={(v) => updateArrayItem("buttons", index, { iconPosition: v })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="left">Left</SelectItem>
+                  <SelectItem value="right">Right</SelectItem>
+                  <SelectItem value="top">Top</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <Label>Variant</Label>
+            <Select value={btn.variant || "default"} onValueChange={(v) => updateArrayItem("buttons", index, { variant: v })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Default</SelectItem>
+                <SelectItem value="outline">Outline</SelectItem>
+                <SelectItem value="ghost">Ghost</SelectItem>
+                <SelectItem value="secondary">Secondary</SelectItem>
+                <SelectItem value="link">Link</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {renderActionEditor("button", btn, (patch) => updateArrayItem("buttons", index, patch))}
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderStyleEditor = () => (
+    <div className="space-y-3">
+      <div>
+        <Label>Background Image URL</Label>
+        <Input value={form.content.bg_image || form.content.backgroundImage || ""} onChange={(e) => {
+          updateContent("bg_image", e.target.value);
+          updateContent("backgroundImage", e.target.value);
+        }} />
+      </div>
+
+      <div>
+        <Label>Upload Background Image</Label>
+        <Input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, "bg_image")} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label>Background Color</Label>
+          <Input value={form.content.bg_color || form.content.backgroundColor || ""} onChange={(e) => {
+            updateContent("bg_color", e.target.value);
+            updateContent("backgroundColor", e.target.value);
+          }} placeholder="#ffffff" />
+        </div>
+        <div>
+          <Label>Text Color</Label>
+          <Input value={form.content.text_color || form.content.textColor || ""} onChange={(e) => {
+            updateContent("text_color", e.target.value);
+            updateContent("textColor", e.target.value);
+          }} placeholder="#111111" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label>Padding Top (px)</Label>
+          <Input type="number" value={form.content.paddingTop ?? ""} onChange={(e) => updateContent("paddingTop", e.target.value === "" ? null : parseInt(e.target.value) || 0)} />
+        </div>
+        <div>
+          <Label>Padding Bottom (px)</Label>
+          <Input type="number" value={form.content.paddingBottom ?? ""} onChange={(e) => updateContent("paddingBottom", e.target.value === "" ? null : parseInt(e.target.value) || 0)} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label>Margin Top (px)</Label>
+          <Input type="number" value={form.content.marginTop ?? ""} onChange={(e) => updateContent("marginTop", e.target.value === "" ? null : parseInt(e.target.value) || 0)} />
+        </div>
+        <div>
+          <Label>Margin Bottom (px)</Label>
+          <Input type="number" value={form.content.marginBottom ?? ""} onChange={(e) => updateContent("marginBottom", e.target.value === "" ? null : parseInt(e.target.value) || 0)} />
+        </div>
+      </div>
+
+      <div>
+        <Label>Custom Class Name</Label>
+        <Input value={form.content.customClassName || form.content.className || ""} onChange={(e) => {
+          updateContent("customClassName", e.target.value);
+          updateContent("className", e.target.value);
+        }} placeholder="my-extra-block-class" />
+      </div>
+    </div>
+  );
+
+  const renderLayoutEditor = () => (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label>Content Alignment</Label>
+          <Select value={form.content.alignment || "center"} onValueChange={(v) => updateContent("alignment", v)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="left">Left</SelectItem>
+              <SelectItem value="center">Center</SelectItem>
+              <SelectItem value="right">Right</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label>Button Alignment</Label>
+          <Select value={form.content.buttonAlignment || "center"} onValueChange={(v) => updateContent("buttonAlignment", v)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="left">Left</SelectItem>
+              <SelectItem value="center">Center</SelectItem>
+              <SelectItem value="right">Right</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label>Vertical Alignment</Label>
+          <Select value={form.content.verticalAlignment || "center"} onValueChange={(v) => updateContent("verticalAlignment", v)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="top">Top</SelectItem>
+              <SelectItem value="center">Center</SelectItem>
+              <SelectItem value="bottom">Bottom</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label>Columns</Label>
+          <Input type="number" min={1} max={4} value={form.content.columns ?? ""} onChange={(e) => updateContent("columns", e.target.value === "" ? null : Math.max(1, Math.min(4, parseInt(e.target.value) || 1)))} />
+        </div>
+      </div>
+
+      <div>
+        <Label>Image Position</Label>
+        <Select value={form.content.imagePosition || "left"} onValueChange={(v) => updateContent("imagePosition", v)}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="left">Image Left / Text Right</SelectItem>
+            <SelectItem value="right">Image Right / Text Left</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
+
+  const renderRepeaterEditor = () => {
+    const t = form.block_type;
+
+    if (t === "entry_cards") {
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label>Cards</Label>
+            <Button type="button" size="sm" variant="outline" onClick={() => addArrayItem("cards", { icon: "ShoppingBag", title: "New Card", desc: "", cta: "Learn more", actionType: "internal_link", actionTarget: "/", openInNewTab: false, visible: true })}>
+              <Plus className="mr-1 h-3.5 w-3.5" /> Add Card
+            </Button>
+          </div>
+          {(form.content.cards || []).map((card: any, index: number) => (
+            <div key={index} className="space-y-2 rounded-md border p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Card {index + 1}</p>
+                <div className="flex items-center gap-1">
+                  <Button type="button" variant="ghost" size="icon" onClick={() => reorderArrayItem("cards", index, "up")}><ArrowUp className="h-4 w-4" /></Button>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => reorderArrayItem("cards", index, "down")}><ArrowDown className="h-4 w-4" /></Button>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeArrayItem("cards", index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-sm"><Switch checked={card.visible !== false} onCheckedChange={(v) => updateArrayItem("cards", index, { visible: v })} /> Visible</label>
+              <Input value={card.title || ""} onChange={(e) => updateArrayItem("cards", index, { title: e.target.value })} placeholder="Title" />
+              <Textarea value={card.desc || ""} onChange={(e) => updateArrayItem("cards", index, { desc: e.target.value })} rows={3} placeholder="Description" />
+              <Input value={card.cta || ""} onChange={(e) => updateArrayItem("cards", index, { cta: e.target.value })} placeholder="CTA text" />
+              <div>
+                <Label>Icon</Label>
+                <Select value={card.icon || "ShoppingBag"} onValueChange={(v) => updateArrayItem("cards", index, { icon: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{ICON_OPTIONS.map((icon) => <SelectItem key={icon} value={icon}>{icon}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              {renderActionEditor("button", { actionType: toActionType(card.actionType), actionTarget: card.actionTarget || card.link || "", openInNewTab: Boolean(card.openInNewTab) }, (patch) => updateArrayItem("cards", index, { ...patch, link: patch.actionTarget ?? card.link }))}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (t === "how_it_works") {
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label>Steps</Label>
+            <Button type="button" size="sm" variant="outline" onClick={() => addArrayItem("steps", { icon: "Package", title: "New Step", desc: "", visible: true })}>
+              <Plus className="mr-1 h-3.5 w-3.5" /> Add Step
+            </Button>
+          </div>
+          {(form.content.steps || []).map((step: any, index: number) => (
+            <div key={index} className="space-y-2 rounded-md border p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Step {index + 1}</p>
+                <div className="flex items-center gap-1">
+                  <Button type="button" variant="ghost" size="icon" onClick={() => reorderArrayItem("steps", index, "up")}><ArrowUp className="h-4 w-4" /></Button>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => reorderArrayItem("steps", index, "down")}><ArrowDown className="h-4 w-4" /></Button>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeArrayItem("steps", index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-sm"><Switch checked={step.visible !== false} onCheckedChange={(v) => updateArrayItem("steps", index, { visible: v })} /> Visible</label>
+              <Input value={step.title || ""} onChange={(e) => updateArrayItem("steps", index, { title: e.target.value })} placeholder="Step title" />
+              <Textarea value={step.desc || ""} onChange={(e) => updateArrayItem("steps", index, { desc: e.target.value })} rows={2} placeholder="Step description" />
+              <div>
+                <Label>Icon</Label>
+                <Select value={step.icon || "Package"} onValueChange={(v) => updateArrayItem("steps", index, { icon: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{ICON_OPTIONS.map((icon) => <SelectItem key={icon} value={icon}>{icon}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (t === "faq") {
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label>FAQ Items</Label>
+            <Button type="button" size="sm" variant="outline" onClick={() => addArrayItem("items", { q: "New question", a: "New answer", visible: true })}>
+              <Plus className="mr-1 h-3.5 w-3.5" /> Add Item
+            </Button>
+          </div>
+          {(form.content.items || []).map((item: any, index: number) => (
+            <div key={index} className="space-y-2 rounded-md border p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">FAQ {index + 1}</p>
+                <div className="flex items-center gap-1">
+                  <Button type="button" variant="ghost" size="icon" onClick={() => reorderArrayItem("items", index, "up")}><ArrowUp className="h-4 w-4" /></Button>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => reorderArrayItem("items", index, "down")}><ArrowDown className="h-4 w-4" /></Button>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeArrayItem("items", index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-sm"><Switch checked={item.visible !== false} onCheckedChange={(v) => updateArrayItem("items", index, { visible: v })} /> Visible</label>
+              <Input value={item.q || ""} onChange={(e) => updateArrayItem("items", index, { q: e.target.value })} placeholder="Question" />
+              <Textarea value={item.a || ""} onChange={(e) => updateArrayItem("items", index, { a: e.target.value })} rows={4} placeholder="Answer" />
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (t === "trust_badges") {
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label>Badges</Label>
+            <Button type="button" size="sm" variant="outline" onClick={() => addArrayItem("badges", { icon: "Shield", title: "New Badge", desc: "", visible: true })}>
+              <Plus className="mr-1 h-3.5 w-3.5" /> Add Badge
+            </Button>
+          </div>
+          {(form.content.badges || []).map((badge: any, index: number) => (
+            <div key={index} className="space-y-2 rounded-md border p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Badge {index + 1}</p>
+                <div className="flex items-center gap-1">
+                  <Button type="button" variant="ghost" size="icon" onClick={() => reorderArrayItem("badges", index, "up")}><ArrowUp className="h-4 w-4" /></Button>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => reorderArrayItem("badges", index, "down")}><ArrowDown className="h-4 w-4" /></Button>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeArrayItem("badges", index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-sm"><Switch checked={badge.visible !== false} onCheckedChange={(v) => updateArrayItem("badges", index, { visible: v })} /> Visible</label>
+              <Input value={badge.title || ""} onChange={(e) => updateArrayItem("badges", index, { title: e.target.value })} placeholder="Title" />
+              <Input value={badge.desc || ""} onChange={(e) => updateArrayItem("badges", index, { desc: e.target.value })} placeholder="Description" />
+              <div>
+                <Label>Icon</Label>
+                <Select value={badge.icon || "Shield"} onValueChange={(v) => updateArrayItem("badges", index, { icon: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{ICON_OPTIONS.map((icon) => <SelectItem key={icon} value={icon}>{icon}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return null;
   };
 
-  const updateArrayItem = (key: string, index: number, patch: any) => {
-    const current = [...(form.content?.[key] || [])];
-    current[index] = { ...current[index], ...patch };
-    updateContent(key, current);
-  };
+  const renderTypeContentEditor = () => {
+    const t = form.block_type;
 
-  const removeArrayItem = (key: string, index: number) => {
-    const current = [...(form.content?.[key] || [])];
-    current.splice(index, 1);
-    updateContent(key, current);
+    if (t === "hero" || t === "banner" || t === "cta") {
+      return (
+        <div className="space-y-3">
+          {t === "hero" && (
+            <>
+              <div>
+                <Label>Eyebrow / Badge</Label>
+                <Input value={form.content.eyebrow ?? ""} onChange={(e) => updateContent("eyebrow", e.target.value)} />
+              </div>
+              <div>
+                <Label>Icon</Label>
+                <Select value={form.content.icon || "__none__"} onValueChange={(v) => updateContent("icon", v === "__none__" ? "" : v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">No icon</SelectItem>
+                    {ICON_OPTIONS.map((icon) => <SelectItem key={icon} value={icon}>{icon}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
+          <div>
+            <Label>Heading</Label>
+            <Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} />
+          </div>
+          <div>
+            <Label>Subheading</Label>
+            <Textarea value={form.content.subheading ?? ""} onChange={(e) => updateContent("subheading", e.target.value)} rows={3} />
+          </div>
+        </div>
+      );
+    }
+
+    if (t === "shipping_banner") {
+      return (
+        <div>
+          <Label>Banner Text</Label>
+          <Input value={form.content.text ?? ""} onChange={(e) => updateContent("text", e.target.value)} />
+        </div>
+      );
+    }
+
+    if (t === "text") {
+      return (
+        <div className="space-y-3">
+          <div><Label>Heading</Label><Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} /></div>
+          <div><Label>Body</Label><Textarea value={form.content.body ?? ""} onChange={(e) => updateContent("body", e.target.value)} rows={8} /></div>
+        </div>
+      );
+    }
+
+    if (t === "image") {
+      return (
+        <div className="space-y-3">
+          <div>
+            <Label>Image URL</Label>
+            <Input value={form.content.image_url ?? ""} onChange={(e) => updateContent("image_url", e.target.value)} />
+          </div>
+          <div>
+            <Label>Upload Image</Label>
+            <Input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, "image_url")} />
+          </div>
+          <div>
+            <Label>Alt Text</Label>
+            <Input value={form.content.alt ?? ""} onChange={(e) => updateContent("alt", e.target.value)} />
+          </div>
+        </div>
+      );
+    }
+
+    if (t === "carousel") {
+      return (
+        <div className="space-y-3">
+          <Label>Carousel Images</Label>
+          <Input type="file" accept="image/*" multiple onChange={handleCarouselUpload} />
+          <div className="flex flex-wrap gap-2">
+            {(form.content.images || []).map((img: string, i: number) => (
+              <div key={i} className="relative">
+                <img src={img} alt="" className="h-16 w-16 rounded object-cover" />
+                <button type="button" className="absolute -right-1 -top-1 rounded-full bg-destructive p-0.5 text-destructive-foreground" onClick={() => updateContent("images", (form.content.images || []).filter((_: string, j: number) => j !== i))}>
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (t === "video") {
+      return (
+        <div className="space-y-3">
+          <div><Label>Video URL</Label><Input value={form.content.video_url ?? ""} onChange={(e) => updateContent("video_url", e.target.value)} /></div>
+          <div><Label>Caption</Label><Input value={form.content.caption ?? ""} onChange={(e) => updateContent("caption", e.target.value)} /></div>
+        </div>
+      );
+    }
+
+    if (t === "spacer") {
+      return <div><Label>Height (px)</Label><Input type="number" value={form.content.height ?? 40} onChange={(e) => updateContent("height", parseInt(e.target.value) || 40)} /></div>;
+    }
+
+    if (t === "html") {
+      return <div><Label>HTML Code</Label><Textarea value={form.content.html ?? ""} onChange={(e) => updateContent("html", e.target.value)} rows={10} className="font-mono text-xs" /></div>;
+    }
+
+    if (t === "embed") {
+      return (
+        <div className="space-y-3">
+          <div><Label>Heading</Label><Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} /></div>
+          <div><Label>Embed URL</Label><Input value={form.content.embed_url ?? ""} onChange={(e) => updateContent("embed_url", e.target.value)} /></div>
+          <div><Label>Height (px)</Label><Input type="number" value={form.content.height ?? 400} onChange={(e) => updateContent("height", parseInt(e.target.value) || 400)} /></div>
+        </div>
+      );
+    }
+
+    if (t === "newsletter") {
+      return (
+        <div className="space-y-3">
+          <div><Label>Heading</Label><Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} /></div>
+          <div><Label>Subheading</Label><Input value={form.content.subheading ?? ""} onChange={(e) => updateContent("subheading", e.target.value)} /></div>
+          <div><Label>Submit Button Text</Label><Input value={form.content.submit_text ?? ""} onChange={(e) => updateContent("submit_text", e.target.value)} /></div>
+        </div>
+      );
+    }
+
+    if (t === "categories" || t === "featured_products") {
+      return (
+        <div className="space-y-3">
+          <div><Label>Heading</Label><Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} /></div>
+          <div><Label>Subheading</Label><Input value={form.content.subheading ?? ""} onChange={(e) => updateContent("subheading", e.target.value)} /></div>
+          <div><Label>Limit</Label><Input type="number" value={form.content.limit ?? (t === "categories" ? 6 : 8)} onChange={(e) => updateContent("limit", parseInt(e.target.value) || (t === "categories" ? 6 : 8))} /></div>
+          {t === "featured_products" && (
+            <>
+              <div><Label>View All Button Text</Label><Input value={form.content.view_all_text ?? ""} onChange={(e) => updateContent("view_all_text", e.target.value)} /></div>
+              <div><Label>View All Link</Label><Input value={form.content.view_all_link ?? ""} onChange={(e) => updateContent("view_all_link", e.target.value)} /></div>
+            </>
+          )}
+        </div>
+      );
+    }
+
+    if (t === "button") {
+      return (
+        <div className="space-y-3">
+          <div><Label>Legacy Button Text</Label><Input value={form.content.button_text ?? ""} onChange={(e) => updateContent("button_text", e.target.value)} /></div>
+          <div><Label>Legacy Button Link</Label><Input value={form.content.button_link ?? ""} onChange={(e) => updateContent("button_link", e.target.value)} /></div>
+          <div>
+            <Label>Legacy Style</Label>
+            <Select value={form.content.style ?? "default"} onValueChange={(v) => updateContent("style", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Default</SelectItem>
+                <SelectItem value="outline">Outline</SelectItem>
+                <SelectItem value="ghost">Ghost</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   const t = form.block_type;
-  const buttonTargetPages = availablePages.filter((p) => !p.startsWith("global_"));
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent className="overflow-y-auto sm:max-w-md">
+      <SheetContent className="overflow-y-auto sm:max-w-xl">
         <SheetHeader>
           <SheetTitle className="font-display uppercase">Edit Block</SheetTitle>
         </SheetHeader>
@@ -238,20 +872,11 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Page</Label>
-                <Select
-                  value={form.content?.placement ?? DEFAULT_PLACEMENT}
-                  onValueChange={(v) => updateContent("placement", v === DEFAULT_PLACEMENT ? "" : v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select placement" />
-                  </SelectTrigger>
+                <Label>Placement</Label>
+                <Select value={form.content?.placement ?? DEFAULT_PLACEMENT} onValueChange={(v) => updateContent("placement", v === DEFAULT_PLACEMENT ? "" : v)}>
+                  <SelectTrigger><SelectValue placeholder="Select placement" /></SelectTrigger>
                   <SelectContent>
-                    {placementOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
+                    {placementOptions.map((opt) => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -264,673 +889,68 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
               </div>
             </div>
 
-            <div>
-              <Label>Placement</Label>
-              <Select value={form.content?.placement ?? ""} onValueChange={(v) => updateContent("placement", v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select placement" />
-                </SelectTrigger>
-                <SelectContent>
-                  {placementOptions.map((opt) => (
-                    <SelectItem key={opt.value || "default-placement"} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <Switch checked={form.content.visibility !== false} onCheckedChange={(v) => updateContent("visibility", v)} />
+              Section visible
+            </label>
 
-            <hr className="border-border" />
+            <Accordion type="multiple" defaultValue={["content", "style", "actions", "layout"]} className="w-full space-y-2">
+              <AccordionItem value="content" className="rounded-md border border-border px-3">
+                <AccordionTrigger className="font-display text-xs uppercase tracking-wider">Content</AccordionTrigger>
+                <AccordionContent className="space-y-3 pb-3">
+                  {renderTypeContentEditor()}
+                  {BLOCKS_WITH_REPEATERS.has(t) && renderRepeaterEditor()}
+                </AccordionContent>
+              </AccordionItem>
 
-            {(t === "hero" || t === "banner" || t === "cta") && (
-              <div className="space-y-3">
-                {t === "hero" && (
+              <AccordionItem value="style" className="rounded-md border border-border px-3">
+                <AccordionTrigger className="font-display text-xs uppercase tracking-wider">Style</AccordionTrigger>
+                <AccordionContent className="pb-3">{renderStyleEditor()}</AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="actions" className="rounded-md border border-border px-3">
+                <AccordionTrigger className="font-display text-xs uppercase tracking-wider">Actions</AccordionTrigger>
+                <AccordionContent className="space-y-3 pb-3">
+                  {renderActionEditor("section", {
+                    actionType: toActionType(form.content.section_actionType || form.content.actionType),
+                    actionTarget: form.content.section_actionTarget || form.content.actionTarget || "",
+                    openInNewTab: Boolean(form.content.section_openInNewTab || form.content.openInNewTab),
+                  }, (patch) => {
+                    updateContent("section_actionType", patch.actionType ?? form.content.section_actionType);
+                    updateContent("section_actionTarget", patch.actionTarget ?? form.content.section_actionTarget);
+                    updateContent("section_openInNewTab", patch.openInNewTab ?? form.content.section_openInNewTab);
+                  })}
+
+                  {BLOCKS_WITH_BUTTONS.has(t) && renderButtonsEditor()}
+
                   <div>
-                    <Label>Eyebrow</Label>
-                    <Input
-                      value={form.content.eyebrow ?? ""}
-                      onChange={(e) => updateContent("eyebrow", e.target.value)}
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <Label>Heading</Label>
-                  <Input
-                    value={form.content.heading ?? ""}
-                    onChange={(e) => updateContent("heading", e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <Label>Subheading</Label>
-                  <Textarea
-                    value={form.content.subheading ?? ""}
-                    onChange={(e) => updateContent("subheading", e.target.value)}
-                    rows={3}
-                  />
-                </div>
-
-                <div>
-                  <Label>Primary Button Text</Label>
-                  <Input
-                    value={form.content.button_text ?? ""}
-                    onChange={(e) => updateContent("button_text", e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <Label>Primary Button Link</Label>
-                  <Select
-                    value={
-                      buttonTargetPages.includes((form.content.button_link || "").replace(/^\//, ""))
-                        ? form.content.button_link || ""
-                        : "__custom__"
-                    }
-                    onValueChange={(v) => {
-                      if (v !== "__custom__") updateContent("button_link", v);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select page" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {buttonTargetPages.map((p) => (
-                        <SelectItem key={p} value={routeFromPage(p)}>
-                          {prettyPageLabel(p)}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="__custom__">Custom URL below</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Input
-                    className="mt-1"
-                    placeholder="Or custom URL..."
-                    value={form.content.button_link ?? ""}
-                    onChange={(e) => updateContent("button_link", e.target.value)}
-                  />
-                </div>
-
-                {t === "hero" && (
-                  <>
-                    <div>
-                      <Label>Secondary Button Text</Label>
-                      <Input
-                        value={form.content.secondary_button_text ?? ""}
-                        onChange={(e) => updateContent("secondary_button_text", e.target.value)}
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Secondary Button Link</Label>
-                      <Input
-                        value={form.content.secondary_button_link ?? ""}
-                        onChange={(e) => updateContent("secondary_button_link", e.target.value)}
-                        placeholder="/create"
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Background Image</Label>
-                      <Input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, "bg_image")} />
-                      {form.content.bg_image && (
-                        <img src={form.content.bg_image} alt="" className="mt-2 h-20 rounded object-cover" />
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
-            {t === "shipping_banner" && (
-              <div className="space-y-3">
-                <div>
-                  <Label>Banner Text</Label>
-                  <Input value={form.content.text ?? ""} onChange={(e) => updateContent("text", e.target.value)} />
-                </div>
-              </div>
-            )}
-
-            {t === "text" && (
-              <div className="space-y-3">
-                <div>
-                  <Label>Heading</Label>
-                  <Input
-                    value={form.content.heading ?? ""}
-                    onChange={(e) => updateContent("heading", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Body</Label>
-                  <Textarea
-                    value={form.content.body ?? ""}
-                    onChange={(e) => updateContent("body", e.target.value)}
-                    rows={8}
-                  />
-                </div>
-              </div>
-            )}
-
-            {t === "image" && (
-              <div className="space-y-3">
-                <div>
-                  <Label>Image</Label>
-                  <Input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, "image_url")} />
-                  {form.content.image_url && (
-                    <img src={form.content.image_url} alt="" className="mt-2 h-32 rounded object-cover" />
-                  )}
-                </div>
-                <div>
-                  <Label>Alt Text</Label>
-                  <Input value={form.content.alt ?? ""} onChange={(e) => updateContent("alt", e.target.value)} />
-                </div>
-              </div>
-            )}
-
-            {t === "carousel" && (
-              <div className="space-y-3">
-                <Label>Carousel Images</Label>
-                <Input type="file" accept="image/*" multiple onChange={handleCarouselUpload} />
-                <div className="flex flex-wrap gap-2">
-                  {(form.content.images || []).map((img: string, i: number) => (
-                    <div key={i} className="relative">
-                      <img src={img} alt="" className="h-16 w-16 rounded object-cover" />
-                      <button
-                        type="button"
-                        className="absolute -right-1 -top-1 rounded-full bg-destructive p-0.5 text-destructive-foreground"
-                        onClick={() =>
-                          updateContent(
-                            "images",
-                            (form.content.images || []).filter((_: string, j: number) => j !== i),
-                          )
+                    <Label>Quick Internal Link</Label>
+                    <Select
+                      value={buttonTargetPages.includes((form.content.section_actionTarget || "").replace(/^\//, "")) ? form.content.section_actionTarget || "" : "__custom__"}
+                      onValueChange={(v) => {
+                        if (v !== "__custom__") {
+                          updateContent("section_actionType", "internal_link");
+                          updateContent("section_actionTarget", v);
                         }
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {t === "video" && (
-              <div className="space-y-3">
-                <div>
-                  <Label>Video URL (YouTube / Vimeo / MP4)</Label>
-                  <Input
-                    value={form.content.video_url ?? ""}
-                    onChange={(e) => updateContent("video_url", e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <Label>Or Upload Video</Label>
-                  <Input
-                    type="file"
-                    accept="video/*"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      const url = await uploadFile(file);
-                      if (url) updateContent("video_url", url);
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <Label>Caption</Label>
-                  <Input
-                    value={form.content.caption ?? ""}
-                    onChange={(e) => updateContent("caption", e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
-
-            {t === "button" && (
-              <div className="space-y-3">
-                <div>
-                  <Label>Button Text</Label>
-                  <Input
-                    value={form.content.button_text ?? ""}
-                    onChange={(e) => updateContent("button_text", e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <Label>Button Link</Label>
-                  <Input
-                    value={form.content.button_link ?? ""}
-                    onChange={(e) => updateContent("button_link", e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <Label>Style</Label>
-                  <Select value={form.content.style ?? "primary"} onValueChange={(v) => updateContent("style", v)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="primary">Primary</SelectItem>
-                      <SelectItem value="outline">Outline</SelectItem>
-                      <SelectItem value="ghost">Ghost</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
-
-            {t === "spacer" && (
-              <div>
-                <Label>Height (px)</Label>
-                <Input
-                  type="number"
-                  value={form.content.height ?? 40}
-                  onChange={(e) => updateContent("height", parseInt(e.target.value) || 40)}
-                />
-              </div>
-            )}
-
-            {t === "html" && (
-              <div>
-                <Label>HTML Code</Label>
-                <Textarea
-                  value={form.content.html ?? ""}
-                  onChange={(e) => updateContent("html", e.target.value)}
-                  rows={10}
-                  className="font-mono text-xs"
-                />
-              </div>
-            )}
-
-            {t === "embed" && (
-              <div className="space-y-3">
-                <div>
-                  <Label>Heading</Label>
-                  <Input
-                    value={form.content.heading ?? ""}
-                    onChange={(e) => updateContent("heading", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Embed URL</Label>
-                  <Input
-                    value={form.content.embed_url ?? ""}
-                    onChange={(e) => updateContent("embed_url", e.target.value)}
-                    placeholder="https://..."
-                  />
-                </div>
-                <div>
-                  <Label>Height (px)</Label>
-                  <Input
-                    type="number"
-                    value={form.content.height ?? 400}
-                    onChange={(e) => updateContent("height", parseInt(e.target.value) || 400)}
-                  />
-                </div>
-              </div>
-            )}
-
-            {t === "newsletter" && (
-              <div className="space-y-3">
-                <div>
-                  <Label>Heading</Label>
-                  <Input
-                    value={form.content.heading ?? ""}
-                    onChange={(e) => updateContent("heading", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Subheading</Label>
-                  <Input
-                    value={form.content.subheading ?? ""}
-                    onChange={(e) => updateContent("subheading", e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
-
-            {t === "categories" && (
-              <div className="space-y-3">
-                <div>
-                  <Label>Heading</Label>
-                  <Input
-                    value={form.content.heading ?? ""}
-                    onChange={(e) => updateContent("heading", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Subheading</Label>
-                  <Input
-                    value={form.content.subheading ?? ""}
-                    onChange={(e) => updateContent("subheading", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Limit</Label>
-                  <Input
-                    type="number"
-                    value={form.content.limit ?? 6}
-                    onChange={(e) => updateContent("limit", parseInt(e.target.value) || 6)}
-                  />
-                </div>
-              </div>
-            )}
-
-            {t === "featured_products" && (
-              <div className="space-y-3">
-                <div>
-                  <Label>Heading</Label>
-                  <Input
-                    value={form.content.heading ?? ""}
-                    onChange={(e) => updateContent("heading", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Subheading</Label>
-                  <Input
-                    value={form.content.subheading ?? ""}
-                    onChange={(e) => updateContent("subheading", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Limit</Label>
-                  <Input
-                    type="number"
-                    value={form.content.limit ?? 8}
-                    onChange={(e) => updateContent("limit", parseInt(e.target.value) || 8)}
-                  />
-                </div>
-              </div>
-            )}
-
-            {t === "entry_cards" && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>Cards</Label>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      addArrayItem("cards", {
-                        icon: "ShoppingBag",
-                        title: "New Card",
-                        desc: "",
-                        link: "/",
-                        cta: "Learn More",
-                      })
-                    }
-                  >
-                    <Plus className="mr-1 h-3.5 w-3.5" /> Add Card
-                  </Button>
-                </div>
-
-                {(form.content.cards || []).map((card: any, index: number) => (
-                  <div key={index} className="space-y-2 rounded-md border p-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium">Card {index + 1}</p>
-                      <button type="button" onClick={() => removeArrayItem("cards", index)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </button>
-                    </div>
-
-                    <div>
-                      <Label>Icon</Label>
-                      <Select
-                        value={card.icon || "ShoppingBag"}
-                        onValueChange={(v) => updateArrayItem("cards", index, { icon: v })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ICON_OPTIONS.map((icon) => (
-                            <SelectItem key={icon} value={icon}>
-                              {icon}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label>Title</Label>
-                      <Input
-                        value={card.title ?? ""}
-                        onChange={(e) => updateArrayItem("cards", index, { title: e.target.value })}
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Description</Label>
-                      <Textarea
-                        value={card.desc ?? ""}
-                        onChange={(e) => updateArrayItem("cards", index, { desc: e.target.value })}
-                        rows={3}
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Link</Label>
-                      <Input
-                        value={card.link ?? ""}
-                        onChange={(e) => updateArrayItem("cards", index, { link: e.target.value })}
-                      />
-                    </div>
-
-                    <div>
-                      <Label>CTA Text</Label>
-                      <Input
-                        value={card.cta ?? ""}
-                        onChange={(e) => updateArrayItem("cards", index, { cta: e.target.value })}
-                      />
-                    </div>
+                      }}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select a page" /></SelectTrigger>
+                      <SelectContent>
+                        {buttonTargetPages.map((p) => <SelectItem key={p} value={routeFromPage(p)}>{prettyPageLabel(p)}</SelectItem>)}
+                        <SelectItem value="__custom__">Custom target</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                ))}
-              </div>
-            )}
+                </AccordionContent>
+              </AccordionItem>
 
-            {t === "how_it_works" && (
-              <div className="space-y-4">
-                <div>
-                  <Label>Heading</Label>
-                  <Input
-                    value={form.content.heading ?? ""}
-                    onChange={(e) => updateContent("heading", e.target.value)}
-                  />
-                </div>
+              <AccordionItem value="layout" className="rounded-md border border-border px-3">
+                <AccordionTrigger className="font-display text-xs uppercase tracking-wider">Layout</AccordionTrigger>
+                <AccordionContent className="pb-3">{renderLayoutEditor()}</AccordionContent>
+              </AccordionItem>
+            </Accordion>
 
-                <div>
-                  <Label>Subheading</Label>
-                  <Input
-                    value={form.content.subheading ?? ""}
-                    onChange={(e) => updateContent("subheading", e.target.value)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label>Steps</Label>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => addArrayItem("steps", { icon: "Package", title: "New Step", desc: "" })}
-                  >
-                    <Plus className="mr-1 h-3.5 w-3.5" /> Add Step
-                  </Button>
-                </div>
-
-                {(form.content.steps || []).map((step: any, index: number) => (
-                  <div key={index} className="space-y-2 rounded-md border p-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium">Step {index + 1}</p>
-                      <button type="button" onClick={() => removeArrayItem("steps", index)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </button>
-                    </div>
-
-                    <div>
-                      <Label>Icon</Label>
-                      <Select
-                        value={step.icon || "Package"}
-                        onValueChange={(v) => updateArrayItem("steps", index, { icon: v })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ICON_OPTIONS.map((icon) => (
-                            <SelectItem key={icon} value={icon}>
-                              {icon}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label>Title</Label>
-                      <Input
-                        value={step.title ?? ""}
-                        onChange={(e) => updateArrayItem("steps", index, { title: e.target.value })}
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Description</Label>
-                      <Textarea
-                        value={step.desc ?? ""}
-                        onChange={(e) => updateArrayItem("steps", index, { desc: e.target.value })}
-                        rows={2}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {t === "faq" && (
-              <div className="space-y-4">
-                <div>
-                  <Label>Heading</Label>
-                  <Input
-                    value={form.content.heading ?? ""}
-                    onChange={(e) => updateContent("heading", e.target.value)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label>FAQ Items</Label>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => addArrayItem("items", { q: "New question?", a: "New answer." })}
-                  >
-                    <Plus className="mr-1 h-3.5 w-3.5" /> Add FAQ
-                  </Button>
-                </div>
-
-                {(form.content.items || []).map((item: any, index: number) => (
-                  <div key={index} className="space-y-2 rounded-md border p-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium">FAQ {index + 1}</p>
-                      <button type="button" onClick={() => removeArrayItem("items", index)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </button>
-                    </div>
-
-                    <div>
-                      <Label>Question</Label>
-                      <Input
-                        value={item.q ?? ""}
-                        onChange={(e) => updateArrayItem("items", index, { q: e.target.value })}
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Answer</Label>
-                      <Textarea
-                        value={item.a ?? ""}
-                        onChange={(e) => updateArrayItem("items", index, { a: e.target.value })}
-                        rows={4}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {t === "trust_badges" && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>Badges</Label>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => addArrayItem("badges", { icon: "Shield", title: "New Badge", desc: "" })}
-                  >
-                    <Plus className="mr-1 h-3.5 w-3.5" /> Add Badge
-                  </Button>
-                </div>
-
-                {(form.content.badges || []).map((badge: any, index: number) => (
-                  <div key={index} className="space-y-2 rounded-md border p-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium">Badge {index + 1}</p>
-                      <button type="button" onClick={() => removeArrayItem("badges", index)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </button>
-                    </div>
-
-                    <div>
-                      <Label>Icon</Label>
-                      <Select
-                        value={badge.icon || "Shield"}
-                        onValueChange={(v) => updateArrayItem("badges", index, { icon: v })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ICON_OPTIONS.map((icon) => (
-                            <SelectItem key={icon} value={icon}>
-                              {icon}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label>Title</Label>
-                      <Input
-                        value={badge.title ?? ""}
-                        onChange={(e) => updateArrayItem("badges", index, { title: e.target.value })}
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Description</Label>
-                      <Input
-                        value={badge.desc ?? ""}
-                        onChange={(e) => updateArrayItem("badges", index, { desc: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <Button
-              onClick={handleSave}
-              disabled={saving || uploading}
-              className="w-full font-display uppercase tracking-wider"
-            >
+            <Button onClick={handleSave} disabled={saving || uploading} className="w-full font-display uppercase tracking-wider">
               {saving ? "Saving..." : uploading ? "Uploading..." : "Save Changes"}
             </Button>
           </div>

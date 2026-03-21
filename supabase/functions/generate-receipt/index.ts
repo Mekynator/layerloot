@@ -128,16 +128,27 @@ serve(async (req) => {
     </body>
     </html>`;
 
-    // Award loyalty points (1 point per kr spent)
+    // Award loyalty points once per paid order using the site-wide 1 point per 4 kr rule.
     if (order.user_id) {
-      const pointsEarned = Math.floor(Number(order.total));
+      const pointsEarned = Math.floor(Number(order.total) / 4);
       if (pointsEarned > 0) {
-        await supabase.from("loyalty_points").insert({
-          user_id: order.user_id,
-          points: pointsEarned,
-          reason: `Order #${order.id.slice(0, 8)}`,
-          order_id: order.id,
-        });
+        const { data: existingPoints, error: existingPointsError } = await supabase
+          .from("loyalty_points")
+          .select("id")
+          .eq("order_id", order.id)
+          .limit(1)
+          .maybeSingle();
+
+        if (existingPointsError) throw existingPointsError;
+
+        if (!existingPoints?.id) {
+          await supabase.from("loyalty_points").insert({
+            user_id: order.user_id,
+            points: pointsEarned,
+            reason: `Order #${order.id.slice(0, 8)}`,
+            order_id: order.id,
+          });
+        }
       }
     }
 

@@ -15,6 +15,36 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+async function awardLoyaltyPointsOnce(args: {
+  supabase: any;
+  userId: string | null | undefined;
+  points: number;
+  reason: string;
+}) {
+  const { supabase, userId, points, reason } = args;
+
+  if (!userId || points <= 0) return;
+
+  const { data: existing, error: existingError } = await supabase
+    .from("loyalty_points")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("reason", reason)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+  if (existing?.id) return;
+
+  const { error: insertError } = await supabase.from("loyalty_points").insert({
+    user_id: userId,
+    points,
+    reason,
+  });
+
+  if (insertError) throw insertError;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -60,7 +90,7 @@ serve(async (req) => {
 
     const { data: order, error: orderError } = await supabase
       .from("custom_orders")
-      .select("id, user_id, stripe_checkout_session_id, request_fee_status, payment_status")
+      .select("id, user_id, stripe_checkout_session_id, request_fee_status, payment_status, request_fee_amount")
       .eq("id", orderId)
       .single();
 
@@ -96,6 +126,15 @@ serve(async (req) => {
         .eq("user_id", user.id);
 
       if (updateError) throw updateError;
+
+      const requestFeePaid = Number(order.request_fee_amount ?? (Number(session.amount_total ?? 0) / 100));
+      const pointsEarned = Math.floor(requestFeePaid / 4);
+      await awardLoyaltyPointsOnce({
+        supabase,
+        userId: user.id,
+        points: pointsEarned,
+        reason: `Custom request fee #${orderId.slice(0, 8)}`,
+      });
     } else {
       const { error: updateError } = await supabase
         .from("custom_orders")
@@ -109,6 +148,14 @@ serve(async (req) => {
         .eq("user_id", user.id);
 
       if (updateError) throw updateError;
+
+      const pointsEarned = Math.floor(Number(session.amount_total ?? 0) / 100 / 4);
+      await awardLoyaltyPointsOnce({
+        supabase,
+        userId: user.id,
+        points: pointsEarned,
+        reason: `Custom order payment #${orderId.slice(0, 8)}`,
+      });
     }
 
     return jsonResponse({ verified: true, paymentKind, orderId, sessionId: checkoutSessionId });

@@ -63,14 +63,14 @@ async function fetchCustomOrders(userId: string, userEmail?: string) {
   const [ownedCustomOrdersRes, emailCustomOrdersRes] = await Promise.all([
     supabase
       .from("custom_orders")
-      .select("*")
+      .select("id, name, email, description, model_url, model_filename, status, admin_notes, created_at, updated_at, user_id, quoted_price, final_agreed_price, customer_response_status, payment_status, production_status")
       .eq("user_id", userId)
       .eq("request_fee_status", "paid")
       .order("created_at", { ascending: false }),
     normalizedEmail
       ? supabase
           .from("custom_orders")
-          .select("*")
+          .select("id, name, email, description, model_url, model_filename, status, admin_notes, created_at, updated_at, user_id, quoted_price, final_agreed_price, customer_response_status, payment_status, production_status")
           .ilike("email", normalizedEmail)
           .eq("request_fee_status", "paid")
           .order("created_at", { ascending: false })
@@ -92,7 +92,13 @@ async function fetchCustomOrders(userId: string, userEmail?: string) {
     .in("custom_order_id", customOrders.map((order: any) => order.id))
     .order("created_at", { ascending: true });
 
-  if (messageError) throw messageError;
+  if (messageError) {
+    console.warn("Could not load custom order messages", messageError.message);
+    return {
+      customOrders,
+      customOrderMessages: {},
+    };
+  }
 
   return {
     customOrders,

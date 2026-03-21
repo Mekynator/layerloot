@@ -2,6 +2,36 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.0.0?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+async function awardLoyaltyPointsOnce(args: {
+  supabase: any;
+  userId: string | null | undefined;
+  points: number;
+  reason: string;
+}) {
+  const { supabase, userId, points, reason } = args;
+
+  if (!userId || points <= 0) return;
+
+  const { data: existing, error: existingError } = await supabase
+    .from("loyalty_points")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("reason", reason)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+  if (existing?.id) return;
+
+  const { error: insertError } = await supabase.from("loyalty_points").insert({
+    user_id: userId,
+    points,
+    reason,
+  });
+
+  if (insertError) throw insertError;
+}
+
 async function markVoucherUsed(supabase: any, userVoucherId: string, voucherType: string | undefined) {
   const updates: Record<string, any> = {
     is_used: true,
@@ -163,17 +193,30 @@ serve(async (req) => {
       const paymentType = session.metadata?.payment_type;
 
       if (type === "request_fee" && orderId) {
-        await supabase
+        const { data: paidOrder, error: paidOrderError } = await supabase
           .from("custom_orders")
           .update({
             request_fee_status: "paid",
             status: "pending_review",
           })
-          .eq("id", orderId);
+          .eq("id", orderId)
+          .select("id, user_id, request_fee_amount")
+          .single();
+
+        if (paidOrderError) throw paidOrderError;
+
+        const requestFeePaid = Number(paidOrder?.request_fee_amount ?? (Number(session.amount_total ?? 0) / 100));
+        const pointsEarned = Math.floor(requestFeePaid / 4);
+        await awardLoyaltyPointsOnce({
+          supabase,
+          userId: paidOrder?.user_id,
+          points: pointsEarned,
+          reason: `Custom request fee #${orderId.slice(0, 8)}`,
+        });
       }
 
       if (paymentType === "custom_order_final" && orderId) {
-        await supabase
+        const { data: paidOrder, error: paidOrderError } = await supabase
           .from("custom_orders")
           .update({
             payment_status: "paid",
@@ -181,7 +224,19 @@ serve(async (req) => {
             paid_at: new Date().toISOString(),
             stripe_checkout_session_id: session.id,
           })
-          .eq("id", orderId);
+          .eq("id", orderId)
+          .select("id, user_id")
+          .single();
+
+        if (paidOrderError) throw paidOrderError;
+
+        const pointsEarned = Math.floor(Number(session.amount_total ?? 0) / 100 / 4);
+        await awardLoyaltyPointsOnce({
+          supabase,
+          userId: paidOrder?.user_id,
+          points: pointsEarned,
+          reason: `Custom order payment #${orderId.slice(0, 8)}`,
+        });
       }
 
       if (source === "cart") {

@@ -17,18 +17,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useCart } from "@/contexts/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useCartAccountData } from "@/hooks/use-cart-account-data";
+import { CartSummarySkeleton } from "@/components/shared/loading-states";
 
 const FREE_SHIPPING_THRESHOLD = 500;
 const BASE_SHIPPING_PRICE = 5.99;
-
-type DiscountCode = {
-  code: string;
-  label: string;
-  type: "percent" | "fixed";
-  value: number;
-};
 
 type RecommendedProduct = {
   id: string;
@@ -38,25 +34,11 @@ type RecommendedProduct = {
   href: string;
 };
 
-type UserVoucherRow = {
-  id: string;
-  code: string;
-  balance: number | null;
-  is_used: boolean;
-  vouchers: {
-    name: string;
-    discount_type: string;
-    discount_value: number;
-  } | null;
-};
-
-type LoyaltyPointRow = {
-  points: number;
-};
-
 export default function CartPage() {
   const { items, removeItem, updateQuantity, totalPrice, addItem } = useCart();
+  const { user } = useAuth();
   const { toast } = useToast();
+  const { data: accountData, isLoading: accountLoading } = useCartAccountData(user?.id);
 
   type CartItemExt = (typeof items)[number] & {
     material?: string;
@@ -76,8 +58,6 @@ export default function CartPage() {
   const [selectedDiscountCode, setSelectedDiscountCode] = useState<string>("");
   const [manualDiscountCode, setManualDiscountCode] = useState("");
   const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const [availableDiscountCodes, setAvailableDiscountCodes] = useState<DiscountCode[]>([]);
-  const [pointsBalance, setPointsBalance] = useState(0);
 
   useEffect(() => {
     const raw = localStorage.getItem("layerloot_saved_items");
@@ -94,73 +74,12 @@ export default function CartPage() {
     localStorage.setItem("layerloot_saved_items", JSON.stringify(savedItems));
   }, [savedItems]);
 
-  useEffect(() => {
-    const loadAccountDiscounts = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const userId = session?.user?.id;
-      if (!userId) {
-        setAvailableDiscountCodes([]);
-        setPointsBalance(0);
-        return;
-      }
-
-      const [loyaltyRes, vouchersRes] = await Promise.all([
-        supabase.from("loyalty_points").select("points").eq("user_id", userId),
-        supabase
-          .from("user_vouchers")
-          .select("id, code, balance, is_used, vouchers(name, discount_type, discount_value)")
-          .eq("user_id", userId)
-          .eq("is_used", false)
-          .order("redeemed_at", { ascending: false }),
-      ]);
-
-      const balance = ((loyaltyRes.data as LoyaltyPointRow[]) ?? []).reduce(
-        (sum, row) => sum + Number(row.points ?? 0),
-        0,
-      );
-      setPointsBalance(balance);
-
-      const mappedCodes: DiscountCode[] = ((vouchersRes.data as UserVoucherRow[]) ?? [])
-        .filter((row) => {
-          if (row.vouchers?.discount_type === "gift_card") {
-            return Number(row.balance ?? 0) > 0;
-          }
-          return true;
-        })
-        .map((row) => {
-          const voucher = row.vouchers;
-          const labelValue =
-            voucher?.discount_type === "free_shipping"
-              ? "Free delivery"
-              : voucher?.discount_type === "gift_card"
-                ? `${Number(row.balance ?? voucher?.discount_value ?? 0).toFixed(2)} kr gift card`
-                : `${Number(voucher?.discount_value ?? 0).toFixed(2)} kr off`;
-
-          return {
-            code: row.code,
-            label: `${row.code} - ${labelValue}`,
-            type: voucher?.discount_type === "percent_discount" ? "percent" : "fixed",
-            value:
-              voucher?.discount_type === "gift_card"
-                ? Number(row.balance ?? voucher?.discount_value ?? 0)
-                : voucher?.discount_type === "free_shipping"
-                  ? BASE_SHIPPING_PRICE
-                  : Number(voucher?.discount_value ?? 0),
-          };
-        });
-
-      setAvailableDiscountCodes(mappedCodes);
-    };
-
-    loadAccountDiscounts();
-  }, []);
-
   const selectedDiscount = useMemo(() => {
-    return availableDiscountCodes.find((d) => d.code === selectedDiscountCode) ?? null;
-  }, [selectedDiscountCode, availableDiscountCodes]);
+    return (accountData?.availableDiscountCodes ?? []).find((d) => d.code === selectedDiscountCode) ?? null;
+  }, [selectedDiscountCode, accountData?.availableDiscountCodes]);
+
+  const availableDiscountCodes = accountData?.availableDiscountCodes ?? [];
+  const pointsBalance = accountData?.pointsBalance ?? 0;
 
   const shippingProgress = Math.min((totalPrice / FREE_SHIPPING_THRESHOLD) * 100, 100);
   const remainingForFreeShipping = Math.max(FREE_SHIPPING_THRESHOLD - totalPrice, 0);
@@ -485,6 +404,7 @@ export default function CartPage() {
           </div>
 
           <div className="space-y-6">
+            {accountLoading && user ? <CartSummarySkeleton /> : null}
             <div className="rounded-2xl border border-border bg-card p-6 shadow-sm lg:sticky lg:top-24">
               <h2 className="mb-5 font-display text-2xl font-bold uppercase text-foreground">Order Summary</h2>
 

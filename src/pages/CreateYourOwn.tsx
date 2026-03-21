@@ -29,6 +29,7 @@ import ModelViewer from "@/components/ModelViewer";
 import Lithophane, { LithophaneSubmitPayload } from "@/components/Lithophane";
 import { motion } from "framer-motion";
 import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
+import { ReviewCardSkeleton, SectionCardSkeleton } from "@/components/shared/loading-states";
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },
@@ -176,11 +177,13 @@ const ReviewSection = ({ toolType, title }: { toolType: "custom-print" | "lithop
       </div>
 
       {loading ? (
-        <div className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
-          Loading reviews...
+        <div className="grid gap-4 md:grid-cols-3">
+          <ReviewCardSkeleton />
+          <ReviewCardSkeleton />
+          <ReviewCardSkeleton />
         </div>
       ) : reviews.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">No reviews yet.</div>
+        <SectionCardSkeleton lines={2} />
       ) : (
         <div className="grid gap-4 md:grid-cols-3">
           {reviews.map((review) => (

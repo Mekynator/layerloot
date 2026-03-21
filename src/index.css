@@ -106,11 +106,25 @@
   }
 }
 
+@layer base {
+  body {
+    background-image:
+      radial-gradient(circle at top, hsl(var(--primary) / 0.08), transparent 24%),
+      linear-gradient(to bottom, hsl(var(--background)), hsl(var(--background)));
+  }
+}
+
 @layer utilities {
   .glow-primary {
     box-shadow: var(--glow-primary);
   }
   .glow-primary-strong {
     box-shadow: var(--glow-primary-strong);
+  }
+  .section-surface {
+    @apply rounded-3xl border border-border/70 bg-card/85 shadow-sm backdrop-blur-sm;
+  }
+  .text-balance {
+    text-wrap: balance;
   }
 }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import EditorPreviewOverlay, { type PreviewBlockRect } from "@/components/admin/EditorPreviewOverlay";
+import { EditorPreviewSkeleton } from "@/components/shared/loading-states";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
 
 interface EditorPreviewFrameProps {
@@ -33,8 +34,13 @@ export default function EditorPreviewFrame({
   const [overlayBlocks, setOverlayBlocks] = useState<PreviewBlockRect[]>([]);
   const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
   const [dragOverBlockId, setDragOverBlockId] = useState<string | null>(null);
+  const [isFrameReady, setIsFrameReady] = useState(false);
 
   const previewSrc = useMemo(() => normalizePreviewRoute(page), [page]);
+
+  useEffect(() => {
+    setIsFrameReady(false);
+  }, [previewSrc]);
   const blockTypeMap = useMemo(
     () => new Map(blocks.map((block) => [block.id, block.block_type])),
     [blocks]
@@ -107,13 +113,19 @@ export default function EditorPreviewFrame({
 
   return (
     <div ref={containerRef} className="relative h-full w-full overflow-auto bg-background">
+      {!isFrameReady ? (
+        <div className="absolute inset-0 z-10">
+          <EditorPreviewSkeleton />
+        </div>
+      ) : null}
       <iframe
         ref={iframeRef}
         key={previewSrc}
         src={previewSrc}
         title={`Editor preview: ${page}`}
-        className="h-[calc(100vh-48px)] w-full border-0 bg-background"
+        className={`h-[calc(100vh-48px)] w-full border-0 bg-background transition-opacity duration-200 ${isFrameReady ? "opacity-100" : "opacity-0"}`}
         sandbox="allow-same-origin allow-scripts"
+        onLoad={() => setIsFrameReady(true)}
       />
 
       <EditorPreviewOverlay

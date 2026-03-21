@@ -28,6 +28,8 @@ import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import ToolReviewForm from "@/components/reviews/ToolReviewForm";
 import { payCustomOrder } from "@/lib/payCustomOrder";
+import { useAccountOverview } from "@/hooks/use-account-overview";
+import { AccountOverviewSkeleton, RewardsGridSkeleton, SectionCardSkeleton } from "@/components/shared/loading-states";
 
 interface Order {
   id: string;
@@ -106,13 +108,6 @@ type VoucherView = "active" | "used";
 type SeenState = {
   ordersLastSeenAt: string | null;
   customRequestsLastSeenAt: string | null;
-};
-
-type LoyaltyPointRow = {
-  id: string;
-  points: number;
-  reason: string | null;
-  created_at: string;
 };
 
 const statusColors: Record<string, string> = {
@@ -295,32 +290,13 @@ function getLatestDate(values: (string | null | undefined)[]) {
   );
 }
 
-function summarizeLoyalty(rows: LoyaltyPointRow[]) {
-  const balance = rows.reduce((sum, row) => sum + Number(row.points ?? 0), 0);
-  const earned = rows
-    .filter((row) => Number(row.points ?? 0) > 0)
-    .reduce((sum, row) => sum + Number(row.points ?? 0), 0);
-  const spent = Math.abs(
-    rows.filter((row) => Number(row.points ?? 0) < 0).reduce((sum, row) => sum + Number(row.points ?? 0), 0),
-  );
-  return { balance, earned, spent };
-}
-
 const Account = () => {
   const { user, isAdmin, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } = useAccountOverview(user?.id);
 
-  const [pointsBalance, setPointsBalance] = useState(0);
-  const [pointsEarned, setPointsEarned] = useState(0);
-  const [pointsSpent, setPointsSpent] = useState(0);
-  const [loyaltyHistory, setLoyaltyHistory] = useState<LoyaltyPointRow[]>([]);
   const [showHistory, setShowHistory] = useState(false);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [customOrders, setCustomOrders] = useState<CustomOrder[]>([]);
-  const [customOrderMessages, setCustomOrderMessages] = useState<Record<string, CustomOrderMessage[]>>({});
-  const [vouchers, setVouchers] = useState<Voucher[]>([]);
-  const [userVouchers, setUserVouchers] = useState<UserVoucher[]>([]);
   const [tab, setTab] = useState<AccountTab>("orders");
   const [customRequestsView, setCustomRequestsView] = useState<CustomRequestsView>("ongoing");
   const [voucherView, setVoucherView] = useState<VoucherView>("active");
@@ -347,73 +323,20 @@ const Account = () => {
     setSeenState(readSeenState(user.id));
   }, [user]);
 
-  const fetchAll = async () => {
-    if (!user) return;
-
-    const [loyaltyRes, ordersRes, customOrdersRes, vouchersRes, userVouchersRes] = await Promise.all([
-      supabase
-        .from("loyalty_points")
-        .select("id, points, reason, created_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("orders")
-        .select("id, status, total, created_at, tool_type")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false }),
-      supabase.from("custom_orders").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("vouchers").select("*").eq("is_active", true).order("points_cost", { ascending: true }),
-      supabase
-        .from("user_vouchers")
-        .select(
-          "id, code, is_used, balance, redeemed_at, recipient_email, recipient_name, used_at, vouchers(name, discount_value, discount_type)",
-        )
-        .eq("user_id", user.id)
-        .order("redeemed_at", { ascending: false }),
-    ]);
-
-    if (loyaltyRes.error) {
-      toast({ title: "Points error", description: loyaltyRes.error.message, variant: "destructive" });
-    }
-    if (vouchersRes.error) {
-      toast({ title: "Voucher error", description: vouchersRes.error.message, variant: "destructive" });
-    }
-
-    const loyaltyRows = (loyaltyRes.data as LoyaltyPointRow[]) ?? [];
-    const summary = summarizeLoyalty(loyaltyRows);
-
-    setLoyaltyHistory(loyaltyRows);
-    setPointsBalance(summary.balance);
-    setPointsEarned(summary.earned);
-    setPointsSpent(summary.spent);
-    setOrders((ordersRes.data as Order[]) ?? []);
-    setCustomOrders((customOrdersRes.data as CustomOrder[]) ?? []);
-    setVouchers((vouchersRes.data as Voucher[]) ?? []);
-    setUserVouchers((userVouchersRes.data as UserVoucher[]) ?? []);
-
-    const customOrdersData = (customOrdersRes.data as CustomOrder[]) ?? [];
-    if (customOrdersData.length > 0) {
-      const ids = customOrdersData.map((o) => o.id);
-      const { data: msgData } = await supabase
-        .from("custom_order_messages")
-        .select("*")
-        .in("custom_order_id", ids)
-        .order("created_at", { ascending: true });
-
-      const grouped: Record<string, CustomOrderMessage[]> = {};
-      ((msgData as CustomOrderMessage[]) ?? []).forEach((msg) => {
-        if (!grouped[msg.custom_order_id]) grouped[msg.custom_order_id] = [];
-        grouped[msg.custom_order_id].push(msg);
-      });
-      setCustomOrderMessages(grouped);
-    } else {
-      setCustomOrderMessages({});
-    }
-  };
-
-  useEffect(() => {
-    fetchAll();
-  }, [user]);
+  const pointsBalance = overview?.pointsBalance ?? 0;
+  const pointsEarned = overview?.pointsEarned ?? 0;
+  const pointsSpent = overview?.pointsSpent ?? 0;
+  const loyaltyHistory = (overview?.loyaltyHistory ?? []) as Array<{
+    id: string;
+    points: number;
+    reason: string | null;
+    created_at: string;
+  }>;
+  const orders = (overview?.orders ?? []) as Order[];
+  const customOrders = (overview?.customOrders ?? []) as CustomOrder[];
+  const customOrderMessages = (overview?.customOrderMessages ?? {}) as Record<string, CustomOrderMessage[]>;
+  const vouchers = (overview?.vouchers ?? []) as Voucher[];
+  const userVouchers = (overview?.userVouchers ?? []) as UserVoucher[];
 
   const parsedCustomOrders = useMemo(
     () => customOrders.map((order) => ({ ...order, parsed: parseCustomOrderDescription(order.description) })),
@@ -518,7 +441,7 @@ const Account = () => {
 
     setRedeemingKey(null);
     toast({ title: "Voucher redeemed", description: `Your code: ${code}` });
-    fetchAll();
+    await refetchOverview();
   };
 
   const sendGiftCard = async (uvId: string) => {
@@ -566,7 +489,7 @@ const Account = () => {
     setGiftEmail("");
     setGiftName("");
     setVoucherView("used");
-    fetchAll();
+    await refetchOverview();
   };
 
   const sendCustomOrderReply = async (customOrderId: string) => {
@@ -592,7 +515,7 @@ const Account = () => {
 
     setReplyMessage((prev) => ({ ...prev, [customOrderId]: "" }));
     toast({ title: "Reply sent" });
-    fetchAll();
+    await refetchOverview();
   };
 
   const respondToQuote = async (order: CustomOrder, accepted: boolean) => {
@@ -638,7 +561,7 @@ const Account = () => {
           description: paymentError?.message || "Please click Pay Now to complete payment.",
           variant: "destructive",
         });
-        await fetchAll();
+        await refetchOverview();
       } finally {
         setProcessingCustomPaymentOrderId(null);
       }
@@ -650,7 +573,7 @@ const Account = () => {
       description: "The request has been marked as declined.",
     });
 
-    fetchAll();
+    await refetchOverview();
   };
 
   const customStatusBadge = (status: string) => (
@@ -943,6 +866,16 @@ const Account = () => {
 
   if (loading || !user) return null;
 
+  if (overviewLoading && !overview) {
+    return (
+      <div className="py-8">
+        <div className="container max-w-5xl">
+          <AccountOverviewSkeleton />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="py-8">
       <div className="container max-w-5xl">
@@ -1190,8 +1123,10 @@ const Account = () => {
         )}
 
         {tab === "rewards" && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {REWARD_CATALOG.map((reward) => {
+          <>
+            {overviewLoading && !overview ? <RewardsGridSkeleton count={4} /> : null}
+            <div className="grid gap-4 sm:grid-cols-2">
+              {REWARD_CATALOG.map((reward) => {
               const matchedVoucher = findMatchingVoucher(reward, vouchers);
               const canRedeem = !!matchedVoucher && pointsBalance >= reward.pointsCost;
 
@@ -1250,12 +1185,14 @@ const Account = () => {
                   </Card>
                 </motion.div>
               );
-            })}
-          </div>
+              })}
+            </div>
+          </>
         )}
 
         {tab === "vouchers" && (
           <div className="space-y-4">
+            {overviewLoading && !overview ? <SectionCardSkeleton lines={4} /> : null}
             <div className="flex flex-wrap gap-2">
               <Button
                 size="sm"

@@ -34,7 +34,15 @@ import SubmitDesign from "./pages/SubmitDesign";
 import NotFound from "./pages/NotFound";
 import ChatWidget from "./components/ChatWidget";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 3,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

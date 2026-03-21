@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
+import { renderBlock } from "@/components/admin/BlockRenderer";
+import { PageSkeleton } from "@/components/shared/loading-states";
+import { usePageBlocks } from "@/hooks/use-page-blocks";
 
 type DynamicPageProps = {
   slug?: string;
@@ -16,57 +17,10 @@ const DynamicPage = ({
 }: DynamicPageProps) => {
   const params = useParams();
   const slug = slugProp ?? params.slug ?? "";
-
-  const [blocks, setBlocks] = useState<SiteBlock[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let mounted = true;
-
-    const fetchBlocks = async () => {
-      if (!slug) {
-        setBlocks([]);
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-
-      const { data, error } = await supabase
-        .from("site_blocks")
-        .select("*")
-        .eq("page", slug)
-        .eq("is_active", true)
-        .order("sort_order");
-
-      if (!mounted) return;
-
-      if (error) {
-        console.error(`Failed to load page blocks for "${slug}"`, error);
-        setBlocks([]);
-      } else {
-        setBlocks((data as SiteBlock[]) ?? []);
-      }
-
-      setLoading(false);
-    };
-
-    fetchBlocks();
-
-    return () => {
-      mounted = false;
-    };
-  }, [slug]);
-
+  const { data: blocks = [], isLoading } = usePageBlocks(slug, Boolean(slug));
   const visibleBlocks = useMemo(() => blocks.filter((block) => block.is_active !== false), [blocks]);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
+  if (isLoading) return <PageSkeleton />;
 
   if (visibleBlocks.length === 0) {
     return (

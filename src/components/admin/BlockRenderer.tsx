@@ -29,6 +29,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import ProductCard from "@/components/ProductCard";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useFeaturedProducts } from "@/hooks/use-storefront";
+import { ProductGridSkeleton } from "@/components/shared/loading-states";
+import { fadeUp } from "@/lib/motion";
 
 export interface SiteBlock {
   id: string;
@@ -292,9 +295,17 @@ const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNo
   const clickable = applySectionAction(action);
 
   return (
-    <section {...props} className={`${props.className} ${clickable.className}`.trim()} onClick={clickable.onClick}>
+    <motion.section
+      {...props}
+      initial={{ opacity: 0, y: 18 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.12 }}
+      transition={{ duration: 0.36 }}
+      className={`${props.className} ${clickable.className}`.trim()}
+      onClick={clickable.onClick}
+    >
       {children}
-    </section>
+    </motion.section>
   );
 };
 
@@ -613,24 +624,13 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
 };
 
 const FeaturedProductsBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) => {
-  const [products, setProducts] = useState<any[]>([]);
   const c = block.content || {};
-
-  useEffect(() => {
-    supabase
-      .from("products")
-      .select("id, name, slug, price, compare_at_price, images, is_featured, model_url, created_at")
-      .eq("is_active", true)
-      .eq("is_featured", true)
-      .limit(c.limit || 8)
-      .then(({ data }) => setProducts(data ?? []));
-  }, [c.limit]);
-
+  const { data: products = [], isLoading } = useFeaturedProducts(c.limit || 8);
   const align = c.alignment || "left";
   const headingAlignClass = alignmentClass(align);
   const viewAllAction = resolveItemAction(c.view_all_button || {}, c.view_all_link || "/products");
 
-  if (products.length === 0) {
+  if (!isLoading && products.length === 0) {
     return withSection(
       block,
       "py-16 lg:py-24",
@@ -665,11 +665,17 @@ const FeaturedProductsBlock = ({ block }: { block: SiteBlock; disableAnimations?
         />
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {products.map((product, i) => (
-          <ProductCard key={product.id} product={product} index={i} />
-        ))}
-      </div>
+      {isLoading ? (
+        <ProductGridSkeleton count={4} />
+      ) : (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {products.map(({ product, socialProof }, i) => (
+            <motion.div key={product.id} variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}>
+              <ProductCard product={product} socialProof={socialProof} index={i} />
+            </motion.div>
+          ))}
+        </div>
+      )}
     </div>,
   );
 };

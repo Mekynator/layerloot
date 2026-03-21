@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { ShoppingBag } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
+import RatingStars from "@/components/social/RatingStars";
+import ProductTrustBadges from "@/components/social/ProductTrustBadges";
+import type { ProductSocialProof } from "@/lib/social-proof";
 
 interface ProductCardProps {
   product: {
@@ -17,24 +20,27 @@ interface ProductCardProps {
     created_at?: string;
     model_url?: string | null;
   };
+  socialProof?: ProductSocialProof;
   index?: number;
 }
 
-const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
+const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
   const { addItem } = useCart();
 
   const images = product.images && product.images.length > 0 ? product.images.filter(Boolean) : ["/placeholder.svg"];
-
   const primaryImage = images[0] || "/placeholder.svg";
   const secondaryImage = images[1] || null;
-
   const isNew = product.created_at ? Date.now() - new Date(product.created_at).getTime() < 14 * 86400000 : false;
-
   const hasSale = product.compare_at_price != null && Number(product.compare_at_price) > Number(product.price);
-
   const discountPct = hasSale
     ? Math.round(((Number(product.compare_at_price) - Number(product.price)) / Number(product.compare_at_price)) * 100)
     : 0;
+
+  const trustBadges = [
+    ...(product.is_featured ? ["best seller"] : []),
+    ...(isNew ? ["recently added"] : []),
+    ...(socialProof?.badges ?? []),
+  ].slice(0, 3);
 
   const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -51,21 +57,21 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 22 }}
+      initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.06 }}
-      whileHover={{ y: -6 }}
+      transition={{ duration: 0.36, delay: index * 0.05 }}
+      whileHover={{ y: -4 }}
       className="h-full"
     >
       <Link
         to={`/products/${product.slug}`}
-        className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all duration-300 hover:border-primary/60 hover:shadow-2xl"
+        className="group relative flex h-full flex-col overflow-hidden rounded-[1.35rem] border border-border/80 bg-card/95 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-[0_20px_60px_-32px_hsl(var(--foreground)/0.45)]"
       >
         <div className="relative aspect-square overflow-hidden bg-muted">
           <img
             src={primaryImage}
             alt={product.name}
-            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
             loading="lazy"
           />
 
@@ -78,51 +84,34 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
             />
           )}
 
-          <div className="absolute inset-0 bg-gradient-to-t from-foreground/20 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+          <div className="absolute inset-0 bg-gradient-to-t from-foreground/25 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
-          <div className="absolute left-3 top-3 flex flex-col gap-1.5">
+          <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
             {hasSale && (
               <Badge className="bg-primary font-display text-[10px] uppercase tracking-wider text-primary-foreground">
                 Sale {discountPct > 0 ? `-${discountPct}%` : ""}
               </Badge>
             )}
-
             {product.is_featured && (
               <Badge className="bg-secondary font-display text-[10px] uppercase tracking-wider text-secondary-foreground">
-                Bestseller
-              </Badge>
-            )}
-
-            {isNew && (
-              <Badge className="bg-accent font-display text-[10px] uppercase tracking-wider text-accent-foreground">
-                New
+                Popular
               </Badge>
             )}
           </div>
-
-          {images.length > 2 && (
-            <div className="absolute right-3 top-3 flex gap-1 rounded-full bg-card/80 px-2 py-1 opacity-0 backdrop-blur transition-opacity duration-300 group-hover:opacity-100">
-              {images.slice(0, 3).map((_, i) => (
-                <span key={i} className="h-2.5 w-2.5 rounded-full border border-card/50 bg-muted-foreground/40" />
-              ))}
-              {images.length > 3 && (
-                <span className="font-display text-[10px] text-foreground">+{images.length - 3}</span>
-              )}
-            </div>
-          )}
         </div>
 
-        <div className="flex flex-1 flex-col p-4 pt-3">
-          <div className="mb-3">
-            <h3 className="line-clamp-2 font-display text-sm font-semibold uppercase tracking-wide text-card-foreground transition-colors duration-300 group-hover:text-primary">
+        <div className="flex flex-1 flex-col gap-3 p-4 pt-3">
+          <div className="space-y-2">
+            <h3 className="line-clamp-2 font-display text-sm font-semibold uppercase tracking-[0.16em] text-card-foreground transition-colors duration-300 group-hover:text-primary">
               {product.name}
             </h3>
+            <RatingStars rating={socialProof?.averageRating} count={socialProof?.reviewCount} className="min-h-5" />
+            <ProductTrustBadges badges={trustBadges} />
           </div>
 
-          <div className="mt-auto">
+          <div className="mt-auto space-y-3">
             <div className="flex items-end gap-2">
               <span className="font-display text-xl font-bold text-primary">{Number(product.price).toFixed(2)} kr</span>
-
               {hasSale && (
                 <span className="pb-0.5 text-sm text-muted-foreground line-through">
                   {Number(product.compare_at_price).toFixed(2)} kr
@@ -130,7 +119,10 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
               )}
             </div>
 
-            <div className="mt-3 flex items-center justify-end">
+            <div className="flex items-center justify-between gap-3 border-t border-border/70 pt-3">
+              <p className="text-xs text-muted-foreground">
+                {socialProof?.reviewCount ? `${socialProof.reviewCount} verified opinions` : "Premium print-ready finish"}
+              </p>
               <Button type="button" size="sm" onClick={handleAddToCart} className="shrink-0 rounded-xl px-3">
                 <ShoppingBag className="mr-1.5 h-4 w-4" />
                 Add to cart

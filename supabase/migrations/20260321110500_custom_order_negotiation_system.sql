@@ -1,6 +1,24 @@
 -- 20260318_custom_order_negotiation_system.sql
 -- Step 1: extend custom_orders and add conversation table for custom print workflow
 
+create or replace function public.is_admin(_uid uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, auth
+as $$
+  select exists (
+    select 1
+    from auth.users u
+    where u.id = _uid
+      and (
+        coalesce(u.raw_app_meta_data ->> 'role', '') = 'admin'
+        or (u.raw_app_meta_data -> 'roles') ? 'admin'
+      )
+  );
+$$;
+
 alter table public.custom_orders
 add column if not exists quoted_price numeric(10,2),
 add column if not exists customer_offer_price numeric(10,2),

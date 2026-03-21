@@ -98,8 +98,19 @@ const cleanupUploadedFiles = async (paths: string[]) => {
 };
 
 const startRequestFeeCheckout = async (customOrderId: string) => {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    throw new Error("Please sign in again to continue with checkout");
+  }
+
   const { data, error } = await supabase.functions.invoke("create-request-fee-checkout", {
     body: { customOrderId },
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
   });
 
   if (error) {

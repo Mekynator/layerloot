@@ -31,9 +31,7 @@ function normalizeSettings(value: any): PageBackgroundSettings {
     opacity: typeof value?.opacity === "number" ? value.opacity : DEFAULT_SETTINGS.opacity,
     blur: typeof value?.blur === "number" ? value.blur : DEFAULT_SETTINGS.blur,
     intervalMs:
-      typeof value?.intervalMs === "number" && value.intervalMs > 0
-        ? value.intervalMs
-        : DEFAULT_SETTINGS.intervalMs,
+      typeof value?.intervalMs === "number" && value.intervalMs > 0 ? value.intervalMs : DEFAULT_SETTINGS.intervalMs,
   };
 }
 
@@ -43,11 +41,7 @@ interface PageBackgroundEditorProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export default function PageBackgroundEditor({
-  page,
-  open,
-  onOpenChange,
-}: PageBackgroundEditorProps) {
+export default function PageBackgroundEditor({ page, open, onOpenChange }: PageBackgroundEditorProps) {
   const { toast } = useToast();
   const [form, setForm] = useState<PageBackgroundSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(false);
@@ -63,11 +57,7 @@ export default function PageBackgroundEditor({
     setLoading(true);
 
     async function load() {
-      const { data, error } = await supabase
-        .from("site_settings")
-        .select("value")
-        .eq("key", settingKey)
-        .maybeSingle();
+      const { data, error } = await supabase.from("site_settings").select("value").eq("key", settingKey).maybeSingle();
 
       if (!isMounted) return;
 
@@ -115,28 +105,60 @@ export default function PageBackgroundEditor({
     setUploading(true);
     const urls: string[] = [];
 
-    for (const file of Array.from(files)) {
-      const ext = file.name.split(".").pop();
-      const path = `page-backgrounds/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-      const { error } = await supabase.storage.from("site-assets").upload(path, file);
-
-      if (error) {
-        toast({ title: "Upload failed", description: error.message, variant: "destructive" });
-        continue;
+      if (!session) {
+        toast({
+          title: "Not authenticated",
+          description: "You must be logged in to upload background images.",
+          variant: "destructive",
+        });
+        return;
       }
 
-      const { data } = supabase.storage.from("site-assets").getPublicUrl(path);
-      urls.push(data.publicUrl);
-    }
+      for (const file of Array.from(files)) {
+        const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+        const safeName = file.name.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9-_]/g, "-");
+        const path = `page-backgrounds/${page}/${Date.now()}-${safeName}.${ext}`;
 
-    setUploading(false);
+        const { error: uploadError } = await supabase.storage.from("site-assets").upload(path, file, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: file.type || undefined,
+        });
 
-    if (urls.length > 0) {
-      setForm((prev) => ({
-        ...prev,
-        images: [...prev.images, ...urls],
-      }));
+        if (uploadError) {
+          toast({
+            title: "Upload failed",
+            description: uploadError.message,
+            variant: "destructive",
+          });
+          continue;
+        }
+
+        const { data: publicUrlData } = supabase.storage.from("site-assets").getPublicUrl(path);
+
+        if (publicUrlData?.publicUrl) {
+          urls.push(publicUrlData.publicUrl);
+        }
+      }
+
+      if (urls.length > 0) {
+        setForm((prev) => ({
+          ...prev,
+          images: [...prev.images, ...urls],
+        }));
+
+        toast({
+          title: "Upload complete",
+          description: `${urls.length} image${urls.length > 1 ? "s" : ""} uploaded successfully.`,
+        });
+      }
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -154,9 +176,7 @@ export default function PageBackgroundEditor({
       } as any,
     };
 
-    const { error } = await supabase
-      .from("site_settings")
-      .upsert(payload, { onConflict: "key" });
+    const { error } = await supabase.from("site_settings").upsert(payload, { onConflict: "key" });
 
     setSaving(false);
 
@@ -173,9 +193,7 @@ export default function PageBackgroundEditor({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="font-display uppercase">
-            Edit Page Background · {page}
-          </DialogTitle>
+          <DialogTitle className="font-display uppercase">Edit Page Background · {page}</DialogTitle>
         </DialogHeader>
 
         {loading ? (
@@ -185,9 +203,7 @@ export default function PageBackgroundEditor({
             <div className="flex items-center justify-between rounded-lg border border-border p-4">
               <div>
                 <p className="text-sm font-medium">Enable slideshow background</p>
-                <p className="text-xs text-muted-foreground">
-                  Show this page’s image slideshow behind the content
-                </p>
+                <p className="text-xs text-muted-foreground">Show this page’s image slideshow behind the content</p>
               </div>
               <Switch checked={form.enabled} onCheckedChange={(checked) => update("enabled", checked)} />
             </div>
@@ -233,9 +249,7 @@ export default function PageBackgroundEditor({
               <div className="mb-3 flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium">Background images</p>
-                  <p className="text-xs text-muted-foreground">
-                    Upload, remove, and reorder slideshow images
-                  </p>
+                  <p className="text-xs text-muted-foreground">Upload, remove, and reorder slideshow images</p>
                 </div>
 
                 <Label
@@ -264,16 +278,10 @@ export default function PageBackgroundEditor({
                 <div className="grid gap-3 sm:grid-cols-2">
                   {form.images.map((src, index) => (
                     <div key={`${src}-${index}`} className="rounded-lg border border-border p-3">
-                      <img
-                        src={src}
-                        alt={`Background ${index + 1}`}
-                        className="h-36 w-full rounded-md object-cover"
-                      />
+                      <img src={src} alt={`Background ${index + 1}`} className="h-36 w-full rounded-md object-cover" />
 
                       <div className="mt-3 flex items-center justify-between gap-2">
-                        <div className="text-xs text-muted-foreground">
-                          Slide {index + 1}
-                        </div>
+                        <div className="text-xs text-muted-foreground">Slide {index + 1}</div>
 
                         <div className="flex gap-1">
                           <Button
@@ -296,12 +304,7 @@ export default function PageBackgroundEditor({
                             <ArrowDown className="h-4 w-4" />
                           </Button>
 
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            onClick={() => removeImage(index)}
-                          >
+                          <Button type="button" variant="destructive" size="icon" onClick={() => removeImage(index)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>

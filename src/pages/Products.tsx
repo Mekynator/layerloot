@@ -51,10 +51,6 @@ const Products = () => {
           <div className="flex flex-col gap-3">
             <div className="space-y-2">
               <h1 className="font-display text-4xl font-bold uppercase text-foreground">Products</h1>
-              <p className="max-w-2xl text-balance text-muted-foreground">
-                Print-ready models, accessories, and premium maker gear, now with clearer trust signals and smoother
-                browsing.
-              </p>
             </div>
           </div>
 

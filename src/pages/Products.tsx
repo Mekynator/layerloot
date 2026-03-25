@@ -50,7 +50,12 @@ const Products = () => {
         <div className="container space-y-8">
           <div className="flex flex-col gap-3">
             <div className="space-y-2">
-              <h1 className="font-display text-4xl font-bold uppercase text-foreground">Products</h1>            
+              <h1 className="font-display text-4xl font-bold uppercase text-foreground">Products</h1>
+              <p className="max-w-2xl text-balance text-muted-foreground">
+                Print-ready models, accessories, and premium maker gear, now with clearer trust signals and smoother
+                browsing.
+              </p>
+            </div>
           </div>
 
           <div className="flex flex-col gap-8 lg:flex-row">
@@ -58,7 +63,9 @@ const Products = () => {
               <div className="section-surface p-4">
                 <div className="mb-4 flex items-center gap-2">
                   <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-display text-sm uppercase tracking-widest text-muted-foreground">Categories</span>
+                  <span className="font-display text-sm uppercase tracking-widest text-muted-foreground">
+                    Categories
+                  </span>
                 </div>
 
                 <nav className="flex flex-row flex-wrap gap-2 lg:flex-col lg:gap-1">
@@ -130,7 +137,12 @@ const Products = () => {
               ) : filtered.length === 0 ? (
                 <SectionCardSkeleton lines={2} />
               ) : (
-                <motion.div initial="hidden" animate="visible" variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.05 } } }} className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                <motion.div
+                  initial="hidden"
+                  animate="visible"
+                  variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.05 } } }}
+                  className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3"
+                >
                   {filtered.map((product, index) => (
                     <motion.div key={product.id} variants={fadeUp}>
                       <ProductCard product={product} socialProof={socialProofMap.get(product.id)} index={index} />
@@ -142,7 +154,9 @@ const Products = () => {
               {!isLoading && filtered.length === 0 ? (
                 <div className="section-surface px-6 py-12 text-center">
                   <h2 className="font-display text-2xl font-bold uppercase text-foreground">No products found</h2>
-                  <p className="mt-2 text-muted-foreground">Try another category or broaden your search to discover more prints.</p>
+                  <p className="mt-2 text-muted-foreground">
+                    Try another category or broaden your search to discover more prints.
+                  </p>
                 </div>
               ) : null}
             </div>

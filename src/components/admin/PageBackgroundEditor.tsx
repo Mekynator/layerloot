@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, ImagePlus, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,8 @@ interface PageBackgroundEditorProps {
 
 export default function PageBackgroundEditor({ page, open, onOpenChange }: PageBackgroundEditorProps) {
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const [form, setForm] = useState<PageBackgroundSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -64,7 +66,11 @@ export default function PageBackgroundEditor({ page, open, onOpenChange }: PageB
       setLoading(false);
 
       if (error) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
+        toast({
+          title: "Error loading settings",
+          description: error.message,
+          variant: "destructive",
+        });
         return;
       }
 
@@ -108,7 +114,17 @@ export default function PageBackgroundEditor({ page, open, onOpenChange }: PageB
     try {
       const {
         data: { session },
+        error: sessionError,
       } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        toast({
+          title: "Authentication error",
+          description: sessionError.message,
+          variant: "destructive",
+        });
+        return;
+      }
 
       if (!session) {
         toast({
@@ -121,7 +137,11 @@ export default function PageBackgroundEditor({ page, open, onOpenChange }: PageB
 
       for (const file of Array.from(files)) {
         const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-        const safeName = file.name.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9-_]/g, "-");
+        const safeName = file.name
+          .replace(/\.[^/.]+$/, "")
+          .replace(/[^a-zA-Z0-9-_]/g, "-")
+          .toLowerCase();
+
         const path = `page-backgrounds/${page}/${Date.now()}-${safeName}.${ext}`;
 
         const { error: uploadError } = await supabase.storage.from("site-assets").upload(path, file, {
@@ -157,36 +177,55 @@ export default function PageBackgroundEditor({ page, open, onOpenChange }: PageB
           description: `${urls.length} image${urls.length > 1 ? "s" : ""} uploaded successfully.`,
         });
       }
+    } catch (error: any) {
+      toast({
+        title: "Unexpected error",
+        description: error?.message || "Something went wrong during upload.",
+        variant: "destructive",
+      });
     } finally {
       setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
   const save = async () => {
     setSaving(true);
 
-    const payload = {
-      key: settingKey,
-      value: {
-        enabled: form.enabled,
-        images: form.images,
-        opacity: Number(form.opacity),
-        blur: Number(form.blur),
-        intervalMs: Math.max(500, Number(form.intervalMs) || 2000),
-      } as any,
-    };
+    try {
+      const payload = {
+        key: settingKey,
+        value: {
+          enabled: form.enabled,
+          images: form.images,
+          opacity: Number(form.opacity),
+          blur: Number(form.blur),
+          intervalMs: Math.max(500, Number(form.intervalMs) || 2000),
+        },
+      };
 
-    const { error } = await supabase.from("site_settings").upsert(payload, { onConflict: "key" });
+      const { error } = await supabase.from("site_settings").upsert(payload, { onConflict: "key" });
 
-    setSaving(false);
+      if (error) {
+        toast({
+          title: "Save failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
 
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-      return;
+      toast({ title: "Page background saved" });
+      onOpenChange(false);
+    } catch (error: any) {
+      toast({
+        title: "Unexpected error",
+        description: error?.message || "Could not save settings.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
     }
-
-    toast({ title: "Page background saved" });
-    onOpenChange(false);
   };
 
   return (
@@ -262,6 +301,7 @@ export default function PageBackgroundEditor({ page, open, onOpenChange }: PageB
               </div>
 
               <Input
+                ref={fileInputRef}
                 id="page-background-upload"
                 type="file"
                 multiple

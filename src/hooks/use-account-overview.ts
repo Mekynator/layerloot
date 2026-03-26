@@ -67,7 +67,7 @@ async function fetchAccountOverview(userId: string, userEmail?: string): Promise
       .from("custom_order_messages")
       .select("*")
       .in("custom_order_id", ids)
-      .order("created_at", { ascending: true }) as Promise<{ data: any[] | null; error: any }>);
+      .order("created_at", { ascending: true }) as unknown as Promise<{ data: any[] | null; error: any }>);
 
     if (messageError) throw messageError;
 

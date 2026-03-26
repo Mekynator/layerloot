@@ -545,6 +545,43 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
     </div>
   );
 
+  const handleItemImageUpload = async (e: ChangeEvent<HTMLInputElement>, arrayKey: string, index: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = await uploadFile(file);
+    if (url) updateArrayItem(arrayKey, index, { image: url });
+  };
+
+  const renderMediaPicker = (item: any, arrayKey: string, index: number) => (
+    <div className="space-y-2 rounded-md border border-dashed border-border p-2">
+      <Label className="text-xs text-muted-foreground">Visual (Icon or Image)</Label>
+      <div className="flex items-center gap-2">
+        <label className="flex items-center gap-1.5 text-xs">
+          <input type="radio" name={`media-${arrayKey}-${index}`} checked={!item.image} onChange={() => updateArrayItem(arrayKey, index, { image: "" })} className="accent-primary" />
+          Icon
+        </label>
+        <label className="flex items-center gap-1.5 text-xs">
+          <input type="radio" name={`media-${arrayKey}-${index}`} checked={!!item.image} onChange={() => updateArrayItem(arrayKey, index, { image: item.image || "placeholder" })} className="accent-primary" />
+          Image
+        </label>
+      </div>
+      {!item.image ? (
+        <Select value={item.icon || "Package"} onValueChange={(v) => updateArrayItem(arrayKey, index, { icon: v })}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>{ICON_OPTIONS.map((icon) => <SelectItem key={icon} value={icon}>{icon}</SelectItem>)}</SelectContent>
+        </Select>
+      ) : (
+        <div className="space-y-1">
+          {item.image && item.image !== "placeholder" && (
+            <img src={item.image} alt="" className="h-16 w-16 rounded object-cover" />
+          )}
+          <Input type="file" accept="image/*" onChange={(e) => handleItemImageUpload(e, arrayKey, index)} />
+          <Input value={item.image === "placeholder" ? "" : item.image || ""} onChange={(e) => updateArrayItem(arrayKey, index, { image: e.target.value })} placeholder="Or paste image URL" />
+        </div>
+      )}
+    </div>
+  );
+
   const renderRepeaterEditor = () => {
     const t = form.block_type;
 
@@ -571,13 +608,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
               <Input value={card.title || ""} onChange={(e) => updateArrayItem("cards", index, { title: e.target.value })} placeholder="Title" />
               <Textarea value={card.desc || ""} onChange={(e) => updateArrayItem("cards", index, { desc: e.target.value })} rows={3} placeholder="Description" />
               <Input value={card.cta || ""} onChange={(e) => updateArrayItem("cards", index, { cta: e.target.value })} placeholder="CTA text" />
-              <div>
-                <Label>Icon</Label>
-                <Select value={card.icon || "ShoppingBag"} onValueChange={(v) => updateArrayItem("cards", index, { icon: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{ICON_OPTIONS.map((icon) => <SelectItem key={icon} value={icon}>{icon}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
+              {renderMediaPicker(card, "cards", index)}
               {renderActionEditor("button", { actionType: toActionType(card.actionType), actionTarget: card.actionTarget || card.link || "", openInNewTab: Boolean(card.openInNewTab) }, (patch) => updateArrayItem("cards", index, { ...patch, link: patch.actionTarget ?? card.link }))}
             </div>
           ))}
@@ -607,13 +638,8 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
               <label className="flex items-center gap-2 text-sm"><Switch checked={step.visible !== false} onCheckedChange={(v) => updateArrayItem("steps", index, { visible: v })} /> Visible</label>
               <Input value={step.title || ""} onChange={(e) => updateArrayItem("steps", index, { title: e.target.value })} placeholder="Step title" />
               <Textarea value={step.desc || ""} onChange={(e) => updateArrayItem("steps", index, { desc: e.target.value })} rows={2} placeholder="Step description" />
-              <div>
-                <Label>Icon</Label>
-                <Select value={step.icon || "Package"} onValueChange={(v) => updateArrayItem("steps", index, { icon: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{ICON_OPTIONS.map((icon) => <SelectItem key={icon} value={icon}>{icon}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
+              {renderMediaPicker(step, "steps", index)}
+              {renderActionEditor("button", { actionType: toActionType(step.actionType), actionTarget: step.actionTarget || "", openInNewTab: Boolean(step.openInNewTab) }, (patch) => updateArrayItem("steps", index, patch))}
             </div>
           ))}
         </div>
@@ -669,14 +695,9 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
               </div>
               <label className="flex items-center gap-2 text-sm"><Switch checked={badge.visible !== false} onCheckedChange={(v) => updateArrayItem("badges", index, { visible: v })} /> Visible</label>
               <Input value={badge.title || ""} onChange={(e) => updateArrayItem("badges", index, { title: e.target.value })} placeholder="Title" />
-              <Input value={badge.desc || ""} onChange={(e) => updateArrayItem("badges", index, { desc: e.target.value })} placeholder="Description" />
-              <div>
-                <Label>Icon</Label>
-                <Select value={badge.icon || "Shield"} onValueChange={(v) => updateArrayItem("badges", index, { icon: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{ICON_OPTIONS.map((icon) => <SelectItem key={icon} value={icon}>{icon}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
+              <Textarea value={badge.desc || ""} onChange={(e) => updateArrayItem("badges", index, { desc: e.target.value })} rows={2} placeholder="Description" />
+              {renderMediaPicker(badge, "badges", index)}
+              {renderActionEditor("button", { actionType: toActionType(badge.actionType), actionTarget: badge.actionTarget || "", openInNewTab: Boolean(badge.openInNewTab) }, (patch) => updateArrayItem("badges", index, patch))}
             </div>
           ))}
         </div>
@@ -811,6 +832,15 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
           <div><Label>Heading</Label><Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} /></div>
           <div><Label>Subheading</Label><Input value={form.content.subheading ?? ""} onChange={(e) => updateContent("subheading", e.target.value)} /></div>
           <div><Label>Submit Button Text</Label><Input value={form.content.submit_text ?? ""} onChange={(e) => updateContent("submit_text", e.target.value)} /></div>
+        </div>
+      );
+    }
+
+    if (t === "how_it_works" || t === "trust_badges" || t === "entry_cards" || t === "faq") {
+      return (
+        <div className="space-y-3">
+          <div><Label>Heading</Label><Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} /></div>
+          <div><Label>Subheading</Label><Textarea value={form.content.subheading ?? ""} onChange={(e) => updateContent("subheading", e.target.value)} rows={2} /></div>
         </div>
       );
     }

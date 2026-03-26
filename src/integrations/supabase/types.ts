@@ -383,7 +383,6 @@ export type Database = {
           shipping_address: Json | null
           shipping_cost: number
           status: string
-          stripe_checkout_session_id: string | null
           subtotal: number
           tool_type: string | null
           total: number
@@ -399,7 +398,6 @@ export type Database = {
           shipping_address?: Json | null
           shipping_cost?: number
           status?: string
-          stripe_checkout_session_id?: string | null
           subtotal?: number
           tool_type?: string | null
           total?: number
@@ -415,7 +413,6 @@ export type Database = {
           shipping_address?: Json | null
           shipping_cost?: number
           status?: string
-          stripe_checkout_session_id?: string | null
           subtotal?: number
           tool_type?: string | null
           total?: number
@@ -509,11 +506,9 @@ export type Database = {
           comment: string | null
           created_at: string
           id: string
-          image_url: string | null
           is_approved: boolean
           product_id: string
           rating: number
-          reviewer_name: string | null
           title: string | null
           user_id: string
         }
@@ -521,11 +516,9 @@ export type Database = {
           comment?: string | null
           created_at?: string
           id?: string
-          image_url?: string | null
           is_approved?: boolean
           product_id: string
           rating: number
-          reviewer_name?: string | null
           title?: string | null
           user_id: string
         }
@@ -533,11 +526,9 @@ export type Database = {
           comment?: string | null
           created_at?: string
           id?: string
-          image_url?: string | null
           is_approved?: boolean
           product_id?: string
           rating?: number
-          reviewer_name?: string | null
           title?: string | null
           user_id?: string
         }
@@ -922,6 +913,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_custom_order: {
+        Args: { _order_email: string; _order_user_id: string }
+        Returns: boolean
+      }
       get_user_points_balance: { Args: { _user_id: string }; Returns: number }
       has_role: {
         Args: {

@@ -484,27 +484,9 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
 const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boolean }) => {
   const c = block.content || {};
   const cards = c.cards || [
-    {
-      icon: "ShoppingBag",
-      title: "Shop Products",
-      desc: "Browse our curated collection of 3D printed items, filaments, and accessories.",
-      link: "/products",
-      cta: "Browse Shop",
-    },
-    {
-      icon: "Palette",
-      title: "Customize",
-      desc: "Choose your material, color, and finish. Make any product truly yours.",
-      link: "/products",
-      cta: "Start Customizing",
-    },
-    {
-      icon: "Upload",
-      title: "Upload Your Idea",
-      desc: "Got a 3D model? Upload it and we'll print it for you with professional quality.",
-      link: "/create",
-      cta: "Upload Model",
-    },
+    { icon: "ShoppingBag", title: "Shop Products", desc: "Browse our curated collection of 3D printed items, filaments, and accessories.", link: "/products", cta: "Browse Shop" },
+    { icon: "Palette", title: "Customize", desc: "Choose your material, color, and finish. Make any product truly yours.", link: "/products", cta: "Start Customizing" },
+    { icon: "Upload", title: "Upload Your Idea", desc: "Got a 3D model? Upload it and we'll print it for you with professional quality.", link: "/create", cta: "Upload Model" },
   ];
 
   const columns = Math.max(1, Math.min(4, Number(c.columns) || 3));
@@ -528,10 +510,15 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
           .map((card: any, index: number) => {
             const Icon = iconForName(card.icon, ShoppingBag);
             const action = resolveItemAction(card, card.link);
+            const hasImage = card.image && card.image !== "placeholder";
             const cardBody = (
               <div className={`group flex h-full flex-col rounded-lg border border-border bg-card p-8 transition-all duration-300 hover:-translate-y-1 hover:border-primary hover:shadow-xl ${alignmentClass(card.alignment || align)}`}>
-                <div className={`mb-5 flex h-16 w-16 items-center justify-center rounded-xl bg-primary/10 transition-colors group-hover:bg-primary/20 ${card.alignment === "center" || (!card.alignment && align === "center") ? "mx-auto" : ""}`}>
-                  <Icon className="h-8 w-8 text-primary" />
+                <div className={`mb-5 flex h-16 w-16 items-center justify-center rounded-xl ${hasImage ? "overflow-hidden" : "bg-primary/10 transition-colors group-hover:bg-primary/20"} ${card.alignment === "center" || (!card.alignment && align === "center") ? "mx-auto" : ""}`}>
+                  {hasImage ? (
+                    <img src={card.image} alt={card.title || ""} className="h-full w-full object-cover" />
+                  ) : (
+                    <Icon className="h-8 w-8 text-primary" />
+                  )}
                 </div>
                 <h3 className="mb-2 font-display text-lg font-bold uppercase text-card-foreground">{card.title}</h3>
                 <p className="mb-4 text-sm text-muted-foreground">{card.desc}</p>
@@ -707,15 +694,33 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
           .filter((s: any) => s?.visible !== false)
           .map((s: any, index: number) => {
             const Icon = iconForName(s.icon, Package);
-            return (
-              <div key={s.title || index} className={`${alignmentClass(s.alignment || align)}`}>
-                <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full border-2 border-primary/20 bg-card transition-all hover:border-primary hover:shadow-lg">
-                  <Icon className="h-7 w-7 text-primary" />
+            const hasImage = s.image && s.image !== "placeholder";
+            const action = resolveItemAction(s);
+            const isClickable = action.actionType !== "none";
+
+            const stepContent = (
+              <div key={s.title || index} className={`${alignmentClass(s.alignment || align)} ${isClickable ? "cursor-pointer" : ""}`}>
+                <div className={`mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full border-2 border-primary/20 bg-card transition-all hover:border-primary hover:shadow-lg ${hasImage ? "overflow-hidden" : ""}`}>
+                  {hasImage ? (
+                    <img src={s.image} alt={s.title || ""} className="h-full w-full object-cover" />
+                  ) : (
+                    <Icon className="h-7 w-7 text-primary" />
+                  )}
                 </div>
                 <h3 className="mb-1 font-display text-lg font-bold uppercase text-foreground">{s.title}</h3>
                 <p className="text-sm text-muted-foreground">{s.desc}</p>
               </div>
             );
+
+            if (action.actionType === "internal_link" && action.actionTarget) {
+              const target = action.actionTarget.startsWith("/") ? action.actionTarget : `/${action.actionTarget}`;
+              return <Link key={s.title || index} to={target} target={action.openInNewTab ? "_blank" : "_self"}>{stepContent}</Link>;
+            }
+            if (action.actionType === "external_link" && action.actionTarget) {
+              return <a key={s.title || index} href={action.actionTarget} target={action.openInNewTab ? "_blank" : "_self"} rel={action.openInNewTab ? "noopener noreferrer" : undefined}>{stepContent}</a>;
+            }
+
+            return <div key={s.title || index}>{stepContent}</div>;
           })}
       </div>
     </div>,
@@ -786,10 +791,17 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
           .filter((badge: any) => badge?.visible !== false)
           .map((badge: any, index: number) => {
             const Icon = iconForName(badge.icon, Shield);
-            return (
-              <div key={badge.title || index} className={`flex gap-4 rounded-md border border-border bg-card p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary hover:shadow-md ${verticalClass(c.verticalAlignment)}`}>
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                  <Icon className="h-6 w-6 text-primary" />
+            const hasImage = badge.image && badge.image !== "placeholder";
+            const action = resolveItemAction(badge);
+
+            const badgeContent = (
+              <div className={`flex gap-4 rounded-md border border-border bg-card p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary hover:shadow-md ${verticalClass(c.verticalAlignment)} ${action.actionType !== "none" ? "cursor-pointer" : ""}`}>
+                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${hasImage ? "overflow-hidden" : "bg-primary/10"}`}>
+                  {hasImage ? (
+                    <img src={badge.image} alt={badge.title || ""} className="h-full w-full object-cover" />
+                  ) : (
+                    <Icon className="h-6 w-6 text-primary" />
+                  )}
                 </div>
                 <div>
                   <h3 className="font-display text-sm font-semibold uppercase text-card-foreground">{badge.title}</h3>
@@ -797,6 +809,16 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
                 </div>
               </div>
             );
+
+            if (action.actionType === "internal_link" && action.actionTarget) {
+              const target = action.actionTarget.startsWith("/") ? action.actionTarget : `/${action.actionTarget}`;
+              return <Link key={badge.title || index} to={target} target={action.openInNewTab ? "_blank" : "_self"}>{badgeContent}</Link>;
+            }
+            if (action.actionType === "external_link" && action.actionTarget) {
+              return <a key={badge.title || index} href={action.actionTarget} target={action.openInNewTab ? "_blank" : "_self"} rel={action.openInNewTab ? "noopener noreferrer" : undefined}>{badgeContent}</a>;
+            }
+
+            return <div key={badge.title || index}>{badgeContent}</div>;
           })}
       </div>
     </div>,

@@ -913,6 +913,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_custom_order: {
+        Args: { _order_email: string; _order_user_id: string }
+        Returns: boolean
+      }
       get_user_points_balance: { Args: { _user_id: string }; Returns: number }
       has_role: {
         Args: {

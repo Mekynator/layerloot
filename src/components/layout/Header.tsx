@@ -120,15 +120,15 @@ const Header = () => {
 
       const [ordersRes, ownedCustomOrdersRes, emailCustomOrdersRes] = await Promise.all([
         (supabase.from("orders") as any).select("created_at").eq("user_id", user.id).order("created_at", { ascending: false }),
-        supabase
-          .from("custom_orders")
+        (supabase.from("custom_orders") as any)
+          .select("id, created_at, updated_at")
           .select("id, created_at, updated_at")
           .eq("user_id", user.id)
           .eq("request_fee_status", "paid")
           .order("created_at", { ascending: false }),
         normalizedEmail
-          ? supabase
-              .from("custom_orders")
+          ? (supabase.from("custom_orders") as any)
+              .select("id, created_at, updated_at")
               .select("id, created_at, updated_at")
               .ilike("email", normalizedEmail)
               .eq("request_fee_status", "paid")

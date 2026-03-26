@@ -67,8 +67,7 @@ async function fetchCustomOrders(userId: string, userEmail?: string) {
       .eq("request_fee_status", "paid")
       .order("created_at", { ascending: false }),
     normalizedEmail
-      ? supabase
-          .from("custom_orders")
+      ? (supabase.from("custom_orders") as any)
           .select("id, name, email, description, model_url, model_filename, status, admin_notes, created_at, updated_at, user_id, quoted_price, final_agreed_price, customer_response_status, payment_status, production_status")
           .ilike("email", normalizedEmail)
           .eq("request_fee_status", "paid")

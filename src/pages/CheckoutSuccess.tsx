@@ -22,8 +22,7 @@ const CheckoutSuccess = () => {
     const fetchOrder = async () => {
       if (!sessionId || !user) return;
 
-      const { data } = await supabase
-        .from("orders")
+      const { data } = await (supabase.from("orders") as any)
         .select("id")
         .eq("stripe_checkout_session_id", sessionId)
         .maybeSingle();

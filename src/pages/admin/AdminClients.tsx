@@ -251,8 +251,7 @@ const AdminClients = () => {
       supabase.functions.invoke("admin-users"),
       supabase.from("profiles").select("id, user_id, full_name, created_at, updated_at"),
       supabase.from("orders").select("id, user_id, status, total, created_at, tool_type").order("created_at", { ascending: false }),
-      supabase
-        .from("custom_orders")
+      (supabase.from("custom_orders") as any)
         .select("id, user_id, name, email, status, created_at, updated_at, final_agreed_price, quoted_price, customer_offer_price, payment_status, production_status")
         .eq("request_fee_status", "paid")
         .order("updated_at", { ascending: false }),

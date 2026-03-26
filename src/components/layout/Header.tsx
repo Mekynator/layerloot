@@ -119,7 +119,7 @@ const Header = () => {
       const normalizedEmail = (user.email || "").trim();
 
       const [ordersRes, ownedCustomOrdersRes, emailCustomOrdersRes] = await Promise.all([
-        supabase.from("orders").select("created_at").eq("user_id", user.id).order("created_at", { ascending: false }),
+        (supabase.from("orders") as any).select("created_at").eq("user_id", user.id).order("created_at", { ascending: false }),
         supabase
           .from("custom_orders")
           .select("id, created_at, updated_at")

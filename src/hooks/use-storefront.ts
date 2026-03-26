@@ -35,8 +35,6 @@ export type ProductReview = {
   created_at: string;
   user_id: string;
   is_approved: boolean;
-  reviewer_name: string | null;
-  image_url: string | null;
 };
 
 export type GalleryShowcaseItem = {
@@ -67,7 +65,7 @@ async function fetchStorefrontCatalog(page?: string): Promise<StorefrontCatalogD
   const categoriesReq = supabase.from("categories").select("id, name, slug, parent_id").order("sort_order");
   const reviewsReq = supabase
     .from("product_reviews")
-    .select("id, product_id, rating, title, comment, created_at, user_id, is_approved, reviewer_name, image_url")
+    .select("id, product_id, rating, title, comment, created_at, user_id, is_approved")
     .eq("is_approved", true)
     .order("created_at", { ascending: false });
   const galleryReq = supabase
@@ -202,7 +200,8 @@ async function fetchProductDetail(slug: string): Promise<ProductDetailData | nul
       .eq("product_id", product.id)
       .eq("is_active", true)
       .order("sort_order"),
-    (supabase.from("product_reviews") as any)
+    supabase
+      .from("product_reviews")
       .select("id, product_id, rating, title, comment, created_at, user_id, is_approved")
       .eq("product_id", product.id)
       .eq("is_approved", true)

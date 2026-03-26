@@ -37,80 +37,13 @@ function mergeUserVouchers(owned: any[], received: any[], userId: string, userEm
   );
 }
 
-function mergeCustomOrders(owned: any[], emailMatched: any[]) {
-  const unique = new Map<string, any>();
-
-  [...owned, ...emailMatched].filter(Boolean).forEach((order) => {
-    unique.set(order.id, order);
-  });
-
-  return Array.from(unique.values()).sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-  );
-}
-
-function mapMessages(rows: any[]) {
-  return rows.reduce((acc: Record<string, any[]>, message: any) => {
-    if (!acc[message.custom_order_id]) acc[message.custom_order_id] = [];
-    acc[message.custom_order_id].push(message);
-    return acc;
-  }, {});
-}
-
-async function fetchCustomOrders(userId: string, userEmail?: string) {
-  const normalizedEmail = (userEmail || "").trim();
-
-  const [ownedCustomOrdersRes, emailCustomOrdersRes] = await Promise.all([
-    (supabase.from("custom_orders") as any)
-      .select("id, name, email, description, model_url, model_filename, status, admin_notes, created_at, updated_at, user_id, quoted_price, final_agreed_price, customer_response_status, payment_status, production_status")
-      .eq("user_id", userId)
-      .eq("request_fee_status", "paid")
-      .order("created_at", { ascending: false }),
-    normalizedEmail
-      ? (supabase.from("custom_orders") as any)
-          .select("id, name, email, description, model_url, model_filename, status, admin_notes, created_at, updated_at, user_id, quoted_price, final_agreed_price, customer_response_status, payment_status, production_status")
-          .ilike("email", normalizedEmail)
-          .eq("request_fee_status", "paid")
-          .order("created_at", { ascending: false })
-      : Promise.resolve({ data: [], error: null }),
-  ]);
-
-  if (ownedCustomOrdersRes.error) throw ownedCustomOrdersRes.error;
-  if (emailCustomOrdersRes.error) throw emailCustomOrdersRes.error;
-
-  const customOrders = mergeCustomOrders(ownedCustomOrdersRes.data ?? [], emailCustomOrdersRes.data ?? []);
-
-  if (customOrders.length === 0) {
-    return { customOrders: [], customOrderMessages: {} };
-  }
-
-  const { data: messageRows, error: messageError } = await supabase
-    .from("custom_order_messages")
-    .select("*")
-    .in("custom_order_id", customOrders.map((order: any) => order.id))
-    .order("created_at", { ascending: true });
-
-  if (messageError) {
-    console.warn("Could not load custom order messages", messageError.message);
-    return {
-      customOrders,
-      customOrderMessages: {},
-    };
-  }
-
-  return {
-    customOrders,
-    customOrderMessages: mapMessages(messageRows ?? []),
-  };
-}
-
 async function fetchAccountOverview(userId: string, userEmail?: string): Promise<AccountOverviewData> {
   const voucherSelect = "id, user_id, voucher_id, code, is_used, balance, redeemed_at, recipient_email, recipient_name, used_at, vouchers(name, discount_value, discount_type)";
 
-  const [loyaltyRes, ordersRes, customOrdersData, vouchersRes, ownedVouchersRes, receivedVouchersRes] = await Promise.all([
+  const [loyaltyRes, ordersRes, customOrdersRes, vouchersRes, ownedVouchersRes, receivedVouchersRes] = await Promise.all([
     supabase.from("loyalty_points").select("id, points, reason, created_at").eq("user_id", userId).order("created_at", { ascending: false }),
     supabase.from("orders").select("id, status, total, created_at, tool_type").eq("user_id", userId).order("created_at", { ascending: false }),
-    fetchCustomOrders(userId, userEmail),
+    supabase.from("custom_orders").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
     supabase.from("vouchers").select("*").eq("is_active", true).order("points_cost", { ascending: true }),
     supabase.from("user_vouchers").select(voucherSelect).eq("user_id", userId).order("redeemed_at", { ascending: false }),
     userEmail
@@ -120,9 +53,30 @@ async function fetchAccountOverview(userId: string, userEmail?: string): Promise
 
   if (loyaltyRes.error) throw loyaltyRes.error;
   if (ordersRes.error) throw ordersRes.error;
+  if (customOrdersRes.error) throw customOrdersRes.error;
   if (vouchersRes.error) throw vouchersRes.error;
   if (ownedVouchersRes.error) throw ownedVouchersRes.error;
   if (receivedVouchersRes.error) throw receivedVouchersRes.error;
+
+  const customOrders = customOrdersRes.data ?? [];
+  let customOrderMessages: Record<string, any[]> = {};
+
+  if (customOrders.length > 0) {
+    const ids = customOrders.map((order: any) => order.id);
+    const { data: messageRows, error: messageError } = await supabase
+      .from("custom_order_messages")
+      .select("*")
+      .in("custom_order_id", ids)
+      .order("created_at", { ascending: true });
+
+    if (messageError) throw messageError;
+
+    customOrderMessages = (messageRows ?? []).reduce((acc: Record<string, any[]>, message: any) => {
+      if (!acc[message.custom_order_id]) acc[message.custom_order_id] = [];
+      acc[message.custom_order_id].push(message);
+      return acc;
+    }, {});
+  }
 
   const loyaltyHistory = (loyaltyRes.data ?? []) as AccountOverviewData["loyaltyHistory"];
   const summary = summarizeLoyalty(loyaltyHistory);
@@ -130,8 +84,8 @@ async function fetchAccountOverview(userId: string, userEmail?: string): Promise
   return {
     loyaltyHistory,
     orders: (ordersRes.data ?? []) as AccountOverviewData["orders"],
-    customOrders: customOrdersData.customOrders,
-    customOrderMessages: customOrdersData.customOrderMessages,
+    customOrders,
+    customOrderMessages,
     vouchers: vouchersRes.data ?? [],
     userVouchers: mergeUserVouchers(ownedVouchersRes.data ?? [], receivedVouchersRes.data ?? [], userId, userEmail),
     pointsBalance: summary.balance,

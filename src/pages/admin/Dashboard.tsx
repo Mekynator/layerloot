@@ -79,14 +79,12 @@ const Dashboard = () => {
         supabase
           .from("custom_orders")
           .select("id", { count: "exact", head: true })
-          .eq("request_fee_status", "paid")
           .not("status", "in", '("in_production","completed","rejected")'),
         supabase.from("product_reviews").select("id", { count: "exact", head: true }),
         supabase.from("orders").select("id", { count: "exact", head: true }).in("status", ["pending", "processing"]),
         supabase
           .from("custom_orders")
           .select("id", { count: "exact", head: true })
-          .eq("request_fee_status", "paid")
           .in("status", ["pending", "reviewing", "quoted", "accepted"]),
         supabase.from("product_reviews").select("id", { count: "exact", head: true }).eq("is_approved", false),
       ]);

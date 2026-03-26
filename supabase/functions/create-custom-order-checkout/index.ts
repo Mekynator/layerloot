@@ -15,46 +15,21 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Missing or invalid Authorization header" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const SITE_URL = (Deno.env.get("SITE_URL") || "https://layerloot.com").replace(/\/$/, "");
+    const SITE_URL = Deno.env.get("SITE_URL");
 
     if (!STRIPE_SECRET_KEY) throw new Error("Missing STRIPE_SECRET_KEY");
     if (!SUPABASE_URL) throw new Error("Missing SUPABASE_URL");
-    if (!SUPABASE_ANON_KEY) throw new Error("Missing SUPABASE_ANON_KEY");
     if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
+    if (!SITE_URL) throw new Error("Missing SITE_URL");
 
     const stripe = new Stripe(STRIPE_SECRET_KEY, {
       apiVersion: "2025-02-24.acacia",
     });
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-
-    const {
-      data: { user },
-      error: userError,
-    } = await authClient.auth.getUser();
-
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const { customOrderId } = await req.json();
 
@@ -74,20 +49,6 @@ serve(async (req) => {
     if (orderError || !order) {
       return new Response(JSON.stringify({ error: "Custom order not found" }), {
         status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (order.user_id !== user.id) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (order.payment_status === "paid") {
-      return new Response(JSON.stringify({ alreadyPaid: true, message: "This custom order is already paid." }), {
-        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -135,15 +96,13 @@ serve(async (req) => {
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      success_url: `${SITE_URL}/account?custom_payment_success=1&order_id=${order.id}&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${SITE_URL}/account?custom_payment_success=1&order_id=${order.id}`,
       cancel_url: `${SITE_URL}/account?custom_payment_cancelled=1&order_id=${order.id}`,
       customer_email: order.email,
       metadata: {
         custom_order_id: order.id,
-        order_id: order.id,
         user_id: order.user_id,
         payment_type: "custom_order_final",
-        type: "custom_order_final",
       },
       line_items: [
         {
@@ -169,7 +128,6 @@ serve(async (req) => {
       .from("custom_orders")
       .update({
         stripe_checkout_session_id: session.id,
-        final_agreed_price: order.final_agreed_price ?? order.quoted_price,
         payment_status: "awaiting_payment",
       })
       .eq("id", order.id);

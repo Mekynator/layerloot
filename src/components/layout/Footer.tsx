@@ -68,7 +68,7 @@ const Footer = () => {
               </Link>
 
               <p className="text-sm text-muted-foreground">
-                Premium 3D printing supplies and custom prints for makers, hobbyists and professionals.
+                Premium 3D printing supplies and custom prints for makers, hobbyists, and professionals.
               </p>
             </div>
 

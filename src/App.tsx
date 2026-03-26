@@ -11,7 +11,6 @@ import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Contact from "./pages/Contact";
 import Cart from "./pages/Cart";
-import CheckoutSuccess from "./pages/CheckoutSuccess";
 import Auth from "./pages/Auth";
 import Account from "./pages/Account";
 import OrderTracking from "./pages/OrderTracking";
@@ -60,7 +59,6 @@ const App = () => (
                 <Route path="/products/:slug" element={<ProductDetail />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/cart" element={<Cart />} />
-                <Route path="/checkout/success" element={<CheckoutSuccess />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/account" element={<Account />} />
                 <Route path="/orders/:orderId" element={<OrderTracking />} />

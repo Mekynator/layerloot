@@ -116,31 +116,16 @@ const Header = () => {
 
       const seenState = readSeenState(user.id);
 
-      const normalizedEmail = (user.email || "").trim();
-
-      const [ordersRes, ownedCustomOrdersRes, emailCustomOrdersRes] = await Promise.all([
-        (supabase.from("orders") as any).select("created_at").eq("user_id", user.id).order("created_at", { ascending: false }),
-        (supabase.from("custom_orders") as any)
-          .select("id, created_at, updated_at")
+      const [ordersRes, customOrdersRes] = await Promise.all([
+        supabase.from("orders").select("created_at").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase
+          .from("custom_orders")
           .select("id, created_at, updated_at")
           .eq("user_id", user.id)
-          .eq("request_fee_status", "paid")
           .order("created_at", { ascending: false }),
-        normalizedEmail
-          ? (supabase.from("custom_orders") as any)
-              .select("id, created_at, updated_at")
-              .select("id, created_at, updated_at")
-              .ilike("email", normalizedEmail)
-              .eq("request_fee_status", "paid")
-              .order("created_at", { ascending: false })
-          : Promise.resolve({ data: [], error: null }),
       ]);
 
-      const customOrdersMap = new Map<string, { id: string; created_at: string; updated_at: string }>();
-      [...(ownedCustomOrdersRes.data ?? []), ...(emailCustomOrdersRes.data ?? [])].forEach((order) => {
-        customOrdersMap.set(order.id, order);
-      });
-      const customOrders = Array.from(customOrdersMap.values());
+      const customOrders = customOrdersRes.data ?? [];
       const customOrderIds = customOrders.map((order) => order.id);
 
       let messages: { created_at: string }[] = [];

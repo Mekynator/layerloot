@@ -171,11 +171,7 @@ const AdminCustomOrders = () => {
   const { toast } = useToast();
 
   const fetchOrders = async () => {
-    const { data, error } = await supabase
-      .from("custom_orders")
-      .select("*")
-      .eq("request_fee_status", "paid")
-      .order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("custom_orders").select("*").order("created_at", { ascending: false });
 
     if (error) {
       toast({ title: "Error loading custom orders", description: error.message, variant: "destructive" });

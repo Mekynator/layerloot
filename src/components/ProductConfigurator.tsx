@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 
 interface Variant {
@@ -59,19 +59,6 @@ const ProductConfigurator = ({ variants, selectedVariant, onSelectVariant }: Pro
     attrOptions.forEach(({ key, values }) => { init[key] = values[0]; });
     return init;
   });
-
-  useEffect(() => {
-    if (selectedVariant) {
-      setSelections({ ...selectedVariant.attributes });
-      return;
-    }
-
-    const init: Record<string, string> = {};
-    attrOptions.forEach(({ key, values }) => {
-      init[key] = values[0];
-    });
-    setSelections(init);
-  }, [selectedVariant, attrOptions]);
 
   const handleSelect = (key: string, value: string) => {
     const next = { ...selections, [key]: value };

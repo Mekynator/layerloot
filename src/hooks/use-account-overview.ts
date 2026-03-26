@@ -63,11 +63,11 @@ async function fetchAccountOverview(userId: string, userEmail?: string): Promise
 
   if (customOrders.length > 0) {
     const ids = customOrders.map((order: any) => order.id);
-    const { data: messageRows, error: messageError } = await supabase
+    const { data: messageRows, error: messageError } = await (supabase
       .from("custom_order_messages")
       .select("*")
       .in("custom_order_id", ids)
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true }) as unknown as Promise<{ data: any[] | null; error: any }>);
 
     if (messageError) throw messageError;
 

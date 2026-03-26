@@ -117,12 +117,12 @@ const Header = () => {
       const seenState = readSeenState(user.id);
 
       const [ordersRes, customOrdersRes] = await Promise.all([
-        supabase.from("orders").select("created_at").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("orders").select("created_at").eq("user_id", user.id).order("created_at", { ascending: false }) as Promise<{ data: { created_at: string }[] | null; error: any }>,
         supabase
           .from("custom_orders")
           .select("id, created_at, updated_at")
           .eq("user_id", user.id)
-          .order("created_at", { ascending: false }),
+          .order("created_at", { ascending: false }) as Promise<{ data: { id: string; created_at: string; updated_at: string }[] | null; error: any }>,
       ]);
 
       const customOrders = customOrdersRes.data ?? [];

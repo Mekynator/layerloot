@@ -1,120 +1,100 @@
-# Admin Access and Visual Page Editor Overhaul
 
-## Overview
 
-This plan restructures how the admin accesses the dashboard and completely reimagines the Page Editor to work as an inline, frontend overlay -- similar to tools like Squarespace or Wix -- where the admin edits the actual live pages directly.
+# Implementation Plan
 
----
-
-## 1. Admin Icon in Header (Next to Cart)
-
-**Current behavior:** Admin Dashboard is buried inside the user dropdown menu.
-
-**New behavior:** A visible Shield icon button appears in the header, right next to the Cart icon, only for logged-in admin users. Clicking it navigates to `/admin`.
-
-**Changes:**
-
-- `src/components/layout/Header.tsx` -- Add a `<Link to="/admin">` with a Shield icon button between the Cart button and the User button, wrapped in `{isAdmin && (...)}`.
+This plan covers four areas: (1) adding missing DB columns for the custom order request-fee flow, (2) fixing custom order visibility so orders appear only after the 100 kr fee is paid, (3) ensuring the quote-accept-pay flow works end-to-end, and (4) converting the chat bot from a regex-based rule engine to an AI-powered conversational assistant using Lovable AI.
 
 ---
 
-## 2. Page Editor as Frontend Overlay
+## 1. Database Migration: Add Missing Custom Order Columns
 
-**Current behavior:** The page editor lives inside the admin sidebar layout (`/admin/content`) showing mock previews of blocks.
+The `custom_orders` table is missing columns referenced by edge functions and frontend code.
 
-**New behavior:** The page editor becomes an overlay mode that loads the actual page (Home, Products, Contact, etc.) and lets the admin click on any block to edit it, drag blocks to reorder, add new blocks, and delete blocks -- all while viewing the real rendered page.
+**Add columns via migration:**
+- `request_fee_amount` (numeric, default 100)
+- `request_fee_status` (text, default `'unpaid'`)
+- `stripe_checkout_session_id` (text, nullable)
+- `metadata` (jsonb, default `'{}'`)
 
-### Architecture
-
-```text
-+--------------------------------------------------+
-| Admin Edit Toolbar (top bar)                     |
-| [Page selector] [+ Add Block] [Save] [Exit]     |
-+--------------------------------------------------+
-|                                                  |
-|  Actual rendered page content (e.g. Home)        |
-|  with hover outlines and click-to-edit overlays  |
-|                                                  |
-|  [Hero block]        <- click to edit            |
-|  [Featured Products] <- click to edit            |
-|  [CTA block]         <- click to edit            |
-|                                                  |
-+--------------------------------------------------+
-| Block Properties Panel (slide-in from right)     |
-+--------------------------------------------------+
-```
-
-### New Files
-
-- **`src/pages/admin/PageEditor.tsx`** -- The main page editor route. This component:
-  - Renders a floating admin toolbar at the top with: page selector dropdown (home, products, contact, + create new page, delete page), an "Add Block" button, and an "Exit Editor" button.
-  - Fetches `site_blocks` for the selected page and renders them using the same rendering components used on the actual frontend pages (reuse from `Index.tsx`).
-  - Wraps each block in an `EditableBlockWrapper` that:
-    - Shows a dashed border and toolbar on hover (edit, move up/down, duplicate, delete, drag handle).
-    - Uses HTML5 drag-and-drop for reordering (same pattern as current `AdminContent.tsx`).
-    - On click, opens a right-side slide-in panel to edit the block's content fields.
-  - Includes a "+" drop zone between blocks to insert new blocks at any position.
-  - Has a "Create New Page" dialog that adds a new page slug to the `pages` list (stored in `site_settings`).
-  - Has a "Delete Page" option that removes all blocks for that page.
-
-- **`src/components/admin/EditableBlockWrapper.tsx`** -- Reusable wrapper component that adds hover controls, drag-and-drop, and click-to-edit behavior around any block.
-
-- **`src/components/admin/BlockEditorPanel.tsx`** -- Right-side slide-in panel (Sheet component) containing the form fields for editing the selected block's content (heading, subheading, images, links, etc.). Reuses the same field logic from the current `AdminContent.tsx`.
-
-- **`src/components/admin/BlockRenderer.tsx`** -- Extracted shared component that renders a `site_block` as it appears on the frontend (Hero, Text, Image, Carousel, Video, CTA, Button, Spacer, HTML, Banner). Used by both the page editor and the actual frontend pages (Index, Contact, etc.) so rendering is consistent.
-
-### Changes to Existing Files
-
-- **`src/App.tsx`** -- Add route `/admin/editor` pointing to `PageEditor.tsx`.
-- **`src/components/admin/AdminLayout.tsx`** -- Update "Page Editor" sidebar link to point to `/admin/editor` instead of `/admin/content`.
-- **`src/pages/admin/AdminContent.tsx`** -- Kept as a fallback/list view but the primary editor becomes `/admin/editor`.
-- **`src/pages/Index.tsx`** -- Refactor block rendering into `BlockRenderer.tsx` and import it, so blocks look identical in both places.
-
-### Page Management Features
-
-- **Create page**: Dialog with a text input for page name/slug. Saves the page list to `site_settings` under key `"custom_pages"`. Also adds a route dynamically.
-- **Delete page**: Confirmation dialog that deletes all `site_blocks` with that page value.
-- **Link buttons between pages**: The Button block type already supports `button_link` -- the editor will show a page selector dropdown for internal links.
+This unblocks `create-request-fee-checkout` and `create-custom-order-checkout` which query these columns.
 
 ---
 
-## 3. Dynamic Page Routing for Custom Pages
+## 2. Custom Order Visibility: Only Show After Fee Paid
 
-- **`src/pages/DynamicPage.tsx`** -- New page component that takes a slug from the URL, fetches `site_blocks` for that slug, and renders them using `BlockRenderer.tsx`.
-- **`src/App.tsx`** -- Add a catch-all route `/pages/:slug` that renders `DynamicPage.tsx` for admin-created custom pages.
-- **Header nav** -- Optionally fetch custom pages from `site_settings` to show them in navigation.
+**Frontend (`use-account-overview.ts`):**
+- The query already fetches all custom orders for the user. Add a filter in the Account page to split orders into two groups:
+  - **Pending fee**: status = `awaiting_request_fee` or `payment_pending` with `request_fee_status != 'paid'` — show a "Pay Request Fee" prompt
+  - **Active orders**: `request_fee_status = 'paid'` — show full details, messaging, quote actions
+
+**Admin side:** Admins already see all orders via RLS `has_role(admin)`. Add a visual indicator showing whether the request fee has been paid so admins know which orders to quote.
+
+**Edge function fixes:**
+- `create-request-fee-checkout`: Currency should be `dkk` (currently `sek`)
+- `stripe-webhook`: Handle `request_fee` metadata type — update `request_fee_status` to `'paid'` and `status` to `'pending'` (ready for admin review)
+
+---
+
+## 3. Quote Accept → Payment Flow
+
+The existing flow mostly works but needs these fixes:
+
+**`respondToQuote` in Account.tsx** (accept path):
+- Currently calls `payCustomOrder()` which invokes `create-custom-order-checkout`
+- The checkout function correctly reads `final_agreed_price ?? quoted_price`, deducts the request fee, and creates a Stripe session
+- Fix: When user accepts, update `customer_response_status` to `'accepted'` AND set `final_agreed_price = quoted_price` (if not already set), then redirect to payment
+
+**`stripe-webhook`**: Handle `custom_order_final` payment type:
+- Set `payment_status = 'paid'`, `status = 'paid'`, `production_status = 'queued'`
+
+---
+
+## 4. AI Chat Bot: Convert to Lovable AI Powered
+
+Currently the chat function uses regex matching (`/points|loyalty/i.test(...)`) and returns hardcoded responses. This will be replaced with an AI-powered conversation that has full context.
+
+**Backend (`supabase/functions/chat/index.ts`):**
+- Keep all existing data-fetching functions (`tryProfile`, `tryPoints`, `tryOrders`, `tryProductViews`, `tryRecommendedProducts`)
+- Gather additional context: categories list, shipping config, site navigation links, custom orders summary
+- Build a rich system prompt containing:
+  - User account info (name, email, points, orders, custom orders)
+  - Cart state and free shipping progress
+  - Product catalog summary and categories
+  - Site navigation map (pages and their URLs)
+  - Store policies (shipping, returns, custom print process)
+  - Instructions to provide links when users ask "where is X"
+- Send full conversation history + system prompt to Lovable AI Gateway (`https://ai.gateway.lovable.dev/v1/chat/completions`) using `LOVABLE_API_KEY`
+- Use `google/gemini-3-flash-preview` model for fast responses
+- Stream the response back to the frontend
+- Parse AI response to extract structured data (links, product recommendations) when relevant
+
+**Frontend (`ChatWidget.tsx`):**
+- Update to handle streaming SSE responses from the new AI-powered chat
+- Add markdown rendering for AI responses using `react-markdown`
+- Keep all existing UI: suggestion chips, product cards, order cards, points display
+- The AI will return structured JSON with `text` + optional `links`, `products`, `suggestions` fields
+- Keep the existing `AssistantExtras` component for rich cards
+
+**System prompt will include:**
+- Full site map: Home (`/`), Products (`/products`), Create Your Own (`/create`), Gallery (`/gallery`), Contact (`/contact`), Account (`/account`), Cart (`/cart`), Auth (`/auth`)
+- User's current page for contextual help
+- Instructions to always provide clickable links when users ask navigation questions
+- Knowledge about materials (PLA, PETG, Resin, etc.), print qualities, custom order process
+- Tone: friendly, helpful, concise
 
 ---
 
 ## Technical Details
 
-### Drag and Drop
+**Files to modify:**
+1. **Database migration** — Add 4 columns to `custom_orders`
+2. **`supabase/functions/chat/index.ts`** — Rewrite to use Lovable AI with context injection, streaming
+3. **`supabase/functions/stripe-webhook/index.ts`** — Handle `request_fee` and `custom_order_final` payment types
+4. **`supabase/functions/create-request-fee-checkout/index.ts`** — Fix currency to DKK
+5. **`src/components/ChatWidget.tsx`** — Add SSE streaming, markdown rendering, keep existing rich UI cards
+6. **`src/pages/Account.tsx`** — Filter custom orders by fee payment status, show "Pay Fee" for unpaid ones
+7. **`src/hooks/use-account-overview.ts`** — No changes needed (already fetches `*`)
+8. **`src/pages/admin/AdminCustomOrders.tsx`** — Add request fee status indicator
 
-- Uses HTML5 native drag-and-drop (same approach as current implementation).
-- `onDragStart`, `onDragOver`, `onDragEnd` handlers update `sort_order` in the database via Supabase.
+**Dependencies to add:** `react-markdown` for chat message rendering
 
-### Block Editing Flow
-
-1. Admin hovers over a block -- dashed outline + toolbar appears.
-2. Admin clicks "Edit" (pencil icon) -- right panel slides in with form fields.
-3. Admin modifies content -- changes auto-save or save on "Apply" button click.
-4. Block re-renders in real-time with updated content.
-
-### Database
-
-- No schema changes needed. Uses existing `site_blocks` and `site_settings` tables.
-- Custom pages stored in `site_settings` with key `"custom_pages"` as a JSON array of `{ slug, title }`.
-
-### Files Summary
-
-| Action | File                                                             |
-| ------ | ---------------------------------------------------------------- |
-| Create | `src/pages/admin/PageEditor.tsx`                                 |
-| Create | `src/components/admin/EditableBlockWrapper.tsx`                  |
-| Create | `src/components/admin/BlockEditorPanel.tsx`                      |
-| Create | `src/components/admin/BlockRenderer.tsx`                         |
-| Create | `src/pages/DynamicPage.tsx`                                      |
-| Edit   | `src/App.tsx` (add routes)                                       |
-| Edit   | `src/components/layout/Header.tsx` (admin icon next to cart)     |
-| Edit   | `src/components/admin/AdminLayout.tsx` (update page editor link) |
-| Edit   | `src/pages/Index.tsx` (use shared BlockRenderer)                 |

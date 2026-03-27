@@ -46,21 +46,38 @@ serve(async (req) => {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
       const type = session.metadata?.type;
+      const paymentType = session.metadata?.payment_type;
       const orderId = session.metadata?.order_id;
+      const customOrderId = session.metadata?.custom_order_id;
       const source = session.metadata?.source;
       const userVoucherId = session.metadata?.user_voucher_id;
       const voucherType = session.metadata?.voucher_type;
 
+      // Handle request fee payment (100 kr)
       if (type === "request_fee" && orderId) {
         await supabase
           .from("custom_orders")
           .update({
-            payment_status: "paid",
-            status: "pending_review",
+            request_fee_status: "paid",
+            payment_status: "unpaid",
+            status: "pending",
           })
           .eq("id", orderId);
       }
 
+      // Handle custom order final payment (quote amount)
+      if (paymentType === "custom_order_final" && customOrderId) {
+        await supabase
+          .from("custom_orders")
+          .update({
+            payment_status: "paid",
+            status: "paid",
+            production_status: "queued",
+          })
+          .eq("id", customOrderId);
+      }
+
+      // Handle cart voucher usage
       if (source === "cart" && userVoucherId) {
         await markVoucherUsed(supabase, userVoucherId, voucherType);
       }

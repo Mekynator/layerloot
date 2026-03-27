@@ -552,6 +552,7 @@ const AdminCustomOrders = () => {
                 <TableHead>Quality</TableHead>
                 <TableHead>Qty</TableHead>
                 <TableHead>Scale</TableHead>
+                <TableHead>Fee</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead className="text-right">Actions</TableHead>

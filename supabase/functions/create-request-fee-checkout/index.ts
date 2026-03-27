@@ -100,7 +100,7 @@ serve(async (req) => {
         {
           quantity: 1,
           price_data: {
-            currency: "sek",
+            currency: "dkk",
             unit_amount: amountOre,
             product_data: { name: "Custom 3D Print Request Fee" },
           },

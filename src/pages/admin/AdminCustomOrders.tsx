@@ -552,6 +552,7 @@ const AdminCustomOrders = () => {
                 <TableHead>Quality</TableHead>
                 <TableHead>Qty</TableHead>
                 <TableHead>Scale</TableHead>
+                <TableHead>Fee</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -580,6 +581,11 @@ const AdminCustomOrders = () => {
                   <TableCell className="text-sm">{order.quality}</TableCell>
                   <TableCell className="text-sm">{order.quantity}</TableCell>
                   <TableCell className="text-sm">{order.scale}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={`text-xs uppercase ${(order as any).request_fee_status === "paid" ? "border-green-500/30 bg-green-500/10 text-green-600" : "border-yellow-500/30 bg-yellow-500/10 text-yellow-600"}`}>
+                      {(order as any).request_fee_status === "paid" ? "Paid" : "Unpaid"}
+                    </Badge>
+                  </TableCell>
                   <TableCell>{getStatusBadge(order.status)}</TableCell>
 
                   <TableCell className="text-sm text-muted-foreground">
@@ -596,7 +602,7 @@ const AdminCustomOrders = () => {
 
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={10} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={11} className="py-8 text-center text-muted-foreground">
                     No custom print requests found in this tab.
                   </TableCell>
                 </TableRow>

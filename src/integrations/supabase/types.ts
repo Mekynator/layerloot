@@ -151,13 +151,17 @@ export type Database = {
           email: string
           final_agreed_price: number | null
           id: string
+          metadata: Json
           model_filename: string
           model_url: string
           name: string
           payment_status: string
           production_status: string
           quoted_price: number | null
+          request_fee_amount: number
+          request_fee_status: string
           status: string
+          stripe_checkout_session_id: string | null
           updated_at: string
           user_id: string
         }
@@ -170,13 +174,17 @@ export type Database = {
           email: string
           final_agreed_price?: number | null
           id?: string
+          metadata?: Json
           model_filename: string
           model_url: string
           name: string
           payment_status?: string
           production_status?: string
           quoted_price?: number | null
+          request_fee_amount?: number
+          request_fee_status?: string
           status?: string
+          stripe_checkout_session_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -189,13 +197,17 @@ export type Database = {
           email?: string
           final_agreed_price?: number | null
           id?: string
+          metadata?: Json
           model_filename?: string
           model_url?: string
           name?: string
           payment_status?: string
           production_status?: string
           quoted_price?: number | null
+          request_fee_amount?: number
+          request_fee_status?: string
           status?: string
+          stripe_checkout_session_id?: string | null
           updated_at?: string
           user_id?: string
         }

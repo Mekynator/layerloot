@@ -80,6 +80,8 @@ interface CustomOrder {
   customer_response_status: "pending" | "accepted" | "declined";
   payment_status: "unpaid" | "awaiting_payment" | "paid" | "refunded" | "cancelled";
   production_status: "pending" | "queued" | "in_production" | "completed" | "shipped" | "cancelled";
+  request_fee_status?: string;
+  request_fee_amount?: number;
 }
 
 interface CustomOrderMessage {
@@ -648,6 +650,7 @@ const Account = () => {
           const messages = customOrderMessages[order.id] || [];
           const currentQuote = order.final_agreed_price ?? order.quoted_price ?? null;
           const hasUnreadForThisOrder = hasUnreadActivityForOrder(order);
+          const feePaid = order.request_fee_status === "paid";
 
           return (
             <Card key={order.id}>
@@ -658,8 +661,13 @@ const Account = () => {
                       <p className="font-display text-lg font-semibold uppercase text-card-foreground">
                         Custom Request #{order.id.slice(0, 8)}
                       </p>
-                      {hasUnreadForThisOrder && <span className="h-2.5 w-2.5 rounded-full bg-red-500" />}
+                      {hasUnreadForThisOrder && <span className="h-2.5 w-2.5 rounded-full bg-destructive" />}
                       {customStatusBadge(order.status)}
+                      {!feePaid && (
+                        <Badge variant="outline" className="border-yellow-500/30 bg-yellow-500/10 text-yellow-600 text-xs uppercase">
+                          Fee Unpaid
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground">
                       Submitted on {new Date(order.created_at).toLocaleString()}
@@ -683,29 +691,75 @@ const Account = () => {
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant="outline">Payment: {order.payment_status.replace(/_/g, " ")}</Badge>
-                      <Badge variant="outline">Production: {order.production_status.replace(/_/g, " ")}</Badge>
-                      {currentQuote !== null && (
-                        <Badge variant="outline" className="border-primary text-primary">
-                          Quote: {Number(currentQuote).toFixed(2)} kr
-                        </Badge>
-                      )}
-                    </div>
+                    {feePaid && (
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="outline">Payment: {order.payment_status.replace(/_/g, " ")}</Badge>
+                        <Badge variant="outline">Production: {order.production_status.replace(/_/g, " ")}</Badge>
+                        {currentQuote !== null && (
+                          <Badge variant="outline" className="border-primary text-primary">
+                            Quote: {Number(currentQuote).toFixed(2)} kr
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setExpandedCustomOrderId(expanded ? null : order.id)}
-                      className="font-display uppercase tracking-wider"
-                    >
-                      {expanded ? "Hide Details" : "View Details"}
-                    </Button>
+                    {!feePaid ? (
+                      <Button
+                        onClick={async () => {
+                          try {
+                            setProcessingCustomPaymentOrderId(order.id);
+                            const { data: sessionData } = await supabase.auth.getSession();
+                            const token = sessionData.session?.access_token;
+                            if (!token) throw new Error("Please sign in again");
+
+                            const { data, error } = await supabase.functions.invoke("create-request-fee-checkout", {
+                              body: { orderId: order.id },
+                              headers: { Authorization: `Bearer ${token}` },
+                            });
+
+                            if (error) throw error;
+                            if (data?.alreadyPaid) {
+                              toast({ title: "Fee already paid" });
+                              await refetchOverview();
+                              return;
+                            }
+                            if (data?.url) window.location.href = data.url;
+                          } catch (err: any) {
+                            toast({ title: "Error", description: err?.message || "Could not start payment", variant: "destructive" });
+                          } finally {
+                            setProcessingCustomPaymentOrderId(null);
+                          }
+                        }}
+                        disabled={processingCustomPaymentOrderId === order.id}
+                        className="font-display uppercase tracking-wider"
+                      >
+                        <DollarSign className="mr-1 h-4 w-4" />
+                        {processingCustomPaymentOrderId === order.id ? "Redirecting..." : `Pay ${order.request_fee_amount ?? 100} kr Fee`}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        onClick={() => setExpandedCustomOrderId(expanded ? null : order.id)}
+                        className="font-display uppercase tracking-wider"
+                      >
+                        {expanded ? "Hide Details" : "View Details"}
+                      </Button>
+                    )}
                   </div>
                 </div>
 
-                {expanded && (
+                {!feePaid && (
+                  <div className="mt-4 rounded-md border border-yellow-500/20 bg-yellow-500/5 p-4">
+                    <p className="text-sm text-foreground font-medium">Request Fee Required</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      A one-time request fee of {order.request_fee_amount ?? 100} kr is required before your custom order can be reviewed. This fee will be deducted from your final order total.
+                    </p>
+                  </div>
+                )}
+
+                {expanded && feePaid && (
                   <div className="mt-5 space-y-5 border-t border-border pt-5">
                     <div className="grid gap-4 lg:grid-cols-2">
                       <div>

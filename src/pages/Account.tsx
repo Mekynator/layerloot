@@ -759,7 +759,7 @@ const Account = () => {
                   </div>
                 )}
 
-                {expanded && (
+                {expanded && feePaid && (
                   <div className="mt-5 space-y-5 border-t border-border pt-5">
                     <div className="grid gap-4 lg:grid-cols-2">
                       <div>

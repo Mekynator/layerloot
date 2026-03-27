@@ -80,6 +80,8 @@ interface CustomOrder {
   customer_response_status: "pending" | "accepted" | "declined";
   payment_status: "unpaid" | "awaiting_payment" | "paid" | "refunded" | "cancelled";
   production_status: "pending" | "queued" | "in_production" | "completed" | "shipped" | "cancelled";
+  request_fee_status?: string;
+  request_fee_amount?: number;
 }
 
 interface CustomOrderMessage {

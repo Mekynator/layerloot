@@ -39,11 +39,18 @@ type SitePageOption = {
   is_published: boolean;
 };
 
-const defaultNav: NavEditorItem[] = [
+const defaultHeaderNav: NavEditorItem[] = [
   { label: "Home", to: "/", source: "manual", openInNewTab: false, visible: true },
   { label: "Products", to: "/products", source: "manual", openInNewTab: false, visible: true },
   { label: "Create Your Own", to: "/create", source: "manual", openInNewTab: false, visible: true },
   { label: "About", to: "/about", source: "manual", openInNewTab: false, visible: true },
+];
+
+const defaultFooterNav: NavEditorItem[] = [
+  { label: "Home", to: "/", source: "manual", openInNewTab: false, visible: true },
+  { label: "Products", to: "/products", source: "manual", openInNewTab: false, visible: true },
+  { label: "About", to: "/about", source: "manual", openInNewTab: false, visible: true },
+  { label: "Contact", to: "/contact", source: "manual", openInNewTab: false, visible: true },
 ];
 
 const normalizePath = (value?: string | null) => {
@@ -72,62 +79,22 @@ const buildPageLabel = (page: SitePageOption, allPages: SitePageOption[]) => {
   return `${parentLabel} / ${own}`;
 };
 
-const dedupeNavItems = (items: NavItem[]) => {
-  const seen = new Set<string>();
-  return items.filter((item) => {
-    if (item.visible === false) return false;
-    const key = `${normalizePath(item.to)}|${item.label.trim().toLowerCase()}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-};
-
-const mergeNavigation = (manualLinks: NavItem[], sitePages: SitePageOption[], target: "header" | "footer") => {
-  const pageFlag = target === "header" ? "show_in_header" : "show_in_footer";
-  const autoPages: NavItem[] = sitePages
-    .filter((page) => page.is_published && page.page_type !== "global" && Boolean(page[pageFlag]))
-    .map((page) => ({
-      label: buildPageLabel(page, sitePages),
-      to: normalizePath(page.full_path),
-      source: "site_page",
-      pageId: page.id,
-      openInNewTab: false,
-      visible: true,
-    }));
-
-  const manual = manualLinks
-    .map(toEditorItem)
-    .filter((item) => item.visible !== false)
-    .map((item) => ({
-      ...item,
-      to: normalizePath(item.to),
-    }));
-
-  return dedupeNavItems([...manual, ...autoPages]);
-};
-
-function useMergedNavLinks(target: "header" | "footer") {
-  const [links, setLinks] = useState<NavItem[]>(defaultNav);
+function useStoredNavLinks(key: "nav_links" | "footer_nav_links", fallback: NavEditorItem[]) {
+  const [links, setLinks] = useState<NavItem[]>(fallback);
 
   useEffect(() => {
     let mounted = true;
 
     const load = async () => {
-      const [navRes, pagesRes] = await Promise.all([
-        supabase.from("site_settings").select("value").eq("key", "nav_links").maybeSingle(),
-        supabase
-          .from("site_pages")
-          .select("id,name,title,full_path,slug,page_type,parent_id,show_in_header,show_in_footer,is_published")
-          .eq("is_published", true)
-          .order("sort_order", { ascending: true }),
-      ]);
+      const { data } = await supabase.from("site_settings").select("value").eq("key", key).maybeSingle();
 
       if (!mounted) return;
 
-      const manualLinks = Array.isArray(navRes.data?.value) ? (navRes.data.value as NavItem[]) : defaultNav;
-      const pages = (pagesRes.data as SitePageOption[] | null) ?? [];
-      setLinks(mergeNavigation(manualLinks, pages, target));
+      if (Array.isArray(data?.value)) {
+        setLinks((data.value as NavItem[]).map(toEditorItem).filter((item) => item.visible !== false));
+      } else {
+        setLinks(fallback.filter((item) => item.visible !== false));
+      }
     };
 
     void load();
@@ -135,24 +102,28 @@ function useMergedNavLinks(target: "header" | "footer") {
     return () => {
       mounted = false;
     };
-  }, [target]);
+  }, [key, fallback]);
 
   return links;
 }
 
-export const useNavLinks = () => useMergedNavLinks("header");
-export const useFooterNavLinks = () => useMergedNavLinks("footer");
+export const useNavLinks = () => useStoredNavLinks("nav_links", defaultHeaderNav);
+export const useFooterNavLinks = () => useStoredNavLinks("footer_nav_links", defaultFooterNav);
 
 const NavLinkEditor = () => {
-  const [links, setLinks] = useState<NavEditorItem[]>(defaultNav);
+  const [mode, setMode] = useState<"header" | "footer">("header");
+  const [links, setLinks] = useState<NavEditorItem[]>(defaultHeaderNav);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [sitePages, setSitePages] = useState<SitePageOption[]>([]);
   const { toast } = useToast();
 
+  const storageKey = mode === "header" ? "nav_links" : "footer_nav_links";
+  const fallbackLinks = mode === "header" ? defaultHeaderNav : defaultFooterNav;
+
   useEffect(() => {
     const load = async () => {
       const [navRes, pagesRes] = await Promise.all([
-        supabase.from("site_settings").select("value").eq("key", "nav_links").maybeSingle(),
+        supabase.from("site_settings").select("value").eq("key", storageKey).maybeSingle(),
         supabase
           .from("site_pages")
           .select("id,name,title,full_path,slug,page_type,parent_id,show_in_header,show_in_footer,is_published")
@@ -162,52 +133,84 @@ const NavLinkEditor = () => {
 
       if (navRes.data?.value && Array.isArray(navRes.data.value)) {
         setLinks((navRes.data.value as NavItem[]).map(toEditorItem));
+      } else {
+        setLinks(fallbackLinks);
       }
 
       setSitePages((pagesRes.data as SitePageOption[]) ?? []);
     };
 
     void load();
-  }, []);
+  }, [storageKey]);
 
-  const headerPages = useMemo(
+  const availablePages = useMemo(
     () =>
       sitePages
-        .filter((page) => page.page_type !== "global" && page.is_published && page.show_in_header)
+        .filter((page) => page.page_type !== "global" && page.is_published)
         .map((page) => ({
           ...page,
           displayLabel: buildPageLabel(page, sitePages),
+          path: normalizePath(page.full_path),
         })),
     [sitePages],
   );
 
   const save = async () => {
     const payload: NavItem[] = links.map((item) => ({
-      label: item.label,
+      label: item.label.trim() || "Untitled",
       to: normalizePath(item.to),
-      source: "manual",
-      pageId: undefined,
+      source: item.source,
+      pageId: item.pageId,
       openInNewTab: Boolean(item.openInNewTab),
       visible: item.visible !== false,
     }));
 
     const { error } = await supabase
       .from("site_settings")
-      .upsert({ key: "nav_links", value: payload as any }, { onConflict: "key" });
+      .upsert({ key: storageKey, value: payload as any }, { onConflict: "key" });
 
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
       return;
     }
 
-    toast({ title: "Navigation saved!" });
+    toast({ title: `${mode === "header" ? "Header" : "Footer"} navigation saved!` });
   };
 
-  const addLink = () =>
+  const addManualLink = () =>
     setLinks((prev) => [
       ...prev,
-      { label: "New Page", to: "/new-page", source: "manual", openInNewTab: false, visible: true },
+      {
+        label: "New Page",
+        to: "/new-page",
+        source: "manual",
+        openInNewTab: false,
+        visible: true,
+      },
     ]);
+
+  const addSitePageLink = () => {
+    const firstAvailable = availablePages.find(
+      (page) => !links.some((link) => link.pageId === page.id || normalizePath(link.to) === page.path),
+    );
+
+    if (!firstAvailable) {
+      toast({ title: "No more pages to add" });
+      return;
+    }
+
+    setLinks((prev) => [
+      ...prev,
+      {
+        label: firstAvailable.displayLabel,
+        to: firstAvailable.path,
+        source: "site_page",
+        pageId: firstAvailable.id,
+        openInNewTab: false,
+        visible: true,
+      },
+    ]);
+  };
 
   const removeLink = (i: number) => setLinks((prev) => prev.filter((_, j) => j !== i));
 
@@ -219,11 +222,29 @@ const NavLinkEditor = () => {
     });
   };
 
+  const applySitePage = (i: number, pageId: string) => {
+    const page = availablePages.find((item) => item.id === pageId);
+    if (!page) return;
+
+    setLinks((prev) => {
+      const updated = [...prev];
+      updated[i] = {
+        ...updated[i],
+        source: "site_page",
+        pageId: page.id,
+        label: page.displayLabel,
+        to: page.path,
+      };
+      return updated;
+    });
+  };
+
   const handleDragEnd = (targetIndex: number) => {
     if (dragIndex === null || dragIndex === targetIndex) {
       setDragIndex(null);
       return;
     }
+
     const reordered = [...links];
     const [moved] = reordered.splice(dragIndex, 1);
     reordered.splice(targetIndex, 0, moved);
@@ -245,13 +266,26 @@ const NavLinkEditor = () => {
 
       <SheetContent className="overflow-y-auto sm:max-w-sm">
         <SheetHeader>
-          <SheetTitle className="font-display uppercase">Header Navigation</SheetTitle>
+          <SheetTitle className="font-display uppercase">Navigation Manager</SheetTitle>
         </SheetHeader>
 
         <div className="mt-6 space-y-4">
+          <div>
+            <Label className="text-xs">Editing</Label>
+            <Select value={mode} onValueChange={(value: "header" | "footer") => setMode(value)}>
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="header">Header navigation</SelectItem>
+                <SelectItem value="footer">Footer quick links</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
-            Manual links are managed here. Pages with{" "}
-            <span className="font-medium text-foreground">Show in header</span> enabled are added automatically below.
+            This editor is now the only source of truth for visible navigation order. Pages from Page Settings can be
+            added manually below, but they will not appear automatically.
           </div>
 
           {links.map((link, i) => (
@@ -269,15 +303,34 @@ const NavLinkEditor = () => {
                 <div className="flex-1 space-y-2">
                   <div>
                     <Label className="text-xs">Source</Label>
-                    <Select value="manual" disabled>
+                    <Select value={link.source} onValueChange={(value: NavSource) => updateLink(i, "source", value)}>
                       <SelectTrigger className="h-8 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="manual">Manual</SelectItem>
+                        <SelectItem value="site_page">Site page</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {link.source === "site_page" && (
+                    <div>
+                      <Label className="text-xs">Page</Label>
+                      <Select value={link.pageId || ""} onValueChange={(value) => applySitePage(i, value)}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Choose page" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availablePages.map((page) => (
+                            <SelectItem key={page.id} value={page.id}>
+                              {page.displayLabel}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   <Input
                     value={link.label}
@@ -291,6 +344,7 @@ const NavLinkEditor = () => {
                     onChange={(e) => updateLink(i, "to", e.target.value)}
                     placeholder="/path"
                     className="h-8 text-xs"
+                    disabled={link.source === "site_page"}
                   />
 
                   <div className="flex items-center justify-between gap-2">
@@ -326,9 +380,15 @@ const NavLinkEditor = () => {
             </div>
           ))}
 
-          <Button variant="outline" size="sm" onClick={addLink} className="w-full">
-            <Plus className="mr-1 h-4 w-4" /> Add Link
-          </Button>
+          <div className="grid grid-cols-1 gap-2">
+            <Button variant="outline" size="sm" onClick={addManualLink} className="w-full">
+              <Plus className="mr-1 h-4 w-4" /> Add Manual Link
+            </Button>
+
+            <Button variant="outline" size="sm" onClick={addSitePageLink} className="w-full">
+              <FileText className="mr-1 h-4 w-4" /> Add Site Page Link
+            </Button>
+          </div>
 
           <Button onClick={save} className="w-full font-display uppercase tracking-wider">
             <Save className="mr-1 h-4 w-4" /> Save Navigation
@@ -337,17 +397,17 @@ const NavLinkEditor = () => {
           <div className="space-y-2 rounded-lg border border-border p-3">
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4 text-primary" />
-              <p className="font-medium text-foreground">Auto pages from Page Settings</p>
+              <p className="font-medium text-foreground">Available site pages</p>
             </div>
 
-            {headerPages.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No published pages currently have Show in header enabled.</p>
+            {availablePages.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No published pages available.</p>
             ) : (
               <div className="space-y-2">
-                {headerPages.map((page) => (
+                {availablePages.map((page) => (
                   <div key={page.id} className="rounded-md border border-border bg-muted/30 px-3 py-2">
                     <p className="text-sm font-medium text-foreground">{page.displayLabel}</p>
-                    <p className="text-xs text-muted-foreground">{normalizePath(page.full_path)}</p>
+                    <p className="text-xs text-muted-foreground">{page.path}</p>
                   </div>
                 ))}
               </div>

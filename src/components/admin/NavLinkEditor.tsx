@@ -46,9 +46,23 @@ const isNavItem = (value: unknown): value is NavItem => {
   return typeof item.label === "string" && typeof item.to === "string";
 };
 
+const normalizePath = (value?: string | null) => {
+  if (!value) return "/";
+  if (value === "/") return "/";
+  return `/${value.replace(/^\/+|\/+$/g, "")}`;
+};
+
 const asNavItems = (value: unknown): NavItem[] => {
   if (!Array.isArray(value)) return [];
-  return value.filter(isNavItem);
+
+  return value.filter(isNavItem).map((item) => ({
+    label: item.label,
+    to: normalizePath(item.to),
+    source: item.source === "site_page" ? "site_page" : "manual",
+    pageId: item.pageId,
+    openInNewTab: Boolean(item.openInNewTab),
+    visible: item.visible !== false,
+  }));
 };
 
 const defaultHeaderNav: NavEditorItem[] = [
@@ -64,12 +78,6 @@ const defaultFooterNav: NavEditorItem[] = [
   { label: "About", to: "/about", source: "manual", openInNewTab: false, visible: true },
   { label: "Contact", to: "/contact", source: "manual", openInNewTab: false, visible: true },
 ];
-
-const normalizePath = (value?: string | null) => {
-  if (!value) return "/";
-  if (value === "/") return "/";
-  return `/${value.replace(/^\/+|\/+$/g, "")}`;
-};
 
 const toEditorItem = (item: NavItem): NavEditorItem => ({
   label: item.label || "Untitled",
@@ -298,8 +306,8 @@ const NavLinkEditor = () => {
           </div>
 
           <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
-            This editor is now the only source of truth for visible navigation order. Pages from Page Settings can be
-            added manually below, but they will not appear automatically.
+            This editor is the source of truth for visible navigation order. Pages from Page Settings can be added
+            manually below, but they will not appear automatically.
           </div>
 
           {links.map((link, i) => (

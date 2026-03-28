@@ -47,6 +47,13 @@ async function fetchPageMeta(page: string) {
 async function fetchPageBlocks(page: string, includeUnpublished = false) {
   const normalizedPage = normalizePageSlug(page);
 
+  const query = supabase
+    .from("site_blocks")
+    .select("*")
+    .eq("page", normalizedPage)
+    .eq("is_active", true)
+    .order("sort_order");
+
   if (!includeUnpublished) {
     const pageMeta = await fetchPageMeta(normalizedPage);
     if (!pageMeta || pageMeta.is_published === false) {
@@ -54,13 +61,7 @@ async function fetchPageBlocks(page: string, includeUnpublished = false) {
     }
   }
 
-  const { data, error } = await supabase
-    .from("site_blocks")
-    .select("*")
-    .eq("page", normalizedPage)
-    .eq("is_active", true)
-    .order("sort_order");
-
+  const { data, error } = await query;
   if (error) throw error;
   return (data as SiteBlock[]) ?? [];
 }

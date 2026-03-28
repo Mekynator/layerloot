@@ -1,5 +1,5 @@
 import { useMemo, useEffect } from "react";
-import { useLocation, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { renderBlock } from "@/components/admin/BlockRenderer";
 import { PageSkeleton } from "@/components/shared/loading-states";
 import NotFound from "./NotFound";
@@ -30,19 +30,11 @@ const DynamicPage = ({
   emptyDescription = "Content coming soon.",
 }: DynamicPageProps) => {
   const params = useParams();
-  const location = useLocation();
   const [searchParams] = useSearchParams();
-
-  const wildcardSlug = params["*"];
-  const directSlug = params.slug;
-  const routeSlug = slugProp ?? wildcardSlug ?? directSlug ?? location.pathname;
-
-  const slug = normalizePageSlug(routeSlug);
+  const slug = normalizePageSlug(slugProp ?? params.slug ?? "");
   const isEditorPreview = searchParams.get("editorPreview") === "1";
-
   const { data: pageMeta, isLoading: pageLoading } = useSitePage(slug, Boolean(slug));
   const { data: blocks = [], isLoading: blocksLoading } = usePageBlocks(slug, Boolean(slug), isEditorPreview);
-
   const visibleBlocks = useMemo(() => blocks.filter((block) => block.is_active !== false), [blocks]);
 
   useEffect(() => {

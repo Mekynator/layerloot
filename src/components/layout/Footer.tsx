@@ -164,12 +164,7 @@ const Footer = () => {
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   {footerLinks.map((link) => (
                     <li key={`${link.label}-${link.to}`}>
-                      <Link
-                        to={link.to}
-                        target={link.openInNewTab ? "_blank" : undefined}
-                        rel={link.openInNewTab ? "noopener noreferrer" : undefined}
-                        className="hover:text-primary"
-                      >
+                      <Link to={link.to} className="hover:text-primary">
                         {link.label}
                       </Link>
                     </li>

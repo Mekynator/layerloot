@@ -417,10 +417,11 @@ const PageEditor = () => {
     const fullPath = pageForm.isHome
       ? "/"
       : pageForm.pageType === "child" && parent
-        ? `${pageToRealPath(parent).replace(/\/+$/, "")}/${rawSlug}`.replace(/\/+/g, "/")
+        ? `${pageToRealPath(parent).replace(/\/+$/, "")}/${rawSlug}`.replace(/\/+ /g, "/")
         : `/${rawSlug}`;
 
-    const nextEditorKey = pageForm.isHome ? "home" : fullPath.replace(/^\/+|\/+$/g, "");
+    const normalizedFullPath = fullPath.replace(/\/{2,}/g, "/");
+    const nextEditorKey = pageForm.isHome ? "home" : normalizedFullPath.replace(/^\/+|\/+$/g, "");
 
     if (pageForm.isHome) {
       const resetQuery = supabase.from("site_pages").update({ is_home: false }).eq("is_home", true);
@@ -436,7 +437,7 @@ const PageEditor = () => {
       name: pageForm.name.trim(),
       title: pageForm.title.trim() || pageForm.name.trim(),
       slug: rawSlug,
-      full_path: fullPath,
+      full_path: normalizedFullPath,
       parent_id: pageForm.pageType === "child" ? pageForm.parentId : null,
       page_type: pageForm.pageType,
       is_home: pageForm.isHome,

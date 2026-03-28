@@ -362,6 +362,10 @@ const Account = () => {
   useEffect(() => {
     if (!user) return;
     setSeenState(readSeenState(user.id));
+    // Load shipping address
+    supabase.from("profiles").select("shipping_address").eq("user_id", user.id).maybeSingle().then(({ data }) => {
+      if (data?.shipping_address) setShippingAddress({ name: "", street: "", city: "", zip: "", country: "Denmark", ...(data.shipping_address as any) });
+    });
   }, [user]);
 
   const pointsBalance = overview?.pointsBalance ?? 0;

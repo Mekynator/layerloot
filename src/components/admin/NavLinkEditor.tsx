@@ -39,9 +39,16 @@ type SitePageOption = {
   is_published: boolean;
 };
 
+const isNavItem = (value: unknown): value is NavItem => {
+  if (!value || typeof value !== "object") return false;
+
+  const item = value as Record<string, unknown>;
+  return typeof item.label === "string" && typeof item.to === "string";
+};
+
 const asNavItems = (value: unknown): NavItem[] => {
   if (!Array.isArray(value)) return [];
-  return value as NavItem[];
+  return value.filter(isNavItem);
 };
 
 const defaultHeaderNav: NavEditorItem[] = [
@@ -95,10 +102,9 @@ function useStoredNavLinks(key: "nav_links" | "footer_nav_links", fallback: NavE
 
       if (!mounted) return;
 
-      if (Array.isArray(data?.value)) {
-        setLinks(
-          ((data.value as unknown as NavItem[]) ?? []).map(toEditorItem).filter((item) => item.visible !== false),
-        );
+      const storedItems = asNavItems(data?.value);
+      if (storedItems.length > 0) {
+        setLinks(storedItems.map(toEditorItem).filter((item) => item.visible !== false));
       } else {
         setLinks(fallback.filter((item) => item.visible !== false));
       }
@@ -138,8 +144,9 @@ const NavLinkEditor = () => {
           .order("sort_order", { ascending: true }),
       ]);
 
-      if (navRes.data?.value && Array.isArray(navRes.data.value)) {
-        setLinks(((navRes.data.value as unknown as NavItem[]) ?? []).map(toEditorItem));
+      const storedItems = asNavItems(navRes.data?.value);
+      if (storedItems.length > 0) {
+        setLinks(storedItems.map(toEditorItem));
       } else {
         setLinks(fallbackLinks);
       }
@@ -148,7 +155,7 @@ const NavLinkEditor = () => {
     };
 
     void load();
-  }, [storageKey]);
+  }, [storageKey, fallbackLinks]);
 
   const availablePages = useMemo(
     () =>

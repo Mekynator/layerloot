@@ -59,6 +59,12 @@ const defaultFooterSettings: FooterSettings = {
   orders_link_label: "Order History",
 };
 
+const normalizePath = (value?: string | null) => {
+  if (!value) return "/";
+  if (value === "/") return "/";
+  return `/${value.replace(/^\/+|\/+$/g, "")}`;
+};
+
 const Footer = () => {
   const [contact, setContact] = useState<ContactSettings>(defaultContact);
   const [branding, setBranding] = useState<BrandingSettings>({
@@ -101,7 +107,18 @@ const Footer = () => {
     });
   }, []);
 
-  const footerLinks = useMemo(() => navLinks.filter((link) => !!link.to && !!link.label).slice(0, 6), [navLinks]);
+  const footerLinks = useMemo(
+    () =>
+      navLinks
+        .filter((link) => !!link.to && !!link.label)
+        .slice(0, 6)
+        .map((link) => ({
+          ...link,
+          to: normalizePath(link.to),
+        })),
+    [navLinks],
+  );
+
   const logoHeight = Math.max(20, Number(footerSettings.logo_height_px || 32));
 
   return (
@@ -146,7 +163,7 @@ const Footer = () => {
 
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   {footerLinks.map((link) => (
-                    <li key={link.to}>
+                    <li key={`${link.label}-${link.to}`}>
                       <Link to={link.to} className="hover:text-primary">
                         {link.label}
                       </Link>

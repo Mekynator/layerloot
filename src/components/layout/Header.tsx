@@ -118,6 +118,20 @@ const isAfter = (dateStr?: string | null, compareStr?: string | null) => {
   return new Date(dateStr).getTime() > new Date(compareStr).getTime();
 };
 
+const normalizePath = (value?: string | null) => {
+  if (!value) return "/";
+  if (value === "/") return "/";
+  return `/${value.replace(/^\/+|\/+$/g, "")}`;
+};
+
+const isActiveLink = (pathname: string, to: string) => {
+  const current = normalizePath(pathname);
+  const target = normalizePath(to);
+
+  if (target === "/") return current === "/";
+  return current === target || current.startsWith(`${target}/`);
+};
+
 const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [adminAlerts, setAdminAlerts] = useState(0);
@@ -243,7 +257,16 @@ const Header = () => {
   const logoAlt = branding.logo_alt || branding.brand_name || "Logo";
   const logoHeight = Math.max(20, Number(headerSettings.logo_height_px || 36));
 
-  const desktopLinks = useMemo(() => navLinks.filter((link) => !!link.to && !!link.label), [navLinks]);
+  const desktopLinks = useMemo(
+    () =>
+      navLinks
+        .filter((link) => !!link.to && !!link.label)
+        .map((link) => ({
+          ...link,
+          to: normalizePath(link.to),
+        })),
+    [navLinks],
+  );
 
   return (
     <>
@@ -276,10 +299,10 @@ const Header = () => {
             <nav className="hidden items-center gap-8 md:flex">
               {desktopLinks.map((link) => (
                 <Link
-                  key={link.to}
+                  key={`${link.label}-${link.to}`}
                   to={link.to}
                   className={`font-display text-sm uppercase tracking-widest transition-colors hover:text-primary ${
-                    location.pathname === link.to ? "text-primary" : "text-secondary-foreground"
+                    isActiveLink(location.pathname, link.to) ? "text-primary" : "text-secondary-foreground"
                   }`}
                 >
                   {link.label}
@@ -383,10 +406,10 @@ const Header = () => {
           <nav className="border-t border-border bg-secondary px-4 pb-4 md:hidden">
             {desktopLinks.map((link) => (
               <Link
-                key={link.to}
+                key={`${link.label}-${link.to}`}
                 to={link.to}
                 className={`block py-3 font-display text-sm uppercase tracking-widest transition-colors hover:text-primary ${
-                  location.pathname === link.to ? "text-primary" : "text-secondary-foreground"
+                  isActiveLink(location.pathname, link.to) ? "text-primary" : "text-secondary-foreground"
                 }`}
               >
                 {link.label}

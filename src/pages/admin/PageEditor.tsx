@@ -58,11 +58,6 @@ type CustomPageRecord = {
   title?: string;
 };
 
-type SiteSettingsRow = {
-  key: string;
-  value: any;
-};
-
 const pageGroups = [
   {
     label: "Main Pages",
@@ -166,7 +161,7 @@ const normalizeSlug = (value: string) =>
   value
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9-/_\s]/g, "")
+    .replace(/[^a-z0-9\-/_\s]/g, "")
     .replace(/\s+/g, "-")
     .replace(/\/+/g, "/")
     .replace(/-+/g, "-")
@@ -229,7 +224,10 @@ const PageEditor = () => {
 
     const pages = new Set<string>(defaultPages);
 
-    const customPageRows: CustomPageRecord[] = Array.isArray(settingsRes.data?.value) ? settingsRes.data.value : [];
+    const customPageRows: CustomPageRecord[] = Array.isArray(settingsRes.data?.value)
+      ? (settingsRes.data?.value as CustomPageRecord[])
+      : [];
+
     for (const row of customPageRows) {
       const slug = normalizePageKey(row?.slug);
       if (!slug) continue;
@@ -425,28 +423,6 @@ const PageEditor = () => {
     await loadPages();
   };
 
-  const duplicateBlock = async (b: SiteBlock) => {
-    const maxOrder = pageBlocks.length > 0 ? Math.max(...pageBlocks.map((bl) => bl.sort_order)) + 1 : 0;
-
-    const { error } = await supabase.from("site_blocks").insert({
-      page: b.page,
-      block_type: b.block_type,
-      title: `${b.title ?? ""} (copy)`,
-      content: b.content,
-      sort_order: maxOrder,
-      is_active: b.is_active ?? true,
-    });
-
-    if (error) {
-      toast({ title: "Duplicate failed", description: error.message, variant: "destructive" });
-      return;
-    }
-
-    toast({ title: "Block duplicated" });
-    await fetchBlocks();
-    await loadPages();
-  };
-
   const toggleActive = async (id: string, active: boolean) => {
     const { error } = await supabase.from("site_blocks").update({ is_active: active }).eq("id", id);
 
@@ -560,6 +536,7 @@ const PageEditor = () => {
     setActivePage("home");
     setDeletePageOpen(false);
     setSelectedBlockId(null);
+
     toast({ title: "Page deleted" });
     await fetchBlocks();
   };
@@ -816,17 +793,6 @@ const PageEditor = () => {
                             className="rounded p-1 text-muted-foreground hover:text-foreground"
                           >
                             <PanelLeft className="h-3 w-3" />
-                          </button>
-
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void duplicateBlock(block);
-                            }}
-                            className="rounded p-1 text-muted-foreground hover:text-foreground"
-                            title="Duplicate block"
-                          >
-                            <Plus className="h-3 w-3" />
                           </button>
 
                           <button

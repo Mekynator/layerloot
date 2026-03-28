@@ -44,15 +44,29 @@ interface CategoryOption {
   name: string;
 }
 
+interface AuthUser {
+  id: string;
+  email: string | null;
+  created_at: string;
+  last_sign_in_at: string | null;
+  role: string | null;
+  user_metadata?: {
+    full_name?: string;
+  } | null;
+}
+
 interface ProfileRow {
   id: string;
-  user_id: string | null;
-  username: string | null;
+  user_id: string;
+  full_name: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 interface UserOption {
   id: string;
   label: string;
+  searchText: string;
 }
 
 type DiscountForm = Omit<DiscountCode, "id" | "created_at" | "used_count" | "scope_target_user_id"> & {
@@ -108,12 +122,14 @@ const AdminDiscounts = () => {
       { data: discountData, error: discountError },
       { data: productData, error: productError },
       { data: categoryData, error: categoryError },
-      { data: profileData, error: profileError },
+      authUsersRes,
+      profilesRes,
     ] = await Promise.all([
       supabase.from("discount_codes").select("*").order("created_at", { ascending: false }),
       supabase.from("products").select("id, name").order("name"),
       supabase.from("categories").select("id, name").order("name"),
-      supabase.from("profiles").select("id, user_id, username").order("username"),
+      supabase.functions.invoke("admin-users"),
+      supabase.from("profiles").select("id, user_id, full_name, created_at, updated_at"),
     ]);
 
     if (discountError) {
@@ -140,10 +156,18 @@ const AdminDiscounts = () => {
       });
     }
 
-    if (profileError) {
+    if (authUsersRes.error) {
       toast({
         title: "Failed to load users",
-        description: profileError.message,
+        description: authUsersRes.error.message || "Admin user directory is not available.",
+        variant: "destructive",
+      });
+    }
+
+    if (profilesRes.error) {
+      toast({
+        title: "Failed to load profiles",
+        description: profilesRes.error.message,
         variant: "destructive",
       });
     }
@@ -152,11 +176,21 @@ const AdminDiscounts = () => {
     setProducts((productData as ProductOption[]) ?? []);
     setCategories((categoryData as CategoryOption[]) ?? []);
 
-    const mappedUsers =
-      (profileData as ProfileRow[] | null)?.map((profile) => ({
-        id: profile.user_id || profile.id,
-        label: (profile.username || "").trim() || profile.user_id || profile.id,
-      })) ?? [];
+    const authUsers = ((authUsersRes.data as { users?: AuthUser[] } | null)?.users ?? []) as AuthUser[];
+    const profiles = (profilesRes.data ?? []) as ProfileRow[];
+    const profileMap = new Map(profiles.map((profile) => [profile.user_id, profile]));
+
+    const mappedUsers = authUsers.map((authUser) => {
+      const profile = profileMap.get(authUser.id) ?? null;
+      const email = (authUser.email || "").trim();
+      const fullName = (profile?.full_name || authUser.user_metadata?.full_name || "").trim();
+
+      return {
+        id: authUser.id,
+        label: email || fullName || authUser.id,
+        searchText: `${email} ${fullName} ${authUser.id}`.toLowerCase(),
+      } satisfies UserOption;
+    });
 
     const uniqueUsers = Array.from(new Map(mappedUsers.map((user) => [user.id, user])).values()).sort((a, b) =>
       a.label.localeCompare(b.label),
@@ -178,10 +212,7 @@ const AdminDiscounts = () => {
   const filteredUsers = useMemo(() => {
     const query = userSearch.trim().toLowerCase();
     if (!query) return users;
-
-    return users.filter((user) => {
-      return user.label.toLowerCase().includes(query) || user.id.toLowerCase().includes(query);
-    });
+    return users.filter((user) => user.searchText.includes(query));
   }, [users, userSearch]);
 
   const userButtonLabel = useMemo(() => {
@@ -225,7 +256,6 @@ const AdminDiscounts = () => {
   const toggleUserSelection = (userId: string) => {
     setForm((current) => {
       const exists = current.scope_target_user_ids.includes(userId);
-
       return {
         ...current,
         scope_target_user_ids: exists
@@ -540,12 +570,7 @@ const AdminDiscounts = () => {
                 <Input
                   type="number"
                   value={form.discount_value}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      discount_value: Number(e.target.value),
-                    })
-                  }
+                  onChange={(e) => setForm({ ...form, discount_value: Number(e.target.value) })}
                   disabled={form.discount_type === "free_shipping"}
                 />
               </div>
@@ -698,12 +723,7 @@ const AdminDiscounts = () => {
                 <Input
                   type="number"
                   value={form.min_order_amount}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      min_order_amount: Number(e.target.value),
-                    })
-                  }
+                  onChange={(e) => setForm({ ...form, min_order_amount: Number(e.target.value) })}
                 />
               </div>
 
@@ -712,12 +732,7 @@ const AdminDiscounts = () => {
                 <Input
                   type="number"
                   value={form.min_quantity}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      min_quantity: Number(e.target.value),
-                    })
-                  }
+                  onChange={(e) => setForm({ ...form, min_quantity: Number(e.target.value) })}
                 />
               </div>
 

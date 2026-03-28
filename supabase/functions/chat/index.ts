@@ -43,19 +43,16 @@ async function resolveUser(token: string | null) {
 async function fetchContext(userId: string | null) {
   const ctx: Record<string, any> = {};
 
-  // Products
   try {
     const { data } = await serviceSupabase.from("products").select("id,name,slug,price,category_id,is_featured").eq("is_active", true).order("created_at", { ascending: false }).limit(20);
     ctx.products = (data ?? []).map((p: any) => ({ ...p, url: `/products/${p.slug}` }));
   } catch { ctx.products = []; }
 
-  // Categories
   try {
     const { data } = await serviceSupabase.from("categories").select("id,name,slug").order("sort_order");
     ctx.categories = data ?? [];
   } catch { ctx.categories = []; }
 
-  // Shipping config
   try {
     const { data } = await serviceSupabase.from("shipping_config").select("*").limit(1).maybeSingle();
     ctx.shipping = data;
@@ -63,13 +60,11 @@ async function fetchContext(userId: string | null) {
 
   if (!userId) return ctx;
 
-  // Profile
   try {
     const { data } = await serviceSupabase.from("profiles").select("full_name").eq("user_id", userId).maybeSingle();
     ctx.profile = data;
   } catch { ctx.profile = null; }
 
-  // Points
   try {
     const { data } = await serviceSupabase.from("loyalty_points").select("points,reason,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(5);
     const rows = data ?? [];
@@ -79,19 +74,16 @@ async function fetchContext(userId: string | null) {
     };
   } catch { ctx.points = { balance: 0, recent: [] }; }
 
-  // Orders
   try {
     const { data } = await serviceSupabase.from("orders").select("id,status,total,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(5);
     ctx.orders = data ?? [];
   } catch { ctx.orders = []; }
 
-  // Custom orders
   try {
     const { data } = await serviceSupabase.from("custom_orders").select("id,status,quoted_price,final_agreed_price,payment_status,production_status,request_fee_status,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(5);
     ctx.customOrders = data ?? [];
   } catch { ctx.customOrders = []; }
 
-  // Vouchers
   try {
     const { data } = await serviceSupabase.from("user_vouchers").select("code,is_used,balance,voucher_id").eq("user_id", userId).eq("is_used", false).limit(5);
     ctx.vouchers = data ?? [];
@@ -184,11 +176,12 @@ ${userSection}
 ## Rules
 - Always be helpful, friendly, and concise
 - Use DKK as currency, format like "150 kr"
-- When mentioning pages, include the link path
+- When mentioning pages, include markdown links like [Products](/products)
 - If user asks about their points, orders, or account — use the data above
 - Current page: ${page || "unknown"}
 - Do NOT make up data. If you don't have info, say so.
 - Keep responses short (2-4 sentences) unless user asks for detail.
+- Use markdown formatting for better readability.
 `;
 }
 

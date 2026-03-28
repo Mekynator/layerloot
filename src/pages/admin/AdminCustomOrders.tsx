@@ -48,6 +48,8 @@ interface CustomOrder {
   customer_response_status: "pending" | "accepted" | "declined" | "countered";
   payment_status: "unpaid" | "awaiting_payment" | "paid" | "refunded" | "cancelled";
   production_status: "pending" | "queued" | "in_production" | "completed" | "shipped" | "cancelled";
+  request_fee_status?: string;
+  request_fee_amount?: number;
   metadata?: {
     reference_image_url?: string | null;
     reference_image_filename?: string | null;
@@ -91,6 +93,7 @@ const STATUSES = [
 
 const PAYMENT_STATUSES = ["unpaid", "awaiting_payment", "paid", "refunded", "cancelled"] as const;
 const PRODUCTION_STATUSES = ["pending", "queued", "in_production", "completed", "shipped", "cancelled"] as const;
+const FEE_STATUSES = ["unpaid", "paid"] as const;
 const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
 function parseCustomOrder(order: CustomOrder): ParsedCustomOrder {
@@ -165,6 +168,7 @@ const AdminCustomOrders = () => {
   const [quoteAmount, setQuoteAmount] = useState("");
   const [paymentStatusUpdate, setPaymentStatusUpdate] = useState<CustomOrder["payment_status"]>("unpaid");
   const [productionStatusUpdate, setProductionStatusUpdate] = useState<CustomOrder["production_status"]>("pending");
+  const [feeStatusUpdate, setFeeStatusUpdate] = useState<string>("unpaid");
   const [conversationImage, setConversationImage] = useState<File | null>(null);
   const [conversationImagePreviewUrl, setConversationImagePreviewUrl] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
@@ -215,6 +219,7 @@ const AdminCustomOrders = () => {
     setQuoteAmount(order.quoted_price !== null ? String(order.quoted_price) : "");
     setPaymentStatusUpdate(order.payment_status);
     setProductionStatusUpdate(order.production_status);
+    setFeeStatusUpdate((order as any).request_fee_status || "unpaid");
     setThreadMessage("");
     setConversationImage(null);
     setConversationImagePreviewUrl(null);
@@ -276,6 +281,7 @@ const AdminCustomOrders = () => {
         admin_notes: adminNotes || null,
         payment_status: paymentStatusUpdate,
         production_status: productionStatusUpdate,
+        request_fee_status: feeStatusUpdate,
       })
       .eq("id", selectedOrder.id);
 
@@ -780,7 +786,22 @@ const AdminCustomOrders = () => {
                     </div>
 
                     <div>
-                      <Label>Admin Notes</Label>
+                      <Label>Request Fee Status</Label>
+                      <Select value={feeStatusUpdate} onValueChange={setFeeStatusUpdate}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {FEE_STATUSES.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {s.replace(/_/g, " ")}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
                       <Textarea
                         value={adminNotes}
                         onChange={(e) => setAdminNotes(e.target.value)}

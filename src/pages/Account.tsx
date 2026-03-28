@@ -16,8 +16,11 @@ import {
   ChevronDown,
   ChevronUp,
   History,
+  Settings,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -105,7 +108,7 @@ type RewardCatalogItem = {
   badge?: string;
 };
 
-type AccountTab = "orders" | "custom-requests" | "rewards" | "vouchers";
+type AccountTab = "orders" | "custom-requests" | "rewards" | "vouchers" | "settings";
 type CustomRequestsView = "ongoing" | "done";
 type VoucherView = "active" | "used";
 
@@ -345,6 +348,8 @@ const Account = () => {
   const [sendingReply, setSendingReply] = useState(false);
   const [processingCustomPaymentOrderId, setProcessingCustomPaymentOrderId] = useState<string | null>(null);
   const [redeemingKey, setRedeemingKey] = useState<string | null>(null);
+  const [shippingAddress, setShippingAddress] = useState({ name: "", street: "", city: "", zip: "", country: "Denmark" });
+  const [savingAddress, setSavingAddress] = useState(false);
   const [seenState, setSeenState] = useState<SeenState>({
     ordersLastSeenAt: null,
     customRequestsLastSeenAt: null,
@@ -357,6 +362,10 @@ const Account = () => {
   useEffect(() => {
     if (!user) return;
     setSeenState(readSeenState(user.id));
+    // Load shipping address
+    supabase.from("profiles").select("shipping_address").eq("user_id", user.id).maybeSingle().then(({ data }) => {
+      if (data?.shipping_address) setShippingAddress({ name: "", street: "", city: "", zip: "", country: "Denmark", ...(data.shipping_address as any) });
+    });
   }, [user]);
 
   const pointsBalance = overview?.pointsBalance ?? 0;
@@ -440,24 +449,48 @@ const Account = () => {
     if (tab === "custom-requests" && latestCustomActivityAt && hasNewCustomRequests) markTabAsSeen("custom-requests");
   }, [tab, user, latestOrderActivityAt, latestCustomActivityAt, hasNewOrders, hasNewCustomRequests]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const redeemVoucher = async (voucher: Voucher, pointsCostOverride?: number) => {
-    const pointsCost = pointsCostOverride ?? voucher.points_cost;
+  const redeemReward = async (reward: RewardCatalogItem) => {
     if (!user) return;
 
-    if (pointsBalance < pointsCost) {
+    if (pointsBalance < reward.pointsCost) {
       toast({ title: "Not enough points", variant: "destructive" });
       return;
     }
 
-    setRedeemingKey(voucher.id);
+    setRedeemingKey(reward.key);
+
+    // Find or create voucher definition
+    let voucherId: string | null = null;
+    const matchedVoucher = findMatchingVoucher(reward, vouchers);
+
+    if (matchedVoucher) {
+      voucherId = matchedVoucher.id;
+    } else {
+      // Create the voucher definition if it doesn't exist
+      const { data: newVoucher, error: createError } = await supabase.from("vouchers").insert({
+        name: reward.name,
+        description: reward.description,
+        discount_type: reward.discountType,
+        discount_value: reward.discountValue,
+        points_cost: reward.pointsCost,
+        is_active: true,
+      }).select("id").single();
+
+      if (createError || !newVoucher) {
+        setRedeemingKey(null);
+        toast({ title: "Error", description: createError?.message || "Could not create voucher", variant: "destructive" });
+        return;
+      }
+      voucherId = newVoucher.id;
+    }
 
     const code = `LL-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    const isGiftCard = voucher.discount_type === "gift_card";
+    const isGiftCard = reward.discountType === "gift_card";
 
     const { error: pointsError } = await supabase.from("loyalty_points").insert({
       user_id: user.id,
-      points: -pointsCost,
-      reason: `Redeemed: ${voucher.name}`,
+      points: -reward.pointsCost,
+      reason: `Redeemed: ${reward.name}`,
     });
 
     if (pointsError) {
@@ -468,9 +501,9 @@ const Account = () => {
 
     const { error: voucherError } = await supabase.from("user_vouchers").insert({
       user_id: user.id,
-      voucher_id: voucher.id,
+      voucher_id: voucherId,
       code,
-      balance: isGiftCard ? voucher.discount_value : null,
+      balance: isGiftCard ? reward.discountValue : null,
     });
 
     if (voucherError) {
@@ -1081,6 +1114,7 @@ const Account = () => {
             },
             { key: "rewards" as const, label: "Rewards Store", icon: Gift, hasDot: false },
             { key: "vouchers" as const, label: "My Vouchers", icon: Star, hasDot: false },
+            { key: "settings" as const, label: "Settings", icon: Settings, hasDot: false },
           ].map(({ key, label, icon: Icon, hasDot }) => (
             <Button
               key={key}
@@ -1219,8 +1253,7 @@ const Account = () => {
             {overviewLoading && !overview ? <RewardsGridSkeleton count={4} /> : null}
             <div className="grid gap-4 sm:grid-cols-2">
               {REWARD_CATALOG.map((reward) => {
-              const matchedVoucher = findMatchingVoucher(reward, vouchers);
-              const canRedeem = !!matchedVoucher && pointsBalance >= reward.pointsCost;
+              const canRedeem = pointsBalance >= reward.pointsCost;
 
               return (
                 <motion.div
@@ -1265,12 +1298,12 @@ const Account = () => {
 
                         <Button
                           size="sm"
-                          onClick={() => matchedVoucher && redeemVoucher(matchedVoucher, reward.pointsCost)}
-                          disabled={!canRedeem || redeemingKey === matchedVoucher?.id}
+                          onClick={() => redeemReward(reward)}
+                          disabled={!canRedeem || redeemingKey === reward.key}
                           className="font-display uppercase tracking-wider"
                         >
                           <Star className="mr-1 h-3 w-3" />
-                          {redeemingKey === matchedVoucher?.id ? "Redeeming..." : `${reward.pointsCost} pts`}
+                          {redeemingKey === reward.key ? "Redeeming..." : `${reward.pointsCost} pts`}
                         </Button>
                       </div>
                     </CardContent>
@@ -1438,6 +1471,41 @@ const Account = () => {
               })
             )}
           </div>
+        )}
+
+        {tab === "settings" && (
+          <Card>
+            <CardContent className="space-y-6 p-6">
+              <div>
+                <h3 className="font-display text-lg font-bold uppercase text-foreground mb-4">
+                  <MapPin className="mr-2 inline h-5 w-5" />
+                  Default Shipping Address
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">This address will be auto-filled at checkout.</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div><Label>Full Name</Label><Input value={shippingAddress.name} onChange={(e) => setShippingAddress({ ...shippingAddress, name: e.target.value })} placeholder="John Doe" /></div>
+                  <div><Label>Street Address</Label><Input value={shippingAddress.street} onChange={(e) => setShippingAddress({ ...shippingAddress, street: e.target.value })} placeholder="123 Main St" /></div>
+                  <div><Label>City</Label><Input value={shippingAddress.city} onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })} placeholder="Copenhagen" /></div>
+                  <div><Label>Zip Code</Label><Input value={shippingAddress.zip} onChange={(e) => setShippingAddress({ ...shippingAddress, zip: e.target.value })} placeholder="2100" /></div>
+                  <div><Label>Country</Label><Input value={shippingAddress.country} onChange={(e) => setShippingAddress({ ...shippingAddress, country: e.target.value })} /></div>
+                </div>
+                <Button
+                  className="mt-4 font-display uppercase tracking-wider"
+                  disabled={savingAddress}
+                  onClick={async () => {
+                    if (!user) return;
+                    setSavingAddress(true);
+                    const { error } = await supabase.from("profiles").update({ shipping_address: shippingAddress as any }).eq("user_id", user.id);
+                    setSavingAddress(false);
+                    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+                    toast({ title: "Address saved!" });
+                  }}
+                >
+                  {savingAddress ? "Saving..." : "Save Address"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

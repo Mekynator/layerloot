@@ -72,24 +72,17 @@ const Contact = () => {
     setLoading(true);
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/contact-send`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        },
-        body: JSON.stringify({
+      const { error } = await supabase.functions.invoke("contact-send", {
+        body: {
           name,
           email,
           subject,
           message,
-        }),
+        },
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to send message");
+      if (error) {
+        throw error;
       }
 
       toast({
@@ -97,14 +90,12 @@ const Contact = () => {
         description: "We'll get back to you soon.",
       });
 
-      // reset form
       setName("");
       setEmail("");
       setSubject("");
       setMessage("");
     } catch (err) {
       console.error(err);
-
       toast({
         title: "Error",
         description: "Failed to send message. Try again.",

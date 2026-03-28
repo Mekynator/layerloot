@@ -219,6 +219,7 @@ const AdminCustomOrders = () => {
     setQuoteAmount(order.quoted_price !== null ? String(order.quoted_price) : "");
     setPaymentStatusUpdate(order.payment_status);
     setProductionStatusUpdate(order.production_status);
+    setFeeStatusUpdate((order as any).request_fee_status || "unpaid");
     setThreadMessage("");
     setConversationImage(null);
     setConversationImagePreviewUrl(null);
@@ -280,6 +281,7 @@ const AdminCustomOrders = () => {
         admin_notes: adminNotes || null,
         payment_status: paymentStatusUpdate,
         production_status: productionStatusUpdate,
+        request_fee_status: feeStatusUpdate,
       })
       .eq("id", selectedOrder.id);
 

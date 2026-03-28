@@ -1,9 +1,9 @@
 // ModelViewer.tsx
-// Fullscreen centering fix
-// - Keeps backward-compatible props for current Lovable pages
-// - Removes reference objects
-// - Raises model slightly so it sits visually centered
-// - Slightly wider camera framing for fullscreen/mobile
+// Updated:
+// - Preserves embedded 3MF/OBJ colors/materials/textures when available
+// - Uses selectedColor only as a fallback when no embedded appearance exists
+// - Keeps wireframe toggle working for both embedded and fallback materials
+// - Keeps fullscreen/mobile centering behavior
 
 import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -62,6 +62,95 @@ function LoadingFallback() {
   );
 }
 
+function hasVisibleTexture(mat: THREE.Material & Partial<THREE.MeshStandardMaterial>) {
+  return Boolean(mat.map || mat.emissiveMap || mat.normalMap || mat.roughnessMap || mat.metalnessMap);
+}
+
+function hasEmbeddedAppearance(
+  mesh: THREE.Mesh,
+  mat: THREE.Material & Partial<THREE.MeshStandardMaterial>,
+  ext: string,
+) {
+  const geometry = mesh.geometry;
+  const hasVertexColors = Boolean(geometry?.getAttribute("color"));
+  const hasTexture = hasVisibleTexture(mat);
+  const color = mat.color;
+  const hasNonWhiteColor = Boolean(color && !color.equals(new THREE.Color(1, 1, 1)));
+
+  if (ext === "3mf") {
+    return hasVertexColors || hasTexture || hasNonWhiteColor;
+  }
+
+  if (ext === "obj") {
+    return hasTexture || hasNonWhiteColor;
+  }
+
+  return false;
+}
+
+function createFallbackMaterial(selectedColor: string, wireframe: boolean) {
+  return new THREE.MeshStandardMaterial({
+    color: new THREE.Color(selectedColor),
+    metalness: 0.18,
+    roughness: 0.62,
+    wireframe,
+  });
+}
+
+function applyMaterials(obj: THREE.Object3D, ext: string, selectedColor: string, wireframe: boolean) {
+  obj.traverse((child) => {
+    if (!(child as THREE.Mesh).isMesh) return;
+
+    const mesh = child as THREE.Mesh;
+    const geometry = mesh.geometry;
+
+    if (geometry) {
+      geometry.computeVertexNormals();
+    }
+
+    const sourceMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+
+    const nextMaterials = sourceMaterials.map((sourceMat) => {
+      const baseMat =
+        sourceMat instanceof THREE.MeshStandardMaterial ||
+        sourceMat instanceof THREE.MeshPhysicalMaterial ||
+        sourceMat instanceof THREE.MeshPhongMaterial ||
+        sourceMat instanceof THREE.MeshLambertMaterial ||
+        sourceMat instanceof THREE.MeshBasicMaterial
+          ? sourceMat
+          : null;
+
+      const appearanceExists = baseMat ? hasEmbeddedAppearance(mesh, baseMat, ext) : false;
+
+      if (appearanceExists && baseMat) {
+        const cloned = baseMat.clone();
+        cloned.wireframe = wireframe;
+
+        if ("vertexColors" in cloned && geometry?.getAttribute("color")) {
+          cloned.vertexColors = true;
+        }
+
+        return cloned;
+      }
+
+      return createFallbackMaterial(selectedColor, wireframe);
+    });
+
+    mesh.material = Array.isArray(mesh.material) ? nextMaterials : nextMaterials[0];
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+  });
+}
+
+function disposeObjectMaterials(obj: THREE.Object3D) {
+  obj.traverse((child) => {
+    if (!(child as THREE.Mesh).isMesh) return;
+    const mesh = child as THREE.Mesh;
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    materials.forEach((mat) => mat?.dispose?.());
+  });
+}
+
 function ModelMesh({
   url,
   autoRotate,
@@ -78,39 +167,25 @@ function ModelMesh({
   const groupRef = useRef<THREE.Group>(null);
   const [object, setObject] = useState<THREE.Object3D | null>(null);
 
-  const material = useMemo(() => {
-    return new THREE.MeshStandardMaterial({
-      color: new THREE.Color(selectedColor),
-      metalness: 0.18,
-      roughness: 0.62,
-      wireframe,
-    });
-  }, [selectedColor, wireframe]);
-
   useEffect(() => {
     let mounted = true;
+    let currentObject: THREE.Object3D | null = null;
     const ext = getFileExtension(url, fileName);
 
     const finish = (obj: THREE.Object3D) => {
-      obj.traverse((child) => {
-        if ((child as THREE.Mesh).isMesh) {
-          const mesh = child as THREE.Mesh;
-          mesh.material = material;
-          mesh.castShadow = true;
-          mesh.receiveShadow = true;
-          if (mesh.geometry) mesh.geometry.computeVertexNormals();
-        }
-      });
-
+      applyMaterials(obj, ext, selectedColor, wireframe);
       normalizeObject(obj);
+      currentObject = obj;
 
-      if (mounted) setObject(obj);
+      if (mounted) {
+        setObject(obj);
+      }
     };
 
     if (ext === "stl") {
       const loader = new STLLoader();
       loader.load(url, (geo) => {
-        const mesh = new THREE.Mesh(geo, material);
+        const mesh = new THREE.Mesh(geo, createFallbackMaterial(selectedColor, wireframe));
         const group = new THREE.Group();
         group.add(mesh);
         finish(group);
@@ -127,8 +202,11 @@ function ModelMesh({
 
     return () => {
       mounted = false;
+      if (currentObject) {
+        disposeObjectMaterials(currentObject);
+      }
     };
-  }, [url, fileName, material]);
+  }, [url, fileName, selectedColor, wireframe]);
 
   useFrame((_, delta) => {
     if (autoRotate && groupRef.current) {

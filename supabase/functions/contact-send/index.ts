@@ -32,8 +32,14 @@ serve(async (req) => {
     const CONTACT_TO_EMAIL = Deno.env.get("CONTACT_TO_EMAIL");
     const CONTACT_FROM_EMAIL = Deno.env.get("CONTACT_FROM_EMAIL");
 
-    if (!RESEND_API_KEY || !CONTACT_TO_EMAIL || !CONTACT_FROM_EMAIL) {
-      return json({ error: "Missing server secrets." }, 500);
+    if (!RESEND_API_KEY) {
+      return json({ error: "Missing RESEND_API_KEY secret." }, 500);
+    }
+    if (!CONTACT_TO_EMAIL) {
+      return json({ error: "Missing CONTACT_TO_EMAIL secret." }, 500);
+    }
+    if (!CONTACT_FROM_EMAIL) {
+      return json({ error: "Missing CONTACT_FROM_EMAIL secret." }, 500);
     }
 
     const html = `
@@ -52,7 +58,7 @@ serve(async (req) => {
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${RESEND_API_KEY}`,
+        Authorization: `Bearer ${RESEND_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -64,14 +70,29 @@ serve(async (req) => {
       }),
     });
 
-    const resendData = await resendRes.json();
+    const resendText = await resendRes.text();
+    let resendData: unknown = null;
+
+    try {
+      resendData = JSON.parse(resendText);
+    } catch {
+      resendData = { raw: resendText };
+    }
 
     if (!resendRes.ok) {
-      return json({ error: "Failed to send email.", details: resendData }, 500);
+      console.error("Resend error:", resendData);
+      return json(
+        {
+          error: "Failed to send email.",
+          details: resendData,
+        },
+        500
+      );
     }
 
     return json({ success: true, data: resendData });
   } catch (error) {
-    return json({ error: String(error) }, 500);
+    console.error("contact-send fatal error:", error);
+    return json({ error: error instanceof Error ? error.message : String(error) }, 500);
   }
 });

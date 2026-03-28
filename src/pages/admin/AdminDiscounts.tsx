@@ -90,21 +90,34 @@ const AdminDiscounts = () => {
   const [saving, setSaving] = useState(false);
 
   const fetchAll = async () => {
-    const [{ data: d }, { data: p }, { data: c }, { data: u, error: usersError }] = await Promise.all([
-      supabase.from("discount_codes").select("*").order("created_at", { ascending: false }),
-      supabase.from("products").select("id, name").order("name"),
-      supabase.from("categories").select("id, name").order("name"),
-      supabase.from("profiles").select("id, user_id, username, display_name, full_name").order("username"),
-    ]);
-
-    setDiscounts((d as DiscountCode[]) ?? []);
-    setProducts((p as { id: string; name: string }[]) ?? []);
-    setCategories((c as { id: string; name: string }[]) ?? []);
-
-    if (usersError) {
-      console.error("Failed to load users for discounts:", usersError);
-      setUsers([]);
-    } else {
+    {form.scope === "user" && (
+  <div>
+    <Label>User</Label>
+    <Select
+      value={form.scope_target_user_id ?? undefined}
+      onValueChange={(v) => setForm({ ...form, scope_target_user_id: v })}
+    >
+      <SelectTrigger>
+        <SelectValue placeholder="Select user" />
+      </SelectTrigger>
+      <SelectContent>
+        {users.length > 0 ? (
+          users.map((user) => (
+            <SelectItem key={user.id} value={user.id}>
+              {user.secondary && user.secondary !== user.label
+                ? `${user.label} (${user.secondary})`
+                : user.label}
+            </SelectItem>
+          ))
+        ) : (
+          <SelectItem value="empty-users-list" disabled>
+            No users found
+          </SelectItem>
+        )}
+      </SelectContent>
+    </Select>
+  </div>
+)}
       const mappedUsers =
         (u as ProfileRow[] | null)?.map((profile) => {
           const built = buildUserLabel(profile);

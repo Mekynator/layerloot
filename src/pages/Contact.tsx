@@ -70,23 +70,18 @@ const Contact = () => {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("contact-send", {
+      const { error } = await supabase.functions.invoke("contact-send", {
         body: {
           name,
           email,
           subject,
           message,
         },
-        headers: {
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
       });
 
       if (error) {
         throw error;
       }
-
-      console.log("contact-send response:", data);
 
       toast({
         title: "Message sent!",

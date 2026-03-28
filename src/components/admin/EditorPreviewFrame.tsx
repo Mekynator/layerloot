@@ -57,7 +57,9 @@ export default function EditorPreviewFrame({
     if (!iframe) return;
 
     let resizeObserver: ResizeObserver | null = null;
+    let mutationObserver: MutationObserver | null = null;
     let raf = 0;
+    let pollId: number | null = null;
 
     const syncOverlay = () => {
       const frame = iframeRef.current;
@@ -68,7 +70,6 @@ export default function EditorPreviewFrame({
         const frameDocument = frame.contentDocument;
         if (!frameWindow || !frameDocument) return;
 
-        const iframeRect = frame.getBoundingClientRect();
         const nodes = Array.from(frameDocument.querySelectorAll<HTMLElement>("[data-editor-block-id]"));
 
         const nextBlocks: PreviewBlockRect[] = nodes.map((node) => {
@@ -103,15 +104,36 @@ export default function EditorPreviewFrame({
         requestSync();
         frameWindow.addEventListener("scroll", requestSync, { passive: true });
         window.addEventListener("resize", requestSync);
+
         resizeObserver = new ResizeObserver(requestSync);
         resizeObserver.observe(frameDocument.body);
         resizeObserver.observe(frameDocument.documentElement);
+
+        mutationObserver = new MutationObserver(requestSync);
+        mutationObserver.observe(frameDocument.body, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+        });
+
+        pollId = window.setInterval(requestSync, 600);
       } catch {
         setOverlayBlocks([]);
       }
     };
 
+    const detach = () => {
+      try {
+        iframe.contentWindow?.removeEventListener("scroll", requestSync);
+      } catch {}
+      window.removeEventListener("resize", requestSync);
+      resizeObserver?.disconnect();
+      mutationObserver?.disconnect();
+      if (pollId) window.clearInterval(pollId);
+    };
+
     const handleLoad = () => {
+      detach();
       attach();
     };
 
@@ -121,13 +143,41 @@ export default function EditorPreviewFrame({
     return () => {
       cancelAnimationFrame(raf);
       iframe.removeEventListener("load", handleLoad);
-      try {
-        iframe.contentWindow?.removeEventListener("scroll", requestSync);
-      } catch {}
-      window.removeEventListener("resize", requestSync);
-      resizeObserver?.disconnect();
+      detach();
     };
   }, [iframeSrc, blocks]);
+
+  useEffect(() => {
+    if (!selectedBlockId) return;
+
+    const frame = iframeRef.current;
+    if (!frame) return;
+
+    const syncAndScroll = () => {
+      try {
+        const frameWindow = frame.contentWindow;
+        const frameDocument = frame.contentDocument;
+        if (!frameWindow || !frameDocument) return;
+
+        const node = frameDocument.querySelector<HTMLElement>(`[data-editor-block-id="${selectedBlockId}"]`);
+        if (!node) return;
+
+        node.scrollIntoView({ behavior: "smooth", block: "center" });
+
+        const nodes = Array.from(frameDocument.querySelectorAll<HTMLElement>("[data-editor-block-id]"));
+        nodes.forEach((el) => {
+          if (el.dataset.editorBlockId === selectedBlockId) {
+            el.setAttribute("data-editor-selected", "true");
+          } else {
+            el.removeAttribute("data-editor-selected");
+          }
+        });
+      } catch {}
+    };
+
+    const timeoutId = window.setTimeout(syncAndScroll, 120);
+    return () => window.clearTimeout(timeoutId);
+  }, [selectedBlockId]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -226,8 +276,8 @@ export default function EditorPreviewFrame({
                     : "Click blocks directly in preview"}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  Single click selects a block. Double click opens the editor. Use the floating actions on each section
-                  to edit, hide or add a block before it.
+                  Single click selects and scrolls to a block. Double click opens the editor. Drag the handle to reorder
+                  sections directly in preview.
                 </p>
               </div>
             </div>

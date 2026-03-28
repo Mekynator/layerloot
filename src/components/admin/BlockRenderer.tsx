@@ -351,6 +351,8 @@ const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNo
       transition={{ duration: 0.36 }}
       className={`${props.className} ${clickable.className}`.trim()}
       onClick={clickable.onClick}
+      data-editor-block-id={block.id}
+      data-editor-block-type={block.title || block.block_type}
     >
       {children}
     </motion.section>
@@ -385,7 +387,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
       return <CategoriesBlock block={block} />;
 
     case "featured_products":
-      return <FeaturedProductsBlock block={block} />;
+      return <FeaturedProductsBlock block={block} disableAnimations={disableAnimations} />;
 
     case "how_it_works":
       return <HowItWorksBlock block={block} />;
@@ -450,7 +452,13 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
       return <SingleButtonBlock block={block} />;
 
     case "spacer":
-      return <div style={{ height: `${c.height || 40}px` }} />;
+      return (
+        <div
+          data-editor-block-id={block.id}
+          data-editor-block-type={block.title || block.block_type}
+          style={{ height: `${c.height || 40}px` }}
+        />
+      );
 
     case "html":
       return withSection(
@@ -491,7 +499,15 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
       return <InstagramAutoFeedBlock block={block} />;
 
     default:
-      return <div className="py-8 text-center text-muted-foreground">Unknown block: {block.block_type}</div>;
+      return (
+        <div
+          data-editor-block-id={block.id}
+          data-editor-block-type={block.title || block.block_type}
+          className="py-8 text-center text-muted-foreground"
+        >
+          Unknown block: {block.block_type}
+        </div>
+      );
   }
 };
 
@@ -755,7 +771,13 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
   );
 };
 
-const FeaturedProductsBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) => {
+const FeaturedProductsBlock = ({
+  block,
+  disableAnimations = false,
+}: {
+  block: SiteBlock;
+  disableAnimations?: boolean;
+}) => {
   const c = block.content || {};
   const { data: products = [], isLoading } = useFeaturedProducts(c.limit || 8);
   const align = c.alignment || "left";

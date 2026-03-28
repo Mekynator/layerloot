@@ -213,6 +213,69 @@ export type Database = {
         }
         Relationships: []
       }
+      discount_codes: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          discount_type: string
+          discount_value: number
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          is_stackable: boolean
+          max_uses: number | null
+          min_order_amount: number | null
+          min_quantity: number | null
+          scope: string
+          scope_target_id: string | null
+          scope_target_user_id: string | null
+          starts_at: string | null
+          updated_at: string
+          used_count: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          is_stackable?: boolean
+          max_uses?: number | null
+          min_order_amount?: number | null
+          min_quantity?: number | null
+          scope?: string
+          scope_target_id?: string | null
+          scope_target_user_id?: string | null
+          starts_at?: string | null
+          updated_at?: string
+          used_count?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          is_stackable?: boolean
+          max_uses?: number | null
+          min_order_amount?: number | null
+          min_quantity?: number | null
+          scope?: string
+          scope_target_id?: string | null
+          scope_target_user_id?: string | null
+          starts_at?: string | null
+          updated_at?: string
+          used_count?: number
+        }
+        Relationships: []
+      }
       gallery_posts: {
         Row: {
           comment: string | null
@@ -681,6 +744,7 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          shipping_address: Json | null
           updated_at: string
           user_id: string
         }
@@ -689,6 +753,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          shipping_address?: Json | null
           updated_at?: string
           user_id: string
         }
@@ -697,6 +762,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          shipping_address?: Json | null
           updated_at?: string
           user_id?: string
         }

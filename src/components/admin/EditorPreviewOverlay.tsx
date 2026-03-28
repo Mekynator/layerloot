@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, GripVertical, Pencil, Plus } from "lucide-react";
 
@@ -26,6 +27,8 @@ interface EditorPreviewOverlayProps {
   onEndDrag?: () => void;
 }
 
+const formatBlockLabel = (value: string) => value.replace(/_/g, " ").replace(/-/g, " ").replace(/\s+/g, " ").trim();
+
 export default function EditorPreviewOverlay({
   blocks,
   selectedBlockId,
@@ -41,6 +44,8 @@ export default function EditorPreviewOverlay({
   onDropBlock,
   onEndDrag,
 }: EditorPreviewOverlayProps) {
+  const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null);
+
   return (
     <div className="pointer-events-none absolute inset-0 z-20">
       {blocks.map((block) => {
@@ -48,23 +53,29 @@ export default function EditorPreviewOverlay({
         const hidden = hiddenBlockIds.includes(block.id);
         const dragging = draggingBlockId === block.id;
         const dragOver = dragOverBlockId === block.id && draggingBlockId !== block.id;
+        const hovered = hoveredBlockId === block.id;
+        const showToolbar = selected || hovered || dragging;
 
         return (
           <div
             key={block.id}
-            className={`absolute rounded-md border-2 transition-all ${
+            className={`absolute rounded-md border-2 transition-all duration-150 ${
               selected
                 ? "border-primary bg-primary/10 shadow-lg"
                 : hidden
                   ? "border-amber-500/70 bg-amber-500/10"
-                  : "border-primary/60 bg-primary/5 hover:bg-primary/10"
+                  : hovered
+                    ? "border-primary/80 bg-primary/10"
+                    : "border-primary/50 bg-primary/5"
             } ${dragging ? "opacity-50" : ""}`}
             style={{
               top: block.top,
               left: block.left,
-              width: block.width,
+              width: Math.max(block.width, 120),
               height: Math.max(block.height, 44),
             }}
+            onMouseEnter={() => setHoveredBlockId(block.id)}
+            onMouseLeave={() => setHoveredBlockId((current) => (current === block.id ? null : current))}
             onDragOver={(e) => {
               e.preventDefault();
               onDragOverBlock?.(block.id);
@@ -84,14 +95,18 @@ export default function EditorPreviewOverlay({
               title={`Select ${block.type}`}
             />
 
-            <div className="pointer-events-none absolute left-2 top-2 flex items-center gap-2 rounded-md bg-background/95 px-2 py-1 shadow-sm">
-              <span className="font-display text-[10px] font-semibold uppercase tracking-wider text-foreground">
-                {block.type}
+            <div className="pointer-events-none absolute left-2 top-2 flex max-w-[60%] items-center gap-2 rounded-md bg-background/95 px-2 py-1 shadow-sm">
+              <span className="truncate font-display text-[10px] font-semibold uppercase tracking-wider text-foreground">
+                {formatBlockLabel(block.type)}
               </span>
               {hidden && <span className="text-[10px] uppercase tracking-wider text-amber-600">Hidden</span>}
             </div>
 
-            <div className="pointer-events-auto absolute right-2 top-2 flex gap-1 rounded-md bg-background/95 p-1 shadow-sm">
+            <div
+              className={`pointer-events-auto absolute right-2 top-2 flex gap-1 rounded-md bg-background/95 p-1 shadow-sm transition-opacity duration-150 ${
+                showToolbar ? "opacity-100" : "opacity-0"
+              }`}
+            >
               <Button
                 type="button"
                 variant="outline"

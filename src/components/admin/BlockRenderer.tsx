@@ -121,6 +121,11 @@ const ICON_MAP: Record<string, any> = {
 
 const iconForName = (name?: string, fallback = Box) => ICON_MAP[name || ""] || fallback;
 
+const isEditorPreviewMode = () => {
+  if (typeof window === "undefined") return false;
+  return new URLSearchParams(window.location.search).get("editorPreview") === "1";
+};
+
 const normalizeAction = (source: any): Required<BlockAction> => {
   const actionType = source?.actionType || source?.type || "none";
   const actionTarget = source?.actionTarget || source?.target || "";
@@ -244,6 +249,7 @@ const sectionProps = (block: SiteBlock, defaults: string) => {
 };
 
 const navigateWithAction = (action: Required<BlockAction>) => {
+  if (isEditorPreviewMode()) return;
   if (action.actionType === "none" || !action.actionTarget) return;
 
   if (action.actionType === "external_link") {
@@ -265,11 +271,12 @@ const navigateWithAction = (action: Required<BlockAction>) => {
 
 const applySectionAction = (action: Required<BlockAction>) => ({
   onClick: (e: MouseEvent<HTMLElement>) => {
+    if (isEditorPreviewMode()) return;
     const target = e.target as HTMLElement;
     if (target.closest("a,button,input,textarea,select,label")) return;
     navigateWithAction(action);
   },
-  className: action.actionType !== "none" ? "cursor-pointer" : "",
+  className: action.actionType !== "none" && !isEditorPreviewMode() ? "cursor-pointer" : "",
 });
 
 const ActionButton = ({
@@ -302,6 +309,10 @@ const ActionButton = ({
       {content}
     </Button>
   );
+
+  if (isEditorPreviewMode()) {
+    return <span className="inline-flex">{buttonNode}</span>;
+  }
 
   if (action.actionType === "none" || !action.actionTarget) return buttonNode;
 
@@ -633,6 +644,10 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
               </div>
             );
 
+            if (isEditorPreviewMode()) {
+              return <div key={card.title || `card-${index}`}>{cardBody}</div>;
+            }
+
             if (action.actionType === "internal_link") {
               const target = action.actionTarget.startsWith("/") ? action.actionTarget : `/${action.actionTarget}`;
               return (
@@ -704,12 +719,9 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {categories.map((cat) => (
-          <div key={cat.id}>
-            <Link
-              to={`/products?category=${cat.slug}`}
-              className="group relative flex h-40 items-end overflow-hidden rounded-lg border border-border p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary"
-            >
+        {categories.map((cat) => {
+          const content = (
+            <div className="group relative flex h-40 items-end overflow-hidden rounded-lg border border-border p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary">
               {cat.image_url && (
                 <img
                   src={cat.image_url}
@@ -723,9 +735,21 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
               <h3 className="relative font-display text-xl font-bold uppercase text-secondary-foreground transition-colors group-hover:text-primary">
                 {cat.name}
               </h3>
-            </Link>
-          </div>
-        ))}
+            </div>
+          );
+
+          if (isEditorPreviewMode()) {
+            return <div key={cat.id}>{content}</div>;
+          }
+
+          return (
+            <div key={cat.id}>
+              <Link to={`/products?category=${cat.slug}`} className="block">
+                {content}
+              </Link>
+            </div>
+          );
+        })}
       </div>
     </div>,
   );
@@ -785,8 +809,9 @@ const FeaturedProductsBlock = ({ block }: { block: SiteBlock; disableAnimations?
             <motion.div
               key={product.id}
               variants={fadeUp}
-              initial="hidden"
-              whileInView="visible"
+              initial={disableAnimations ? false : "hidden"}
+              whileInView={disableAnimations ? undefined : "visible"}
+              animate={disableAnimations ? { opacity: 1, y: 0 } : undefined}
               viewport={{ once: true }}
             >
               <ProductCard product={product} socialProof={socialProof} index={i} />
@@ -841,7 +866,7 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
             const stepContent = (
               <div
                 key={s.title || index}
-                className={`${alignmentClass(s.alignment || align)} ${isClickable ? "cursor-pointer" : ""}`}
+                className={`${alignmentClass(s.alignment || align)} ${isClickable && !isEditorPreviewMode() ? "cursor-pointer" : ""}`}
               >
                 <div
                   className={`mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full border-2 border-primary/20 bg-card transition-all hover:border-primary hover:shadow-lg ${hasImage ? "overflow-hidden" : ""}`}
@@ -856,6 +881,10 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
                 <p className="text-sm text-muted-foreground">{s.desc}</p>
               </div>
             );
+
+            if (isEditorPreviewMode()) {
+              return <div key={s.title || index}>{stepContent}</div>;
+            }
 
             if (action.actionType === "internal_link" && action.actionTarget) {
               const target = action.actionTarget.startsWith("/") ? action.actionTarget : `/${action.actionTarget}`;
@@ -967,7 +996,7 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
 
             const badgeContent = (
               <div
-                className={`flex gap-4 rounded-md border border-border bg-card p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary hover:shadow-md ${verticalClass(c.verticalAlignment)} ${action.actionType !== "none" ? "cursor-pointer" : ""}`}
+                className={`flex gap-4 rounded-md border border-border bg-card p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary hover:shadow-md ${verticalClass(c.verticalAlignment)} ${action.actionType !== "none" && !isEditorPreviewMode() ? "cursor-pointer" : ""}`}
               >
                 <div
                   className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${hasImage ? "overflow-hidden" : "bg-primary/10"}`}
@@ -984,6 +1013,10 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
                 </div>
               </div>
             );
+
+            if (isEditorPreviewMode()) {
+              return <div key={badge.title || index}>{badgeContent}</div>;
+            }
 
             if (action.actionType === "internal_link" && action.actionTarget) {
               const target = action.actionTarget.startsWith("/") ? action.actionTarget : `/${action.actionTarget}`;
@@ -1196,6 +1229,7 @@ const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (isEditorPreviewMode()) return;
     if (!email) return;
     const { error } = await supabase.from("newsletter_subscribers").insert({ email } as any);
     setStatus(error ? "error" : "success");
@@ -1344,10 +1378,16 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
           </div>
 
           {showProfileButton && (
-            <Button asChild>
-              <a href={profileUrl} target="_blank" rel="noreferrer">
-                <Instagram className="mr-2 h-4 w-4" />@{username}
-              </a>
+            <Button asChild={!isEditorPreviewMode()}>
+              {isEditorPreviewMode() ? (
+                <span>
+                  <Instagram className="mr-2 h-4 w-4" />@{username}
+                </span>
+              ) : (
+                <a href={profileUrl} target="_blank" rel="noreferrer">
+                  <Instagram className="mr-2 h-4 w-4" />@{username}
+                </a>
+              )}
             </Button>
           )}
         </div>
@@ -1360,14 +1400,8 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {items.map((item) => {
               const imageSrc = item.media_type === "VIDEO" ? item.thumbnail_url || item.media_url : item.media_url;
-              return (
-                <a
-                  key={item.id}
-                  href={item.permalink || profileUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="overflow-hidden rounded-2xl border bg-background transition hover:shadow-md"
-                >
+              const card = (
+                <>
                   {imageSrc ? (
                     <img
                       src={imageSrc}
@@ -1383,6 +1417,26 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
                   {showCaptions && item.caption && (
                     <div className="line-clamp-3 p-3 text-sm text-muted-foreground">{item.caption}</div>
                   )}
+                </>
+              );
+
+              if (isEditorPreviewMode()) {
+                return (
+                  <div key={item.id} className="overflow-hidden rounded-2xl border bg-background">
+                    {card}
+                  </div>
+                );
+              }
+
+              return (
+                <a
+                  key={item.id}
+                  href={item.permalink || profileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="overflow-hidden rounded-2xl border bg-background transition hover:shadow-md"
+                >
+                  {card}
                 </a>
               );
             })}
@@ -1391,8 +1445,8 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
           <div className="space-y-4">
             <div className="overflow-hidden rounded-2xl border bg-background">
               {activeItem ? (
-                <a href={activeItem.permalink || profileUrl} target="_blank" rel="noreferrer">
-                  {(() => {
+                isEditorPreviewMode() ? (
+                  (() => {
                     const activeSrc =
                       activeItem.media_type === "VIDEO"
                         ? activeItem.thumbnail_url || activeItem.media_url
@@ -1408,8 +1462,28 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
                         No image
                       </div>
                     );
-                  })()}
-                </a>
+                  })()
+                ) : (
+                  <a href={activeItem.permalink || profileUrl} target="_blank" rel="noreferrer">
+                    {(() => {
+                      const activeSrc =
+                        activeItem.media_type === "VIDEO"
+                          ? activeItem.thumbnail_url || activeItem.media_url
+                          : activeItem.media_url;
+                      return activeSrc ? (
+                        <img
+                          src={activeSrc}
+                          alt={activeItem.caption || "Instagram post"}
+                          className="aspect-square w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex aspect-square items-center justify-center bg-muted text-sm text-muted-foreground">
+                          No image
+                        </div>
+                      );
+                    })()}
+                  </a>
+                )
               ) : null}
             </div>
 

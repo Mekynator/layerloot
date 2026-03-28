@@ -347,6 +347,8 @@ const Account = () => {
   const [sendingReply, setSendingReply] = useState(false);
   const [processingCustomPaymentOrderId, setProcessingCustomPaymentOrderId] = useState<string | null>(null);
   const [redeemingKey, setRedeemingKey] = useState<string | null>(null);
+  const [shippingAddress, setShippingAddress] = useState({ name: "", street: "", city: "", zip: "", country: "Denmark" });
+  const [savingAddress, setSavingAddress] = useState(false);
   const [seenState, setSeenState] = useState<SeenState>({
     ordersLastSeenAt: null,
     customRequestsLastSeenAt: null,
@@ -1464,6 +1466,41 @@ const Account = () => {
               })
             )}
           </div>
+        )}
+
+        {tab === "settings" && (
+          <Card>
+            <CardContent className="space-y-6 p-6">
+              <div>
+                <h3 className="font-display text-lg font-bold uppercase text-foreground mb-4">
+                  <MapPin className="mr-2 inline h-5 w-5" />
+                  Default Shipping Address
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">This address will be auto-filled at checkout.</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div><Label>Full Name</Label><Input value={shippingAddress.name} onChange={(e) => setShippingAddress({ ...shippingAddress, name: e.target.value })} placeholder="John Doe" /></div>
+                  <div><Label>Street Address</Label><Input value={shippingAddress.street} onChange={(e) => setShippingAddress({ ...shippingAddress, street: e.target.value })} placeholder="123 Main St" /></div>
+                  <div><Label>City</Label><Input value={shippingAddress.city} onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })} placeholder="Copenhagen" /></div>
+                  <div><Label>Zip Code</Label><Input value={shippingAddress.zip} onChange={(e) => setShippingAddress({ ...shippingAddress, zip: e.target.value })} placeholder="2100" /></div>
+                  <div><Label>Country</Label><Input value={shippingAddress.country} onChange={(e) => setShippingAddress({ ...shippingAddress, country: e.target.value })} /></div>
+                </div>
+                <Button
+                  className="mt-4 font-display uppercase tracking-wider"
+                  disabled={savingAddress}
+                  onClick={async () => {
+                    if (!user) return;
+                    setSavingAddress(true);
+                    const { error } = await supabase.from("profiles").update({ shipping_address: shippingAddress as any }).eq("user_id", user.id);
+                    setSavingAddress(false);
+                    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+                    toast({ title: "Address saved!" });
+                  }}
+                >
+                  {savingAddress ? "Saving..." : "Save Address"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

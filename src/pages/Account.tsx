@@ -1243,8 +1243,7 @@ const Account = () => {
             {overviewLoading && !overview ? <RewardsGridSkeleton count={4} /> : null}
             <div className="grid gap-4 sm:grid-cols-2">
               {REWARD_CATALOG.map((reward) => {
-              const matchedVoucher = findMatchingVoucher(reward, vouchers);
-              const canRedeem = !!matchedVoucher && pointsBalance >= reward.pointsCost;
+              const canRedeem = pointsBalance >= reward.pointsCost;
 
               return (
                 <motion.div
@@ -1289,12 +1288,12 @@ const Account = () => {
 
                         <Button
                           size="sm"
-                          onClick={() => matchedVoucher && redeemVoucher(matchedVoucher, reward.pointsCost)}
-                          disabled={!canRedeem || redeemingKey === matchedVoucher?.id}
+                          onClick={() => redeemReward(reward)}
+                          disabled={!canRedeem || redeemingKey === reward.key}
                           className="font-display uppercase tracking-wider"
                         >
                           <Star className="mr-1 h-3 w-3" />
-                          {redeemingKey === matchedVoucher?.id ? "Redeeming..." : `${reward.pointsCost} pts`}
+                          {redeemingKey === reward.key ? "Redeeming..." : `${reward.pointsCost} pts`}
                         </Button>
                       </div>
                     </CardContent>

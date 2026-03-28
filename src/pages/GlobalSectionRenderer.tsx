@@ -33,7 +33,7 @@ const GlobalSectionRenderer = ({ page }: GlobalSectionRendererProps) => {
       setLoading(false);
     };
 
-    fetchBlocks();
+    void fetchBlocks();
 
     return () => {
       mounted = false;

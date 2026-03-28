@@ -109,6 +109,7 @@ const blockTypes = [
   { value: "html", label: "Custom HTML", icon: Code },
   { value: "embed", label: "Embed / iFrame", icon: Globe },
   { value: "newsletter", label: "Newsletter Form", icon: Mail },
+  { value: "instagram_auto_feed", label: "Instagram Auto Feed", icon: Globe },
 ];
 
 const BLOCK_COLORS: Record<string, string> = {
@@ -131,6 +132,7 @@ const BLOCK_COLORS: Record<string, string> = {
   html: "border-l-orange-500 bg-orange-500/5",
   embed: "border-l-indigo-500 bg-indigo-500/5",
   newsletter: "border-l-pink-500 bg-pink-500/5",
+  instagram_auto_feed: "border-l-fuchsia-500 bg-fuchsia-500/5",
 };
 
 const pageLabelMap = new Map(
@@ -382,6 +384,19 @@ const PageEditor = () => {
             { icon: "Star", title: "Rewards", desc: "Earn points on purchases", visible: true },
           ],
           columns: 3,
+          visibility: true,
+        };
+        break;
+      case "instagram_auto_feed":
+        defaultContent = {
+          title: "Follow us on Instagram",
+          subtitle: "Latest posts and reels",
+          instagramUsername: "layerloot",
+          itemsToShow: 10,
+          layout: "slider",
+          autoplay: true,
+          showCaptions: false,
+          showProfileButton: true,
           visibility: true,
         };
         break;

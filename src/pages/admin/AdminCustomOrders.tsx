@@ -168,6 +168,7 @@ const AdminCustomOrders = () => {
   const [quoteAmount, setQuoteAmount] = useState("");
   const [paymentStatusUpdate, setPaymentStatusUpdate] = useState<CustomOrder["payment_status"]>("unpaid");
   const [productionStatusUpdate, setProductionStatusUpdate] = useState<CustomOrder["production_status"]>("pending");
+  const [feeStatusUpdate, setFeeStatusUpdate] = useState<string>("unpaid");
   const [conversationImage, setConversationImage] = useState<File | null>(null);
   const [conversationImagePreviewUrl, setConversationImagePreviewUrl] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);

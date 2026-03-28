@@ -31,65 +31,12 @@ serve(async (req) => {
       return json({ error: "Missing required fields." }, 400);
     }
 
-    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    const CONTACT_TO_EMAIL = Deno.env.get("CONTACT_TO_EMAIL");
-    const CONTACT_FROM_EMAIL = Deno.env.get("CONTACT_FROM_EMAIL");
+    console.log("Contact form submission:", { name, email, subject, message });
 
-    if (!RESEND_API_KEY) {
-      return json({ error: "Missing RESEND_API_KEY secret." }, 500);
-    }
-
-    if (!CONTACT_TO_EMAIL) {
-      return json({ error: "Missing CONTACT_TO_EMAIL secret." }, 500);
-    }
-
-    if (!CONTACT_FROM_EMAIL) {
-      return json({ error: "Missing CONTACT_FROM_EMAIL secret." }, 500);
-    }
-
-    const html = `
-      <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-        <h2>New Contact Form Message</h2>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Subject:</strong> ${subject}</p>
-        <p><strong>Message:</strong></p>
-        <div style="white-space: pre-wrap; border: 1px solid #ddd; padding: 12px; border-radius: 8px;">
-          ${message}
-        </div>
-      </div>
-    `;
-
-    const resendRes = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: CONTACT_FROM_EMAIL,
-        to: [CONTACT_TO_EMAIL],
-        reply_to: email,
-        subject: `Contact Form: ${subject}`,
-        html,
-      }),
+    return json({
+      success: true,
+      message: "Contact form received successfully.",
     });
-
-    const resendText = await resendRes.text();
-    let resendData: unknown = null;
-
-    try {
-      resendData = JSON.parse(resendText);
-    } catch {
-      resendData = { raw: resendText };
-    }
-
-    if (!resendRes.ok) {
-      console.error("Resend error:", resendData);
-      return json({ error: "Failed to send email.", details: resendData }, 500);
-    }
-
-    return json({ success: true, data: resendData }, 200);
   } catch (error) {
     console.error("contact-send fatal error:", error);
     return json({ error: error instanceof Error ? error.message : String(error) }, 500);

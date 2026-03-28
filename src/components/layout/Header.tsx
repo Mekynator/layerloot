@@ -20,6 +20,28 @@ type BrandingSettings = {
   brand_accent?: string;
   logo_text_left?: string;
   logo_text_right?: string;
+  logo_image_url?: string;
+  logo_link?: string;
+  logo_alt?: string;
+};
+
+type HeaderSettings = {
+  show_logo_icon?: boolean;
+  show_logo_text?: boolean;
+  show_cart_icon?: boolean;
+  show_account_icon?: boolean;
+  show_admin_icon?: boolean;
+  show_mobile_menu?: boolean;
+  desktop_nav_enabled?: boolean;
+  mobile_nav_enabled?: boolean;
+  logo_height_px?: number;
+  logo_text_class?: string;
+  account_label?: string;
+  auth_label?: string;
+  admin_label?: string;
+  sign_out_label?: string;
+  mobile_account_label?: string;
+  mobile_admin_label?: string;
 };
 
 type SeenState = {
@@ -32,6 +54,28 @@ const defaultBranding: BrandingSettings = {
   brand_accent: "Loot",
   logo_text_left: "Layer",
   logo_text_right: "Loot",
+  logo_image_url: "",
+  logo_link: "/",
+  logo_alt: "LayerLoot",
+};
+
+const defaultHeaderSettings: HeaderSettings = {
+  show_logo_icon: true,
+  show_logo_text: true,
+  show_cart_icon: true,
+  show_account_icon: true,
+  show_admin_icon: true,
+  show_mobile_menu: true,
+  desktop_nav_enabled: true,
+  mobile_nav_enabled: true,
+  logo_height_px: 36,
+  logo_text_class: "font-display text-2xl font-bold uppercase tracking-wider text-secondary-foreground",
+  account_label: "My Account",
+  auth_label: "Login / Register",
+  admin_label: "Admin Dashboard",
+  sign_out_label: "Sign Out",
+  mobile_account_label: "My Account",
+  mobile_admin_label: "Admin",
 };
 
 const getNotificationsStorageKey = (userId: string) => `layerloot_account_notifications_${userId}`;
@@ -78,6 +122,7 @@ const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [adminAlerts, setAdminAlerts] = useState(0);
   const [branding, setBranding] = useState<BrandingSettings>(defaultBranding);
+  const [headerSettings, setHeaderSettings] = useState<HeaderSettings>(defaultHeaderSettings);
   const [hasAccountNotifications, setHasAccountNotifications] = useState(false);
 
   const location = useLocation();
@@ -104,7 +149,7 @@ const Header = () => {
       setAdminAlerts((ordersRes.count ?? 0) + (customRes.count ?? 0) + (reviewsRes.count ?? 0));
     };
 
-    fetchAdminAlerts();
+    void fetchAdminAlerts();
   }, [isAdmin, user]);
 
   useEffect(() => {
@@ -117,12 +162,22 @@ const Header = () => {
       const seenState = readSeenState(user.id);
 
       const [ordersRes, customOrdersRes] = await Promise.all([
-        supabase.from("orders").select("created_at").eq("user_id", user.id).order("created_at", { ascending: false }) as unknown as Promise<{ data: { created_at: string }[] | null; error: any }>,
+        supabase
+          .from("orders")
+          .select("created_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false }) as unknown as Promise<{
+          data: { created_at: string }[] | null;
+          error: any;
+        }>,
         supabase
           .from("custom_orders")
           .select("id, created_at, updated_at")
           .eq("user_id", user.id)
-          .order("created_at", { ascending: false }) as unknown as Promise<{ data: { id: string; created_at: string; updated_at: string }[] | null; error: any }>,
+          .order("created_at", { ascending: false }) as unknown as Promise<{
+          data: { id: string; created_at: string; updated_at: string }[] | null;
+          error: any;
+        }>,
       ]);
 
       const customOrders = customOrdersRes.data ?? [];
@@ -151,26 +206,31 @@ const Header = () => {
       setHasAccountNotifications(hasNewOrders || hasNewCustomRequests);
     };
 
-    fetchAccountNotifications();
+    void fetchAccountNotifications();
 
     const interval = window.setInterval(fetchAccountNotifications, 30000);
     return () => window.clearInterval(interval);
   }, [user]);
 
   useEffect(() => {
-    supabase
-      .from("site_settings")
-      .select("value")
-      .eq("key", "branding")
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.value) {
-          setBranding({
-            ...defaultBranding,
-            ...(data.value as BrandingSettings),
-          });
-        }
-      });
+    Promise.all([
+      supabase.from("site_settings").select("value").eq("key", "branding").maybeSingle(),
+      supabase.from("site_settings").select("value").eq("key", "header_settings").maybeSingle(),
+    ]).then(([brandingRes, headerRes]) => {
+      if (brandingRes.data?.value) {
+        setBranding({
+          ...defaultBranding,
+          ...(brandingRes.data.value as BrandingSettings),
+        });
+      }
+
+      if (headerRes.data?.value) {
+        setHeaderSettings({
+          ...defaultHeaderSettings,
+          ...(headerRes.data.value as HeaderSettings),
+        });
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -179,6 +239,9 @@ const Header = () => {
 
   const logoLeft = branding.logo_text_left || "Layer";
   const logoRight = branding.logo_text_right || branding.brand_accent || "Loot";
+  const logoLink = branding.logo_link || "/";
+  const logoAlt = branding.logo_alt || branding.brand_name || "Logo";
+  const logoHeight = Math.max(20, Number(headerSettings.logo_height_px || 36));
 
   const desktopLinks = useMemo(() => navLinks.filter((link) => !!link.to && !!link.label), [navLinks]);
 
@@ -188,41 +251,62 @@ const Header = () => {
 
       <header className="sticky top-0 z-50 border-b border-border bg-secondary">
         <div className="container flex h-16 items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <Layers className="h-7 w-7 text-primary" />
-            <span className="font-display text-2xl font-bold uppercase tracking-wider text-secondary-foreground">
-              {logoLeft}
-              <span className="text-primary">{logoRight}</span>
-            </span>
-          </Link>
-
-          <nav className="hidden items-center gap-8 md:flex">
-            {desktopLinks.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                className={`font-display text-sm uppercase tracking-widest transition-colors hover:text-primary ${
-                  location.pathname === link.to ? "text-primary" : "text-secondary-foreground"
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <Link to="/cart">
-              <Button variant="ghost" size="icon" className="relative text-secondary-foreground hover:text-foreground">
-                <ShoppingCart className="h-5 w-5" />
-                {totalItems > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-xs font-bold text-primary">
-                    {totalItems}
+          <Link to={logoLink} className="flex items-center gap-2">
+            {branding.logo_image_url ? (
+              <img
+                src={branding.logo_image_url}
+                alt={logoAlt}
+                style={{ height: `${logoHeight}px` }}
+                className="w-auto object-contain"
+              />
+            ) : (
+              <>
+                {headerSettings.show_logo_icon && <Layers className="h-7 w-7 text-primary" />}
+                {headerSettings.show_logo_text && (
+                  <span className={headerSettings.logo_text_class || defaultHeaderSettings.logo_text_class}>
+                    {logoLeft}
+                    <span className="text-primary">{logoRight}</span>
                   </span>
                 )}
-              </Button>
-            </Link>
+              </>
+            )}
+          </Link>
 
-            {isAdmin && (
+          {headerSettings.desktop_nav_enabled && (
+            <nav className="hidden items-center gap-8 md:flex">
+              {desktopLinks.map((link) => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className={`font-display text-sm uppercase tracking-widest transition-colors hover:text-primary ${
+                    location.pathname === link.to ? "text-primary" : "text-secondary-foreground"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          )}
+
+          <div className="flex items-center gap-2">
+            {headerSettings.show_cart_icon && (
+              <Link to="/cart">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative text-secondary-foreground hover:text-foreground"
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  {totalItems > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-xs font-bold text-primary">
+                      {totalItems}
+                    </span>
+                  )}
+                </Button>
+              </Link>
+            )}
+
+            {isAdmin && headerSettings.show_admin_icon && (
               <Link to="/admin">
                 <Button
                   variant="ghost"
@@ -235,55 +319,67 @@ const Header = () => {
               </Link>
             )}
 
-            {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative text-secondary-foreground hover:text-primary">
-                    <User className="h-5 w-5" />
-                    {hasAccountNotifications && (
-                      <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500" />
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem asChild>
-                    <Link to="/account" className="cursor-pointer">
-                      My Account
-                    </Link>
-                  </DropdownMenuItem>
-                  {isAdmin && (
-                    <DropdownMenuItem asChild>
-                      <Link to="/admin" className="cursor-pointer">
-                        <Shield className="mr-2 h-4 w-4" /> Admin Dashboard
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={signOut} className="cursor-pointer">
-                    <LogOut className="mr-2 h-4 w-4" /> Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Link to="/auth">
-                <Button variant="ghost" size="icon" className="text-secondary-foreground hover:text-primary">
-                  <User className="h-5 w-5" />
-                </Button>
-              </Link>
+            {headerSettings.show_account_icon && (
+              <>
+                {user ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="relative text-secondary-foreground hover:text-primary"
+                      >
+                        <User className="h-5 w-5" />
+                        {hasAccountNotifications && (
+                          <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500" />
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link to="/account" className="cursor-pointer">
+                          {headerSettings.account_label || defaultHeaderSettings.account_label}
+                        </Link>
+                      </DropdownMenuItem>
+                      {isAdmin && (
+                        <DropdownMenuItem asChild>
+                          <Link to="/admin" className="cursor-pointer">
+                            <Shield className="mr-2 h-4 w-4" />{" "}
+                            {headerSettings.admin_label || defaultHeaderSettings.admin_label}
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={signOut} className="cursor-pointer">
+                        <LogOut className="mr-2 h-4 w-4" />{" "}
+                        {headerSettings.sign_out_label || defaultHeaderSettings.sign_out_label}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <Link to="/auth">
+                    <Button variant="ghost" size="icon" className="text-secondary-foreground hover:text-primary">
+                      <User className="h-5 w-5" />
+                    </Button>
+                  </Link>
+                )}
+              </>
             )}
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-secondary-foreground hover:text-primary md:hidden"
-              onClick={() => setMobileOpen((v) => !v)}
-            >
-              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
+            {headerSettings.show_mobile_menu && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-secondary-foreground hover:text-primary md:hidden"
+                onClick={() => setMobileOpen((v) => !v)}
+              >
+                {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </Button>
+            )}
           </div>
         </div>
 
-        {mobileOpen && (
+        {mobileOpen && headerSettings.mobile_nav_enabled && (
           <nav className="border-t border-border bg-secondary px-4 pb-4 md:hidden">
             {desktopLinks.map((link) => (
               <Link
@@ -297,13 +393,15 @@ const Header = () => {
               </Link>
             ))}
 
-            {user && (
+            {user ? (
               <>
                 <Link
                   to="/account"
                   className="block py-3 font-display text-sm uppercase tracking-widest text-secondary-foreground hover:text-primary"
                 >
-                  My Account
+                  {headerSettings.mobile_account_label ||
+                    headerSettings.account_label ||
+                    defaultHeaderSettings.mobile_account_label}
                 </Link>
 
                 {isAdmin && (
@@ -311,10 +409,19 @@ const Header = () => {
                     to="/admin"
                     className="block py-3 font-display text-sm uppercase tracking-widest text-secondary-foreground hover:text-primary"
                   >
-                    Admin
+                    {headerSettings.mobile_admin_label ||
+                      headerSettings.admin_label ||
+                      defaultHeaderSettings.mobile_admin_label}
                   </Link>
                 )}
               </>
+            ) : (
+              <Link
+                to="/auth"
+                className="block py-3 font-display text-sm uppercase tracking-widest text-secondary-foreground hover:text-primary"
+              >
+                {headerSettings.auth_label || defaultHeaderSettings.auth_label}
+              </Link>
             )}
           </nav>
         )}

@@ -10,13 +10,18 @@ type DynamicPageProps = {
   emptyDescription?: string;
 };
 
+const normalizePageSlug = (value?: string) => {
+  if (!value || value === "/") return "home";
+  return value.replace(/^\/+|\/+$/g, "") || "home";
+};
+
 const DynamicPage = ({
   slug: slugProp,
   emptyTitle = "Coming soon",
   emptyDescription = "Content coming soon.",
 }: DynamicPageProps) => {
   const params = useParams();
-  const slug = slugProp ?? params.slug ?? "";
+  const slug = normalizePageSlug(slugProp ?? params.slug ?? "");
   const { data: blocks = [], isLoading } = usePageBlocks(slug, Boolean(slug));
   const visibleBlocks = useMemo(() => blocks.filter((block) => block.is_active !== false), [blocks]);
 

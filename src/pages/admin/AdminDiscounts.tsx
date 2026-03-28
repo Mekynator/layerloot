@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, Save, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,11 @@ interface DiscountCode {
   created_at: string;
 }
 
+interface UserOption {
+  id: string;
+  label: string;
+}
+
 const emptyDiscount: Omit<DiscountCode, "id" | "created_at" | "used_count"> = {
   code: "",
   description: "",
@@ -55,26 +60,53 @@ const AdminDiscounts = () => {
   const [discounts, setDiscounts] = useState<DiscountCode[]>([]);
   const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [users, setUsers] = useState<UserOption[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<DiscountCode | null>(null);
   const [form, setForm] = useState(emptyDiscount);
   const [saving, setSaving] = useState(false);
 
   const fetchAll = async () => {
-    const [{ data: d }, { data: p }, { data: c }] = await Promise.all([
+    const [{ data: d }, { data: p }, { data: c }, { data: u, error: usersError }] = await Promise.all([
       supabase.from("discount_codes").select("*").order("created_at", { ascending: false }),
       supabase.from("products").select("id, name").order("name"),
       supabase.from("categories").select("id, name").order("name"),
+      supabase.from("profiles").select("id, full_name, email").order("full_name"),
     ]);
 
     setDiscounts((d as DiscountCode[]) ?? []);
     setProducts((p as { id: string; name: string }[]) ?? []);
     setCategories((c as { id: string; name: string }[]) ?? []);
+
+    if (usersError) {
+      console.error("Failed to load users for discounts:", usersError);
+      setUsers([]);
+    } else {
+      const mappedUsers =
+        (u as Array<{ id: string; full_name?: string | null; email?: string | null }> | null)?.map((user) => {
+          const displayName = (user.full_name || "").trim();
+          const email = (user.email || "").trim();
+          return {
+            id: user.id,
+            label: displayName || email || user.id,
+          };
+        }) ?? [];
+
+      const uniqueUsers = Array.from(new Map(mappedUsers.map((user) => [user.id, user])).values()).sort((a, b) =>
+        a.label.localeCompare(b.label),
+      );
+
+      setUsers(uniqueUsers);
+    }
   };
 
   useEffect(() => {
     fetchAll();
   }, []);
+
+  const selectedUserLabel = useMemo(() => {
+    return users.find((user) => user.id === form.scope_target_user_id)?.label ?? "";
+  }, [users, form.scope_target_user_id]);
 
   const openCreate = () => {
     setEditing(null);
@@ -109,6 +141,16 @@ const AdminDiscounts = () => {
   const handleSave = async () => {
     if (!form.code.trim()) {
       toast({ title: "Code required", variant: "destructive" });
+      return;
+    }
+
+    if (form.scope === "user" && !form.scope_target_user_id) {
+      toast({ title: "Select a user", variant: "destructive" });
+      return;
+    }
+
+    if ((form.scope === "product" || form.scope === "category") && !form.scope_target_id) {
+      toast({ title: "Select a target", variant: "destructive" });
       return;
     }
 
@@ -173,7 +215,7 @@ const AdminDiscounts = () => {
   const getScopeLabel = (d: DiscountCode) => {
     if (d.scope === "product") return products.find((p) => p.id === d.scope_target_id)?.name || "Specific product";
     if (d.scope === "category") return categories.find((c) => c.id === d.scope_target_id)?.name || "Specific category";
-    if (d.scope === "user") return "Specific user";
+    if (d.scope === "user") return users.find((u) => u.id === d.scope_target_user_id)?.label || "Specific user";
     if (d.scope === "bulk") return `Bulk (min ${d.min_quantity})`;
     return "All products";
   };
@@ -239,6 +281,7 @@ const AdminDiscounts = () => {
                   </TableCell>
 
                   <TableCell className="text-sm">{getScopeLabel(d)}</TableCell>
+
                   <TableCell className="text-sm">
                     {d.used_count}
                     {d.max_uses ? `/${d.max_uses}` : ""}
@@ -418,12 +461,28 @@ const AdminDiscounts = () => {
 
             {form.scope === "user" && (
               <div>
-                <Label>User ID (UUID)</Label>
-                <Input
+                <Label>User</Label>
+                <Select
                   value={form.scope_target_user_id || ""}
-                  onChange={(e) => setForm({ ...form, scope_target_user_id: e.target.value || null })}
-                  placeholder="User UUID"
-                />
+                  onValueChange={(v) => setForm({ ...form, scope_target_user_id: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select user">{selectedUserLabel || "Select user"}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.length === 0 ? (
+                      <SelectItem value="no-users" disabled>
+                        No users found
+                      </SelectItem>
+                    ) : (
+                      users.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.label}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
             )}
 

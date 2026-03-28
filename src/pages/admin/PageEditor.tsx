@@ -183,6 +183,96 @@ const realPagePath = (page: string) => {
 
 const isFrontendPage = (page: string) => !page.startsWith("global_");
 
+const sortBlocks = (list: SiteBlock[]) => [...list].sort((a, b) => a.sort_order - b.sort_order);
+
+const createDefaultContent = (type: string) => {
+  switch (type) {
+    case "categories":
+      return { heading: "Shop by Category", subheading: "Find exactly what you need", limit: 6 };
+    case "featured_products":
+      return { heading: "Best Sellers", subheading: "Our most popular 3D printed items", limit: 8 };
+    case "how_it_works":
+      return { heading: "How It Works", subheading: "From idea to your doorstep in 4 simple steps" };
+    case "faq":
+      return { heading: "Frequently Asked Questions" };
+    case "shipping_banner":
+      return {
+        text: "Free shipping on orders over 500 kr",
+        section_actionType: "none",
+        section_actionTarget: "",
+        section_openInNewTab: false,
+        visibility: true,
+      };
+    case "hero":
+      return {
+        eyebrow: "3D Printing Essentials",
+        heading: "New hero title",
+        subheading: "Describe the section here",
+        button_text: "Explore",
+        button_link: "/products",
+        secondary_button_text: "Custom Order",
+        secondary_button_link: "/create",
+        alignment: "left",
+        buttonAlignment: "left",
+        visibility: true,
+        buttons: [
+          {
+            text: "Explore",
+            icon: "ArrowRight",
+            iconPosition: "right",
+            variant: "default",
+            actionType: "internal_link",
+            actionTarget: "/products",
+            openInNewTab: false,
+            visible: true,
+          },
+          {
+            text: "Custom Order",
+            icon: "",
+            iconPosition: "left",
+            variant: "outline",
+            actionType: "internal_link",
+            actionTarget: "/create",
+            openInNewTab: false,
+            visible: true,
+          },
+        ],
+      };
+    case "entry_cards":
+      return {
+        cards: [
+          { icon: "ShoppingBag", title: "Shop Products", desc: "Card description", link: "/products", cta: "Browse" },
+          { icon: "Palette", title: "Customize", desc: "Card description", link: "/create", cta: "Customize" },
+          { icon: "Upload", title: "Upload Idea", desc: "Card description", link: "/submit-design", cta: "Upload" },
+        ],
+      };
+    case "trust_badges":
+      return {
+        badges: [
+          { icon: "Truck", title: "Free Shipping", desc: "On orders over 500 kr", visible: true },
+          { icon: "Shield", title: "Secure Checkout", desc: "Protected checkout", visible: true },
+          { icon: "Star", title: "Rewards", desc: "Earn points on purchases", visible: true },
+        ],
+        columns: 3,
+        visibility: true,
+      };
+    case "instagram_auto_feed":
+      return {
+        title: "Follow us on Instagram",
+        subtitle: "Latest posts and reels",
+        instagramUsername: "layerloot3d",
+        itemsToShow: 10,
+        layout: "slider",
+        autoplay: true,
+        showCaptions: false,
+        showProfileButton: true,
+        visibility: true,
+      };
+    default:
+      return {};
+  }
+};
+
 const PageEditor = () => {
   const { isAdmin, loading, user } = useAuth();
   const navigate = useNavigate();
@@ -285,175 +375,140 @@ const PageEditor = () => {
     void fetchBlocks();
   }, [activePage]);
 
-  const pageBlocks = blocks.filter((b) => b.page === activePage).sort((a, b) => a.sort_order - b.sort_order);
+  const pageBlocks = useMemo(
+    () => sortBlocks(blocks.filter((b) => normalizePageKey(b.page) === activePage)),
+    [activePage, blocks],
+  );
+
   const selectedBlock = pageBlocks.find((b) => b.id === selectedBlockId) || null;
 
+  const replacePageBlocks = (nextPageBlocks: SiteBlock[]) => {
+    setBlocks((prev) => {
+      const otherPages = prev.filter((b) => normalizePageKey(b.page) !== activePage);
+      return sortBlocks([...otherPages, ...nextPageBlocks]);
+    });
+  };
+
   const addBlock = async (type: string) => {
-    const sortOrder =
-      insertAtIndex !== null
-        ? insertAtIndex
-        : pageBlocks.length > 0
-          ? Math.max(...pageBlocks.map((b) => b.sort_order)) + 1
-          : 0;
+    const nextLocalBlocks = [...pageBlocks];
+    const insertIndex = insertAtIndex ?? pageBlocks.length;
+    const defaultContent = createDefaultContent(type);
+    const tempId = `temp-${crypto.randomUUID()}`;
 
-    if (insertAtIndex !== null) {
-      const toShift = pageBlocks.filter((b) => b.sort_order >= sortOrder);
-      await Promise.all(
-        toShift.map((b) =>
-          supabase
-            .from("site_blocks")
-            .update({ sort_order: b.sort_order + 1 })
-            .eq("id", b.id),
-        ),
-      );
-    }
-
-    let defaultContent: any = {};
-    switch (type) {
-      case "categories":
-        defaultContent = { heading: "Shop by Category", subheading: "Find exactly what you need", limit: 6 };
-        break;
-      case "featured_products":
-        defaultContent = { heading: "Best Sellers", subheading: "Our most popular 3D printed items", limit: 8 };
-        break;
-      case "how_it_works":
-        defaultContent = { heading: "How It Works", subheading: "From idea to your doorstep in 4 simple steps" };
-        break;
-      case "faq":
-        defaultContent = { heading: "Frequently Asked Questions" };
-        break;
-      case "shipping_banner":
-        defaultContent = {
-          text: "Free shipping on orders over 500 kr",
-          section_actionType: "none",
-          section_actionTarget: "",
-          section_openInNewTab: false,
-          visibility: true,
-        };
-        break;
-      case "hero":
-        defaultContent = {
-          eyebrow: "3D Printing Essentials",
-          heading: "New hero title",
-          subheading: "Describe the section here",
-          button_text: "Explore",
-          button_link: "/products",
-          secondary_button_text: "Custom Order",
-          secondary_button_link: "/create",
-          alignment: "left",
-          buttonAlignment: "left",
-          visibility: true,
-          buttons: [
-            {
-              text: "Explore",
-              icon: "ArrowRight",
-              iconPosition: "right",
-              variant: "default",
-              actionType: "internal_link",
-              actionTarget: "/products",
-              openInNewTab: false,
-              visible: true,
-            },
-            {
-              text: "Custom Order",
-              icon: "",
-              iconPosition: "left",
-              variant: "outline",
-              actionType: "internal_link",
-              actionTarget: "/create",
-              openInNewTab: false,
-              visible: true,
-            },
-          ],
-        };
-        break;
-      case "entry_cards":
-        defaultContent = {
-          cards: [
-            { icon: "ShoppingBag", title: "Shop Products", desc: "Card description", link: "/products", cta: "Browse" },
-            { icon: "Palette", title: "Customize", desc: "Card description", link: "/create", cta: "Customize" },
-            { icon: "Upload", title: "Upload Idea", desc: "Card description", link: "/submit-design", cta: "Upload" },
-          ],
-        };
-        break;
-      case "trust_badges":
-        defaultContent = {
-          badges: [
-            { icon: "Truck", title: "Free Shipping", desc: "On orders over 500 kr", visible: true },
-            { icon: "Shield", title: "Secure Checkout", desc: "Protected checkout", visible: true },
-            { icon: "Star", title: "Rewards", desc: "Earn points on purchases", visible: true },
-          ],
-          columns: 3,
-          visibility: true,
-        };
-        break;
-      case "instagram_auto_feed":
-        defaultContent = {
-          title: "Follow us on Instagram",
-          subtitle: "Latest posts and reels",
-          instagramUsername: "layerloot3d",
-          itemsToShow: 10,
-          layout: "slider",
-          autoplay: true,
-          showCaptions: false,
-          showProfileButton: true,
-          visibility: true,
-        };
-        break;
-    }
-
-    const { error } = await supabase.from("site_blocks").insert({
+    const optimisticBlock: SiteBlock = {
+      id: tempId,
       page: activePage,
       block_type: type,
       title: blockTypes.find((bt) => bt.value === type)?.label || type,
       content: defaultContent,
-      sort_order: sortOrder,
+      sort_order: insertIndex,
       is_active: true,
-    });
+    };
 
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    nextLocalBlocks.splice(insertIndex, 0, optimisticBlock);
+    const normalizedLocal = nextLocalBlocks.map((block, index) => ({ ...block, sort_order: index }));
+    replacePageBlocks(normalizedLocal);
+    setAddBlockOpen(false);
+    setInsertAtIndex(null);
+
+    const orderUpdates = pageBlocks
+      .filter((b) => b.sort_order >= insertIndex)
+      .map((b) =>
+        supabase
+          .from("site_blocks")
+          .update({ sort_order: b.sort_order + 1 })
+          .eq("id", b.id),
+      );
+
+    const insertResult = await supabase
+      .from("site_blocks")
+      .insert({
+        page: activePage,
+        block_type: type,
+        title: optimisticBlock.title,
+        content: defaultContent,
+        sort_order: insertIndex,
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    const shiftedResults = await Promise.all(orderUpdates);
+    const shiftError = shiftedResults.find((result) => result.error)?.error;
+
+    if (insertResult.error || shiftError) {
+      await fetchBlocks();
+      toast({
+        title: "Error",
+        description: insertResult.error?.message || shiftError?.message || "Could not add block.",
+        variant: "destructive",
+      });
       return;
     }
 
+    replacePageBlocks(normalizedLocal.map((block) => (block.id === tempId ? (insertResult.data as SiteBlock) : block)));
+
     toast({ title: "Block added" });
-    setAddBlockOpen(false);
-    setInsertAtIndex(null);
-    await fetchBlocks();
-    await loadPages();
+    void loadPages();
   };
 
   const deleteBlock = async (id: string) => {
-    const { error } = await supabase.from("site_blocks").delete().eq("id", id);
+    const previousPageBlocks = pageBlocks;
+    const filtered = pageBlocks
+      .filter((block) => block.id !== id)
+      .map((block, index) => ({ ...block, sort_order: index }));
 
-    if (error) {
-      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+    replacePageBlocks(filtered);
+    setSelectedBlockId(null);
+    setEditPanelOpen(false);
+
+    const deleteResult = await supabase.from("site_blocks").delete().eq("id", id);
+    const reorderResults = await Promise.all(
+      filtered.map((block, index) => supabase.from("site_blocks").update({ sort_order: index }).eq("id", block.id)),
+    );
+    const reorderError = reorderResults.find((result) => result.error)?.error;
+
+    if (deleteResult.error || reorderError) {
+      replacePageBlocks(previousPageBlocks);
+      toast({
+        title: "Delete failed",
+        description: deleteResult.error?.message || reorderError?.message || "Could not delete block.",
+        variant: "destructive",
+      });
       return;
     }
 
-    setSelectedBlockId(null);
-    setEditPanelOpen(false);
     toast({ title: "Block deleted" });
-    await fetchBlocks();
-    await loadPages();
+    void loadPages();
   };
 
   const toggleActive = async (id: string, active: boolean) => {
+    const previousPageBlocks = pageBlocks;
+    replacePageBlocks(pageBlocks.map((block) => (block.id === id ? { ...block, is_active: active } : block)));
+
     const { error } = await supabase.from("site_blocks").update({ is_active: active }).eq("id", id);
 
     if (error) {
+      replacePageBlocks(previousPageBlocks);
       toast({ title: "Update failed", description: error.message, variant: "destructive" });
-      return;
     }
-
-    await fetchBlocks();
   };
 
   const reorderBlocks = async (nextBlocks: SiteBlock[]) => {
-    await Promise.all(
-      nextBlocks.map((block, index) => supabase.from("site_blocks").update({ sort_order: index }).eq("id", block.id)),
+    const previousPageBlocks = pageBlocks;
+    const normalized = nextBlocks.map((block, index) => ({ ...block, sort_order: index }));
+
+    replacePageBlocks(normalized);
+
+    const results = await Promise.all(
+      normalized.map((block, index) => supabase.from("site_blocks").update({ sort_order: index }).eq("id", block.id)),
     );
-    await fetchBlocks();
+
+    const error = results.find((result) => result.error)?.error;
+    if (error) {
+      replacePageBlocks(previousPageBlocks);
+      toast({ title: "Reorder failed", description: error.message, variant: "destructive" });
+    }
   };
 
   const handleMoveBlock = async (draggedId: string, targetId: string) => {
@@ -553,7 +608,7 @@ const PageEditor = () => {
     setSelectedBlockId(null);
 
     toast({ title: "Page deleted" });
-    await fetchBlocks();
+    setBlocks([]);
   };
 
   if (loading || !isAdmin) return null;
@@ -892,7 +947,7 @@ const PageEditor = () => {
             onAddBefore={(id) => {
               const blockIndex = pageBlocks.findIndex((b) => b.id === id);
               if (blockIndex === -1) return;
-              setInsertAtIndex(blockIndex > 0 ? pageBlocks[blockIndex - 1].sort_order + 1 : 0);
+              setInsertAtIndex(blockIndex);
               setAddBlockOpen(true);
             }}
             onMoveBlock={handleMoveBlock}

@@ -1,19 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import {
-  Image,
-  Gift,
-  Sparkles,
-  Heart,
-  Gamepad2,
-  Swords,
-  Monitor,
-  Upload,
-  Send,
-  Box,
-  Star,
-  CreditCard,
-} from "lucide-react";
+import { Image, Gift, Heart, Gamepad2, Swords, Monitor, Upload, Send, Box, Star, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";

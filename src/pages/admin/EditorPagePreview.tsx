@@ -20,7 +20,7 @@ export default function EditorPagePreview() {
     async function load() {
       setLoading(true);
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("site_blocks")
         .select("*")
         .eq("page", page)
@@ -29,11 +29,17 @@ export default function EditorPagePreview() {
 
       if (!mounted) return;
 
+      if (error) {
+        setBlocks([]);
+        setLoading(false);
+        return;
+      }
+
       setBlocks((data as SiteBlock[]) ?? []);
       setLoading(false);
     }
 
-    load();
+    void load();
 
     return () => {
       mounted = false;

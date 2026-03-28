@@ -71,17 +71,19 @@ export default function EditorPreviewFrame({
 
         const nodes = Array.from(frameDocument.querySelectorAll<HTMLElement>("[data-editor-block-id]"));
 
-        const nextBlocks: PreviewBlockRect[] = nodes.map((node) => {
-          const rect = node.getBoundingClientRect();
-          return {
-            id: node.dataset.editorBlockId || "",
-            type: node.dataset.editorBlockType || "Block",
-            top: rect.top + frameWindow.scrollY,
-            left: rect.left,
-            width: rect.width,
-            height: rect.height,
-          };
-        });
+        const nextBlocks: PreviewBlockRect[] = nodes
+          .map((node) => {
+            const rect = node.getBoundingClientRect();
+            return {
+              id: node.dataset.editorBlockId || "",
+              type: node.dataset.editorBlockType || "Block",
+              top: rect.top + frameWindow.scrollY,
+              left: rect.left,
+              width: rect.width,
+              height: rect.height,
+            };
+          })
+          .filter((item) => item.id);
 
         setOverlayBlocks(nextBlocks);
       } catch {

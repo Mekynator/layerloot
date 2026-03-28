@@ -18,7 +18,10 @@ function json(body: unknown, status = 200) {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", {
+      status: 200,
+      headers: corsHeaders,
+    });
   }
 
   try {
@@ -35,9 +38,11 @@ serve(async (req) => {
     if (!RESEND_API_KEY) {
       return json({ error: "Missing RESEND_API_KEY secret." }, 500);
     }
+
     if (!CONTACT_TO_EMAIL) {
       return json({ error: "Missing CONTACT_TO_EMAIL secret." }, 500);
     }
+
     if (!CONTACT_FROM_EMAIL) {
       return json({ error: "Missing CONTACT_FROM_EMAIL secret." }, 500);
     }
@@ -81,16 +86,10 @@ serve(async (req) => {
 
     if (!resendRes.ok) {
       console.error("Resend error:", resendData);
-      return json(
-        {
-          error: "Failed to send email.",
-          details: resendData,
-        },
-        500
-      );
+      return json({ error: "Failed to send email.", details: resendData }, 500);
     }
 
-    return json({ success: true, data: resendData });
+    return json({ success: true, data: resendData }, 200);
   } catch (error) {
     console.error("contact-send fatal error:", error);
     return json({ error: error instanceof Error ? error.message : String(error) }, 500);

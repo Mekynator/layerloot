@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Instagram } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -24,10 +24,22 @@ type InstagramAutoFeedBlockProps = {
   functionName?: string;
 };
 
+function normalizeInstagramUsername(value?: string) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  const withoutProtocol = raw.replace(/^https?:\/\//i, "");
+  const withoutDomain = withoutProtocol.replace(/^www\.instagram\.com\//i, "");
+  const withoutAt = withoutDomain.replace(/^@/, "");
+  const cleaned = withoutAt.split(/[/?#]/)[0]?.trim() || "";
+
+  return cleaned.toLowerCase();
+}
+
 export default function InstagramAutoFeedBlock({
   title = "Follow us on Instagram",
   subtitle = "Latest posts and reels",
-  instagramUsername = "",
+  instagramUsername = "layerloot3d",
   itemsToShow = 10,
   layout = "slider",
   autoplay = true,
@@ -40,44 +52,59 @@ export default function InstagramAutoFeedBlock({
   const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState(0);
 
-  const username = String(instagramUsername).trim().replace(/^@/, "");
-  const profileUrl = username ? `https://www.instagram.com/${username}` : "https://www.instagram.com/layerloot3d";
+  const username = useMemo(() => normalizeInstagramUsername(instagramUsername) || "layerloot3d", [instagramUsername]);
+
+  const safeItemsToShow = Math.max(1, Number(itemsToShow) || 10);
+  const profileUrl = `https://www.instagram.com/${username}`;
 
   useEffect(() => {
     let mounted = true;
 
     const loadFeed = async () => {
-      if (!username) {
-        setItems([]);
-        setLoading(false);
-        return;
-      }
-
       try {
         setLoading(true);
-        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${functionName}?username=${encodeURIComponent(username)}&limit=${itemsToShow}`;
+
+        const url =
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${functionName}` +
+          `?username=${encodeURIComponent(username)}&limit=${safeItemsToShow}`;
+
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
         };
 
-        if (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) {
-          headers.apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-          headers.Authorization = `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`;
+        const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+        if (publishableKey) {
+          headers.apikey = publishableKey;
+          headers.Authorization = `Bearer ${publishableKey}`;
         }
 
-        const res = await fetch(url, { headers });
-        if (!res.ok) throw new Error(`Instagram feed request failed: ${res.status}`);
+        const res = await fetch(url, { method: "GET", headers });
+        if (!res.ok) {
+          throw new Error(`Instagram feed request failed: ${res.status}`);
+        }
 
         const data = await res.json();
         if (!mounted) return;
 
-        setItems(Array.isArray(data?.items) ? data.items.slice(0, itemsToShow) : []);
+        const nextItems = Array.isArray(data?.items)
+          ? data.items
+              .filter((item: InstagramMediaItem) => item && (item.media_url || item.thumbnail_url || item.permalink))
+              .slice(0, safeItemsToShow)
+          : [];
+
+        setItems(nextItems);
         setCurrent(0);
       } catch (error) {
         console.error("Failed to load Instagram feed", error);
-        if (mounted) setItems([]);
+        if (mounted) {
+          setItems([]);
+          setCurrent(0);
+        }
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -86,19 +113,30 @@ export default function InstagramAutoFeedBlock({
     return () => {
       mounted = false;
     };
-  }, [functionName, itemsToShow, username]);
+  }, [functionName, safeItemsToShow, username]);
 
   useEffect(() => {
     if (!autoplay || layout !== "slider" || items.length <= 1) return;
-    const timer = window.setInterval(() => {
-      setCurrent((prev) => (prev + 1) % items.length);
-    }, Math.max(1500, intervalMs || 3000));
+
+    const timer = window.setInterval(
+      () => {
+        setCurrent((prev) => (prev + 1) % items.length);
+      },
+      Math.max(1500, Number(intervalMs) || 3000),
+    );
+
     return () => window.clearInterval(timer);
   }, [autoplay, intervalMs, items.length, layout]);
 
-  if (!username) return null;
+  const safeCurrent = current >= items.length ? 0 : current;
+  const activeItem = items[safeCurrent];
 
-  const activeItem = items[current];
+  const getImageSrc = (item?: InstagramMediaItem) => {
+    if (!item) return "";
+    return item.media_type === "VIDEO"
+      ? item.thumbnail_url || item.media_url || ""
+      : item.media_url || item.thumbnail_url || "";
+  };
 
   return (
     <section className="rounded-3xl border bg-card/70 p-5 shadow-sm backdrop-blur md:p-6">
@@ -124,7 +162,8 @@ export default function InstagramAutoFeedBlock({
       ) : layout === "grid" ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {items.map((item) => {
-            const imageSrc = item.media_type === "VIDEO" ? item.thumbnail_url || item.media_url : item.media_url;
+            const imageSrc = getImageSrc(item);
+
             return (
               <a
                 key={item.id}
@@ -134,11 +173,21 @@ export default function InstagramAutoFeedBlock({
                 className="overflow-hidden rounded-2xl border bg-background transition hover:shadow-md"
               >
                 {imageSrc ? (
-                  <img src={imageSrc} alt={item.caption || "Instagram post"} className="aspect-square w-full object-cover" loading="lazy" />
+                  <img
+                    src={imageSrc}
+                    alt={item.caption || "Instagram post"}
+                    className="aspect-square w-full object-cover"
+                    loading="lazy"
+                  />
                 ) : (
-                  <div className="flex aspect-square items-center justify-center bg-muted text-sm text-muted-foreground">No image</div>
+                  <div className="flex aspect-square items-center justify-center bg-muted text-sm text-muted-foreground">
+                    No image
+                  </div>
                 )}
-                {showCaptions && item.caption && <div className="line-clamp-3 p-3 text-sm text-muted-foreground">{item.caption}</div>}
+
+                {showCaptions && item.caption && (
+                  <div className="line-clamp-3 p-3 text-sm text-muted-foreground">{item.caption}</div>
+                )}
               </a>
             );
           })}
@@ -146,15 +195,21 @@ export default function InstagramAutoFeedBlock({
       ) : (
         <div className="space-y-4">
           <div className="overflow-hidden rounded-2xl border bg-background">
-            {activeItem && (
+            {activeItem ? (
               <a href={activeItem.permalink || profileUrl} target="_blank" rel="noreferrer">
-                <img
-                  src={activeItem.media_type === "VIDEO" ? activeItem.thumbnail_url || activeItem.media_url : activeItem.media_url}
-                  alt={activeItem.caption || "Instagram post"}
-                  className="aspect-square w-full object-cover"
-                />
+                {getImageSrc(activeItem) ? (
+                  <img
+                    src={getImageSrc(activeItem)}
+                    alt={activeItem.caption || "Instagram post"}
+                    className="aspect-square w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex aspect-square items-center justify-center bg-muted text-sm text-muted-foreground">
+                    No image
+                  </div>
+                )}
               </a>
-            )}
+            ) : null}
           </div>
 
           {showCaptions && activeItem?.caption && <p className="text-sm text-muted-foreground">{activeItem.caption}</p>}
@@ -164,8 +219,9 @@ export default function InstagramAutoFeedBlock({
               {items.map((item, index) => (
                 <button
                   key={item.id}
+                  type="button"
                   onClick={() => setCurrent(index)}
-                  className={`h-2.5 w-2.5 rounded-full ${index === current ? "bg-primary" : "bg-muted"}`}
+                  className={`h-2.5 w-2.5 rounded-full ${index === safeCurrent ? "bg-primary" : "bg-muted"}`}
                   aria-label={`Go to Instagram item ${index + 1}`}
                 />
               ))}

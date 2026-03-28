@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useSearchParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, useSearchParams } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
@@ -47,8 +47,10 @@ const queryClient = new QueryClient({
 });
 
 const AppShell = () => {
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const isEditorPreview = searchParams.get("editorPreview") === "1";
+  const isAdminRoute = location.pathname.startsWith("/admin");
 
   return (
     <>
@@ -84,8 +86,8 @@ const AppShell = () => {
         </Routes>
       </Layout>
 
-      {!isEditorPreview && <ChatWidget />}
-      {!isEditorPreview && <PromotionPopup />}
+      {!isEditorPreview && !isAdminRoute && <ChatWidget />}
+      {!isEditorPreview && !isAdminRoute && <PromotionPopup />}
     </>
   );
 };

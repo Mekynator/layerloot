@@ -27,16 +27,24 @@ const normalizePageSlug = (value?: string) => {
   return value.replace(/^\/+|\/+$/g, "") || "home";
 };
 
-async function fetchPageBlocks(page: string) {
+async function fetchPageBlocks(page: string, includeUnpublished = false) {
   const normalizedPage = normalizePageSlug(page);
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("site_blocks")
     .select("*")
     .eq("page", normalizedPage)
     .eq("is_active", true)
     .order("sort_order");
 
+  if (!includeUnpublished) {
+    const pageMeta = await fetchPageMeta(normalizedPage);
+    if (!pageMeta || pageMeta.is_published === false) {
+      return [];
+    }
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
   return (data as SiteBlock[]) ?? [];
 }
@@ -58,10 +66,10 @@ async function fetchPageMeta(page: string) {
   return (data as SitePageRecord | null) ?? null;
 }
 
-export function usePageBlocks(page: string, enabled = true) {
+export function usePageBlocks(page: string, enabled = true, includeUnpublished = false) {
   return useQuery({
-    queryKey: ["site-blocks", page],
-    queryFn: () => fetchPageBlocks(page),
+    queryKey: ["site-blocks", page, includeUnpublished],
+    queryFn: () => fetchPageBlocks(page, includeUnpublished),
     enabled: enabled && Boolean(page),
     staleTime: 1000 * 60 * 5,
   });

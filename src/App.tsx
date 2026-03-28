@@ -82,6 +82,13 @@ const AppShell = () => {
           <Route path="/admin/settings" element={<AdminSettings />} />
           <Route path="/admin/editor" element={<PageEditor />} />
           <Route path="/pages/:slug" element={<DynamicPage />} />
+
+          {/*
+            Catch-all live route for published dynamic pages.
+            Keep this after all explicit routes so system pages still win first.
+          */}
+          <Route path="/:slug" element={<DynamicPage />} />
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Layout>

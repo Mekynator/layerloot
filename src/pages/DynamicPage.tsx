@@ -2,6 +2,7 @@ import { useMemo, useEffect } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { renderBlock } from "@/components/admin/BlockRenderer";
 import { PageSkeleton } from "@/components/shared/loading-states";
+import NotFound from "./NotFound";
 import { usePageBlocks, useSitePage } from "@/hooks/use-page-blocks";
 
 type DynamicPageProps = {
@@ -32,8 +33,8 @@ const DynamicPage = ({
   const [searchParams] = useSearchParams();
   const slug = normalizePageSlug(slugProp ?? params.slug ?? "");
   const isEditorPreview = searchParams.get("editorPreview") === "1";
-  const { data: pageMeta } = useSitePage(slug, Boolean(slug));
-  const { data: blocks = [], isLoading } = usePageBlocks(slug, Boolean(slug));
+  const { data: pageMeta, isLoading: pageLoading } = useSitePage(slug, Boolean(slug));
+  const { data: blocks = [], isLoading: blocksLoading } = usePageBlocks(slug, Boolean(slug), isEditorPreview);
   const visibleBlocks = useMemo(() => blocks.filter((block) => block.is_active !== false), [blocks]);
 
   useEffect(() => {
@@ -49,26 +50,23 @@ const DynamicPage = ({
     window.parent.postMessage({ source: "layerloot-editor-preview", ...payload }, window.location.origin);
   };
 
-  if (isLoading) return <PageSkeleton />;
+  if (pageLoading || blocksLoading) return <PageSkeleton />;
 
-  if (pageMeta && pageMeta.is_published === false && !isEditorPreview) {
-    return (
-      <div className="container py-20 text-center">
-        <h1 className="font-display text-3xl font-bold uppercase text-foreground">
-          {pageMeta.title || pageMeta.name || "Page unavailable"}
-        </h1>
-        <p className="mt-3 text-muted-foreground">This page is currently unpublished.</p>
-      </div>
-    );
+  if (!pageMeta) {
+    return <NotFound />;
+  }
+
+  if (pageMeta.is_published === false && !isEditorPreview) {
+    return <NotFound />;
   }
 
   if (visibleBlocks.length === 0) {
     return (
       <div className="container py-20 text-center">
         <h1 className="font-display text-3xl font-bold uppercase text-foreground">
-          {pageMeta?.title || pageMeta?.name || emptyTitle}
+          {pageMeta.title || pageMeta.name || emptyTitle}
         </h1>
-        <p className="mt-3 text-muted-foreground">{pageMeta?.seo_description || emptyDescription}</p>
+        <p className="mt-3 text-muted-foreground">{pageMeta.seo_description || emptyDescription}</p>
       </div>
     );
   }

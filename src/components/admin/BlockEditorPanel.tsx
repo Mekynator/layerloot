@@ -42,6 +42,7 @@ const ICON_OPTIONS = [
   "Home",
   "Gift",
   "BadgeCheck",
+  "Instagram",
 ];
 
 const BLOCKS_WITH_BUTTONS = new Set(["hero", "cta", "button", "banner", "featured_products"]);
@@ -90,7 +91,9 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
           text: content.button_text,
           icon: content.button_icon || "",
           iconPosition: "left",
-          variant: content.button_variant || (content.style === "outline" ? "outline" : content.style === "ghost" ? "ghost" : "default"),
+          variant:
+            content.button_variant ||
+            (content.style === "outline" ? "outline" : content.style === "ghost" ? "ghost" : "default"),
           actionType: /^https?:\/\//i.test(content.button_link || "") ? "external_link" : "internal_link",
           actionTarget: content.button_link || "",
           openInNewTab: false,
@@ -336,10 +339,20 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Button {index + 1}</p>
             <div className="flex items-center gap-1">
-              <Button type="button" variant="ghost" size="icon" onClick={() => reorderArrayItem("buttons", index, "up")}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => reorderArrayItem("buttons", index, "up")}
+              >
                 <ArrowUp className="h-4 w-4" />
               </Button>
-              <Button type="button" variant="ghost" size="icon" onClick={() => reorderArrayItem("buttons", index, "down")}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => reorderArrayItem("buttons", index, "down")}
+              >
                 <ArrowDown className="h-4 w-4" />
               </Button>
               <Button type="button" variant="ghost" size="icon" onClick={() => removeArrayItem("buttons", index)}>
@@ -349,19 +362,28 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
           </div>
 
           <label className="flex items-center gap-2 text-sm">
-            <Switch checked={btn.visible !== false} onCheckedChange={(v) => updateArrayItem("buttons", index, { visible: v })} />
+            <Switch
+              checked={btn.visible !== false}
+              onCheckedChange={(v) => updateArrayItem("buttons", index, { visible: v })}
+            />
             Visible
           </label>
 
           <div>
             <Label>Text</Label>
-            <Input value={btn.text || ""} onChange={(e) => updateArrayItem("buttons", index, { text: e.target.value })} />
+            <Input
+              value={btn.text || ""}
+              onChange={(e) => updateArrayItem("buttons", index, { text: e.target.value })}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label>Icon</Label>
-              <Select value={btn.icon || "__none__"} onValueChange={(v) => updateArrayItem("buttons", index, { icon: v === "__none__" ? "" : v })}>
+              <Select
+                value={btn.icon || "__none__"}
+                onValueChange={(v) => updateArrayItem("buttons", index, { icon: v === "__none__" ? "" : v })}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="No icon" />
                 </SelectTrigger>
@@ -378,7 +400,10 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
 
             <div>
               <Label>Icon Position</Label>
-              <Select value={btn.iconPosition || "left"} onValueChange={(v) => updateArrayItem("buttons", index, { iconPosition: v })}>
+              <Select
+                value={btn.iconPosition || "left"}
+                onValueChange={(v) => updateArrayItem("buttons", index, { iconPosition: v })}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -393,7 +418,10 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
 
           <div>
             <Label>Variant</Label>
-            <Select value={btn.variant || "default"} onValueChange={(v) => updateArrayItem("buttons", index, { variant: v })}>
+            <Select
+              value={btn.variant || "default"}
+              onValueChange={(v) => updateArrayItem("buttons", index, { variant: v })}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -417,10 +445,13 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
     <div className="space-y-3">
       <div>
         <Label>Background Image URL</Label>
-        <Input value={form.content.bg_image || form.content.backgroundImage || ""} onChange={(e) => {
-          updateContent("bg_image", e.target.value);
-          updateContent("backgroundImage", e.target.value);
-        }} />
+        <Input
+          value={form.content.bg_image || form.content.backgroundImage || ""}
+          onChange={(e) => {
+            updateContent("bg_image", e.target.value);
+            updateContent("backgroundImage", e.target.value);
+          }}
+        />
       </div>
 
       <div>
@@ -431,48 +462,80 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
       <div className="grid grid-cols-2 gap-2">
         <div>
           <Label>Background Color</Label>
-          <Input value={form.content.bg_color || form.content.backgroundColor || ""} onChange={(e) => {
-            updateContent("bg_color", e.target.value);
-            updateContent("backgroundColor", e.target.value);
-          }} placeholder="#ffffff" />
+          <Input
+            value={form.content.bg_color || form.content.backgroundColor || ""}
+            onChange={(e) => {
+              updateContent("bg_color", e.target.value);
+              updateContent("backgroundColor", e.target.value);
+            }}
+            placeholder="#ffffff"
+          />
         </div>
         <div>
           <Label>Text Color</Label>
-          <Input value={form.content.text_color || form.content.textColor || ""} onChange={(e) => {
-            updateContent("text_color", e.target.value);
-            updateContent("textColor", e.target.value);
-          }} placeholder="#111111" />
+          <Input
+            value={form.content.text_color || form.content.textColor || ""}
+            onChange={(e) => {
+              updateContent("text_color", e.target.value);
+              updateContent("textColor", e.target.value);
+            }}
+            placeholder="#111111"
+          />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
         <div>
           <Label>Padding Top (px)</Label>
-          <Input type="number" value={form.content.paddingTop ?? ""} onChange={(e) => updateContent("paddingTop", e.target.value === "" ? null : parseInt(e.target.value) || 0)} />
+          <Input
+            type="number"
+            value={form.content.paddingTop ?? ""}
+            onChange={(e) => updateContent("paddingTop", e.target.value === "" ? null : parseInt(e.target.value) || 0)}
+          />
         </div>
         <div>
           <Label>Padding Bottom (px)</Label>
-          <Input type="number" value={form.content.paddingBottom ?? ""} onChange={(e) => updateContent("paddingBottom", e.target.value === "" ? null : parseInt(e.target.value) || 0)} />
+          <Input
+            type="number"
+            value={form.content.paddingBottom ?? ""}
+            onChange={(e) =>
+              updateContent("paddingBottom", e.target.value === "" ? null : parseInt(e.target.value) || 0)
+            }
+          />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
         <div>
           <Label>Margin Top (px)</Label>
-          <Input type="number" value={form.content.marginTop ?? ""} onChange={(e) => updateContent("marginTop", e.target.value === "" ? null : parseInt(e.target.value) || 0)} />
+          <Input
+            type="number"
+            value={form.content.marginTop ?? ""}
+            onChange={(e) => updateContent("marginTop", e.target.value === "" ? null : parseInt(e.target.value) || 0)}
+          />
         </div>
         <div>
           <Label>Margin Bottom (px)</Label>
-          <Input type="number" value={form.content.marginBottom ?? ""} onChange={(e) => updateContent("marginBottom", e.target.value === "" ? null : parseInt(e.target.value) || 0)} />
+          <Input
+            type="number"
+            value={form.content.marginBottom ?? ""}
+            onChange={(e) =>
+              updateContent("marginBottom", e.target.value === "" ? null : parseInt(e.target.value) || 0)
+            }
+          />
         </div>
       </div>
 
       <div>
         <Label>Custom Class Name</Label>
-        <Input value={form.content.customClassName || form.content.className || ""} onChange={(e) => {
-          updateContent("customClassName", e.target.value);
-          updateContent("className", e.target.value);
-        }} placeholder="my-extra-block-class" />
+        <Input
+          value={form.content.customClassName || form.content.className || ""}
+          onChange={(e) => {
+            updateContent("customClassName", e.target.value);
+            updateContent("className", e.target.value);
+          }}
+          placeholder="my-extra-block-class"
+        />
       </div>
     </div>
   );
@@ -496,7 +559,10 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
 
         <div>
           <Label>Button Alignment</Label>
-          <Select value={form.content.buttonAlignment || "center"} onValueChange={(v) => updateContent("buttonAlignment", v)}>
+          <Select
+            value={form.content.buttonAlignment || "center"}
+            onValueChange={(v) => updateContent("buttonAlignment", v)}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -512,7 +578,10 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
       <div className="grid grid-cols-2 gap-2">
         <div>
           <Label>Vertical Alignment</Label>
-          <Select value={form.content.verticalAlignment || "center"} onValueChange={(v) => updateContent("verticalAlignment", v)}>
+          <Select
+            value={form.content.verticalAlignment || "center"}
+            onValueChange={(v) => updateContent("verticalAlignment", v)}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -526,7 +595,18 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
 
         <div>
           <Label>Columns</Label>
-          <Input type="number" min={1} max={4} value={form.content.columns ?? ""} onChange={(e) => updateContent("columns", e.target.value === "" ? null : Math.max(1, Math.min(4, parseInt(e.target.value) || 1)))} />
+          <Input
+            type="number"
+            min={1}
+            max={4}
+            value={form.content.columns ?? ""}
+            onChange={(e) =>
+              updateContent(
+                "columns",
+                e.target.value === "" ? null : Math.max(1, Math.min(4, parseInt(e.target.value) || 1)),
+              )
+            }
+          />
         </div>
       </div>
 
@@ -557,18 +637,38 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
       <Label className="text-xs text-muted-foreground">Visual (Icon or Image)</Label>
       <div className="flex items-center gap-2">
         <label className="flex items-center gap-1.5 text-xs">
-          <input type="radio" name={`media-${arrayKey}-${index}`} checked={!item.image} onChange={() => updateArrayItem(arrayKey, index, { image: "" })} className="accent-primary" />
+          <input
+            type="radio"
+            name={`media-${arrayKey}-${index}`}
+            checked={!item.image}
+            onChange={() => updateArrayItem(arrayKey, index, { image: "" })}
+            className="accent-primary"
+          />
           Icon
         </label>
         <label className="flex items-center gap-1.5 text-xs">
-          <input type="radio" name={`media-${arrayKey}-${index}`} checked={!!item.image} onChange={() => updateArrayItem(arrayKey, index, { image: item.image || "placeholder" })} className="accent-primary" />
+          <input
+            type="radio"
+            name={`media-${arrayKey}-${index}`}
+            checked={!!item.image}
+            onChange={() => updateArrayItem(arrayKey, index, { image: item.image || "placeholder" })}
+            className="accent-primary"
+          />
           Image
         </label>
       </div>
       {!item.image ? (
         <Select value={item.icon || "Package"} onValueChange={(v) => updateArrayItem(arrayKey, index, { icon: v })}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>{ICON_OPTIONS.map((icon) => <SelectItem key={icon} value={icon}>{icon}</SelectItem>)}</SelectContent>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {ICON_OPTIONS.map((icon) => (
+              <SelectItem key={icon} value={icon}>
+                {icon}
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
       ) : (
         <div className="space-y-1">
@@ -576,7 +676,11 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
             <img src={item.image} alt="" className="h-16 w-16 rounded object-cover" />
           )}
           <Input type="file" accept="image/*" onChange={(e) => handleItemImageUpload(e, arrayKey, index)} />
-          <Input value={item.image === "placeholder" ? "" : item.image || ""} onChange={(e) => updateArrayItem(arrayKey, index, { image: e.target.value })} placeholder="Or paste image URL" />
+          <Input
+            value={item.image === "placeholder" ? "" : item.image || ""}
+            onChange={(e) => updateArrayItem(arrayKey, index, { image: e.target.value })}
+            placeholder="Or paste image URL"
+          />
         </div>
       )}
     </div>
@@ -590,7 +694,23 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <Label>Cards</Label>
-            <Button type="button" size="sm" variant="outline" onClick={() => addArrayItem("cards", { icon: "ShoppingBag", title: "New Card", desc: "", cta: "Learn more", actionType: "internal_link", actionTarget: "/", openInNewTab: false, visible: true })}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                addArrayItem("cards", {
+                  icon: "ShoppingBag",
+                  title: "New Card",
+                  desc: "",
+                  cta: "Learn more",
+                  actionType: "internal_link",
+                  actionTarget: "/",
+                  openInNewTab: false,
+                  visible: true,
+                })
+              }
+            >
               <Plus className="mr-1 h-3.5 w-3.5" /> Add Card
             </Button>
           </div>
@@ -599,17 +719,60 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">Card {index + 1}</p>
                 <div className="flex items-center gap-1">
-                  <Button type="button" variant="ghost" size="icon" onClick={() => reorderArrayItem("cards", index, "up")}><ArrowUp className="h-4 w-4" /></Button>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => reorderArrayItem("cards", index, "down")}><ArrowDown className="h-4 w-4" /></Button>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeArrayItem("cards", index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => reorderArrayItem("cards", index, "up")}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => reorderArrayItem("cards", index, "down")}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeArrayItem("cards", index)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
                 </div>
               </div>
-              <label className="flex items-center gap-2 text-sm"><Switch checked={card.visible !== false} onCheckedChange={(v) => updateArrayItem("cards", index, { visible: v })} /> Visible</label>
-              <Input value={card.title || ""} onChange={(e) => updateArrayItem("cards", index, { title: e.target.value })} placeholder="Title" />
-              <Textarea value={card.desc || ""} onChange={(e) => updateArrayItem("cards", index, { desc: e.target.value })} rows={3} placeholder="Description" />
-              <Input value={card.cta || ""} onChange={(e) => updateArrayItem("cards", index, { cta: e.target.value })} placeholder="CTA text" />
+              <label className="flex items-center gap-2 text-sm">
+                <Switch
+                  checked={card.visible !== false}
+                  onCheckedChange={(v) => updateArrayItem("cards", index, { visible: v })}
+                />{" "}
+                Visible
+              </label>
+              <Input
+                value={card.title || ""}
+                onChange={(e) => updateArrayItem("cards", index, { title: e.target.value })}
+                placeholder="Title"
+              />
+              <Textarea
+                value={card.desc || ""}
+                onChange={(e) => updateArrayItem("cards", index, { desc: e.target.value })}
+                rows={3}
+                placeholder="Description"
+              />
+              <Input
+                value={card.cta || ""}
+                onChange={(e) => updateArrayItem("cards", index, { cta: e.target.value })}
+                placeholder="CTA text"
+              />
               {renderMediaPicker(card, "cards", index)}
-              {renderActionEditor("button", { actionType: toActionType(card.actionType), actionTarget: card.actionTarget || card.link || "", openInNewTab: Boolean(card.openInNewTab) }, (patch) => updateArrayItem("cards", index, { ...patch, link: patch.actionTarget ?? card.link }))}
+              {renderActionEditor(
+                "button",
+                {
+                  actionType: toActionType(card.actionType),
+                  actionTarget: card.actionTarget || card.link || "",
+                  openInNewTab: Boolean(card.openInNewTab),
+                },
+                (patch) => updateArrayItem("cards", index, { ...patch, link: patch.actionTarget ?? card.link }),
+              )}
             </div>
           ))}
         </div>
@@ -621,7 +784,12 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <Label>Steps</Label>
-            <Button type="button" size="sm" variant="outline" onClick={() => addArrayItem("steps", { icon: "Package", title: "New Step", desc: "", visible: true })}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => addArrayItem("steps", { icon: "Package", title: "New Step", desc: "", visible: true })}
+            >
               <Plus className="mr-1 h-3.5 w-3.5" /> Add Step
             </Button>
           </div>
@@ -630,16 +798,55 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">Step {index + 1}</p>
                 <div className="flex items-center gap-1">
-                  <Button type="button" variant="ghost" size="icon" onClick={() => reorderArrayItem("steps", index, "up")}><ArrowUp className="h-4 w-4" /></Button>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => reorderArrayItem("steps", index, "down")}><ArrowDown className="h-4 w-4" /></Button>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeArrayItem("steps", index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => reorderArrayItem("steps", index, "up")}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => reorderArrayItem("steps", index, "down")}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeArrayItem("steps", index)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
                 </div>
               </div>
-              <label className="flex items-center gap-2 text-sm"><Switch checked={step.visible !== false} onCheckedChange={(v) => updateArrayItem("steps", index, { visible: v })} /> Visible</label>
-              <Input value={step.title || ""} onChange={(e) => updateArrayItem("steps", index, { title: e.target.value })} placeholder="Step title" />
-              <Textarea value={step.desc || ""} onChange={(e) => updateArrayItem("steps", index, { desc: e.target.value })} rows={2} placeholder="Step description" />
+              <label className="flex items-center gap-2 text-sm">
+                <Switch
+                  checked={step.visible !== false}
+                  onCheckedChange={(v) => updateArrayItem("steps", index, { visible: v })}
+                />{" "}
+                Visible
+              </label>
+              <Input
+                value={step.title || ""}
+                onChange={(e) => updateArrayItem("steps", index, { title: e.target.value })}
+                placeholder="Step title"
+              />
+              <Textarea
+                value={step.desc || ""}
+                onChange={(e) => updateArrayItem("steps", index, { desc: e.target.value })}
+                rows={2}
+                placeholder="Step description"
+              />
               {renderMediaPicker(step, "steps", index)}
-              {renderActionEditor("button", { actionType: toActionType(step.actionType), actionTarget: step.actionTarget || "", openInNewTab: Boolean(step.openInNewTab) }, (patch) => updateArrayItem("steps", index, patch))}
+              {renderActionEditor(
+                "button",
+                {
+                  actionType: toActionType(step.actionType),
+                  actionTarget: step.actionTarget || "",
+                  openInNewTab: Boolean(step.openInNewTab),
+                },
+                (patch) => updateArrayItem("steps", index, patch),
+              )}
             </div>
           ))}
         </div>
@@ -651,7 +858,12 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <Label>FAQ Items</Label>
-            <Button type="button" size="sm" variant="outline" onClick={() => addArrayItem("items", { q: "New question", a: "New answer", visible: true })}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => addArrayItem("items", { q: "New question", a: "New answer", visible: true })}
+            >
               <Plus className="mr-1 h-3.5 w-3.5" /> Add Item
             </Button>
           </div>
@@ -660,14 +872,45 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">FAQ {index + 1}</p>
                 <div className="flex items-center gap-1">
-                  <Button type="button" variant="ghost" size="icon" onClick={() => reorderArrayItem("items", index, "up")}><ArrowUp className="h-4 w-4" /></Button>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => reorderArrayItem("items", index, "down")}><ArrowDown className="h-4 w-4" /></Button>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeArrayItem("items", index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => reorderArrayItem("items", index, "up")}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => reorderArrayItem("items", index, "down")}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeArrayItem("items", index)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
                 </div>
               </div>
-              <label className="flex items-center gap-2 text-sm"><Switch checked={item.visible !== false} onCheckedChange={(v) => updateArrayItem("items", index, { visible: v })} /> Visible</label>
-              <Input value={item.q || ""} onChange={(e) => updateArrayItem("items", index, { q: e.target.value })} placeholder="Question" />
-              <Textarea value={item.a || ""} onChange={(e) => updateArrayItem("items", index, { a: e.target.value })} rows={4} placeholder="Answer" />
+              <label className="flex items-center gap-2 text-sm">
+                <Switch
+                  checked={item.visible !== false}
+                  onCheckedChange={(v) => updateArrayItem("items", index, { visible: v })}
+                />{" "}
+                Visible
+              </label>
+              <Input
+                value={item.q || ""}
+                onChange={(e) => updateArrayItem("items", index, { q: e.target.value })}
+                placeholder="Question"
+              />
+              <Textarea
+                value={item.a || ""}
+                onChange={(e) => updateArrayItem("items", index, { a: e.target.value })}
+                rows={4}
+                placeholder="Answer"
+              />
             </div>
           ))}
         </div>
@@ -679,7 +922,12 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <Label>Badges</Label>
-            <Button type="button" size="sm" variant="outline" onClick={() => addArrayItem("badges", { icon: "Shield", title: "New Badge", desc: "", visible: true })}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => addArrayItem("badges", { icon: "Shield", title: "New Badge", desc: "", visible: true })}
+            >
               <Plus className="mr-1 h-3.5 w-3.5" /> Add Badge
             </Button>
           </div>
@@ -688,16 +936,55 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">Badge {index + 1}</p>
                 <div className="flex items-center gap-1">
-                  <Button type="button" variant="ghost" size="icon" onClick={() => reorderArrayItem("badges", index, "up")}><ArrowUp className="h-4 w-4" /></Button>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => reorderArrayItem("badges", index, "down")}><ArrowDown className="h-4 w-4" /></Button>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeArrayItem("badges", index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => reorderArrayItem("badges", index, "up")}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => reorderArrayItem("badges", index, "down")}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeArrayItem("badges", index)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
                 </div>
               </div>
-              <label className="flex items-center gap-2 text-sm"><Switch checked={badge.visible !== false} onCheckedChange={(v) => updateArrayItem("badges", index, { visible: v })} /> Visible</label>
-              <Input value={badge.title || ""} onChange={(e) => updateArrayItem("badges", index, { title: e.target.value })} placeholder="Title" />
-              <Textarea value={badge.desc || ""} onChange={(e) => updateArrayItem("badges", index, { desc: e.target.value })} rows={2} placeholder="Description" />
+              <label className="flex items-center gap-2 text-sm">
+                <Switch
+                  checked={badge.visible !== false}
+                  onCheckedChange={(v) => updateArrayItem("badges", index, { visible: v })}
+                />{" "}
+                Visible
+              </label>
+              <Input
+                value={badge.title || ""}
+                onChange={(e) => updateArrayItem("badges", index, { title: e.target.value })}
+                placeholder="Title"
+              />
+              <Textarea
+                value={badge.desc || ""}
+                onChange={(e) => updateArrayItem("badges", index, { desc: e.target.value })}
+                rows={2}
+                placeholder="Description"
+              />
               {renderMediaPicker(badge, "badges", index)}
-              {renderActionEditor("button", { actionType: toActionType(badge.actionType), actionTarget: badge.actionTarget || "", openInNewTab: Boolean(badge.openInNewTab) }, (patch) => updateArrayItem("badges", index, patch))}
+              {renderActionEditor(
+                "button",
+                {
+                  actionType: toActionType(badge.actionType),
+                  actionTarget: badge.actionTarget || "",
+                  openInNewTab: Boolean(badge.openInNewTab),
+                },
+                (patch) => updateArrayItem("badges", index, patch),
+              )}
             </div>
           ))}
         </div>
@@ -721,11 +1008,20 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
               </div>
               <div>
                 <Label>Icon</Label>
-                <Select value={form.content.icon || "__none__"} onValueChange={(v) => updateContent("icon", v === "__none__" ? "" : v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={form.content.icon || "__none__"}
+                  onValueChange={(v) => updateContent("icon", v === "__none__" ? "" : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">No icon</SelectItem>
-                    {ICON_OPTIONS.map((icon) => <SelectItem key={icon} value={icon}>{icon}</SelectItem>)}
+                    {ICON_OPTIONS.map((icon) => (
+                      <SelectItem key={icon} value={icon}>
+                        {icon}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -737,7 +1033,11 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
           </div>
           <div>
             <Label>Subheading</Label>
-            <Textarea value={form.content.subheading ?? ""} onChange={(e) => updateContent("subheading", e.target.value)} rows={3} />
+            <Textarea
+              value={form.content.subheading ?? ""}
+              onChange={(e) => updateContent("subheading", e.target.value)}
+              rows={3}
+            />
           </div>
         </div>
       );
@@ -755,8 +1055,18 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
     if (t === "text") {
       return (
         <div className="space-y-3">
-          <div><Label>Heading</Label><Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} /></div>
-          <div><Label>Body</Label><Textarea value={form.content.body ?? ""} onChange={(e) => updateContent("body", e.target.value)} rows={8} /></div>
+          <div>
+            <Label>Heading</Label>
+            <Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} />
+          </div>
+          <div>
+            <Label>Body</Label>
+            <Textarea
+              value={form.content.body ?? ""}
+              onChange={(e) => updateContent("body", e.target.value)}
+              rows={8}
+            />
+          </div>
         </div>
       );
     }
@@ -789,7 +1099,16 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
             {(form.content.images || []).map((img: string, i: number) => (
               <div key={i} className="relative">
                 <img src={img} alt="" className="h-16 w-16 rounded object-cover" />
-                <button type="button" className="absolute -right-1 -top-1 rounded-full bg-destructive p-0.5 text-destructive-foreground" onClick={() => updateContent("images", (form.content.images || []).filter((_: string, j: number) => j !== i))}>
+                <button
+                  type="button"
+                  className="absolute -right-1 -top-1 rounded-full bg-destructive p-0.5 text-destructive-foreground"
+                  onClick={() =>
+                    updateContent(
+                      "images",
+                      (form.content.images || []).filter((_: string, j: number) => j !== i),
+                    )
+                  }
+                >
                   <Trash2 className="h-3 w-3" />
                 </button>
               </div>
@@ -802,26 +1121,64 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
     if (t === "video") {
       return (
         <div className="space-y-3">
-          <div><Label>Video URL</Label><Input value={form.content.video_url ?? ""} onChange={(e) => updateContent("video_url", e.target.value)} /></div>
-          <div><Label>Caption</Label><Input value={form.content.caption ?? ""} onChange={(e) => updateContent("caption", e.target.value)} /></div>
+          <div>
+            <Label>Video URL</Label>
+            <Input value={form.content.video_url ?? ""} onChange={(e) => updateContent("video_url", e.target.value)} />
+          </div>
+          <div>
+            <Label>Caption</Label>
+            <Input value={form.content.caption ?? ""} onChange={(e) => updateContent("caption", e.target.value)} />
+          </div>
         </div>
       );
     }
 
     if (t === "spacer") {
-      return <div><Label>Height (px)</Label><Input type="number" value={form.content.height ?? 40} onChange={(e) => updateContent("height", parseInt(e.target.value) || 40)} /></div>;
+      return (
+        <div>
+          <Label>Height (px)</Label>
+          <Input
+            type="number"
+            value={form.content.height ?? 40}
+            onChange={(e) => updateContent("height", parseInt(e.target.value) || 40)}
+          />
+        </div>
+      );
     }
 
     if (t === "html") {
-      return <div><Label>HTML Code</Label><Textarea value={form.content.html ?? ""} onChange={(e) => updateContent("html", e.target.value)} rows={10} className="font-mono text-xs" /></div>;
+      return (
+        <div>
+          <Label>HTML Code</Label>
+          <Textarea
+            value={form.content.html ?? ""}
+            onChange={(e) => updateContent("html", e.target.value)}
+            rows={10}
+            className="font-mono text-xs"
+          />
+        </div>
+      );
     }
 
     if (t === "embed") {
       return (
         <div className="space-y-3">
-          <div><Label>Heading</Label><Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} /></div>
-          <div><Label>Embed URL</Label><Input value={form.content.embed_url ?? ""} onChange={(e) => updateContent("embed_url", e.target.value)} /></div>
-          <div><Label>Height (px)</Label><Input type="number" value={form.content.height ?? 400} onChange={(e) => updateContent("height", parseInt(e.target.value) || 400)} /></div>
+          <div>
+            <Label>Heading</Label>
+            <Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} />
+          </div>
+          <div>
+            <Label>Embed URL</Label>
+            <Input value={form.content.embed_url ?? ""} onChange={(e) => updateContent("embed_url", e.target.value)} />
+          </div>
+          <div>
+            <Label>Height (px)</Label>
+            <Input
+              type="number"
+              value={form.content.height ?? 400}
+              onChange={(e) => updateContent("height", parseInt(e.target.value) || 400)}
+            />
+          </div>
         </div>
       );
     }
@@ -829,9 +1186,24 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
     if (t === "newsletter") {
       return (
         <div className="space-y-3">
-          <div><Label>Heading</Label><Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} /></div>
-          <div><Label>Subheading</Label><Input value={form.content.subheading ?? ""} onChange={(e) => updateContent("subheading", e.target.value)} /></div>
-          <div><Label>Submit Button Text</Label><Input value={form.content.submit_text ?? ""} onChange={(e) => updateContent("submit_text", e.target.value)} /></div>
+          <div>
+            <Label>Heading</Label>
+            <Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} />
+          </div>
+          <div>
+            <Label>Subheading</Label>
+            <Input
+              value={form.content.subheading ?? ""}
+              onChange={(e) => updateContent("subheading", e.target.value)}
+            />
+          </div>
+          <div>
+            <Label>Submit Button Text</Label>
+            <Input
+              value={form.content.submit_text ?? ""}
+              onChange={(e) => updateContent("submit_text", e.target.value)}
+            />
+          </div>
         </div>
       );
     }
@@ -839,8 +1211,18 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
     if (t === "how_it_works" || t === "trust_badges" || t === "entry_cards" || t === "faq") {
       return (
         <div className="space-y-3">
-          <div><Label>Heading</Label><Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} /></div>
-          <div><Label>Subheading</Label><Textarea value={form.content.subheading ?? ""} onChange={(e) => updateContent("subheading", e.target.value)} rows={2} /></div>
+          <div>
+            <Label>Heading</Label>
+            <Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} />
+          </div>
+          <div>
+            <Label>Subheading</Label>
+            <Textarea
+              value={form.content.subheading ?? ""}
+              onChange={(e) => updateContent("subheading", e.target.value)}
+              rows={2}
+            />
+          </div>
         </div>
       );
     }
@@ -848,13 +1230,41 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
     if (t === "categories" || t === "featured_products") {
       return (
         <div className="space-y-3">
-          <div><Label>Heading</Label><Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} /></div>
-          <div><Label>Subheading</Label><Input value={form.content.subheading ?? ""} onChange={(e) => updateContent("subheading", e.target.value)} /></div>
-          <div><Label>Limit</Label><Input type="number" value={form.content.limit ?? (t === "categories" ? 6 : 8)} onChange={(e) => updateContent("limit", parseInt(e.target.value) || (t === "categories" ? 6 : 8))} /></div>
+          <div>
+            <Label>Heading</Label>
+            <Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} />
+          </div>
+          <div>
+            <Label>Subheading</Label>
+            <Input
+              value={form.content.subheading ?? ""}
+              onChange={(e) => updateContent("subheading", e.target.value)}
+            />
+          </div>
+          <div>
+            <Label>Limit</Label>
+            <Input
+              type="number"
+              value={form.content.limit ?? (t === "categories" ? 6 : 8)}
+              onChange={(e) => updateContent("limit", parseInt(e.target.value) || (t === "categories" ? 6 : 8))}
+            />
+          </div>
           {t === "featured_products" && (
             <>
-              <div><Label>View All Button Text</Label><Input value={form.content.view_all_text ?? ""} onChange={(e) => updateContent("view_all_text", e.target.value)} /></div>
-              <div><Label>View All Link</Label><Input value={form.content.view_all_link ?? ""} onChange={(e) => updateContent("view_all_link", e.target.value)} /></div>
+              <div>
+                <Label>View All Button Text</Label>
+                <Input
+                  value={form.content.view_all_text ?? ""}
+                  onChange={(e) => updateContent("view_all_text", e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>View All Link</Label>
+                <Input
+                  value={form.content.view_all_link ?? ""}
+                  onChange={(e) => updateContent("view_all_link", e.target.value)}
+                />
+              </div>
             </>
           )}
         </div>
@@ -864,12 +1274,26 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
     if (t === "button") {
       return (
         <div className="space-y-3">
-          <div><Label>Legacy Button Text</Label><Input value={form.content.button_text ?? ""} onChange={(e) => updateContent("button_text", e.target.value)} /></div>
-          <div><Label>Legacy Button Link</Label><Input value={form.content.button_link ?? ""} onChange={(e) => updateContent("button_link", e.target.value)} /></div>
+          <div>
+            <Label>Legacy Button Text</Label>
+            <Input
+              value={form.content.button_text ?? ""}
+              onChange={(e) => updateContent("button_text", e.target.value)}
+            />
+          </div>
+          <div>
+            <Label>Legacy Button Link</Label>
+            <Input
+              value={form.content.button_link ?? ""}
+              onChange={(e) => updateContent("button_link", e.target.value)}
+            />
+          </div>
           <div>
             <Label>Legacy Style</Label>
             <Select value={form.content.style ?? "default"} onValueChange={(v) => updateContent("style", v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="default">Default</SelectItem>
                 <SelectItem value="outline">Outline</SelectItem>
@@ -877,6 +1301,92 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
               </SelectContent>
             </Select>
           </div>
+        </div>
+      );
+    }
+
+    if (t === "instagram_auto_feed") {
+      return (
+        <div className="space-y-3">
+          <div>
+            <Label>Title</Label>
+            <Input value={form.content.title ?? ""} onChange={(e) => updateContent("title", e.target.value)} />
+          </div>
+          <div>
+            <Label>Subtitle</Label>
+            <Textarea
+              value={form.content.subtitle ?? ""}
+              onChange={(e) => updateContent("subtitle", e.target.value)}
+              rows={2}
+            />
+          </div>
+          <div>
+            <Label>Instagram Username</Label>
+            <Input
+              value={form.content.instagramUsername ?? ""}
+              onChange={(e) => updateContent("instagramUsername", e.target.value)}
+              placeholder="layerloot"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label>Items to Show</Label>
+              <Input
+                type="number"
+                min={1}
+                max={20}
+                value={form.content.itemsToShow ?? 10}
+                onChange={(e) =>
+                  updateContent("itemsToShow", Math.max(1, Math.min(20, parseInt(e.target.value) || 10)))
+                }
+              />
+            </div>
+            <div>
+              <Label>Loop Speed (ms)</Label>
+              <Input
+                type="number"
+                min={1500}
+                step={500}
+                value={form.content.intervalMs ?? 3000}
+                onChange={(e) => updateContent("intervalMs", Math.max(1500, parseInt(e.target.value) || 3000))}
+              />
+            </div>
+          </div>
+          <div>
+            <Label>Layout</Label>
+            <Select value={form.content.layout ?? "slider"} onValueChange={(v) => updateContent("layout", v)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="slider">Slider</SelectItem>
+                <SelectItem value="grid">Grid</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Edge Function Name</Label>
+            <Input
+              value={form.content.functionName ?? "instagram-feed"}
+              onChange={(e) => updateContent("functionName", e.target.value)}
+              placeholder="instagram-feed"
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <Switch checked={form.content.autoplay !== false} onCheckedChange={(v) => updateContent("autoplay", v)} />{" "}
+            Autoplay loop
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <Switch checked={!!form.content.showCaptions} onCheckedChange={(v) => updateContent("showCaptions", v)} />{" "}
+            Show captions
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <Switch
+              checked={form.content.showProfileButton !== false}
+              onCheckedChange={(v) => updateContent("showProfileButton", v)}
+            />{" "}
+            Show profile button
+          </label>
         </div>
       );
     }
@@ -903,10 +1413,19 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Placement</Label>
-                <Select value={form.content?.placement ?? DEFAULT_PLACEMENT} onValueChange={(v) => updateContent("placement", v === DEFAULT_PLACEMENT ? "" : v)}>
-                  <SelectTrigger><SelectValue placeholder="Select placement" /></SelectTrigger>
+                <Select
+                  value={form.content?.placement ?? DEFAULT_PLACEMENT}
+                  onValueChange={(v) => updateContent("placement", v === DEFAULT_PLACEMENT ? "" : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select placement" />
+                  </SelectTrigger>
                   <SelectContent>
-                    {placementOptions.map((opt) => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                    {placementOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -920,11 +1439,18 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
             </div>
 
             <label className="flex items-center gap-2 text-sm">
-              <Switch checked={form.content.visibility !== false} onCheckedChange={(v) => updateContent("visibility", v)} />
+              <Switch
+                checked={form.content.visibility !== false}
+                onCheckedChange={(v) => updateContent("visibility", v)}
+              />
               Section visible
             </label>
 
-            <Accordion type="multiple" defaultValue={["content", "style", "actions", "layout"]} className="w-full space-y-2">
+            <Accordion
+              type="multiple"
+              defaultValue={["content", "style", "actions", "layout"]}
+              className="w-full space-y-2"
+            >
               <AccordionItem value="content" className="rounded-md border border-border px-3">
                 <AccordionTrigger className="font-display text-xs uppercase tracking-wider">Content</AccordionTrigger>
                 <AccordionContent className="space-y-3 pb-3">
@@ -941,22 +1467,30 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
               <AccordionItem value="actions" className="rounded-md border border-border px-3">
                 <AccordionTrigger className="font-display text-xs uppercase tracking-wider">Actions</AccordionTrigger>
                 <AccordionContent className="space-y-3 pb-3">
-                  {renderActionEditor("section", {
-                    actionType: toActionType(form.content.section_actionType || form.content.actionType),
-                    actionTarget: form.content.section_actionTarget || form.content.actionTarget || "",
-                    openInNewTab: Boolean(form.content.section_openInNewTab || form.content.openInNewTab),
-                  }, (patch) => {
-                    updateContent("section_actionType", patch.actionType ?? form.content.section_actionType);
-                    updateContent("section_actionTarget", patch.actionTarget ?? form.content.section_actionTarget);
-                    updateContent("section_openInNewTab", patch.openInNewTab ?? form.content.section_openInNewTab);
-                  })}
+                  {renderActionEditor(
+                    "section",
+                    {
+                      actionType: toActionType(form.content.section_actionType || form.content.actionType),
+                      actionTarget: form.content.section_actionTarget || form.content.actionTarget || "",
+                      openInNewTab: Boolean(form.content.section_openInNewTab || form.content.openInNewTab),
+                    },
+                    (patch) => {
+                      updateContent("section_actionType", patch.actionType ?? form.content.section_actionType);
+                      updateContent("section_actionTarget", patch.actionTarget ?? form.content.section_actionTarget);
+                      updateContent("section_openInNewTab", patch.openInNewTab ?? form.content.section_openInNewTab);
+                    },
+                  )}
 
                   {BLOCKS_WITH_BUTTONS.has(t) && renderButtonsEditor()}
 
                   <div>
                     <Label>Quick Internal Link</Label>
                     <Select
-                      value={buttonTargetPages.includes((form.content.section_actionTarget || "").replace(/^\//, "")) ? form.content.section_actionTarget || "" : "__custom__"}
+                      value={
+                        buttonTargetPages.includes((form.content.section_actionTarget || "").replace(/^\//, ""))
+                          ? form.content.section_actionTarget || ""
+                          : "__custom__"
+                      }
                       onValueChange={(v) => {
                         if (v !== "__custom__") {
                           updateContent("section_actionType", "internal_link");
@@ -964,9 +1498,15 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
                         }
                       }}
                     >
-                      <SelectTrigger><SelectValue placeholder="Select a page" /></SelectTrigger>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a page" />
+                      </SelectTrigger>
                       <SelectContent>
-                        {buttonTargetPages.map((p) => <SelectItem key={p} value={routeFromPage(p)}>{prettyPageLabel(p)}</SelectItem>)}
+                        {buttonTargetPages.map((p) => (
+                          <SelectItem key={p} value={routeFromPage(p)}>
+                            {prettyPageLabel(p)}
+                          </SelectItem>
+                        ))}
                         <SelectItem value="__custom__">Custom target</SelectItem>
                       </SelectContent>
                     </Select>
@@ -980,7 +1520,11 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
               </AccordionItem>
             </Accordion>
 
-            <Button onClick={handleSave} disabled={saving || uploading} className="w-full font-display uppercase tracking-wider">
+            <Button
+              onClick={handleSave}
+              disabled={saving || uploading}
+              className="w-full font-display uppercase tracking-wider"
+            >
               {saving ? "Saving..." : uploading ? "Uploading..." : "Save Changes"}
             </Button>
           </div>

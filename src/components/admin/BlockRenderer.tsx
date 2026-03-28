@@ -23,6 +23,7 @@ import {
   Home,
   Gift,
   BadgeCheck,
+  Instagram,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,6 +33,16 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { useFeaturedProducts } from "@/hooks/use-storefront";
 import { ProductGridSkeleton } from "@/components/shared/loading-states";
 import { fadeUp } from "@/lib/motion";
+
+type InstagramMediaItem = {
+  id: string;
+  caption?: string;
+  media_type?: string;
+  media_url?: string;
+  permalink?: string;
+  thumbnail_url?: string;
+  username?: string;
+};
 
 export interface SiteBlock {
   id: string;
@@ -105,6 +116,7 @@ const ICON_MAP: Record<string, any> = {
   Home,
   Gift,
   BadgeCheck,
+  Instagram,
 };
 
 const iconForName = (name?: string, fallback = Box) => ICON_MAP[name || ""] || fallback;
@@ -145,7 +157,10 @@ const resolveItemAction = (item: any, fallbackLink?: string): Required<BlockActi
   };
 };
 
-const resolveButtons = (content: any, legacy: Array<{ text?: string; link?: string; icon?: string; variant?: string }>) => {
+const resolveButtons = (
+  content: any,
+  legacy: Array<{ text?: string; link?: string; icon?: string; variant?: string }>,
+) => {
   if (Array.isArray(content?.buttons) && content.buttons.length > 0) {
     return content.buttons.map((button: any) => ({
       text: button?.text || "",
@@ -203,7 +218,9 @@ const verticalClass = (vertical?: string) => {
 };
 
 const sectionStyle = (content: any): CSSProperties => ({
-  ...(content?.backgroundColor || content?.bg_color ? { backgroundColor: content?.backgroundColor || content?.bg_color } : {}),
+  ...(content?.backgroundColor || content?.bg_color
+    ? { backgroundColor: content?.backgroundColor || content?.bg_color }
+    : {}),
   ...(content?.textColor || content?.text_color ? { color: content?.textColor || content?.text_color } : {}),
   ...(content?.paddingTop !== undefined ? { paddingTop: `${Number(content.paddingTop) || 0}px` } : {}),
   ...(content?.paddingBottom !== undefined ? { paddingBottom: `${Number(content.paddingBottom) || 0}px` } : {}),
@@ -230,12 +247,20 @@ const navigateWithAction = (action: Required<BlockAction>) => {
   if (action.actionType === "none" || !action.actionTarget) return;
 
   if (action.actionType === "external_link") {
-    window.open(action.actionTarget, action.openInNewTab ? "_blank" : "_self", action.openInNewTab ? "noopener,noreferrer" : undefined);
+    window.open(
+      action.actionTarget,
+      action.openInNewTab ? "_blank" : "_self",
+      action.openInNewTab ? "noopener,noreferrer" : undefined,
+    );
     return;
   }
 
   const target = action.actionTarget.startsWith("/") ? action.actionTarget : `/${action.actionTarget}`;
-  window.open(target, action.openInNewTab ? "_blank" : "_self", action.openInNewTab ? "noopener,noreferrer" : undefined);
+  window.open(
+    target,
+    action.openInNewTab ? "_blank" : "_self",
+    action.openInNewTab ? "noopener,noreferrer" : undefined,
+  );
 };
 
 const applySectionAction = (action: Required<BlockAction>) => ({
@@ -247,7 +272,15 @@ const applySectionAction = (action: Required<BlockAction>) => ({
   className: action.actionType !== "none" ? "cursor-pointer" : "",
 });
 
-const ActionButton = ({ button, fallbackText, className }: { button: BlockButton; fallbackText?: string; className?: string }) => {
+const ActionButton = ({
+  button,
+  fallbackText,
+  className,
+}: {
+  button: BlockButton;
+  fallbackText?: string;
+  className?: string;
+}) => {
   if (button.visible === false) return null;
   const text = button.text || fallbackText;
   if (!text) return null;
@@ -274,7 +307,11 @@ const ActionButton = ({ button, fallbackText, className }: { button: BlockButton
 
   if (action.actionType === "external_link") {
     return (
-      <a href={action.actionTarget} target={action.openInNewTab ? "_blank" : "_self"} rel={action.openInNewTab ? "noopener noreferrer" : undefined}>
+      <a
+        href={action.actionTarget}
+        target={action.openInNewTab ? "_blank" : "_self"}
+        rel={action.openInNewTab ? "noopener noreferrer" : undefined}
+      >
         {buttonNode}
       </a>
     );
@@ -316,13 +353,18 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
 
   switch (block.block_type) {
     case "hero":
-      return (
-        <HeroBlock block={block} />
-      );
+      return <HeroBlock block={block} />;
 
     case "shipping_banner":
-      return (
-        withSection(block, "bg-primary py-3", <div className="container flex items-center justify-center gap-2 text-primary-foreground"><Truck className="h-5 w-5" /><span className="font-display text-sm uppercase tracking-widest">{c.text || "Free shipping on orders over 500 kr"}</span></div>)
+      return withSection(
+        block,
+        "bg-primary py-3",
+        <div className="container flex items-center justify-center gap-2 text-primary-foreground">
+          <Truck className="h-5 w-5" />
+          <span className="font-display text-sm uppercase tracking-widest">
+            {c.text || "Free shipping on orders over 500 kr"}
+          </span>
+        </div>,
       );
 
     case "entry_cards":
@@ -359,9 +401,15 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
         "py-16",
         <div className="container">
           {c.image_url ? (
-            <img src={c.image_url} alt={c.alt || ""} className="mx-auto max-h-[600px] w-full rounded-lg object-contain" />
+            <img
+              src={c.image_url}
+              alt={c.alt || ""}
+              className="mx-auto max-h-[600px] w-full rounded-lg object-contain"
+            />
           ) : (
-            <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted text-muted-foreground">No image set</div>
+            <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted text-muted-foreground">
+              No image set
+            </div>
           )}
         </div>,
       );
@@ -377,7 +425,9 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
         block,
         "bg-accent py-3",
         <div className="container flex items-center justify-center gap-2 text-accent-foreground">
-          {c.badge && <span className="rounded bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider">{c.badge}</span>}
+          {c.badge && (
+            <span className="rounded bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider">{c.badge}</span>
+          )}
           <span className="font-display text-sm uppercase tracking-widest">{c.heading || c.title || "Banner"}</span>
         </div>,
       );
@@ -403,19 +453,31 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
         block,
         "py-8",
         <div className="container">
-          {c.heading && <h2 className="mb-4 text-center font-display text-2xl font-bold uppercase text-foreground">{c.heading}</h2>}
+          {c.heading && (
+            <h2 className="mb-4 text-center font-display text-2xl font-bold uppercase text-foreground">{c.heading}</h2>
+          )}
           {c.embed_url ? (
             <div className="overflow-hidden rounded-lg border border-border" style={{ height: `${c.height || 400}px` }}>
-              <iframe src={c.embed_url} className="h-full w-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+              <iframe
+                src={c.embed_url}
+                className="h-full w-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
             </div>
           ) : (
-            <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted text-muted-foreground">No embed URL set</div>
+            <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted text-muted-foreground">
+              No embed URL set
+            </div>
           )}
         </div>,
       );
 
     case "newsletter":
       return <NewsletterBlock block={block} />;
+
+    case "instagram_auto_feed":
+      return <InstagramAutoFeedBlock block={block} />;
 
     default:
       return <div className="py-8 text-center text-muted-foreground">Unknown block: {block.block_type}</div>;
@@ -453,18 +515,28 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
       </div>
 
       <div className="container relative">
-        <div className={`max-w-2xl ${align === "center" ? "mx-auto" : align === "right" ? "ml-auto" : ""} ${alignmentClass(align)}`}>
+        <div
+          className={`max-w-2xl ${align === "center" ? "mx-auto" : align === "right" ? "ml-auto" : ""} ${alignmentClass(align)}`}
+        >
           <div className={`mb-4 flex items-center gap-2 ${justifyClass(align)}`}>
-            {c.icon && (() => {
-              const Icon = iconForName(c.icon, Printer);
-              return <Icon className="h-5 w-5 text-primary" />;
-            })()}
+            {c.icon &&
+              (() => {
+                const Icon = iconForName(c.icon, Printer);
+                return <Icon className="h-5 w-5 text-primary" />;
+              })()}
             {!c.icon && <Printer className="h-5 w-5 text-primary" />}
-            <span className="font-display text-sm uppercase tracking-widest text-primary">{c.eyebrow || c.badge || "3D Printing Essentials"}</span>
+            <span className="font-display text-sm uppercase tracking-widest text-primary">
+              {c.eyebrow || c.badge || "3D Printing Essentials"}
+            </span>
           </div>
 
-          <h1 className="mb-6 font-display text-5xl font-bold uppercase leading-tight text-secondary-foreground lg:text-7xl">{c.heading || "Gear Up Your Print Lab"}</h1>
-          <p className="mb-8 max-w-lg text-lg text-muted-foreground">{c.subheading || "Premium filaments, tools, miniatures, and custom prints. Everything a maker needs, delivered to your workshop."}</p>
+          <h1 className="mb-6 font-display text-5xl font-bold uppercase leading-tight text-secondary-foreground lg:text-7xl">
+            {c.heading || "Gear Up Your Print Lab"}
+          </h1>
+          <p className="mb-8 max-w-lg text-lg text-muted-foreground">
+            {c.subheading ||
+              "Premium filaments, tools, miniatures, and custom prints. Everything a maker needs, delivered to your workshop."}
+          </p>
 
           <div className={`flex flex-wrap gap-4 ${justifyClass(buttonAlignment)}`}>
             {buttons.map((button, index) => (
@@ -484,13 +556,38 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
 const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boolean }) => {
   const c = block.content || {};
   const cards = c.cards || [
-    { icon: "ShoppingBag", title: "Shop Products", desc: "Browse our curated collection of 3D printed items, filaments, and accessories.", link: "/products", cta: "Browse Shop" },
-    { icon: "Palette", title: "Customize", desc: "Choose your material, color, and finish. Make any product truly yours.", link: "/products", cta: "Start Customizing" },
-    { icon: "Upload", title: "Upload Your Idea", desc: "Got a 3D model? Upload it and we'll print it for you with professional quality.", link: "/create", cta: "Upload Model" },
+    {
+      icon: "ShoppingBag",
+      title: "Shop Products",
+      desc: "Browse our curated collection of 3D printed items, filaments, and accessories.",
+      link: "/products",
+      cta: "Browse Shop",
+    },
+    {
+      icon: "Palette",
+      title: "Customize",
+      desc: "Choose your material, color, and finish. Make any product truly yours.",
+      link: "/products",
+      cta: "Start Customizing",
+    },
+    {
+      icon: "Upload",
+      title: "Upload Your Idea",
+      desc: "Got a 3D model? Upload it and we'll print it for you with professional quality.",
+      link: "/create",
+      cta: "Upload Model",
+    },
   ];
 
   const columns = Math.max(1, Math.min(4, Number(c.columns) || 3));
-  const columnClass = columns === 1 ? "md:grid-cols-1" : columns === 2 ? "md:grid-cols-2" : columns === 4 ? "md:grid-cols-4" : "md:grid-cols-3";
+  const columnClass =
+    columns === 1
+      ? "md:grid-cols-1"
+      : columns === 2
+        ? "md:grid-cols-2"
+        : columns === 4
+          ? "md:grid-cols-4"
+          : "md:grid-cols-3";
   const align = c.alignment || "center";
 
   return withSection(
@@ -499,7 +596,9 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
     <div className="container">
       {(c.heading || c.subheading) && (
         <div className={`mb-10 ${alignmentClass(align)}`}>
-          {c.heading && <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{c.heading}</h2>}
+          {c.heading && (
+            <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{c.heading}</h2>
+          )}
           {c.subheading && <p className="mt-2 text-muted-foreground">{c.subheading}</p>}
         </div>
       )}
@@ -512,8 +611,12 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
             const action = resolveItemAction(card, card.link);
             const hasImage = card.image && card.image !== "placeholder";
             const cardBody = (
-              <div className={`group flex h-full flex-col rounded-lg border border-border bg-card p-8 transition-all duration-300 hover:-translate-y-1 hover:border-primary hover:shadow-xl ${alignmentClass(card.alignment || align)}`}>
-                <div className={`mb-5 flex h-16 w-16 items-center justify-center rounded-xl ${hasImage ? "overflow-hidden" : "bg-primary/10 transition-colors group-hover:bg-primary/20"} ${card.alignment === "center" || (!card.alignment && align === "center") ? "mx-auto" : ""}`}>
+              <div
+                className={`group flex h-full flex-col rounded-lg border border-border bg-card p-8 transition-all duration-300 hover:-translate-y-1 hover:border-primary hover:shadow-xl ${alignmentClass(card.alignment || align)}`}
+              >
+                <div
+                  className={`mb-5 flex h-16 w-16 items-center justify-center rounded-xl ${hasImage ? "overflow-hidden" : "bg-primary/10 transition-colors group-hover:bg-primary/20"} ${card.alignment === "center" || (!card.alignment && align === "center") ? "mx-auto" : ""}`}
+                >
                   {hasImage ? (
                     <img src={card.image} alt={card.title || ""} className="h-full w-full object-cover" />
                   ) : (
@@ -541,7 +644,12 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
 
             if (action.actionType === "external_link") {
               return (
-                <a key={card.title || `card-${index}`} href={action.actionTarget} target={action.openInNewTab ? "_blank" : "_self"} rel={action.openInNewTab ? "noopener noreferrer" : undefined}>
+                <a
+                  key={card.title || `card-${index}`}
+                  href={action.actionTarget}
+                  target={action.openInNewTab ? "_blank" : "_self"}
+                  rel={action.openInNewTab ? "noopener noreferrer" : undefined}
+                >
                   {cardBody}
                 </a>
               );
@@ -575,7 +683,9 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
       block,
       "bg-secondary py-16 lg:py-24",
       <div className="container text-center">
-        <h2 className="font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">{c.heading || "Shop by Category"}</h2>
+        <h2 className="font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">
+          {c.heading || "Shop by Category"}
+        </h2>
         <p className="mt-2 text-muted-foreground">{c.subheading || "Find exactly what you need"}</p>
         <p className="mt-8 text-sm italic text-muted-foreground">No categories available.</p>
       </div>,
@@ -587,21 +697,32 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
     "bg-secondary py-16 lg:py-24",
     <div className="container">
       <div className={`mb-12 ${alignmentClass(align)}`}>
-        <h2 className="font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">{c.heading || "Shop by Category"}</h2>
+        <h2 className="font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">
+          {c.heading || "Shop by Category"}
+        </h2>
         <p className="mt-2 text-muted-foreground">{c.subheading || "Find exactly what you need"}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {categories.map((cat) => (
           <div key={cat.id}>
-            <Link to={`/products?category=${cat.slug}`} className="group relative flex h-40 items-end overflow-hidden rounded-lg border border-border p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary">
+            <Link
+              to={`/products?category=${cat.slug}`}
+              className="group relative flex h-40 items-end overflow-hidden rounded-lg border border-border p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary"
+            >
               {cat.image_url && (
-                <img src={cat.image_url} alt={cat.name} className="absolute inset-0 h-full w-full object-cover opacity-30 transition-all duration-500 group-hover:scale-110 group-hover:opacity-40" />
+                <img
+                  src={cat.image_url}
+                  alt={cat.name}
+                  className="absolute inset-0 h-full w-full object-cover opacity-30 transition-all duration-500 group-hover:scale-110 group-hover:opacity-40"
+                />
               )}
 
               <div className="absolute inset-0 bg-gradient-to-t from-secondary via-secondary/60 to-transparent" />
 
-              <h3 className="relative font-display text-xl font-bold uppercase text-secondary-foreground transition-colors group-hover:text-primary">{cat.name}</h3>
+              <h3 className="relative font-display text-xl font-bold uppercase text-secondary-foreground transition-colors group-hover:text-primary">
+                {cat.name}
+              </h3>
             </Link>
           </div>
         ))}
@@ -622,7 +743,9 @@ const FeaturedProductsBlock = ({ block }: { block: SiteBlock; disableAnimations?
       block,
       "py-16 lg:py-24",
       <div className="container text-center">
-        <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{c.heading || "Best Sellers"}</h2>
+        <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
+          {c.heading || "Best Sellers"}
+        </h2>
         <p className="mt-2 text-muted-foreground">{c.subheading || "Our most popular 3D printed items"}</p>
         <p className="mt-8 text-sm italic text-muted-foreground">No featured products available.</p>
       </div>,
@@ -635,7 +758,9 @@ const FeaturedProductsBlock = ({ block }: { block: SiteBlock; disableAnimations?
     <div className="container">
       <div className={`mb-12 flex flex-wrap items-end justify-between gap-4 ${headingAlignClass}`}>
         <div>
-          <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{c.heading || "Best Sellers"}</h2>
+          <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
+            {c.heading || "Best Sellers"}
+          </h2>
           <p className="mt-2 text-muted-foreground">{c.subheading || "Our most popular 3D printed items"}</p>
         </div>
 
@@ -657,7 +782,13 @@ const FeaturedProductsBlock = ({ block }: { block: SiteBlock; disableAnimations?
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {products.map(({ product, socialProof }, i) => (
-            <motion.div key={product.id} variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}>
+            <motion.div
+              key={product.id}
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+            >
               <ProductCard product={product} socialProof={socialProof} index={i} />
             </motion.div>
           ))}
@@ -677,7 +808,14 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
   ];
 
   const columns = Math.max(1, Math.min(4, Number(c.columns) || 4));
-  const columnClass = columns === 1 ? "sm:grid-cols-1" : columns === 2 ? "sm:grid-cols-2" : columns === 3 ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-4";
+  const columnClass =
+    columns === 1
+      ? "sm:grid-cols-1"
+      : columns === 2
+        ? "sm:grid-cols-2"
+        : columns === 3
+          ? "sm:grid-cols-2 lg:grid-cols-3"
+          : "sm:grid-cols-2 lg:grid-cols-4";
   const align = c.alignment || "center";
 
   return withSection(
@@ -685,7 +823,9 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
     "bg-muted/50 py-16 lg:py-24",
     <div className="container">
       <div className={`mb-12 ${alignmentClass(align)}`}>
-        <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{c.heading || "How It Works"}</h2>
+        <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
+          {c.heading || "How It Works"}
+        </h2>
         <p className="mt-2 text-muted-foreground">{c.subheading || "From idea to your doorstep in 4 simple steps"}</p>
       </div>
 
@@ -699,8 +839,13 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
             const isClickable = action.actionType !== "none";
 
             const stepContent = (
-              <div key={s.title || index} className={`${alignmentClass(s.alignment || align)} ${isClickable ? "cursor-pointer" : ""}`}>
-                <div className={`mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full border-2 border-primary/20 bg-card transition-all hover:border-primary hover:shadow-lg ${hasImage ? "overflow-hidden" : ""}`}>
+              <div
+                key={s.title || index}
+                className={`${alignmentClass(s.alignment || align)} ${isClickable ? "cursor-pointer" : ""}`}
+              >
+                <div
+                  className={`mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full border-2 border-primary/20 bg-card transition-all hover:border-primary hover:shadow-lg ${hasImage ? "overflow-hidden" : ""}`}
+                >
                   {hasImage ? (
                     <img src={s.image} alt={s.title || ""} className="h-full w-full object-cover" />
                   ) : (
@@ -714,10 +859,23 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
 
             if (action.actionType === "internal_link" && action.actionTarget) {
               const target = action.actionTarget.startsWith("/") ? action.actionTarget : `/${action.actionTarget}`;
-              return <Link key={s.title || index} to={target} target={action.openInNewTab ? "_blank" : "_self"}>{stepContent}</Link>;
+              return (
+                <Link key={s.title || index} to={target} target={action.openInNewTab ? "_blank" : "_self"}>
+                  {stepContent}
+                </Link>
+              );
             }
             if (action.actionType === "external_link" && action.actionTarget) {
-              return <a key={s.title || index} href={action.actionTarget} target={action.openInNewTab ? "_blank" : "_self"} rel={action.openInNewTab ? "noopener noreferrer" : undefined}>{stepContent}</a>;
+              return (
+                <a
+                  key={s.title || index}
+                  href={action.actionTarget}
+                  target={action.openInNewTab ? "_blank" : "_self"}
+                  rel={action.openInNewTab ? "noopener noreferrer" : undefined}
+                >
+                  {stepContent}
+                </a>
+              );
             }
 
             return <div key={s.title || index}>{stepContent}</div>;
@@ -747,7 +905,9 @@ const FaqBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) 
     "py-16 lg:py-24",
     <div className="container max-w-3xl">
       <div className={`mb-12 ${alignmentClass(align)}`}>
-        <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{c.heading || "Frequently Asked Questions"}</h2>
+        <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
+          {c.heading || "Frequently Asked Questions"}
+        </h2>
       </div>
 
       <Accordion type="single" collapsible className="space-y-2">
@@ -755,7 +915,9 @@ const FaqBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) 
           .filter((item: any) => item?.visible !== false)
           .map((item: any, i: number) => (
             <AccordionItem key={i} value={`faq-${i}`} className="rounded-lg border border-border bg-card px-6">
-              <AccordionTrigger className="font-display text-sm uppercase tracking-wider text-card-foreground hover:text-primary hover:no-underline">{item.q}</AccordionTrigger>
+              <AccordionTrigger className="font-display text-sm uppercase tracking-wider text-card-foreground hover:text-primary hover:no-underline">
+                {item.q}
+              </AccordionTrigger>
               <AccordionContent className="text-muted-foreground">{item.a}</AccordionContent>
             </AccordionItem>
           ))}
@@ -773,7 +935,14 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
   ];
 
   const columns = Math.max(1, Math.min(4, Number(c.columns) || 3));
-  const columnClass = columns === 1 ? "sm:grid-cols-1" : columns === 2 ? "sm:grid-cols-2" : columns === 4 ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3";
+  const columnClass =
+    columns === 1
+      ? "sm:grid-cols-1"
+      : columns === 2
+        ? "sm:grid-cols-2"
+        : columns === 4
+          ? "sm:grid-cols-2 lg:grid-cols-4"
+          : "sm:grid-cols-3";
 
   return withSection(
     block,
@@ -781,7 +950,9 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
     <div className="container">
       {(c.heading || c.subheading) && (
         <div className={`mb-8 ${alignmentClass(c.alignment || "center")}`}>
-          {c.heading && <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{c.heading}</h2>}
+          {c.heading && (
+            <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{c.heading}</h2>
+          )}
           {c.subheading && <p className="mt-2 text-muted-foreground">{c.subheading}</p>}
         </div>
       )}
@@ -795,8 +966,12 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
             const action = resolveItemAction(badge);
 
             const badgeContent = (
-              <div className={`flex gap-4 rounded-md border border-border bg-card p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary hover:shadow-md ${verticalClass(c.verticalAlignment)} ${action.actionType !== "none" ? "cursor-pointer" : ""}`}>
-                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${hasImage ? "overflow-hidden" : "bg-primary/10"}`}>
+              <div
+                className={`flex gap-4 rounded-md border border-border bg-card p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary hover:shadow-md ${verticalClass(c.verticalAlignment)} ${action.actionType !== "none" ? "cursor-pointer" : ""}`}
+              >
+                <div
+                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${hasImage ? "overflow-hidden" : "bg-primary/10"}`}
+                >
                   {hasImage ? (
                     <img src={badge.image} alt={badge.title || ""} className="h-full w-full object-cover" />
                   ) : (
@@ -812,10 +987,23 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
 
             if (action.actionType === "internal_link" && action.actionTarget) {
               const target = action.actionTarget.startsWith("/") ? action.actionTarget : `/${action.actionTarget}`;
-              return <Link key={badge.title || index} to={target} target={action.openInNewTab ? "_blank" : "_self"}>{badgeContent}</Link>;
+              return (
+                <Link key={badge.title || index} to={target} target={action.openInNewTab ? "_blank" : "_self"}>
+                  {badgeContent}
+                </Link>
+              );
             }
             if (action.actionType === "external_link" && action.actionTarget) {
-              return <a key={badge.title || index} href={action.actionTarget} target={action.openInNewTab ? "_blank" : "_self"} rel={action.openInNewTab ? "noopener noreferrer" : undefined}>{badgeContent}</a>;
+              return (
+                <a
+                  key={badge.title || index}
+                  href={action.actionTarget}
+                  target={action.openInNewTab ? "_blank" : "_self"}
+                  rel={action.openInNewTab ? "noopener noreferrer" : undefined}
+                >
+                  {badgeContent}
+                </a>
+              );
             }
 
             return <div key={badge.title || index}>{badgeContent}</div>;
@@ -834,7 +1022,9 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
     block,
     "py-16",
     <div className="container">
-      {block.title && <h2 className="mb-8 text-center font-display text-3xl font-bold uppercase text-foreground">{block.title}</h2>}
+      {block.title && (
+        <h2 className="mb-8 text-center font-display text-3xl font-bold uppercase text-foreground">{block.title}</h2>
+      )}
 
       <div className="relative overflow-hidden rounded-lg">
         <div className="aspect-[21/9] overflow-hidden">
@@ -854,17 +1044,31 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
 
         {images.length > 1 && (
           <>
-            <Button variant="ghost" size="icon" className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background" onClick={() => setCurrent((p) => (p - 1 + images.length) % images.length)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background"
+              onClick={() => setCurrent((p) => (p - 1 + images.length) % images.length)}
+            >
               <ChevronLeft className="h-[45px] w-[45px] text-primary" />
             </Button>
 
-            <Button variant="ghost" size="icon" className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background" onClick={() => setCurrent((p) => (p + 1) % images.length)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background"
+              onClick={() => setCurrent((p) => (p + 1) % images.length)}
+            >
               <ChevronRight className="h-[45px] w-[45px] text-primary" />
             </Button>
 
             <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
               {images.map((_, i) => (
-                <button key={i} onClick={() => setCurrent(i)} className={`h-2 w-2 rounded-full transition-all ${i === current ? "w-6 bg-primary" : "bg-background/60"}`} />
+                <button
+                  key={i}
+                  onClick={() => setCurrent(i)}
+                  className={`h-2 w-2 rounded-full transition-all ${i === current ? "w-6 bg-primary" : "bg-background/60"}`}
+                />
               ))}
             </div>
           </>
@@ -887,16 +1091,30 @@ const VideoBlock = ({ block }: { block: SiteBlock }) => {
     block,
     "bg-secondary py-16 lg:py-24",
     <div className="container max-w-4xl">
-      {block.title && <h2 className="mb-8 text-center font-display text-3xl font-bold uppercase text-secondary-foreground">{block.title}</h2>}
+      {block.title && (
+        <h2 className="mb-8 text-center font-display text-3xl font-bold uppercase text-secondary-foreground">
+          {block.title}
+        </h2>
+      )}
 
       <div className="overflow-hidden rounded-lg border border-border shadow-xl">
         {isYouTube ? (
           <div className="aspect-video">
-            <iframe src={`https://www.youtube.com/embed/${getYouTubeId(url)}`} className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+            <iframe
+              src={`https://www.youtube.com/embed/${getYouTubeId(url)}`}
+              className="h-full w-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
           </div>
         ) : isVimeo ? (
           <div className="aspect-video">
-            <iframe src={`https://player.vimeo.com/video/${getVimeoId(url)}`} className="h-full w-full" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
+            <iframe
+              src={`https://player.vimeo.com/video/${getVimeoId(url)}`}
+              className="h-full w-full"
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowFullScreen
+            />
           </div>
         ) : (
           <div className="aspect-video">
@@ -915,17 +1133,30 @@ const VideoBlock = ({ block }: { block: SiteBlock }) => {
 const CtaBlock = ({ block }: { block: SiteBlock }) => {
   const c = block.content || {};
   const align = c.alignment || "center";
-  const buttons = resolveButtons(c, [{ text: c.button_text || "Learn more", link: c.button_link || "/products", icon: "ArrowRight", variant: c.button_variant || "default" }]);
+  const buttons = resolveButtons(c, [
+    {
+      text: c.button_text || "Learn more",
+      link: c.button_link || "/products",
+      icon: "ArrowRight",
+      variant: c.button_variant || "default",
+    },
+  ]);
 
   return withSection(
     block,
     "bg-secondary py-16 lg:py-24",
     <div className={`container ${alignmentClass(align)}`}>
-      <h2 className="mb-4 font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">{c.heading || "Ready to get started?"}</h2>
+      <h2 className="mb-4 font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">
+        {c.heading || "Ready to get started?"}
+      </h2>
       {c.subheading && <p className="mb-8 text-lg text-muted-foreground">{c.subheading}</p>}
       <div className={`flex flex-wrap gap-4 ${justifyClass(c.buttonAlignment || align)}`}>
         {buttons.map((button, index) => (
-          <ActionButton key={`${button.text}-${index}`} button={button} className="font-display uppercase tracking-wider" />
+          <ActionButton
+            key={`${button.text}-${index}`}
+            button={button}
+            className="font-display uppercase tracking-wider"
+          />
         ))}
       </div>
     </div>,
@@ -948,7 +1179,11 @@ const SingleButtonBlock = ({ block }: { block: SiteBlock }) => {
     "py-8",
     <div className={`container flex ${justifyClass(c.buttonAlignment || c.alignment || "center")}`}>
       {buttons.map((button, index) => (
-        <ActionButton key={`${button.text}-${index}`} button={button} className="font-display uppercase tracking-wider" />
+        <ActionButton
+          key={`${button.text}-${index}`}
+          button={button}
+          className="font-display uppercase tracking-wider"
+        />
       ))}
     </div>,
   );
@@ -973,8 +1208,12 @@ const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
     block,
     "bg-secondary py-16",
     <div className={`container max-w-xl ${alignmentClass(align)}`}>
-      <h2 className="mb-2 font-display text-2xl font-bold uppercase text-secondary-foreground">{c.heading || "Stay Updated"}</h2>
-      <p className="mb-6 text-muted-foreground">{c.subheading || "Subscribe to our newsletter for the latest updates."}</p>
+      <h2 className="mb-2 font-display text-2xl font-bold uppercase text-secondary-foreground">
+        {c.heading || "Stay Updated"}
+      </h2>
+      <p className="mb-6 text-muted-foreground">
+        {c.subheading || "Subscribe to our newsletter for the latest updates."}
+      </p>
 
       {status === "success" ? (
         <p className="font-display text-primary">Thanks for subscribing!</p>
@@ -988,13 +1227,208 @@ const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
             placeholder="your@email.com"
             className="flex-1 rounded-md border border-border bg-background px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           />
-          <button type="submit" className="rounded-md bg-primary px-6 py-2 font-display text-sm uppercase tracking-wider text-primary-foreground hover:bg-primary/90">
+          <button
+            type="submit"
+            className="rounded-md bg-primary px-6 py-2 font-display text-sm uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
+          >
             {c.submit_text || "Subscribe"}
           </button>
         </form>
       )}
 
       {status === "error" && <p className="mt-2 text-sm text-destructive">Already subscribed or error occurred.</p>}
+    </div>,
+  );
+};
+
+const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
+  const c = block.content || {};
+  const [items, setItems] = useState<InstagramMediaItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [current, setCurrent] = useState(0);
+
+  const username = String(c.instagramUsername || "")
+    .trim()
+    .replace(/^@/, "");
+  const itemsToShow = Math.max(1, Math.min(20, Number(c.itemsToShow) || 10));
+  const layout = c.layout === "grid" ? "grid" : "slider";
+  const autoplay = c.autoplay !== false;
+  const showCaptions = Boolean(c.showCaptions);
+  const showProfileButton = c.showProfileButton !== false;
+  const intervalMs = Math.max(1500, Number(c.intervalMs) || 3000);
+  const functionName = String(c.functionName || "instagram-feed").trim() || "instagram-feed";
+  const profileUrl = username ? `https://www.instagram.com/${username}` : "https://www.instagram.com";
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadFeed = async () => {
+      if (!username) {
+        setItems([]);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${functionName}?username=${encodeURIComponent(username)}&limit=${itemsToShow}`;
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+
+        if (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) {
+          headers.apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+          headers.Authorization = `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`;
+        }
+
+        const res = await fetch(url, { headers });
+        if (!res.ok) throw new Error(`Instagram feed request failed: ${res.status}`);
+
+        const data = await res.json();
+        if (!mounted) return;
+
+        const nextItems = Array.isArray(data?.items) ? data.items : [];
+        setItems(nextItems.slice(0, itemsToShow));
+        setCurrent(0);
+      } catch (error) {
+        console.error("Failed to load Instagram feed", error);
+        if (mounted) setItems([]);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    void loadFeed();
+
+    return () => {
+      mounted = false;
+    };
+  }, [username, itemsToShow, functionName]);
+
+  useEffect(() => {
+    if (!autoplay || layout !== "slider" || items.length <= 1) return;
+
+    const timer = window.setInterval(() => {
+      setCurrent((prev) => (prev + 1) % items.length);
+    }, intervalMs);
+
+    return () => window.clearInterval(timer);
+  }, [autoplay, intervalMs, items.length, layout]);
+
+  if (!username) {
+    return withSection(
+      block,
+      "py-16 lg:py-24",
+      <div className="container">
+        <div className="rounded-3xl border border-dashed border-border bg-card/50 p-8 text-center text-muted-foreground">
+          Add an Instagram username to show the auto feed.
+        </div>
+      </div>,
+    );
+  }
+
+  const activeItem = items[current];
+
+  return withSection(
+    block,
+    "py-16 lg:py-24",
+    <div className="container">
+      <div className="rounded-3xl border bg-card/70 p-5 shadow-sm backdrop-blur md:p-6">
+        <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">{c.title || "Follow us on Instagram"}</h2>
+            <p className="text-sm text-muted-foreground">{c.subtitle || "Latest posts and reels"}</p>
+          </div>
+
+          {showProfileButton && (
+            <Button asChild>
+              <a href={profileUrl} target="_blank" rel="noreferrer">
+                <Instagram className="mr-2 h-4 w-4" />@{username}
+              </a>
+            </Button>
+          )}
+        </div>
+
+        {loading ? (
+          <div className="text-sm text-muted-foreground">Loading Instagram feed...</div>
+        ) : items.length === 0 ? (
+          <div className="text-sm text-muted-foreground">No Instagram posts found.</div>
+        ) : layout === "grid" ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {items.map((item) => {
+              const imageSrc = item.media_type === "VIDEO" ? item.thumbnail_url || item.media_url : item.media_url;
+              return (
+                <a
+                  key={item.id}
+                  href={item.permalink || profileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="overflow-hidden rounded-2xl border bg-background transition hover:shadow-md"
+                >
+                  {imageSrc ? (
+                    <img
+                      src={imageSrc}
+                      alt={item.caption || "Instagram post"}
+                      className="aspect-square w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="flex aspect-square items-center justify-center bg-muted text-sm text-muted-foreground">
+                      No image
+                    </div>
+                  )}
+                  {showCaptions && item.caption && (
+                    <div className="line-clamp-3 p-3 text-sm text-muted-foreground">{item.caption}</div>
+                  )}
+                </a>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="overflow-hidden rounded-2xl border bg-background">
+              {activeItem ? (
+                <a href={activeItem.permalink || profileUrl} target="_blank" rel="noreferrer">
+                  {(() => {
+                    const activeSrc =
+                      activeItem.media_type === "VIDEO"
+                        ? activeItem.thumbnail_url || activeItem.media_url
+                        : activeItem.media_url;
+                    return activeSrc ? (
+                      <img
+                        src={activeSrc}
+                        alt={activeItem.caption || "Instagram post"}
+                        className="aspect-square w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex aspect-square items-center justify-center bg-muted text-sm text-muted-foreground">
+                        No image
+                      </div>
+                    );
+                  })()}
+                </a>
+              ) : null}
+            </div>
+
+            {showCaptions && activeItem?.caption && (
+              <p className="text-sm text-muted-foreground">{activeItem.caption}</p>
+            )}
+
+            {items.length > 1 && (
+              <div className="flex flex-wrap gap-2">
+                {items.map((item, index) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setCurrent(index)}
+                    className={`h-2.5 w-2.5 rounded-full ${index === current ? "bg-primary" : "bg-muted"}`}
+                    aria-label={`Go to Instagram item ${index + 1}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>,
   );
 };

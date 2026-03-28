@@ -25,6 +25,7 @@ import AdminReviews from "./pages/admin/AdminReviews";
 import AdminContent from "./pages/admin/AdminContent";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminCustomOrders from "./pages/admin/AdminCustomOrders";
+import AdminDiscounts from "./pages/admin/AdminDiscounts";
 import PageEditor from "./pages/admin/PageEditor";
 import DynamicPage from "./pages/DynamicPage";
 import CreateYourOwn from "./pages/CreateYourOwn";
@@ -33,6 +34,7 @@ import About from "./pages/About";
 import SubmitDesign from "./pages/SubmitDesign";
 import NotFound from "./pages/NotFound";
 import ChatWidget from "./components/ChatWidget";
+import PromotionPopup from "./components/PromotionPopup";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -74,6 +76,7 @@ const App = () => (
                 <Route path="/admin/clients" element={<AdminClients />} />
                 <Route path="/admin/shipping" element={<AdminShipping />} />
                 <Route path="/admin/custom-orders" element={<AdminCustomOrders />} />
+                <Route path="/admin/discounts" element={<AdminDiscounts />} />
                 <Route path="/admin/reviews" element={<AdminReviews />} />
                 <Route path="/admin/content" element={<AdminContent />} />
                 <Route path="/admin/settings" element={<AdminSettings />} />
@@ -83,6 +86,7 @@ const App = () => (
               </Routes>
             </Layout>
             <ChatWidget />
+            <PromotionPopup />
           </BrowserRouter>
         </CartProvider>
       </AuthProvider>

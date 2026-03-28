@@ -1321,11 +1321,11 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
             />
           </div>
           <div>
-            <Label>Instagram Username</Label>
+            <Label>Instagram Username or Profile URL</Label>
             <Input
               value={form.content.instagramUsername ?? ""}
               onChange={(e) => updateContent("instagramUsername", e.target.value)}
-              placeholder="layerloot"
+              placeholder="layerloot3d or https://www.instagram.com/layerloot3d"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">

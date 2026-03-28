@@ -1247,9 +1247,12 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
   const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState(0);
 
-  const username = String(c.instagramUsername || "")
-    .trim()
-    .replace(/^@/, "");
+  const rawInstagramInput = String(c.instagramUsername || "").trim();
+  const username = rawInstagramInput
+    .replace(/^https?:\/\/(www\.)?instagram\.com\//i, "")
+    .replace(/[/?#].*$/, "")
+    .replace(/^@/, "")
+    .replace(/^\/+|\/+$/g, "");
   const itemsToShow = Math.max(1, Math.min(20, Number(c.itemsToShow) || 10));
   const layout = c.layout === "grid" ? "grid" : "slider";
   const autoplay = c.autoplay !== false;

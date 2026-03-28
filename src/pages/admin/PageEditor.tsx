@@ -391,7 +391,7 @@ const PageEditor = () => {
         defaultContent = {
           title: "Follow us on Instagram",
           subtitle: "Latest posts and reels",
-          instagramUsername: "layerloot",
+          instagramUsername: "layerloot3d",
           itemsToShow: 10,
           layout: "slider",
           autoplay: true,

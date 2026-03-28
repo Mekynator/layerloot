@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Layers, Mail, MapPin, Phone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavLinks } from "@/components/admin/NavLinkEditor";
+import { useNavLinks, type NavItem } from "@/components/admin/NavLinkEditor";
 import GlobalSectionRenderer from "@/components/layout/GlobalSectionRenderer";
 
 type ContactSettings = {
@@ -36,6 +36,18 @@ type FooterSettings = {
   orders_link_label?: string;
 };
 
+type SitePageOption = {
+  id: string;
+  name: string;
+  title: string | null;
+  full_path: string;
+  slug: string;
+  page_type: string;
+  parent_id: string | null;
+  show_in_footer: boolean;
+  is_published: boolean;
+};
+
 const defaultContact: ContactSettings = {
   email: "support@layerloot.lovable.app",
   phone: "+45 00 00 00 00",
@@ -65,6 +77,24 @@ const normalizePath = (value?: string | null) => {
   return `/${value.replace(/^\/+|\/+$/g, "")}`;
 };
 
+const pageLabel = (page: SitePageOption, parentMap: Map<string, SitePageOption>) => {
+  const ownLabel = page.title || page.name || page.slug;
+  if (!page.parent_id) return ownLabel;
+  const parent = parentMap.get(page.parent_id);
+  if (!parent) return ownLabel;
+  return `${parent.title || parent.name || parent.slug} / ${ownLabel}`;
+};
+
+const dedupeLinks = (items: NavItem[]) => {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = `${normalizePath(item.to)}::${item.label}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
 const Footer = () => {
   const [contact, setContact] = useState<ContactSettings>(defaultContact);
   const [branding, setBranding] = useState<BrandingSettings>({
@@ -75,15 +105,22 @@ const Footer = () => {
     logo_alt: "LayerLoot",
   });
   const [footerSettings, setFooterSettings] = useState<FooterSettings>(defaultFooterSettings);
+  const [footerPages, setFooterPages] = useState<SitePageOption[]>([]);
 
-  const navLinks = useNavLinks();
+  const manualNavLinks = useNavLinks();
 
   useEffect(() => {
     Promise.all([
       supabase.from("site_settings").select("value").eq("key", "contact").maybeSingle(),
       supabase.from("site_settings").select("value").eq("key", "branding").maybeSingle(),
       supabase.from("site_settings").select("value").eq("key", "footer_settings").maybeSingle(),
-    ]).then(([contactRes, brandingRes, footerRes]) => {
+      supabase
+        .from("site_pages")
+        .select("id,name,title,full_path,slug,page_type,parent_id,show_in_footer,is_published")
+        .eq("is_published", true)
+        .eq("show_in_footer", true)
+        .order("sort_order", { ascending: true }),
+    ]).then(([contactRes, brandingRes, footerRes, pagesRes]) => {
       if (contactRes.data?.value) {
         setContact({
           ...defaultContact,
@@ -104,20 +141,32 @@ const Footer = () => {
           ...(footerRes.data.value as FooterSettings),
         });
       }
+
+      setFooterPages(((pagesRes.data as SitePageOption[] | null) ?? []).filter((page) => page.page_type !== "global"));
     });
   }, []);
 
-  const footerLinks = useMemo(
-    () =>
-      navLinks
-        .filter((link) => !!link.to && !!link.label)
-        .slice(0, 6)
-        .map((link) => ({
-          ...link,
-          to: normalizePath(link.to),
-        })),
-    [navLinks],
-  );
+  const footerLinks = useMemo(() => {
+    const parentMap = new Map(footerPages.map((page) => [page.id, page]));
+
+    const autoLinks: NavItem[] = footerPages.map((page) => ({
+      label: pageLabel(page, parentMap),
+      to: normalizePath(page.full_path),
+      source: "site_page",
+      pageId: page.id,
+      openInNewTab: false,
+      visible: true,
+    }));
+
+    const manualLinks = manualNavLinks
+      .filter((link) => !!link.to && !!link.label)
+      .map((link) => ({
+        ...link,
+        to: normalizePath(link.to),
+      }));
+
+    return dedupeLinks([...autoLinks, ...manualLinks]).slice(0, 6);
+  }, [footerPages, manualNavLinks]);
 
   const logoHeight = Math.max(20, Number(footerSettings.logo_height_px || 32));
 
@@ -164,7 +213,11 @@ const Footer = () => {
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   {footerLinks.map((link) => (
                     <li key={`${link.label}-${link.to}`}>
-                      <Link to={link.to} className="hover:text-primary">
+                      <Link
+                        to={link.to}
+                        className="hover:text-primary"
+                        target={link.openInNewTab ? "_blank" : undefined}
+                      >
                         {link.label}
                       </Link>
                     </li>

@@ -33,6 +33,7 @@ type SitePageOption = {
   full_path: string;
   slug: string;
   page_type: string;
+  parent_id: string | null;
   show_in_header: boolean;
   is_published: boolean;
 };
@@ -59,6 +60,14 @@ const toEditorItem = (item: NavItem): NavEditorItem => ({
   openInNewTab: Boolean(item.openInNewTab),
   visible: item.visible !== false,
 });
+
+const pageLabel = (page: SitePageOption, parentMap: Map<string, SitePageOption>) => {
+  const ownLabel = page.title || page.name || page.slug;
+  if (!page.parent_id) return ownLabel;
+  const parent = parentMap.get(page.parent_id);
+  if (!parent) return ownLabel;
+  return `${parent.title || parent.name || parent.slug} / ${ownLabel}`;
+};
 
 export const useNavLinks = () => {
   const [links, setLinks] = useState<NavItem[]>(defaultNav);
@@ -99,7 +108,7 @@ const NavLinkEditor = () => {
 
     supabase
       .from("site_pages")
-      .select("id,name,title,full_path,slug,page_type,show_in_header,is_published")
+      .select("id,name,title,full_path,slug,page_type,parent_id,show_in_header,is_published")
       .eq("is_published", true)
       .eq("show_in_header", true)
       .order("sort_order", { ascending: true })
@@ -109,6 +118,7 @@ const NavLinkEditor = () => {
   }, []);
 
   const headerPages = useMemo(() => sitePages.filter((page) => page.page_type !== "global"), [sitePages]);
+  const parentMap = useMemo(() => new Map(sitePages.map((page) => [page.id, page])), [sitePages]);
 
   const save = async () => {
     const payload: NavItem[] = links.map((item) => ({
@@ -138,7 +148,7 @@ const NavLinkEditor = () => {
       { label: "New Page", to: "/new-page", source: "manual", openInNewTab: false, visible: true },
     ]);
 
-  const removeLink = (i: number) => setLinks(links.filter((_, j) => j != i));
+  const removeLink = (i: number) => setLinks(links.filter((_, j) => j !== i));
 
   const updateLink = (i: number, field: keyof NavEditorItem, value: string | boolean) => {
     setLinks((prev) => {
@@ -158,7 +168,7 @@ const NavLinkEditor = () => {
         ...updated[i],
         source: "site_page",
         pageId: page.id,
-        label: page.title || page.name || page.slug,
+        label: pageLabel(page, parentMap),
         to: normalizePath(page.full_path),
       };
       return updated;
@@ -193,6 +203,11 @@ const NavLinkEditor = () => {
         <SheetHeader>
           <SheetTitle className="font-display uppercase">Header Navigation</SheetTitle>
         </SheetHeader>
+
+        <div className="mt-4 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+          Published pages with <span className="font-medium text-foreground">Show in header</span> enabled can be linked
+          automatically here. Manual links still work for custom routes.
+        </div>
 
         <div className="mt-6 space-y-3">
           {links.map((link, i) => (
@@ -231,7 +246,7 @@ const NavLinkEditor = () => {
                         <SelectContent>
                           {headerPages.map((page) => (
                             <SelectItem key={page.id} value={page.id}>
-                              {page.title || page.name || page.slug}
+                              {pageLabel(page, parentMap)}
                             </SelectItem>
                           ))}
                         </SelectContent>

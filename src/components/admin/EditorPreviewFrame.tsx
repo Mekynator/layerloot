@@ -23,16 +23,7 @@ const labelForPage = (page: string) => {
     .replace(/\b\w/g, (m) => m.toUpperCase());
 };
 
-export default function EditorPreviewFrame({
-  page,
-  pagePath,
-  blocks,
-  selectedBlockId,
-  onSelectBlock,
-  onEditBlock,
-  onToggleActive,
-  onAddBefore,
-}: Props) {
+export default function EditorPreviewFrame({ page, pagePath }: Props) {
   const iframeSrc = useMemo(() => {
     const url = new URL(window.location.origin + pagePath);
     url.searchParams.set("editorPreview", "1");
@@ -49,7 +40,7 @@ export default function EditorPreviewFrame({
         </div>
 
         <Button variant="outline" size="sm" asChild>
-          <a href={pagePath} target="_blank" rel="noreferrer">
+          <a href={pagePath} target="_blank" rel="noopener noreferrer">
             <ExternalLink className="mr-2 h-4 w-4" />
             Open real page
           </a>
@@ -62,13 +53,15 @@ export default function EditorPreviewFrame({
           src={iframeSrc}
           title={`Preview ${page}`}
           className="h-full w-full border-0 bg-background"
+          sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
+          referrerPolicy="no-referrer-when-downgrade"
         />
 
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute right-3 top-3 rounded-md border border-border bg-background/95 px-3 py-2 shadow-sm backdrop-blur">
+          <div className="absolute right-3 top-3 max-w-sm rounded-md border border-border bg-background/95 px-3 py-2 shadow-sm backdrop-blur">
             <p className="text-[11px] text-muted-foreground">
-              Preview is using the real route:
-              <span className="ml-1 font-mono text-foreground">{pagePath}</span>
+              Instagram and some external sites can still block opening from inside preview iframes. Use{" "}
+              <span className="ml-1 font-medium text-foreground">Open real page</span> to test external links.
             </p>
           </div>
         </div>

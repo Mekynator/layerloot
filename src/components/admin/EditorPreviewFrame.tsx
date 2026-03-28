@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ExternalLink, MonitorSmartphone, Eye, MousePointerClick } from "lucide-react";
+import { ExternalLink, MonitorSmartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
 import EditorPreviewOverlay, { type PreviewBlockRect } from "@/components/admin/EditorPreviewOverlay";
@@ -49,7 +49,6 @@ export default function EditorPreviewFrame({
 
   const totalBlocks = blocks.length;
   const visibleBlocks = blocks.filter((block) => block.is_active !== false).length;
-  const selectedBlock = blocks.find((block) => block.id === selectedBlockId) || null;
   const hiddenBlockIds = blocks.filter((block) => block.is_active === false).map((block) => block.id);
 
   useEffect(() => {
@@ -211,7 +210,7 @@ export default function EditorPreviewFrame({
   };
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-card px-4 py-2">
         <div>
           <p className="font-display text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Live preview</p>
@@ -235,13 +234,13 @@ export default function EditorPreviewFrame({
         </div>
       </div>
 
-      <div className="relative flex-1 overflow-hidden bg-muted/20">
+      <div className="relative flex-1 min-h-0 overflow-hidden bg-muted/20">
         <iframe
           ref={iframeRef}
           key={iframeSrc}
           src={iframeSrc}
           title={`Preview ${page}`}
-          className="h-full w-full border-0 bg-background"
+          className="block h-full w-full border-0 bg-background"
           sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
           referrerPolicy="no-referrer-when-downgrade"
         />
@@ -264,42 +263,7 @@ export default function EditorPreviewFrame({
             setDragOverBlockId(null);
           }}
         />
-
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-3 top-3 max-w-md rounded-md border border-border bg-background/95 px-3 py-2 shadow-sm backdrop-blur">
-            <div className="flex items-start gap-2">
-              <Eye className="mt-0.5 h-4 w-4 text-primary" />
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-foreground">
-                  {selectedBlock
-                    ? `Selected: ${selectedBlock.title || selectedBlock.block_type}`
-                    : "Click blocks directly in preview"}
-                </p>
-                <p className="text-[11px] text-muted-foreground">
-                  Single click selects and scrolls to a block. Double click opens the editor. Drag the handle to reorder
-                  sections directly in preview.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="absolute right-3 top-3 max-w-sm rounded-md border border-border bg-background/95 px-3 py-2 shadow-sm backdrop-blur">
-            <div className="flex items-start gap-2">
-              <MousePointerClick className="mt-0.5 h-4 w-4 text-primary" />
-              <p className="text-[11px] text-muted-foreground">
-                Instagram and some external sites can still block opening from inside preview iframes. Use{" "}
-                <span className="font-medium text-foreground">Open real page</span> to test external links.
-              </p>
-            </div>
-          </div>
-
-          <div className="absolute bottom-3 left-3 rounded-md border border-border bg-background/95 px-3 py-2 text-[11px] text-muted-foreground shadow-sm backdrop-blur">
-            Page path: <span className="font-medium text-foreground">{pagePath}</span>
-          </div>
-        </div>
       </div>
     </div>
   );
 }
-
-export default EditorPreviewFrame;

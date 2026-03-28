@@ -294,6 +294,14 @@ const PageEditor = () => {
     if (!loading && (!user || !isAdmin)) navigate("/");
   }, [isAdmin, loading, user, navigate]);
 
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
   const loadPages = async () => {
     const { data, error } = await supabase.from("site_pages").select("*").order("sort_order").order("created_at");
 
@@ -322,7 +330,6 @@ const PageEditor = () => {
   );
 
   const frontendPages = useMemo(() => pages.filter((page) => page.page_type !== "global"), [pages]);
-
   const globalPages = useMemo(() => pages.filter((page) => page.page_type === "global"), [pages]);
 
   const childCandidates = useMemo(
@@ -441,9 +448,9 @@ const PageEditor = () => {
     };
 
     const oldPageKey = selectedPage ? pageToEditorKey(selectedPage) : null;
-    const { data, error } = isEditing
-      ? await supabase.from("site_pages").update(payload).eq("id", editingPageId!).select("*").single()
-      : await supabase.from("site_pages").insert(payload).select("*").single();
+    const { error } = isEditing
+      ? await supabase.from("site_pages").update(payload).eq("id", editingPageId!)
+      : await supabase.from("site_pages").insert(payload);
 
     if (error) {
       toast({
@@ -569,7 +576,6 @@ const PageEditor = () => {
     }
 
     replacePageBlocks(normalizedLocal.map((block) => (block.id === tempId ? (insertResult.data as SiteBlock) : block)));
-
     toast({ title: "Block added" });
   };
 
@@ -663,7 +669,7 @@ const PageEditor = () => {
   if (loading || !isAdmin) return null;
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex h-screen flex-col overflow-hidden">
       <div className="sticky top-16 z-40 border-b border-border bg-foreground text-background">
         <div className="flex h-12 items-center justify-between gap-3 px-4">
           <div className="flex items-center gap-3">

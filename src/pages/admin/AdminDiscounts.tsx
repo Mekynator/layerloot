@@ -33,9 +33,18 @@ interface DiscountCode {
   created_at: string;
 }
 
+interface ProfileRow {
+  id: string;
+  user_id: string | null;
+  username: string | null;
+  display_name: string | null;
+  full_name: string | null;
+}
+
 interface UserOption {
   id: string;
   label: string;
+  secondary?: string;
 }
 
 const emptyDiscount: Omit<DiscountCode, "id" | "created_at" | "used_count"> = {
@@ -55,6 +64,20 @@ const emptyDiscount: Omit<DiscountCode, "id" | "created_at" | "used_count"> = {
   expires_at: null,
 };
 
+const buildUserLabel = (profile: ProfileRow) => {
+  const username = profile.username?.trim();
+  const displayName = profile.display_name?.trim();
+  const fullName = profile.full_name?.trim();
+
+  if (username && displayName) return { label: username, secondary: displayName };
+  if (username && fullName) return { label: username, secondary: fullName };
+  if (username) return { label: username };
+  if (displayName && fullName && displayName !== fullName) return { label: displayName, secondary: fullName };
+  if (displayName) return { label: displayName };
+  if (fullName) return { label: fullName };
+  return { label: profile.user_id || profile.id };
+};
+
 const AdminDiscounts = () => {
   const { toast } = useToast();
   const [discounts, setDiscounts] = useState<DiscountCode[]>([]);
@@ -71,7 +94,7 @@ const AdminDiscounts = () => {
       supabase.from("discount_codes").select("*").order("created_at", { ascending: false }),
       supabase.from("products").select("id, name").order("name"),
       supabase.from("categories").select("id, name").order("name"),
-      supabase.from("profiles").select("id, full_name, email").order("full_name"),
+      supabase.from("profiles").select("id, user_id, username, display_name, full_name").order("username"),
     ]);
 
     setDiscounts((d as DiscountCode[]) ?? []);
@@ -83,12 +106,12 @@ const AdminDiscounts = () => {
       setUsers([]);
     } else {
       const mappedUsers =
-        (u as Array<{ id: string; full_name?: string | null; email?: string | null }> | null)?.map((user) => {
-          const displayName = (user.full_name || "").trim();
-          const email = (user.email || "").trim();
+        (u as ProfileRow[] | null)?.map((profile) => {
+          const built = buildUserLabel(profile);
           return {
-            id: user.id,
-            label: displayName || email || user.id,
+            id: profile.user_id || profile.id,
+            label: built.label,
+            secondary: built.secondary,
           };
         }) ?? [];
 
@@ -105,7 +128,9 @@ const AdminDiscounts = () => {
   }, []);
 
   const selectedUserLabel = useMemo(() => {
-    return users.find((user) => user.id === form.scope_target_user_id)?.label ?? "";
+    const found = users.find((user) => user.id === form.scope_target_user_id);
+    if (!found) return "";
+    return found.secondary ? `${found.label} (${found.secondary})` : found.label;
   }, [users, form.scope_target_user_id]);
 
   const openCreate = () => {
@@ -215,7 +240,13 @@ const AdminDiscounts = () => {
   const getScopeLabel = (d: DiscountCode) => {
     if (d.scope === "product") return products.find((p) => p.id === d.scope_target_id)?.name || "Specific product";
     if (d.scope === "category") return categories.find((c) => c.id === d.scope_target_id)?.name || "Specific category";
-    if (d.scope === "user") return users.find((u) => u.id === d.scope_target_user_id)?.label || "Specific user";
+
+    if (d.scope === "user") {
+      const user = users.find((u) => u.id === d.scope_target_user_id);
+      if (!user) return "Specific user";
+      return user.secondary ? `${user.label} (${user.secondary})` : user.label;
+    }
+
     if (d.scope === "bulk") return `Bulk (min ${d.min_quantity})`;
     return "All products";
   };
@@ -477,7 +508,7 @@ const AdminDiscounts = () => {
                     ) : (
                       users.map((user) => (
                         <SelectItem key={user.id} value={user.id}>
-                          {user.label}
+                          {user.secondary ? `${user.label} (${user.secondary})` : user.label}
                         </SelectItem>
                       ))
                     )}

@@ -48,6 +48,8 @@ interface CustomOrder {
   customer_response_status: "pending" | "accepted" | "declined" | "countered";
   payment_status: "unpaid" | "awaiting_payment" | "paid" | "refunded" | "cancelled";
   production_status: "pending" | "queued" | "in_production" | "completed" | "shipped" | "cancelled";
+  request_fee_status?: string;
+  request_fee_amount?: number;
   metadata?: {
     reference_image_url?: string | null;
     reference_image_filename?: string | null;
@@ -91,6 +93,7 @@ const STATUSES = [
 
 const PAYMENT_STATUSES = ["unpaid", "awaiting_payment", "paid", "refunded", "cancelled"] as const;
 const PRODUCTION_STATUSES = ["pending", "queued", "in_production", "completed", "shipped", "cancelled"] as const;
+const FEE_STATUSES = ["unpaid", "paid"] as const;
 const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
 function parseCustomOrder(order: CustomOrder): ParsedCustomOrder {

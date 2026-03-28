@@ -328,15 +328,12 @@ const PageEditor = () => {
     () => pages.find((page) => pageToEditorKey(page) === activePage) ?? null,
     [pages, activePage],
   );
-
   const frontendPages = useMemo(() => pages.filter((page) => page.page_type !== "global"), [pages]);
   const globalPages = useMemo(() => pages.filter((page) => page.page_type === "global"), [pages]);
-
   const childCandidates = useMemo(
     () => frontendPages.filter((page) => page.id !== editingPageId),
     [frontendPages, editingPageId],
   );
-
   const pageKeys = useMemo(() => pages.map((page) => pageToEditorKey(page)), [pages]);
 
   const fetchBlocks = async () => {
@@ -818,9 +815,7 @@ const PageEditor = () => {
 
       <div className="flex flex-1 overflow-hidden">
         <aside
-          className={`shrink-0 overflow-y-auto border-r border-border bg-card transition-all duration-300 ${
-            panelCollapsed ? "w-0 overflow-hidden" : "w-72 lg:w-80"
-          }`}
+          className={`shrink-0 overflow-y-auto border-r border-border bg-card transition-all duration-300 ${panelCollapsed ? "w-0 overflow-hidden" : "w-72 lg:w-80"}`}
         >
           <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-4 py-3">
             <div className="flex items-center gap-2">
@@ -887,9 +882,7 @@ const PageEditor = () => {
                       }}
                       onDragEnd={handleStructureDragEnd}
                       onClick={() => setSelectedBlockId(isSelected ? null : block.id)}
-                      className={`group cursor-pointer rounded-md border-l-[3px] px-2 py-2 text-sm transition-all ${colorClass} ${
-                        isSelected ? "ring-2 ring-primary ring-offset-1 ring-offset-card" : "hover:bg-accent/50"
-                      } ${!block.is_active ? "opacity-50" : ""}`}
+                      className={`group cursor-pointer rounded-md border-l-[3px] px-2 py-2 text-sm transition-all ${colorClass} ${isSelected ? "ring-2 ring-primary ring-offset-1 ring-offset-card" : "hover:bg-accent/50"} ${!block.is_active ? "opacity-50" : ""}`}
                     >
                       <div className="flex items-start gap-2">
                         <GripVertical className="mt-0.5 h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground" />

@@ -5,9 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Trash2, Plus, ArrowUp, ArrowDown } from "lucide-react";
+import { Trash2, Plus, ArrowUp, ArrowDown, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { SiteBlock } from "./BlockRenderer";
@@ -30,6 +31,15 @@ type PageOption = {
   full_path: string;
   page_type: string;
   parent_id: string | null;
+};
+
+type LinkablePageOption = {
+  id: string;
+  label: string;
+  route: string;
+  slug: string;
+  pageType: "main" | "child";
+  parentLabel?: string;
 };
 
 const ICON_OPTIONS = [
@@ -83,6 +93,84 @@ const toActionType = (value: unknown): ActionType => {
   return "none";
 };
 
+const PageTargetPicker = ({
+  value,
+  options,
+  onSelect,
+  placeholder = "Search page or child page",
+}: {
+  value: string;
+  options: LinkablePageOption[];
+  onSelect: (value: string) => void;
+  placeholder?: string;
+}) => {
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return options;
+    return options.filter((page) =>
+      `${page.label} ${page.slug} ${page.route} ${page.parentLabel || ""}`.toLowerCase().includes(term),
+    );
+  }, [options, search]);
+
+  const active = options.find((page) => page.route === normalizePath(value));
+
+  return (
+    <div className="space-y-2 rounded-md border border-border p-3">
+      <div>
+        <Label>Search Internal Page</Label>
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={placeholder}
+            className="pl-8"
+          />
+        </div>
+      </div>
+
+      <div>
+        <Label>Choose Page</Label>
+        <div className="max-h-44 space-y-1 overflow-y-auto rounded-md border border-border bg-background p-2">
+          {filtered.length === 0 ? (
+            <p className="px-1 py-2 text-sm text-muted-foreground">No pages found.</p>
+          ) : (
+            filtered.map((page) => {
+              const selected = normalizePath(value) === page.route;
+              return (
+                <button
+                  key={page.id}
+                  type="button"
+                  onClick={() => onSelect(page.route)}
+                  className={`flex w-full items-center justify-between rounded-md px-2 py-2 text-left transition-colors ${
+                    selected ? "bg-primary/10 text-foreground" : "hover:bg-muted"
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{page.label}</p>
+                    <p className="truncate text-xs text-muted-foreground">{page.route}</p>
+                  </div>
+                  <Badge variant="secondary" className="ml-2 shrink-0 text-[10px] uppercase">
+                    {page.pageType}
+                  </Badge>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {active && (
+        <p className="text-xs text-muted-foreground">
+          Selected: <span className="font-medium text-foreground">{active.label}</span> → {active.route}
+        </p>
+      )}
+    </div>
+  );
+};
+
 const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPanelProps) => {
   const [form, setForm] = useState<any>({
     title: "",
@@ -93,7 +181,6 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [pageSearch, setPageSearch] = useState("");
   const [sitePages, setSitePages] = useState<PageOption[]>([]);
   const { toast } = useToast();
 
@@ -214,58 +301,33 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
 
   const fallbackButtonTargetPages = availablePages.filter((p) => !p.startsWith("global_"));
 
-  const buttonTargetPages = useMemo(() => {
+  const internalPageOptions = useMemo<LinkablePageOption[]>(() => {
     if (sitePages.length === 0) {
       return fallbackButtonTargetPages.map((p, index) => ({
         id: `fallback-${index}`,
         label: prettyPageLabel(p),
-        value: normalizePath(routeFromPage(p)),
+        route: normalizePath(routeFromPage(p)),
         slug: p,
+        pageType: p.includes("/") ? "child" : "main",
       }));
     }
 
-    const map = new Map<string, { id: string; label: string; value: string; slug: string; parent_id: string | null }>();
-
-    sitePages
+    const pageById = new Map(sitePages.map((page) => [page.id, page]));
+    return sitePages
       .filter((page) => page.page_type !== "global")
-      .forEach((page) => {
-        map.set(page.id, {
+      .map((page) => {
+        const parent = page.parent_id ? pageById.get(page.parent_id) : null;
+        const label = page.title || page.name || prettyPageLabel(page.slug);
+        return {
           id: page.id,
-          label: page.title || page.name || prettyPageLabel(page.slug),
-          value: normalizePath(page.full_path),
+          label: parent ? `${parent.title || parent.name || prettyPageLabel(parent.slug)} / ${label}` : label,
+          route: normalizePath(page.full_path),
           slug: page.slug,
-          parent_id: page.parent_id,
-        });
+          pageType: page.parent_id ? "child" : "main",
+          parentLabel: parent ? parent.title || parent.name || prettyPageLabel(parent.slug) : undefined,
+        };
       });
-
-    return Array.from(map.values());
   }, [sitePages, fallbackButtonTargetPages]);
-
-  const pageLookup = useMemo(() => {
-    const byId = new Map(sitePages.map((page) => [page.id, page]));
-    return buttonTargetPages.map((page) => {
-      const source = byId.get(page.id);
-      if (!source?.parent_id) return page;
-
-      const parent = byId.get(source.parent_id);
-      if (!parent) return page;
-
-      return {
-        ...page,
-        label: `${parent.title || parent.name || prettyPageLabel(parent.slug)} / ${page.label}`,
-      };
-    });
-  }, [buttonTargetPages, sitePages]);
-
-  const filteredPageOptions = useMemo(() => {
-    const term = pageSearch.trim().toLowerCase();
-    if (!term) return pageLookup;
-
-    return pageLookup.filter((page) => {
-      const haystack = `${page.label} ${page.slug} ${page.value}`.toLowerCase();
-      return haystack.includes(term);
-    });
-  }, [pageLookup, pageSearch]);
 
   const updateForm = (key: string, value: any) => {
     setForm((prev: any) => ({ ...prev, [key]: value }));
@@ -361,73 +423,52 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
     onSave();
   };
 
-  const renderPagePicker = (
-    currentTarget: string,
-    onSelect: (value: string) => void,
-    placeholder = "Search page or child page",
-  ) => (
-    <div className="space-y-2 rounded-md border border-border p-3">
-      <div>
-        <Label>Page Search</Label>
-        <Input value={pageSearch} onChange={(e) => setPageSearch(e.target.value)} placeholder={placeholder} />
+  const renderActionEditor = (prefix: "section" | "button", data: any, onChange: (patch: any) => void) => {
+    const actionType = toActionType(data?.actionType);
+
+    return (
+      <div className="space-y-2 rounded-md border border-border p-3">
+        <div>
+          <Label>{prefix === "section" ? "Section click action" : "Button action"}</Label>
+          <Select value={actionType} onValueChange={(v) => onChange({ actionType: v })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">None</SelectItem>
+              <SelectItem value="internal_link">Internal Link</SelectItem>
+              <SelectItem value="external_link">External URL</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {actionType === "internal_link" && (
+          <PageTargetPicker
+            value={data?.actionTarget || ""}
+            options={internalPageOptions}
+            onSelect={(value) => onChange({ actionType: "internal_link", actionTarget: value })}
+          />
+        )}
+
+        {actionType !== "none" && (
+          <>
+            <div>
+              <Label>Target</Label>
+              <Input
+                placeholder={actionType === "internal_link" ? "/products" : "https://example.com"}
+                value={data?.actionTarget || ""}
+                onChange={(e) => onChange({ actionTarget: e.target.value })}
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <Switch checked={Boolean(data?.openInNewTab)} onCheckedChange={(v) => onChange({ openInNewTab: v })} />
+              Open in new tab
+            </label>
+          </>
+        )}
       </div>
-
-      <div>
-        <Label>Internal Page</Label>
-        <Select value={currentTarget || "__none__"} onValueChange={(value) => value !== "__none__" && onSelect(value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select page" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none__">Select page</SelectItem>
-            {filteredPageOptions.map((page) => (
-              <SelectItem key={page.id} value={page.value}>
-                {page.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    </div>
-  );
-
-  const renderActionEditor = (prefix: "section" | "button", data: any, onChange: (patch: any) => void) => (
-    <div className="space-y-2 rounded-md border border-border p-3">
-      <div>
-        <Label>{prefix === "section" ? "Section click action" : "Button action"}</Label>
-        <Select value={toActionType(data?.actionType)} onValueChange={(v) => onChange({ actionType: v })}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">None</SelectItem>
-            <SelectItem value="internal_link">Internal Link</SelectItem>
-            <SelectItem value="external_link">External URL</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {toActionType(data?.actionType) === "internal_link" &&
-        renderPagePicker(data?.actionTarget || "", (value) => onChange({ actionTarget: value }))}
-
-      {toActionType(data?.actionType) !== "none" && (
-        <>
-          <div>
-            <Label>Target</Label>
-            <Input
-              placeholder={toActionType(data?.actionType) === "internal_link" ? "/products" : "https://example.com"}
-              value={data?.actionTarget || ""}
-              onChange={(e) => onChange({ actionTarget: e.target.value })}
-            />
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <Switch checked={Boolean(data?.openInNewTab)} onCheckedChange={(v) => onChange({ openInNewTab: v })} />
-            Open in new tab
-          </label>
-        </>
-      )}
-    </div>
-  );
+    );
+  };
 
   const renderButtonsEditor = () => (
     <div className="space-y-3">
@@ -1385,6 +1426,11 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
                   onChange={(e) => updateContent("view_all_link", e.target.value)}
                 />
               </div>
+              <PageTargetPicker
+                value={form.content.view_all_link ?? ""}
+                options={internalPageOptions}
+                onSelect={(value) => updateContent("view_all_link", value)}
+              />
             </>
           )}
         </div>
@@ -1408,6 +1454,11 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
               onChange={(e) => updateContent("button_link", e.target.value)}
             />
           </div>
+          <PageTargetPicker
+            value={form.content.button_link ?? ""}
+            options={internalPageOptions}
+            onSelect={(value) => updateContent("button_link", value)}
+          />
           <div>
             <Label>Legacy Style</Label>
             <Select value={form.content.style ?? "default"} onValueChange={(v) => updateContent("style", v)}>

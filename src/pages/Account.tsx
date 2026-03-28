@@ -105,7 +105,7 @@ type RewardCatalogItem = {
   badge?: string;
 };
 
-type AccountTab = "orders" | "custom-requests" | "rewards" | "vouchers";
+type AccountTab = "orders" | "custom-requests" | "rewards" | "vouchers" | "settings";
 type CustomRequestsView = "ongoing" | "done";
 type VoucherView = "active" | "used";
 

@@ -39,6 +39,11 @@ type SitePageOption = {
   is_published: boolean;
 };
 
+const asNavItems = (value: unknown): NavItem[] => {
+  if (!Array.isArray(value)) return [];
+  return value as NavItem[];
+};
+
 const defaultHeaderNav: NavEditorItem[] = [
   { label: "Home", to: "/", source: "manual", openInNewTab: false, visible: true },
   { label: "Products", to: "/products", source: "manual", openInNewTab: false, visible: true },
@@ -91,7 +96,9 @@ function useStoredNavLinks(key: "nav_links" | "footer_nav_links", fallback: NavE
       if (!mounted) return;
 
       if (Array.isArray(data?.value)) {
-        setLinks((data.value as NavItem[]).map(toEditorItem).filter((item) => item.visible !== false));
+        setLinks(
+          ((data.value as unknown as NavItem[]) ?? []).map(toEditorItem).filter((item) => item.visible !== false),
+        );
       } else {
         setLinks(fallback.filter((item) => item.visible !== false));
       }
@@ -132,7 +139,7 @@ const NavLinkEditor = () => {
       ]);
 
       if (navRes.data?.value && Array.isArray(navRes.data.value)) {
-        setLinks((navRes.data.value as NavItem[]).map(toEditorItem));
+        setLinks(((navRes.data.value as unknown as NavItem[]) ?? []).map(toEditorItem));
       } else {
         setLinks(fallbackLinks);
       }

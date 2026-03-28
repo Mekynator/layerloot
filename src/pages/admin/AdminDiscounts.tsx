@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Plus, Trash2, Save, Copy } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, ChevronsUpDown, Copy, Plus, Save, Search, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,24 +48,24 @@ interface ProfileRow {
   id: string;
   user_id: string | null;
   username: string | null;
-  display_name: string | null;
-  full_name: string | null;
 }
 
 interface UserOption {
   id: string;
   label: string;
-  secondary?: string;
 }
 
-const emptyDiscount: Omit<DiscountCode, "id" | "created_at" | "used_count"> = {
+type DiscountForm = Omit<DiscountCode, "id" | "created_at" | "used_count" | "scope_target_user_id"> & {
+  scope_target_user_ids: string[];
+};
+
+const emptyDiscount: DiscountForm = {
   code: "",
   description: "",
   discount_type: "percentage",
   discount_value: 10,
   scope: "all",
   scope_target_id: null,
-  scope_target_user_id: null,
   min_order_amount: 0,
   min_quantity: 1,
   max_uses: null,
@@ -72,43 +73,15 @@ const emptyDiscount: Omit<DiscountCode, "id" | "created_at" | "used_count"> = {
   is_active: true,
   starts_at: null,
   expires_at: null,
+  scope_target_user_ids: [],
 };
 
-const buildUserOption = (profile: ProfileRow): UserOption => {
-  const username = profile.username?.trim() || "";
-  const displayName = profile.display_name?.trim() || "";
-  const fullName = profile.full_name?.trim() || "";
-
-  if (username) {
-    const secondary =
-      displayName && displayName !== username ? displayName : fullName && fullName !== username ? fullName : undefined;
-
-    return {
-      id: profile.user_id || profile.id,
-      label: username,
-      secondary,
-    };
-  }
-
-  if (displayName) {
-    return {
-      id: profile.user_id || profile.id,
-      label: displayName,
-      secondary: fullName && fullName !== displayName ? fullName : undefined,
-    };
-  }
-
-  if (fullName) {
-    return {
-      id: profile.user_id || profile.id,
-      label: fullName,
-    };
-  }
-
-  return {
-    id: profile.user_id || profile.id,
-    label: profile.user_id || profile.id,
-  };
+const normalizeUserIds = (value: string | null) => {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 };
 
 const AdminDiscounts = () => {
@@ -121,9 +94,12 @@ const AdminDiscounts = () => {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<DiscountCode | null>(null);
-  const [form, setForm] = useState(emptyDiscount);
+  const [form, setForm] = useState<DiscountForm>(emptyDiscount);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const [userSearch, setUserSearch] = useState("");
+  const [userPickerOpen, setUserPickerOpen] = useState(false);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -137,11 +113,8 @@ const AdminDiscounts = () => {
       supabase.from("discount_codes").select("*").order("created_at", { ascending: false }),
       supabase.from("products").select("id, name").order("name"),
       supabase.from("categories").select("id, name").order("name"),
-      supabase.from("profiles").select("id, user_id, username, display_name, full_name"),
+      supabase.from("profiles").select("id, user_id, username").order("username"),
     ]);
-
-    console.log("profiles result:", profileData);
-    console.log("profiles error:", profileError);
 
     if (discountError) {
       toast({
@@ -179,7 +152,11 @@ const AdminDiscounts = () => {
     setProducts((productData as ProductOption[]) ?? []);
     setCategories((categoryData as CategoryOption[]) ?? []);
 
-    const mappedUsers = (profileData as ProfileRow[] | null)?.map(buildUserOption) ?? [];
+    const mappedUsers =
+      (profileData as ProfileRow[] | null)?.map((profile) => ({
+        id: profile.user_id || profile.id,
+        label: (profile.username || "").trim() || profile.user_id || profile.id,
+      })) ?? [];
 
     const uniqueUsers = Array.from(new Map(mappedUsers.map((user) => [user.id, user])).values()).sort((a, b) =>
       a.label.localeCompare(b.label),
@@ -193,8 +170,29 @@ const AdminDiscounts = () => {
     fetchAll();
   }, []);
 
+  const selectedUsers = useMemo(
+    () => users.filter((user) => form.scope_target_user_ids.includes(user.id)),
+    [users, form.scope_target_user_ids],
+  );
+
+  const filteredUsers = useMemo(() => {
+    const query = userSearch.trim().toLowerCase();
+    if (!query) return users;
+
+    return users.filter((user) => {
+      return user.label.toLowerCase().includes(query) || user.id.toLowerCase().includes(query);
+    });
+  }, [users, userSearch]);
+
+  const userButtonLabel = useMemo(() => {
+    if (selectedUsers.length === 0) return "Select users";
+    if (selectedUsers.length === 1) return selectedUsers[0].label;
+    return `${selectedUsers.length} users selected`;
+  }, [selectedUsers]);
+
   const openCreate = () => {
     setEditing(null);
+    setUserSearch("");
     setForm({
       ...emptyDiscount,
       code: `LL-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
@@ -204,6 +202,7 @@ const AdminDiscounts = () => {
 
   const openEdit = (discount: DiscountCode) => {
     setEditing(discount);
+    setUserSearch("");
     setForm({
       code: discount.code,
       description: discount.description || "",
@@ -211,7 +210,6 @@ const AdminDiscounts = () => {
       discount_value: discount.discount_value,
       scope: discount.scope,
       scope_target_id: discount.scope_target_id,
-      scope_target_user_id: discount.scope_target_user_id,
       min_order_amount: discount.min_order_amount,
       min_quantity: discount.min_quantity,
       max_uses: discount.max_uses,
@@ -219,8 +217,29 @@ const AdminDiscounts = () => {
       is_active: discount.is_active,
       starts_at: discount.starts_at,
       expires_at: discount.expires_at,
+      scope_target_user_ids: normalizeUserIds(discount.scope_target_user_id),
     });
     setDialogOpen(true);
+  };
+
+  const toggleUserSelection = (userId: string) => {
+    setForm((current) => {
+      const exists = current.scope_target_user_ids.includes(userId);
+
+      return {
+        ...current,
+        scope_target_user_ids: exists
+          ? current.scope_target_user_ids.filter((id) => id !== userId)
+          : [...current.scope_target_user_ids, userId],
+      };
+    });
+  };
+
+  const removeSelectedUser = (userId: string) => {
+    setForm((current) => ({
+      ...current,
+      scope_target_user_ids: current.scope_target_user_ids.filter((id) => id !== userId),
+    }));
   };
 
   const handleSave = async () => {
@@ -229,8 +248,8 @@ const AdminDiscounts = () => {
       return;
     }
 
-    if (form.scope === "user" && !form.scope_target_user_id) {
-      toast({ title: "Select a user", variant: "destructive" });
+    if (form.scope === "user" && form.scope_target_user_ids.length === 0) {
+      toast({ title: "Select at least one user", variant: "destructive" });
       return;
     }
 
@@ -248,7 +267,7 @@ const AdminDiscounts = () => {
       discount_value: Number(form.discount_value),
       scope: form.scope,
       scope_target_id: form.scope === "product" || form.scope === "category" ? form.scope_target_id : null,
-      scope_target_user_id: form.scope === "user" ? form.scope_target_user_id : null,
+      scope_target_user_id: form.scope === "user" ? form.scope_target_user_ids.join(",") : null,
       min_order_amount: Number(form.min_order_amount) || 0,
       min_quantity: Number(form.min_quantity) || 1,
       max_uses: form.max_uses ? Number(form.max_uses) : null,
@@ -278,6 +297,7 @@ const AdminDiscounts = () => {
     });
 
     setDialogOpen(false);
+    setUserPickerOpen(false);
     fetchAll();
   };
 
@@ -325,9 +345,14 @@ const AdminDiscounts = () => {
     }
 
     if (discount.scope === "user") {
-      const user = users.find((item) => item.id === discount.scope_target_user_id);
-      if (!user) return "Specific user";
-      return user.secondary ? `${user.label} (${user.secondary})` : user.label;
+      const selectedIds = normalizeUserIds(discount.scope_target_user_id);
+      const matchedUsers = users.filter((user) => selectedIds.includes(user.id));
+
+      if (matchedUsers.length === 0) return "Specific user";
+      if (matchedUsers.length === 1) return matchedUsers[0].label;
+      if (matchedUsers.length <= 3) return matchedUsers.map((user) => user.label).join(", ");
+
+      return `${matchedUsers.length} specific users`;
     }
 
     if (discount.scope === "bulk") {
@@ -453,7 +478,16 @@ const AdminDiscounts = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setUserPickerOpen(false);
+            setUserSearch("");
+          }
+        }}
+      >
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
             <DialogTitle className="font-display uppercase">
@@ -526,7 +560,7 @@ const AdminDiscounts = () => {
                     ...form,
                     scope: value,
                     scope_target_id: null,
-                    scope_target_user_id: null,
+                    scope_target_user_ids: [],
                   })
                 }
               >
@@ -537,7 +571,7 @@ const AdminDiscounts = () => {
                   <SelectItem value="all">All Products</SelectItem>
                   <SelectItem value="product">Specific Product</SelectItem>
                   <SelectItem value="category">Specific Category</SelectItem>
-                  <SelectItem value="user">Specific User</SelectItem>
+                  <SelectItem value="user">Specific User(s)</SelectItem>
                   <SelectItem value="bulk">Bulk Discount</SelectItem>
                 </SelectContent>
               </Select>
@@ -586,29 +620,75 @@ const AdminDiscounts = () => {
             )}
 
             {form.scope === "user" && (
-              <div>
-                <Label>User</Label>
-                <Select
-                  value={form.scope_target_user_id ?? undefined}
-                  onValueChange={(value) => setForm({ ...form, scope_target_user_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select user" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users.length > 0 ? (
-                      users.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.secondary ? `${user.label} (${user.secondary})` : user.label}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="empty-users-list" disabled>
-                        No users found
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-3">
+                <Label>User Emails</Label>
+
+                <Popover open={userPickerOpen} onOpenChange={setUserPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-between font-normal"
+                    >
+                      <span className="truncate text-left">{userButtonLabel}</span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                    <div className="border-b p-3">
+                      <div className="relative">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={userSearch}
+                          onChange={(e) => setUserSearch(e.target.value)}
+                          placeholder="Search email..."
+                          className="pl-9"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="max-h-64 overflow-y-auto">
+                      {filteredUsers.length > 0 ? (
+                        filteredUsers.map((user) => {
+                          const selected = form.scope_target_user_ids.includes(user.id);
+
+                          return (
+                            <button
+                              key={user.id}
+                              type="button"
+                              onClick={() => toggleUserSelection(user.id)}
+                              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground"
+                            >
+                              <span className="truncate">{user.label}</span>
+                              <Check className={`ml-3 h-4 w-4 ${selected ? "opacity-100" : "opacity-0"}`} />
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <div className="px-3 py-3 text-sm text-muted-foreground">No users found</div>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                {selectedUsers.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedUsers.map((user) => (
+                      <Badge key={user.id} variant="secondary" className="flex items-center gap-1 pr-1">
+                        <span className="max-w-[220px] truncate">{user.label}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeSelectedUser(user.id)}
+                          className="rounded-full p-0.5 hover:bg-black/10"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

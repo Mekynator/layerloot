@@ -29,6 +29,7 @@ import {
   Layers,
   Package,
   FolderTree,
+  Settings2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,50 +45,42 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
 import BlockEditorPanel from "@/components/admin/BlockEditorPanel";
 import NavLinkEditor from "@/components/admin/NavLinkEditor";
 import PageBackgroundEditor from "@/components/admin/PageBackgroundEditor";
 import EditorPreviewFrame from "@/components/admin/EditorPreviewFrame";
 
-type CustomPageRecord = {
+type SitePage = Tables<"site_pages">;
+
+type PageFormState = {
+  name: string;
+  title: string;
   slug: string;
-  title?: string;
+  pageType: "main" | "child";
+  parentId: string;
+  isPublished: boolean;
+  showInHeader: boolean;
+  showInFooter: boolean;
+  isHome: boolean;
 };
 
-const pageGroups = [
-  {
-    label: "Main Pages",
-    pages: [
-      { value: "home", label: "Home" },
-      { value: "products", label: "Products" },
-      { value: "about", label: "About" },
-      { value: "contact", label: "Contact" },
-      { value: "gallery", label: "Gallery" },
-      { value: "create-your-own", label: "Create Your Own" },
-      { value: "submit-design", label: "Submit Design" },
-      { value: "faq", label: "FAQ" },
-      { value: "shipping-info", label: "Shipping Info" },
-      { value: "returns", label: "Returns" },
-    ],
-  },
-  {
-    label: "Global Layout",
-    pages: [
-      { value: "global_header_top", label: "Global Header Top" },
-      { value: "global_header_bottom", label: "Global Header Bottom" },
-      { value: "global_before_main", label: "Global Before Main" },
-      { value: "global_after_main", label: "Global After Main" },
-      { value: "global_footer_top", label: "Global Footer Top" },
-      { value: "global_footer_bottom", label: "Global Footer Bottom" },
-    ],
-  },
-];
-
-const defaultPages = pageGroups.flatMap((group) => group.pages.map((page) => page.value));
+const emptyPageForm: PageFormState = {
+  name: "",
+  title: "",
+  slug: "",
+  pageType: "main",
+  parentId: "",
+  isPublished: true,
+  showInHeader: false,
+  showInFooter: false,
+  isHome: false,
+};
 
 const blockTypes = [
   { value: "hero", label: "Hero Banner", icon: Square },
@@ -135,19 +128,47 @@ const BLOCK_COLORS: Record<string, string> = {
   instagram_auto_feed: "border-l-fuchsia-500 bg-fuchsia-500/5",
 };
 
-const pageLabelMap = new Map(
-  pageGroups.flatMap((group) => group.pages.map((page) => [page.value, page.label] as const)),
-);
+const sortBlocks = (list: SiteBlock[]) => [...list].sort((a, b) => a.sort_order - b.sort_order);
 
-const prettyPageLabel = (slug: string) =>
-  pageLabelMap.get(slug) ||
-  slug
+const normalizeSlugSegment = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\-_\s]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^[-_/]+|[-_/]+$/g, "");
+
+const prettyLabel = (value: string) =>
+  value
     .replace(/^global_/, "Global ")
+    .replace(/\//g, " / ")
     .replace(/-/g, " ")
     .replace(/_/g, " ")
     .replace(/\b\w/g, (m) => m.toUpperCase());
 
-const placementLabel = (page: string, placement?: string) => {
+const isGlobalPage = (page?: Pick<SitePage, "page_type" | "slug"> | null) =>
+  page?.page_type === "global" || page?.slug?.startsWith("global_");
+
+const pageToEditorKey = (page: Pick<SitePage, "slug" | "full_path" | "is_home" | "page_type">) => {
+  if (isGlobalPage(page)) return page.slug;
+  if (page.is_home || page.full_path === "/") return "home";
+  return page.full_path.replace(/^\/+|\/+$/g, "");
+};
+
+const pageToRealPath = (page?: Pick<SitePage, "slug" | "full_path" | "is_home" | "page_type"> | null) => {
+  if (!page) return "/";
+  if (isGlobalPage(page)) return "/";
+  if (page.is_home || page.full_path === "/") return "/";
+  return page.full_path.startsWith("/") ? page.full_path : `/${page.full_path}`;
+};
+
+const pageDisplayTitle = (page?: Pick<SitePage, "name" | "title" | "slug" | "full_path" | "is_home"> | null) => {
+  if (!page) return "";
+  return page.title || page.name || prettyLabel(page.is_home ? "home" : page.full_path || page.slug);
+};
+
+const placementLabel = (pageKey: string, placement?: string) => {
   if (!placement) return "Default";
   const map: Record<string, Record<string, string>> = {
     products: { after_products: "After products" },
@@ -156,34 +177,8 @@ const placementLabel = (page: string, placement?: string) => {
     "create-your-own": { after_create_your_own: "After tools" },
     "submit-design": { after_submit_design: "After submit form" },
   };
-  return map[page]?.[placement] || placement;
+  return map[pageKey]?.[placement] || placement;
 };
-
-const normalizeSlug = (value: string) =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9\-/_\s]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/\/+/g, "/")
-    .replace(/-+/g, "-")
-    .replace(/^\/|\/$/g, "");
-
-const normalizePageKey = (value?: string | null) => {
-  const cleaned = normalizeSlug(value || "");
-  if (!cleaned || cleaned === "home") return "home";
-  return cleaned;
-};
-
-const realPagePath = (page: string) => {
-  if (page === "home") return "/";
-  if (page.startsWith("global_")) return "/";
-  return `/${page}`;
-};
-
-const isFrontendPage = (page: string) => !page.startsWith("global_");
-
-const sortBlocks = (list: SiteBlock[]) => [...list].sort((a, b) => a.sort_order - b.sort_order);
 
 const createDefaultContent = (type: string) => {
   switch (type) {
@@ -280,14 +275,15 @@ const PageEditor = () => {
 
   const [activePage, setActivePage] = useState("home");
   const [blocks, setBlocks] = useState<SiteBlock[]>([]);
-  const [allPages, setAllPages] = useState<string[]>(defaultPages);
-  const [pageTitles, setPageTitles] = useState<Record<string, string>>({});
+  const [pages, setPages] = useState<SitePage[]>([]);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [editPanelOpen, setEditPanelOpen] = useState(false);
   const [addBlockOpen, setAddBlockOpen] = useState(false);
   const [insertAtIndex, setInsertAtIndex] = useState<number | null>(null);
-  const [newPageOpen, setNewPageOpen] = useState(false);
-  const [newPageSlug, setNewPageSlug] = useState("");
+  const [pageDialogOpen, setPageDialogOpen] = useState(false);
+  const [pageDialogMode, setPageDialogMode] = useState<"create" | "edit">("create");
+  const [pageForm, setPageForm] = useState<PageFormState>(emptyPageForm);
+  const [editingPageId, setEditingPageId] = useState<string | null>(null);
   const [deletePageOpen, setDeletePageOpen] = useState(false);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [sDragIndex, setSDragIndex] = useState<number | null>(null);
@@ -298,67 +294,43 @@ const PageEditor = () => {
     if (!loading && (!user || !isAdmin)) navigate("/");
   }, [isAdmin, loading, user, navigate]);
 
-  const customPages = useMemo(() => allPages.filter((p) => !defaultPages.includes(p)), [allPages]);
-
   const loadPages = async () => {
-    const pageTitleMap: Record<string, string> = {};
+    const { data, error } = await supabase.from("site_pages").select("*").order("sort_order").order("created_at");
 
-    pageGroups.forEach((group) => {
-      group.pages.forEach((page) => {
-        pageTitleMap[page.value] = page.label;
-      });
-    });
-
-    const [settingsRes, blocksRes] = await Promise.all([
-      supabase.from("site_settings").select("key,value").eq("key", "custom_pages").maybeSingle(),
-      supabase.from("site_blocks").select("page"),
-    ]);
-
-    const pages = new Set<string>(defaultPages);
-
-    const customPageRows: CustomPageRecord[] = Array.isArray(settingsRes.data?.value)
-      ? (settingsRes.data?.value as CustomPageRecord[])
-      : [];
-
-    for (const row of customPageRows) {
-      const slug = normalizePageKey(row?.slug);
-      if (!slug) continue;
-      pages.add(slug);
-      if (row?.title?.trim()) pageTitleMap[slug] = row.title.trim();
+    if (error) {
+      toast({ title: "Error loading pages", description: error.message, variant: "destructive" });
+      return;
     }
 
-    for (const row of (blocksRes.data || []) as Array<{ page: string | null }>) {
-      const page = normalizePageKey(row.page);
-      if (!page) continue;
-      pages.add(page);
-    }
+    const nextPages = (data ?? []) as SitePage[];
+    setPages(nextPages);
 
-    const sortedPages = Array.from(pages).sort((a, b) => {
-      const aDefaultIndex = defaultPages.indexOf(a);
-      const bDefaultIndex = defaultPages.indexOf(b);
-
-      if (aDefaultIndex !== -1 && bDefaultIndex !== -1) return aDefaultIndex - bDefaultIndex;
-      if (aDefaultIndex !== -1) return -1;
-      if (bDefaultIndex !== -1) return 1;
-
-      const aGlobal = a.startsWith("global_");
-      const bGlobal = b.startsWith("global_");
-      if (aGlobal !== bGlobal) return aGlobal ? -1 : 1;
-
-      return prettyPageLabel(a).localeCompare(prettyPageLabel(b));
-    });
-
-    setPageTitles(pageTitleMap);
-    setAllPages(sortedPages);
-
-    if (!sortedPages.includes(activePage)) {
-      setActivePage("home");
+    const activeExists = nextPages.some((page) => pageToEditorKey(page) === activePage);
+    if (!activeExists) {
+      const homePage = nextPages.find((page) => page.is_home) || nextPages[0];
+      if (homePage) setActivePage(pageToEditorKey(homePage));
     }
   };
 
   useEffect(() => {
     void loadPages();
   }, []);
+
+  const selectedPage = useMemo(
+    () => pages.find((page) => pageToEditorKey(page) === activePage) ?? null,
+    [pages, activePage],
+  );
+
+  const frontendPages = useMemo(() => pages.filter((page) => page.page_type !== "global"), [pages]);
+
+  const globalPages = useMemo(() => pages.filter((page) => page.page_type === "global"), [pages]);
+
+  const childCandidates = useMemo(
+    () => frontendPages.filter((page) => page.id !== editingPageId),
+    [frontendPages, editingPageId],
+  );
+
+  const pageKeys = useMemo(() => pages.map((page) => pageToEditorKey(page)), [pages]);
 
   const fetchBlocks = async () => {
     const { data, error } = await supabase.from("site_blocks").select("*").eq("page", activePage).order("sort_order");
@@ -372,21 +344,171 @@ const PageEditor = () => {
   };
 
   useEffect(() => {
+    if (!activePage) return;
     void fetchBlocks();
   }, [activePage]);
 
-  const pageBlocks = useMemo(
-    () => sortBlocks(blocks.filter((b) => normalizePageKey(b.page) === activePage)),
-    [activePage, blocks],
-  );
-
+  const pageBlocks = useMemo(() => sortBlocks(blocks.filter((b) => b.page === activePage)), [activePage, blocks]);
   const selectedBlock = pageBlocks.find((b) => b.id === selectedBlockId) || null;
 
   const replacePageBlocks = (nextPageBlocks: SiteBlock[]) => {
     setBlocks((prev) => {
-      const otherPages = prev.filter((b) => normalizePageKey(b.page) !== activePage);
+      const otherPages = prev.filter((b) => b.page !== activePage);
       return sortBlocks([...otherPages, ...nextPageBlocks]);
     });
+  };
+
+  const openCreatePageDialog = () => {
+    setPageDialogMode("create");
+    setEditingPageId(null);
+    setPageForm(emptyPageForm);
+    setPageDialogOpen(true);
+  };
+
+  const openEditPageDialog = () => {
+    if (!selectedPage) return;
+
+    setPageDialogMode("edit");
+    setEditingPageId(selectedPage.id);
+    setPageForm({
+      name: selectedPage.name || "",
+      title: selectedPage.title || "",
+      slug: selectedPage.is_home ? "home" : selectedPage.slug || "",
+      pageType: selectedPage.page_type === "child" ? "child" : "main",
+      parentId: selectedPage.parent_id || "",
+      isPublished: selectedPage.is_published,
+      showInHeader: selectedPage.show_in_header,
+      showInFooter: selectedPage.show_in_footer,
+      isHome: selectedPage.is_home,
+    });
+    setPageDialogOpen(true);
+  };
+
+  const savePage = async () => {
+    const isEditing = pageDialogMode === "edit" && Boolean(editingPageId);
+    const parent = childCandidates.find((page) => page.id === pageForm.parentId) ?? null;
+    const rawSlug = pageForm.isHome ? "home" : normalizeSlugSegment(pageForm.slug || pageForm.name);
+
+    if (!pageForm.name.trim()) {
+      toast({ title: "Page name required" });
+      return;
+    }
+
+    if (!rawSlug) {
+      toast({ title: "Page slug required" });
+      return;
+    }
+
+    if (pageForm.pageType === "child" && !pageForm.parentId) {
+      toast({ title: "Parent page required", description: "Choose the main page this child page belongs to." });
+      return;
+    }
+
+    if (pageForm.pageType === "child" && !parent) {
+      toast({ title: "Invalid parent page" });
+      return;
+    }
+
+    const fullPath = pageForm.isHome
+      ? "/"
+      : pageForm.pageType === "child" && parent
+        ? `${pageToRealPath(parent).replace(/\/+$/, "")}/${rawSlug}`.replace(/\/+/g, "/")
+        : `/${rawSlug}`;
+
+    const nextEditorKey = pageForm.isHome ? "home" : fullPath.replace(/^\/+|\/+$/g, "");
+
+    if (pageForm.isHome) {
+      const resetQuery = supabase.from("site_pages").update({ is_home: false }).eq("is_home", true);
+      const { error: resetError } =
+        isEditing && editingPageId ? await resetQuery.neq("id", editingPageId) : await resetQuery;
+      if (resetError) {
+        toast({ title: "Homepage update failed", description: resetError.message, variant: "destructive" });
+        return;
+      }
+    }
+
+    const payload: Tables<"site_pages"> extends never ? never : any = {
+      name: pageForm.name.trim(),
+      title: pageForm.title.trim() || pageForm.name.trim(),
+      slug: rawSlug,
+      full_path: fullPath,
+      parent_id: pageForm.pageType === "child" ? pageForm.parentId : null,
+      page_type: pageForm.pageType,
+      is_home: pageForm.isHome,
+      is_published: pageForm.isPublished,
+      show_in_header: pageForm.showInHeader,
+      show_in_footer: pageForm.showInFooter,
+    };
+
+    const oldPageKey = selectedPage ? pageToEditorKey(selectedPage) : null;
+    const { data, error } = isEditing
+      ? await supabase.from("site_pages").update(payload).eq("id", editingPageId!).select("*").single()
+      : await supabase.from("site_pages").insert(payload).select("*").single();
+
+    if (error) {
+      toast({
+        title: isEditing ? "Page update failed" : "Page creation failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isEditing && oldPageKey && oldPageKey !== nextEditorKey) {
+      const { error: blockPageError } = await supabase
+        .from("site_blocks")
+        .update({ page: nextEditorKey })
+        .eq("page", oldPageKey);
+      if (blockPageError) {
+        toast({
+          title: "Page saved, but block migration failed",
+          description: blockPageError.message,
+          variant: "destructive",
+        });
+      }
+    }
+
+    await loadPages();
+    setActivePage(nextEditorKey);
+    setPageDialogOpen(false);
+    setEditingPageId(null);
+    setPageForm(emptyPageForm);
+    toast({ title: isEditing ? "Page updated" : "Page created" });
+  };
+
+  const deletePage = async () => {
+    if (!selectedPage) return;
+
+    const pageKey = pageToEditorKey(selectedPage);
+
+    if (selectedPage.is_home) {
+      toast({ title: "Home page cannot be deleted", description: "Set another page as homepage first." });
+      return;
+    }
+
+    const { error: blocksError } = await supabase.from("site_blocks").delete().eq("page", pageKey);
+    if (blocksError) {
+      toast({ title: "Delete failed", description: blocksError.message, variant: "destructive" });
+      return;
+    }
+
+    const { error } = await supabase.from("site_pages").delete().eq("id", selectedPage.id);
+    if (error) {
+      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    setDeletePageOpen(false);
+    setSelectedBlockId(null);
+    await loadPages();
+
+    const nextHome =
+      pages.find((page) => page.id !== selectedPage.id && page.is_home) ||
+      pages.find((page) => page.id !== selectedPage.id);
+    if (nextHome) setActivePage(pageToEditorKey(nextHome));
+
+    setBlocks([]);
+    toast({ title: "Page deleted" });
   };
 
   const addBlock = async (type: string) => {
@@ -449,7 +571,6 @@ const PageEditor = () => {
     replacePageBlocks(normalizedLocal.map((block) => (block.id === tempId ? (insertResult.data as SiteBlock) : block)));
 
     toast({ title: "Block added" });
-    void loadPages();
   };
 
   const deleteBlock = async (id: string) => {
@@ -479,7 +600,6 @@ const PageEditor = () => {
     }
 
     toast({ title: "Block deleted" });
-    void loadPages();
   };
 
   const toggleActive = async (id: string, active: boolean) => {
@@ -540,77 +660,6 @@ const PageEditor = () => {
     setSDragOverIndex(null);
   };
 
-  const persistCustomPages = async (pages: string[], titleOverrides?: Record<string, string>) => {
-    const payload = pages
-      .filter((page) => !defaultPages.includes(page))
-      .map((slug) => ({
-        slug,
-        title: titleOverrides?.[slug] || pageTitles[slug] || prettyPageLabel(slug),
-      }));
-
-    const { error } = await supabase
-      .from("site_settings")
-      .upsert({ key: "custom_pages", value: payload as any }, { onConflict: "key" });
-
-    if (error) {
-      toast({ title: "Could not save pages", description: error.message, variant: "destructive" });
-      return false;
-    }
-
-    return true;
-  };
-
-  const createPage = async () => {
-    const slug = normalizePageKey(newPageSlug);
-
-    if (!slug) return;
-    if (allPages.includes(slug)) {
-      toast({ title: "Page already exists", description: `The page "${slug}" is already saved.` });
-      return;
-    }
-
-    const nextTitles = {
-      ...pageTitles,
-      [slug]: newPageSlug.trim() || prettyPageLabel(slug),
-    };
-    const nextPages = Array.from(new Set([...allPages, slug]));
-
-    const saved = await persistCustomPages(nextPages, nextTitles);
-    if (!saved) return;
-
-    setPageTitles(nextTitles);
-    setAllPages(nextPages);
-    setActivePage(slug);
-    setNewPageOpen(false);
-    setNewPageSlug("");
-    toast({ title: "Page created" });
-  };
-
-  const deletePage = async () => {
-    const { error } = await supabase.from("site_blocks").delete().eq("page", activePage);
-
-    if (error) {
-      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
-      return;
-    }
-
-    const remainingPages = allPages.filter((p) => p !== activePage);
-    const remainingTitles = { ...pageTitles };
-    delete remainingTitles[activePage];
-
-    const saved = await persistCustomPages(remainingPages, remainingTitles);
-    if (!saved) return;
-
-    setPageTitles(remainingTitles);
-    setAllPages(remainingPages);
-    setActivePage("home");
-    setDeletePageOpen(false);
-    setSelectedBlockId(null);
-
-    toast({ title: "Page deleted" });
-    setBlocks([]);
-  };
-
   if (loading || !isAdmin) return null;
 
   return (
@@ -633,41 +682,39 @@ const PageEditor = () => {
               value={activePage}
               onValueChange={(value) => {
                 if (value === "__new__") {
-                  setNewPageOpen(true);
+                  openCreatePageDialog();
                   return;
                 }
                 setActivePage(value);
                 setSelectedBlockId(null);
               }}
             >
-              <SelectTrigger className="w-64 border-background/20 bg-background/10 text-background">
+              <SelectTrigger className="w-72 border-background/20 bg-background/10 text-background">
                 <SelectValue />
               </SelectTrigger>
 
               <SelectContent>
-                {pageGroups.map((group) => (
-                  <SelectGroup key={group.label}>
-                    <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                      {group.label}
-                    </SelectLabel>
-                    {group.pages
-                      .filter((p) => allPages.includes(p.value))
-                      .map((p) => (
-                        <SelectItem key={p.value} value={p.value}>
-                          {pageTitles[p.value] || p.label}
-                        </SelectItem>
-                      ))}
-                  </SelectGroup>
-                ))}
-
-                {customPages.length > 0 && (
+                {frontendPages.length > 0 && (
                   <SelectGroup>
                     <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                      Saved / Backend Pages
+                      Site Pages
                     </SelectLabel>
-                    {customPages.map((p) => (
-                      <SelectItem key={p} value={p}>
-                        {pageTitles[p] || prettyPageLabel(p)}
+                    {frontendPages.map((page) => (
+                      <SelectItem key={page.id} value={pageToEditorKey(page)}>
+                        {pageDisplayTitle(page)}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
+
+                {globalPages.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Global Layout
+                    </SelectLabel>
+                    {globalPages.map((page) => (
+                      <SelectItem key={page.id} value={pageToEditorKey(page)}>
+                        {pageDisplayTitle(page)}
                       </SelectItem>
                     ))}
                   </SelectGroup>
@@ -679,22 +726,35 @@ const PageEditor = () => {
               </SelectContent>
             </Select>
 
-            <Badge variant="secondary" className="hidden md:inline-flex">
-              {pageTitles[activePage] || prettyPageLabel(activePage)}
-            </Badge>
+            {selectedPage && (
+              <Badge variant="secondary" className="hidden md:inline-flex">
+                {pageDisplayTitle(selectedPage)}
+              </Badge>
+            )}
 
-            {isFrontendPage(activePage) && (
+            {selectedPage && selectedPage.page_type !== "global" && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate(realPagePath(activePage))}
+                onClick={() => navigate(pageToRealPath(selectedPage))}
                 className="text-background/70 hover:bg-background/10 hover:text-background"
               >
                 Open real page
               </Button>
             )}
 
-            {!defaultPages.includes(activePage) && (
+            {selectedPage && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={openEditPageDialog}
+                className="text-background/70 hover:bg-background/10 hover:text-background"
+              >
+                <Settings2 className="mr-1 h-3.5 w-3.5" /> Page Settings
+              </Button>
+            )}
+
+            {selectedPage && !selectedPage.is_home && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -771,12 +831,14 @@ const PageEditor = () => {
           <div className="border-b border-border bg-muted/30 px-4 py-3">
             <p className="font-display text-[10px] uppercase tracking-widest text-muted-foreground">Editing</p>
             <p className="mt-1 text-sm font-medium text-foreground">
-              {pageTitles[activePage] || prettyPageLabel(activePage)}
+              {selectedPage ? pageDisplayTitle(selectedPage) : prettyLabel(activePage)}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              {activePage.startsWith("global_")
+              {selectedPage?.page_type === "global"
                 ? "This area appears across the site."
-                : "This controls the live public page layout."}
+                : selectedPage?.page_type === "child"
+                  ? "This is a child/slave page inside the site structure."
+                  : "This controls the live public page layout."}
             </p>
           </div>
 
@@ -802,7 +864,7 @@ const PageEditor = () => {
                 const Icon = bt?.icon ?? Square;
                 const colorClass = BLOCK_COLORS[block.block_type] ?? "border-l-muted-foreground bg-muted/30";
                 const isSelected = selectedBlockId === block.id;
-                const placement = block.content?.placement as string | undefined;
+                const placement = (block.content as Record<string, any> | null)?.placement as string | undefined;
 
                 return (
                   <div key={block.id}>
@@ -932,7 +994,7 @@ const PageEditor = () => {
         <main className="flex-1 overflow-hidden bg-background">
           <EditorPreviewFrame
             page={activePage}
-            pagePath={realPagePath(activePage)}
+            pagePath={pageToRealPath(selectedPage)}
             blocks={pageBlocks}
             selectedBlockId={selectedBlockId}
             onSelectBlock={(id) => setSelectedBlockId(id)}
@@ -964,7 +1026,7 @@ const PageEditor = () => {
           void fetchBlocks();
           void loadPages();
         }}
-        pages={allPages}
+        pages={pageKeys}
       />
 
       <PageBackgroundEditor page={activePage} open={backgroundEditorOpen} onOpenChange={setBackgroundEditorOpen} />
@@ -973,7 +1035,7 @@ const PageEditor = () => {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="font-display uppercase">
-              Add Section · {pageTitles[activePage] || prettyPageLabel(activePage)}
+              Add Section · {selectedPage ? pageDisplayTitle(selectedPage) : prettyLabel(activePage)}
             </DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-3 gap-2">
@@ -992,27 +1054,143 @@ const PageEditor = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={newPageOpen} onOpenChange={setNewPageOpen}>
-        <DialogContent className="sm:max-w-sm">
+      <Dialog open={pageDialogOpen} onOpenChange={setPageDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-display uppercase">Create Page</DialogTitle>
+            <DialogTitle className="font-display uppercase">
+              {pageDialogMode === "create" ? "Create Page" : "Edit Page"}
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label>Page Name / Slug</Label>
-              <Input
-                value={newPageSlug}
-                onChange={(e) => setNewPageSlug(e.target.value)}
-                placeholder="e.g. campaigns/summer-drop"
-              />
+
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Page name</Label>
+                <Input
+                  value={pageForm.name}
+                  onChange={(e) => setPageForm((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Example: Summer Drop"
+                />
+              </div>
+              <div>
+                <Label>Page title</Label>
+                <Input
+                  value={pageForm.title}
+                  onChange={(e) => setPageForm((prev) => ({ ...prev, title: e.target.value }))}
+                  placeholder="Optional display title"
+                />
+              </div>
             </div>
-            <Button
-              onClick={() => void createPage()}
-              disabled={!newPageSlug.trim()}
-              className="w-full font-display uppercase tracking-wider"
-            >
-              Create
-            </Button>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Page type</Label>
+                <Select
+                  value={pageForm.pageType}
+                  onValueChange={(value: "main" | "child") =>
+                    setPageForm((prev) => ({
+                      ...prev,
+                      pageType: value,
+                      parentId: value === "main" ? "" : prev.parentId,
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="main">Main page</SelectItem>
+                    <SelectItem value="child">Child / slave page</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Slug</Label>
+                <Input
+                  value={pageForm.slug}
+                  onChange={(e) => setPageForm((prev) => ({ ...prev, slug: normalizeSlugSegment(e.target.value) }))}
+                  placeholder="summer-drop"
+                  disabled={pageForm.isHome}
+                />
+              </div>
+            </div>
+
+            {pageForm.pageType === "child" && (
+              <div>
+                <Label>Parent page</Label>
+                <Select
+                  value={pageForm.parentId}
+                  onValueChange={(value) => setPageForm((prev) => ({ ...prev, parentId: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose parent page" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {childCandidates.map((page) => (
+                      <SelectItem key={page.id} value={page.id}>
+                        {pageDisplayTitle(page)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium">Published</p>
+                  <p className="text-xs text-muted-foreground">Show on live site</p>
+                </div>
+                <Switch
+                  checked={pageForm.isPublished}
+                  onCheckedChange={(checked) => setPageForm((prev) => ({ ...prev, isPublished: checked }))}
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium">Homepage</p>
+                  <p className="text-xs text-muted-foreground">Only one page can be home</p>
+                </div>
+                <Switch
+                  checked={pageForm.isHome}
+                  onCheckedChange={(checked) => setPageForm((prev) => ({ ...prev, isHome: checked }))}
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium">Show in header</p>
+                  <p className="text-xs text-muted-foreground">Available for header nav</p>
+                </div>
+                <Switch
+                  checked={pageForm.showInHeader}
+                  onCheckedChange={(checked) => setPageForm((prev) => ({ ...prev, showInHeader: checked }))}
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium">Show in footer</p>
+                  <p className="text-xs text-muted-foreground">Available for footer links</p>
+                </div>
+                <Switch
+                  checked={pageForm.showInFooter}
+                  onCheckedChange={(checked) => setPageForm((prev) => ({ ...prev, showInFooter: checked }))}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setPageDialogOpen(false)} className="flex-1">
+                Cancel
+              </Button>
+              <Button onClick={() => void savePage()} className="flex-1 font-display uppercase tracking-wider">
+                {pageDialogMode === "create" ? "Create" : "Save"}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -1023,7 +1201,7 @@ const PageEditor = () => {
             <DialogTitle className="font-display uppercase">Delete Page</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            This will permanently delete all blocks on "{pageTitles[activePage] || prettyPageLabel(activePage)}".
+            This will permanently delete all blocks on "{selectedPage ? pageDisplayTitle(selectedPage) : activePage}".
           </p>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setDeletePageOpen(false)} className="flex-1">

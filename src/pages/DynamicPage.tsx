@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useMemo, useEffect } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import { renderBlock } from "@/components/admin/BlockRenderer";
 import { PageSkeleton } from "@/components/shared/loading-states";
 import { usePageBlocks, useSitePage } from "@/hooks/use-page-blocks";
@@ -15,25 +15,48 @@ const normalizePageSlug = (value?: string) => {
   return value.replace(/^\/+|\/+$/g, "") || "home";
 };
 
+const getBlockLabel = (blockType: string, title?: string | null) => {
+  if (title?.trim()) return title.trim();
+  return blockType
+    .replace(/_/g, " ")
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (m) => m.toUpperCase());
+};
+
 const DynamicPage = ({
   slug: slugProp,
   emptyTitle = "Coming soon",
   emptyDescription = "Content coming soon.",
 }: DynamicPageProps) => {
   const params = useParams();
+  const [searchParams] = useSearchParams();
   const slug = normalizePageSlug(slugProp ?? params.slug ?? "");
-  const { data: pageMeta, isLoading: isPageLoading } = useSitePage(slug, Boolean(slug));
-  const { data: blocks = [], isLoading: isBlocksLoading } = usePageBlocks(slug, Boolean(slug));
-
+  const isEditorPreview = searchParams.get("editorPreview") === "1";
+  const { data: pageMeta } = useSitePage(slug, Boolean(slug));
+  const { data: blocks = [], isLoading } = usePageBlocks(slug, Boolean(slug));
   const visibleBlocks = useMemo(() => blocks.filter((block) => block.is_active !== false), [blocks]);
-  const isLoading = isPageLoading || isBlocksLoading;
+
+  useEffect(() => {
+    if (!isEditorPreview) return;
+    document.body.setAttribute("data-editor-preview", "true");
+    return () => {
+      document.body.removeAttribute("data-editor-preview");
+    };
+  }, [isEditorPreview]);
+
+  const notifyParent = (payload: Record<string, unknown>) => {
+    if (!isEditorPreview || typeof window === "undefined" || window.parent === window) return;
+    window.parent.postMessage({ source: "layerloot-editor-preview", ...payload }, window.location.origin);
+  };
 
   if (isLoading) return <PageSkeleton />;
 
-  if (pageMeta && pageMeta.is_published === false) {
+  if (pageMeta && pageMeta.is_published === false && !isEditorPreview) {
     return (
       <div className="container py-20 text-center">
-        <h1 className="font-display text-3xl font-bold uppercase text-foreground">Page unavailable</h1>
+        <h1 className="font-display text-3xl font-bold uppercase text-foreground">
+          {pageMeta.title || pageMeta.name || "Page unavailable"}
+        </h1>
         <p className="mt-3 text-muted-foreground">This page is currently unpublished.</p>
       </div>
     );
@@ -51,10 +74,38 @@ const DynamicPage = ({
   }
 
   return (
-    <div>
-      {visibleBlocks.map((block) => (
-        <div key={block.id}>{renderBlock(block)}</div>
-      ))}
+    <div data-editor-page={slug}>
+      {visibleBlocks.map((block) => {
+        const label = getBlockLabel(block.block_type, block.title);
+
+        if (!isEditorPreview) {
+          return <div key={block.id}>{renderBlock(block)}</div>;
+        }
+
+        return (
+          <div
+            key={block.id}
+            data-editor-block-id={block.id}
+            data-editor-block-type={label}
+            data-editor-block-active={block.is_active === false ? "false" : "true"}
+            className="relative"
+            onClick={() =>
+              notifyParent({
+                type: "select-block",
+                blockId: block.id,
+              })
+            }
+            onDoubleClick={() =>
+              notifyParent({
+                type: "edit-block",
+                blockId: block.id,
+              })
+            }
+          >
+            {renderBlock(block)}
+          </div>
+        );
+      })}
     </div>
   );
 };

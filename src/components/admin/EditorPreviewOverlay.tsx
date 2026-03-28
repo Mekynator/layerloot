@@ -74,13 +74,12 @@ export default function EditorPreviewOverlay({
               onDropBlock?.(block.id);
             }}
           >
-            {dragOver && (
-              <div className="pointer-events-none absolute inset-x-0 -top-1 h-1 rounded bg-primary" />
-            )}
+            {dragOver && <div className="pointer-events-none absolute inset-x-0 -top-1 h-1 rounded bg-primary" />}
 
             <button
               type="button"
               onClick={() => onSelectBlock(block.id)}
+              onDoubleClick={() => onEditBlock(block.id)}
               className="pointer-events-auto absolute inset-0 h-full w-full rounded-md"
               title={`Select ${block.type}`}
             />
@@ -89,9 +88,7 @@ export default function EditorPreviewOverlay({
               <span className="font-display text-[10px] font-semibold uppercase tracking-wider text-foreground">
                 {block.type}
               </span>
-              {hidden && (
-                <span className="text-[10px] uppercase tracking-wider text-amber-600">Hidden</span>
-              )}
+              {hidden && <span className="text-[10px] uppercase tracking-wider text-amber-600">Hidden</span>}
             </div>
 
             <div className="pointer-events-auto absolute right-2 top-2 flex gap-1 rounded-md bg-background/95 p-1 shadow-sm">

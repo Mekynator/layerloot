@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ExternalLink, MonitorSmartphone, Eye, MousePointerClick } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
+import EditorPreviewOverlay, { type PreviewBlockRect } from "@/components/admin/EditorPreviewOverlay";
 
 type Props = {
   page: string;
@@ -23,7 +24,22 @@ const labelForPage = (page: string) => {
     .replace(/\b\w/g, (m) => m.toUpperCase());
 };
 
-export default function EditorPreviewFrame({ page, pagePath, blocks, selectedBlockId }: Props) {
+export default function EditorPreviewFrame({
+  page,
+  pagePath,
+  blocks,
+  selectedBlockId,
+  onSelectBlock,
+  onEditBlock,
+  onToggleActive,
+  onAddBefore,
+  onMoveBlock,
+}: Props) {
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const [overlayBlocks, setOverlayBlocks] = useState<PreviewBlockRect[]>([]);
+  const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
+  const [dragOverBlockId, setDragOverBlockId] = useState<string | null>(null);
+
   const iframeSrc = useMemo(() => {
     const url = new URL(window.location.origin + pagePath);
     url.searchParams.set("editorPreview", "1");
@@ -34,6 +50,115 @@ export default function EditorPreviewFrame({ page, pagePath, blocks, selectedBlo
   const totalBlocks = blocks.length;
   const visibleBlocks = blocks.filter((block) => block.is_active !== false).length;
   const selectedBlock = blocks.find((block) => block.id === selectedBlockId) || null;
+  const hiddenBlockIds = blocks.filter((block) => block.is_active === false).map((block) => block.id);
+
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    let resizeObserver: ResizeObserver | null = null;
+    let raf = 0;
+
+    const syncOverlay = () => {
+      const frame = iframeRef.current;
+      if (!frame) return;
+
+      try {
+        const frameWindow = frame.contentWindow;
+        const frameDocument = frame.contentDocument;
+        if (!frameWindow || !frameDocument) return;
+
+        const iframeRect = frame.getBoundingClientRect();
+        const nodes = Array.from(frameDocument.querySelectorAll<HTMLElement>("[data-editor-block-id]"));
+
+        const nextBlocks: PreviewBlockRect[] = nodes.map((node) => {
+          const rect = node.getBoundingClientRect();
+          return {
+            id: node.dataset.editorBlockId || "",
+            type: node.dataset.editorBlockType || "Block",
+            top: rect.top + frameWindow.scrollY,
+            left: rect.left,
+            width: rect.width,
+            height: rect.height,
+          };
+        });
+
+        setOverlayBlocks(nextBlocks);
+      } catch {
+        setOverlayBlocks([]);
+      }
+    };
+
+    const requestSync = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(syncOverlay);
+    };
+
+    const attach = () => {
+      try {
+        const frameWindow = iframe.contentWindow;
+        const frameDocument = iframe.contentDocument;
+        if (!frameWindow || !frameDocument) return;
+
+        requestSync();
+        frameWindow.addEventListener("scroll", requestSync, { passive: true });
+        window.addEventListener("resize", requestSync);
+        resizeObserver = new ResizeObserver(requestSync);
+        resizeObserver.observe(frameDocument.body);
+        resizeObserver.observe(frameDocument.documentElement);
+      } catch {
+        setOverlayBlocks([]);
+      }
+    };
+
+    const handleLoad = () => {
+      attach();
+    };
+
+    iframe.addEventListener("load", handleLoad);
+    attach();
+
+    return () => {
+      cancelAnimationFrame(raf);
+      iframe.removeEventListener("load", handleLoad);
+      try {
+        iframe.contentWindow?.removeEventListener("scroll", requestSync);
+      } catch {}
+      window.removeEventListener("resize", requestSync);
+      resizeObserver?.disconnect();
+    };
+  }, [iframeSrc, blocks]);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data;
+      if (!data || data.source !== "layerloot-editor-preview") return;
+
+      if (data.type === "select-block" && typeof data.blockId === "string") {
+        onSelectBlock(data.blockId);
+      }
+
+      if (data.type === "edit-block" && typeof data.blockId === "string") {
+        onSelectBlock(data.blockId);
+        onEditBlock(data.blockId);
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [onEditBlock, onSelectBlock]);
+
+  const handleDropBlock = (targetId: string) => {
+    if (!draggingBlockId || draggingBlockId === targetId) {
+      setDraggingBlockId(null);
+      setDragOverBlockId(null);
+      return;
+    }
+    onMoveBlock(draggingBlockId, targetId);
+    setDraggingBlockId(null);
+    setDragOverBlockId(null);
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -60,14 +185,34 @@ export default function EditorPreviewFrame({ page, pagePath, blocks, selectedBlo
         </div>
       </div>
 
-      <div className="relative flex-1 bg-muted/20">
+      <div className="relative flex-1 overflow-auto bg-muted/20">
         <iframe
+          ref={iframeRef}
           key={iframeSrc}
           src={iframeSrc}
           title={`Preview ${page}`}
           className="h-full w-full border-0 bg-background"
           sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
           referrerPolicy="no-referrer-when-downgrade"
+        />
+
+        <EditorPreviewOverlay
+          blocks={overlayBlocks}
+          selectedBlockId={selectedBlockId}
+          hiddenBlockIds={hiddenBlockIds}
+          draggingBlockId={draggingBlockId}
+          dragOverBlockId={dragOverBlockId}
+          onSelectBlock={onSelectBlock}
+          onEditBlock={onEditBlock}
+          onToggleActive={onToggleActive}
+          onAddBefore={onAddBefore}
+          onStartDrag={(id) => setDraggingBlockId(id)}
+          onDragOverBlock={(id) => setDragOverBlockId(id)}
+          onDropBlock={handleDropBlock}
+          onEndDrag={() => {
+            setDraggingBlockId(null);
+            setDragOverBlockId(null);
+          }}
         />
 
         <div className="pointer-events-none absolute inset-0">
@@ -78,11 +223,11 @@ export default function EditorPreviewFrame({ page, pagePath, blocks, selectedBlo
                 <p className="text-xs font-medium text-foreground">
                   {selectedBlock
                     ? `Selected: ${selectedBlock.title || selectedBlock.block_type}`
-                    : "Preview mode active"}
+                    : "Click blocks directly in preview"}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  Click-to-edit overlay comes in the next step. For now, select blocks from the left structure panel and
-                  use the block editor.
+                  Single click selects a block. Double click opens the editor. Use the floating actions on each section
+                  to edit, hide or add a block before it.
                 </p>
               </div>
             </div>

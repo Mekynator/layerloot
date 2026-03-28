@@ -440,24 +440,48 @@ const Account = () => {
     if (tab === "custom-requests" && latestCustomActivityAt && hasNewCustomRequests) markTabAsSeen("custom-requests");
   }, [tab, user, latestOrderActivityAt, latestCustomActivityAt, hasNewOrders, hasNewCustomRequests]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const redeemVoucher = async (voucher: Voucher, pointsCostOverride?: number) => {
-    const pointsCost = pointsCostOverride ?? voucher.points_cost;
+  const redeemReward = async (reward: RewardCatalogItem) => {
     if (!user) return;
 
-    if (pointsBalance < pointsCost) {
+    if (pointsBalance < reward.pointsCost) {
       toast({ title: "Not enough points", variant: "destructive" });
       return;
     }
 
-    setRedeemingKey(voucher.id);
+    setRedeemingKey(reward.key);
+
+    // Find or create voucher definition
+    let voucherId: string | null = null;
+    const matchedVoucher = findMatchingVoucher(reward, vouchers);
+
+    if (matchedVoucher) {
+      voucherId = matchedVoucher.id;
+    } else {
+      // Create the voucher definition if it doesn't exist
+      const { data: newVoucher, error: createError } = await supabase.from("vouchers").insert({
+        name: reward.name,
+        description: reward.description,
+        discount_type: reward.discountType,
+        discount_value: reward.discountValue,
+        points_cost: reward.pointsCost,
+        is_active: true,
+      }).select("id").single();
+
+      if (createError || !newVoucher) {
+        setRedeemingKey(null);
+        toast({ title: "Error", description: createError?.message || "Could not create voucher", variant: "destructive" });
+        return;
+      }
+      voucherId = newVoucher.id;
+    }
 
     const code = `LL-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    const isGiftCard = voucher.discount_type === "gift_card";
+    const isGiftCard = reward.discountType === "gift_card";
 
     const { error: pointsError } = await supabase.from("loyalty_points").insert({
       user_id: user.id,
-      points: -pointsCost,
-      reason: `Redeemed: ${voucher.name}`,
+      points: -reward.pointsCost,
+      reason: `Redeemed: ${reward.name}`,
     });
 
     if (pointsError) {
@@ -468,9 +492,9 @@ const Account = () => {
 
     const { error: voucherError } = await supabase.from("user_vouchers").insert({
       user_id: user.id,
-      voucher_id: voucher.id,
+      voucher_id: voucherId,
       code,
-      balance: isGiftCard ? voucher.discount_value : null,
+      balance: isGiftCard ? reward.discountValue : null,
     });
 
     if (voucherError) {

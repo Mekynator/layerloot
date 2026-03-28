@@ -34,7 +34,6 @@ const Contact = () => {
   const [blocks, setBlocks] = useState<SiteBlock[]>([]);
   const [contact, setContact] = useState<ContactSettings>(defaultContact);
 
-  // ✅ form state
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [subject, setSubject] = useState("");
@@ -66,7 +65,6 @@ const Contact = () => {
     };
   }, []);
 
-  // ✅ UPDATED SUBMIT FUNCTION
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -95,7 +93,7 @@ const Contact = () => {
       setSubject("");
       setMessage("");
     } catch (err) {
-      console.error(err);
+      console.error("Contact form error:", err);
       toast({
         title: "Error",
         description: "Failed to send message. Try again.",
@@ -160,7 +158,6 @@ const Contact = () => {
               </Button>
             </motion.form>
 
-            {/* RIGHT SIDE (UNCHANGED) */}
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
               <h2 className="font-display text-xl font-semibold uppercase text-foreground">Get in Touch</h2>
 
@@ -181,6 +178,44 @@ const Contact = () => {
                   </div>
                 ))}
               </div>
+
+              {(contact.social?.instagram || contact.social?.facebook || contact.social?.youtube) && (
+                <div className="space-y-2 pt-4">
+                  <h3 className="font-display text-sm font-semibold uppercase text-foreground">Follow Us</h3>
+                  <div className="flex gap-3">
+                    {contact.social?.instagram && (
+                      <a
+                        href={contact.social.instagram}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-muted-foreground hover:text-primary"
+                      >
+                        Instagram
+                      </a>
+                    )}
+                    {contact.social?.facebook && (
+                      <a
+                        href={contact.social.facebook}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-muted-foreground hover:text-primary"
+                      >
+                        Facebook
+                      </a>
+                    )}
+                    {contact.social?.youtube && (
+                      <a
+                        href={contact.social.youtube}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-muted-foreground hover:text-primary"
+                      >
+                        YouTube
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
             </motion.div>
           </div>
         </div>

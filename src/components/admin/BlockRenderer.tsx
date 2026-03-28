@@ -1260,7 +1260,7 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
   const showProfileButton = c.showProfileButton !== false;
   const intervalMs = Math.max(1500, Number(c.intervalMs) || 3000);
   const functionName = String(c.functionName || "instagram-feed").trim() || "instagram-feed";
-  const profileUrl = username ? `https://www.instagram.com/${username}` : "https://www.instagram.com";
+  const profileUrl = "https://www.instagram.com/layerloot3d?igsh=cmhjMHc4NjVjMmdk";
 
   useEffect(() => {
     let mounted = true;

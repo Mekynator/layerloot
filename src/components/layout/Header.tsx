@@ -4,7 +4,7 @@ import { ShoppingCart, User, Menu, X, Layers, LogOut, Shield } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavLinks, type NavItem } from "@/components/admin/NavLinkEditor";
+import { useNavLinks } from "@/components/admin/NavLinkEditor";
 import { supabase } from "@/integrations/supabase/client";
 import GlobalSectionRenderer from "@/components/layout/GlobalSectionRenderer";
 import {
@@ -47,18 +47,6 @@ type HeaderSettings = {
 type SeenState = {
   ordersLastSeenAt: string | null;
   customRequestsLastSeenAt: string | null;
-};
-
-type SitePageOption = {
-  id: string;
-  name: string;
-  title: string | null;
-  full_path: string;
-  slug: string;
-  page_type: string;
-  parent_id: string | null;
-  show_in_header: boolean;
-  is_published: boolean;
 };
 
 const defaultBranding: BrandingSettings = {
@@ -144,36 +132,17 @@ const isActiveLink = (pathname: string, to: string) => {
   return current === target || current.startsWith(`${target}/`);
 };
 
-const pageLabel = (page: SitePageOption, parentMap: Map<string, SitePageOption>) => {
-  const ownLabel = page.title || page.name || page.slug;
-  if (!page.parent_id) return ownLabel;
-  const parent = parentMap.get(page.parent_id);
-  if (!parent) return ownLabel;
-  return `${parent.title || parent.name || parent.slug} / ${ownLabel}`;
-};
-
-const dedupeLinks = (items: NavItem[]) => {
-  const seen = new Set<string>();
-  return items.filter((item) => {
-    const key = `${normalizePath(item.to)}::${item.label}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-};
-
 const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [adminAlerts, setAdminAlerts] = useState(0);
   const [branding, setBranding] = useState<BrandingSettings>(defaultBranding);
   const [headerSettings, setHeaderSettings] = useState<HeaderSettings>(defaultHeaderSettings);
   const [hasAccountNotifications, setHasAccountNotifications] = useState(false);
-  const [headerPages, setHeaderPages] = useState<SitePageOption[]>([]);
 
   const location = useLocation();
   const { totalItems } = useCart();
   const { user, isAdmin, signOut } = useAuth();
-  const manualNavLinks = useNavLinks();
+  const navLinks = useNavLinks();
 
   useEffect(() => {
     const fetchAdminAlerts = async () => {
@@ -261,13 +230,7 @@ const Header = () => {
     Promise.all([
       supabase.from("site_settings").select("value").eq("key", "branding").maybeSingle(),
       supabase.from("site_settings").select("value").eq("key", "header_settings").maybeSingle(),
-      supabase
-        .from("site_pages")
-        .select("id,name,title,full_path,slug,page_type,parent_id,show_in_header,is_published")
-        .eq("is_published", true)
-        .eq("show_in_header", true)
-        .order("sort_order", { ascending: true }),
-    ]).then(([brandingRes, headerRes, pagesRes]) => {
+    ]).then(([brandingRes, headerRes]) => {
       if (brandingRes.data?.value) {
         setBranding({
           ...defaultBranding,
@@ -281,8 +244,6 @@ const Header = () => {
           ...(headerRes.data.value as HeaderSettings),
         });
       }
-
-      setHeaderPages(((pagesRes.data as SitePageOption[] | null) ?? []).filter((page) => page.page_type !== "global"));
     });
   }, []);
 
@@ -296,27 +257,16 @@ const Header = () => {
   const logoAlt = branding.logo_alt || branding.brand_name || "Logo";
   const logoHeight = Math.max(20, Number(headerSettings.logo_height_px || 36));
 
-  const desktopLinks = useMemo(() => {
-    const parentMap = new Map(headerPages.map((page) => [page.id, page]));
-
-    const autoLinks: NavItem[] = headerPages.map((page) => ({
-      label: pageLabel(page, parentMap),
-      to: normalizePath(page.full_path),
-      source: "site_page",
-      pageId: page.id,
-      openInNewTab: false,
-      visible: true,
-    }));
-
-    const manualLinks = manualNavLinks
-      .filter((link) => !!link.to && !!link.label)
-      .map((link) => ({
-        ...link,
-        to: normalizePath(link.to),
-      }));
-
-    return dedupeLinks([...autoLinks, ...manualLinks]).filter((link) => link.visible !== false);
-  }, [headerPages, manualNavLinks]);
+  const desktopLinks = useMemo(
+    () =>
+      navLinks
+        .filter((link) => !!link.to && !!link.label)
+        .map((link) => ({
+          ...link,
+          to: normalizePath(link.to),
+        })),
+    [navLinks],
+  );
 
   return (
     <>
@@ -351,8 +301,6 @@ const Header = () => {
                 <Link
                   key={`${link.label}-${link.to}`}
                   to={link.to}
-                  target={link.openInNewTab ? "_blank" : undefined}
-                  rel={link.openInNewTab ? "noreferrer" : undefined}
                   className={`font-display text-sm uppercase tracking-widest transition-colors hover:text-primary ${
                     isActiveLink(location.pathname, link.to) ? "text-primary" : "text-secondary-foreground"
                   }`}
@@ -460,8 +408,6 @@ const Header = () => {
               <Link
                 key={`${link.label}-${link.to}`}
                 to={link.to}
-                target={link.openInNewTab ? "_blank" : undefined}
-                rel={link.openInNewTab ? "noreferrer" : undefined}
                 className={`block py-3 font-display text-sm uppercase tracking-widest transition-colors hover:text-primary ${
                   isActiveLink(location.pathname, link.to) ? "text-primary" : "text-secondary-foreground"
                 }`}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { GripVertical, Plus, Trash2, Save } from "lucide-react";
+import { GripVertical, Plus, Trash2, Save, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,16 +33,16 @@ type SitePageOption = {
   full_path: string;
   slug: string;
   page_type: string;
-  parent_id: string | null;
-  show_in_header: boolean;
+  parent_id?: string | null;
+  show_in_header?: boolean;
+  show_in_footer?: boolean;
   is_published: boolean;
 };
 
 const defaultNav: NavEditorItem[] = [
   { label: "Home", to: "/", source: "manual", openInNewTab: false, visible: true },
-  { label: "Shop", to: "/products", source: "manual", openInNewTab: false, visible: true },
+  { label: "Products", to: "/products", source: "manual", openInNewTab: false, visible: true },
   { label: "Create Your Own", to: "/create", source: "manual", openInNewTab: false, visible: true },
-  { label: "Gallery", to: "/gallery", source: "manual", openInNewTab: false, visible: true },
   { label: "About", to: "/about", source: "manual", openInNewTab: false, visible: true },
 ];
 
@@ -61,32 +61,87 @@ const toEditorItem = (item: NavItem): NavEditorItem => ({
   visible: item.visible !== false,
 });
 
-const pageLabel = (page: SitePageOption, parentMap: Map<string, SitePageOption>) => {
-  const ownLabel = page.title || page.name || page.slug;
-  if (!page.parent_id) return ownLabel;
-  const parent = parentMap.get(page.parent_id);
-  if (!parent) return ownLabel;
-  return `${parent.title || parent.name || parent.slug} / ${ownLabel}`;
+const buildPageLabel = (page: SitePageOption, allPages: SitePageOption[]) => {
+  const own = page.title || page.name || page.slug;
+  if (!page.parent_id) return own;
+
+  const parent = allPages.find((item) => item.id === page.parent_id);
+  if (!parent) return own;
+
+  const parentLabel = parent.title || parent.name || parent.slug;
+  return `${parentLabel} / ${own}`;
 };
 
-export const useNavLinks = () => {
+const dedupeNavItems = (items: NavItem[]) => {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (item.visible === false) return false;
+    const key = `${normalizePath(item.to)}|${item.label.trim().toLowerCase()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const mergeNavigation = (manualLinks: NavItem[], sitePages: SitePageOption[], target: "header" | "footer") => {
+  const pageFlag = target === "header" ? "show_in_header" : "show_in_footer";
+  const autoPages: NavItem[] = sitePages
+    .filter((page) => page.is_published && page.page_type !== "global" && Boolean(page[pageFlag]))
+    .map((page) => ({
+      label: buildPageLabel(page, sitePages),
+      to: normalizePath(page.full_path),
+      source: "site_page",
+      pageId: page.id,
+      openInNewTab: false,
+      visible: true,
+    }));
+
+  const manual = manualLinks
+    .map(toEditorItem)
+    .filter((item) => item.visible !== false)
+    .map((item) => ({
+      ...item,
+      to: normalizePath(item.to),
+    }));
+
+  return dedupeNavItems([...manual, ...autoPages]);
+};
+
+function useMergedNavLinks(target: "header" | "footer") {
   const [links, setLinks] = useState<NavItem[]>(defaultNav);
 
   useEffect(() => {
-    supabase
-      .from("site_settings")
-      .select("value")
-      .eq("key", "nav_links")
-      .single()
-      .then(({ data }) => {
-        if (data?.value && Array.isArray(data.value)) {
-          setLinks((data.value as NavItem[]).map(toEditorItem).filter((item) => item.visible !== false));
-        }
-      });
-  }, []);
+    let mounted = true;
+
+    const load = async () => {
+      const [navRes, pagesRes] = await Promise.all([
+        supabase.from("site_settings").select("value").eq("key", "nav_links").maybeSingle(),
+        supabase
+          .from("site_pages")
+          .select("id,name,title,full_path,slug,page_type,parent_id,show_in_header,show_in_footer,is_published")
+          .eq("is_published", true)
+          .order("sort_order", { ascending: true }),
+      ]);
+
+      if (!mounted) return;
+
+      const manualLinks = Array.isArray(navRes.data?.value) ? (navRes.data.value as NavItem[]) : defaultNav;
+      const pages = (pagesRes.data as SitePageOption[] | null) ?? [];
+      setLinks(mergeNavigation(manualLinks, pages, target));
+    };
+
+    void load();
+
+    return () => {
+      mounted = false;
+    };
+  }, [target]);
 
   return links;
-};
+}
+
+export const useNavLinks = () => useMergedNavLinks("header");
+export const useFooterNavLinks = () => useMergedNavLinks("footer");
 
 const NavLinkEditor = () => {
   const [links, setLinks] = useState<NavEditorItem[]>(defaultNav);
@@ -95,37 +150,43 @@ const NavLinkEditor = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    supabase
-      .from("site_settings")
-      .select("value")
-      .eq("key", "nav_links")
-      .single()
-      .then(({ data }) => {
-        if (data?.value && Array.isArray(data.value)) {
-          setLinks((data.value as NavItem[]).map(toEditorItem));
-        }
-      });
+    const load = async () => {
+      const [navRes, pagesRes] = await Promise.all([
+        supabase.from("site_settings").select("value").eq("key", "nav_links").maybeSingle(),
+        supabase
+          .from("site_pages")
+          .select("id,name,title,full_path,slug,page_type,parent_id,show_in_header,show_in_footer,is_published")
+          .eq("is_published", true)
+          .order("sort_order", { ascending: true }),
+      ]);
 
-    supabase
-      .from("site_pages")
-      .select("id,name,title,full_path,slug,page_type,parent_id,show_in_header,is_published")
-      .eq("is_published", true)
-      .eq("show_in_header", true)
-      .order("sort_order", { ascending: true })
-      .then(({ data }) => {
-        setSitePages((data as SitePageOption[]) ?? []);
-      });
+      if (navRes.data?.value && Array.isArray(navRes.data.value)) {
+        setLinks((navRes.data.value as NavItem[]).map(toEditorItem));
+      }
+
+      setSitePages((pagesRes.data as SitePageOption[]) ?? []);
+    };
+
+    void load();
   }, []);
 
-  const headerPages = useMemo(() => sitePages.filter((page) => page.page_type !== "global"), [sitePages]);
-  const parentMap = useMemo(() => new Map(sitePages.map((page) => [page.id, page])), [sitePages]);
+  const headerPages = useMemo(
+    () =>
+      sitePages
+        .filter((page) => page.page_type !== "global" && page.is_published && page.show_in_header)
+        .map((page) => ({
+          ...page,
+          displayLabel: buildPageLabel(page, sitePages),
+        })),
+    [sitePages],
+  );
 
   const save = async () => {
     const payload: NavItem[] = links.map((item) => ({
       label: item.label,
       to: normalizePath(item.to),
-      source: item.source,
-      pageId: item.pageId,
+      source: "manual",
+      pageId: undefined,
       openInNewTab: Boolean(item.openInNewTab),
       visible: item.visible !== false,
     }));
@@ -148,29 +209,12 @@ const NavLinkEditor = () => {
       { label: "New Page", to: "/new-page", source: "manual", openInNewTab: false, visible: true },
     ]);
 
-  const removeLink = (i: number) => setLinks(links.filter((_, j) => j !== i));
+  const removeLink = (i: number) => setLinks((prev) => prev.filter((_, j) => j !== i));
 
   const updateLink = (i: number, field: keyof NavEditorItem, value: string | boolean) => {
     setLinks((prev) => {
       const updated = [...prev];
       updated[i] = { ...updated[i], [field]: value };
-      return updated;
-    });
-  };
-
-  const applySitePage = (i: number, pageId: string) => {
-    const page = headerPages.find((item) => item.id === pageId);
-    if (!page) return;
-
-    setLinks((prev) => {
-      const updated = [...prev];
-      updated[i] = {
-        ...updated[i],
-        source: "site_page",
-        pageId: page.id,
-        label: pageLabel(page, parentMap),
-        to: normalizePath(page.full_path),
-      };
       return updated;
     });
   };
@@ -204,12 +248,12 @@ const NavLinkEditor = () => {
           <SheetTitle className="font-display uppercase">Header Navigation</SheetTitle>
         </SheetHeader>
 
-        <div className="mt-4 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-          Published pages with <span className="font-medium text-foreground">Show in header</span> enabled can be linked
-          automatically here. Manual links still work for custom routes.
-        </div>
+        <div className="mt-6 space-y-4">
+          <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+            Manual links are managed here. Pages with{" "}
+            <span className="font-medium text-foreground">Show in header</span> enabled are added automatically below.
+          </div>
 
-        <div className="mt-6 space-y-3">
           {links.map((link, i) => (
             <div
               key={i}
@@ -225,34 +269,15 @@ const NavLinkEditor = () => {
                 <div className="flex-1 space-y-2">
                   <div>
                     <Label className="text-xs">Source</Label>
-                    <Select value={link.source} onValueChange={(value: NavSource) => updateLink(i, "source", value)}>
+                    <Select value="manual" disabled>
                       <SelectTrigger className="h-8 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="manual">Manual</SelectItem>
-                        <SelectItem value="site_page">Site page</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-
-                  {link.source === "site_page" && (
-                    <div>
-                      <Label className="text-xs">Page</Label>
-                      <Select value={link.pageId || ""} onValueChange={(value) => applySitePage(i, value)}>
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="Choose page" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {headerPages.map((page) => (
-                            <SelectItem key={page.id} value={page.id}>
-                              {pageLabel(page, parentMap)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
 
                   <Input
                     value={link.label}
@@ -266,7 +291,6 @@ const NavLinkEditor = () => {
                     onChange={(e) => updateLink(i, "to", e.target.value)}
                     placeholder="/path"
                     className="h-8 text-xs"
-                    disabled={link.source === "site_page"}
                   />
 
                   <div className="flex items-center justify-between gap-2">
@@ -309,6 +333,26 @@ const NavLinkEditor = () => {
           <Button onClick={save} className="w-full font-display uppercase tracking-wider">
             <Save className="mr-1 h-4 w-4" /> Save Navigation
           </Button>
+
+          <div className="space-y-2 rounded-lg border border-border p-3">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary" />
+              <p className="font-medium text-foreground">Auto pages from Page Settings</p>
+            </div>
+
+            {headerPages.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No published pages currently have Show in header enabled.</p>
+            ) : (
+              <div className="space-y-2">
+                {headerPages.map((page) => (
+                  <div key={page.id} className="rounded-md border border-border bg-muted/30 px-3 py-2">
+                    <p className="text-sm font-medium text-foreground">{page.displayLabel}</p>
+                    <p className="text-xs text-muted-foreground">{normalizePath(page.full_path)}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </SheetContent>
     </Sheet>

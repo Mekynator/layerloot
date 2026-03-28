@@ -68,6 +68,7 @@ const AppShell = () => {
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/about" element={<About />} />
           <Route path="/submit-design" element={<SubmitDesign />} />
+
           <Route path="/admin" element={<Dashboard />} />
           <Route path="/admin/products" element={<AdminProducts />} />
           <Route path="/admin/products/:productId/variants" element={<AdminVariants />} />
@@ -81,14 +82,9 @@ const AppShell = () => {
           <Route path="/admin/content" element={<AdminContent />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
           <Route path="/admin/editor" element={<PageEditor />} />
+
           <Route path="/pages/:slug" element={<DynamicPage />} />
-
-          {/*
-            Catch-all live route for published dynamic pages.
-            Keep this after all explicit routes so system pages still win first.
-          */}
-          <Route path="/:slug" element={<DynamicPage />} />
-
+          <Route path="/*" element={<DynamicPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Layout>

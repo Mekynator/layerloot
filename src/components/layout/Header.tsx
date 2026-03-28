@@ -182,7 +182,7 @@ const Header = () => {
           .eq("user_id", user.id)
           .order("created_at", { ascending: false }) as unknown as Promise<{
           data: { created_at: string }[] | null;
-          error: any;
+          error: unknown;
         }>,
         supabase
           .from("custom_orders")
@@ -190,7 +190,7 @@ const Header = () => {
           .eq("user_id", user.id)
           .order("created_at", { ascending: false }) as unknown as Promise<{
           data: { id: string; created_at: string; updated_at: string }[] | null;
-          error: any;
+          error: unknown;
         }>,
       ]);
 
@@ -301,6 +301,8 @@ const Header = () => {
                 <Link
                   key={`${link.label}-${link.to}`}
                   to={link.to}
+                  target={link.openInNewTab ? "_blank" : undefined}
+                  rel={link.openInNewTab ? "noopener noreferrer" : undefined}
                   className={`font-display text-sm uppercase tracking-widest transition-colors hover:text-primary ${
                     isActiveLink(location.pathname, link.to) ? "text-primary" : "text-secondary-foreground"
                   }`}
@@ -367,14 +369,14 @@ const Header = () => {
                       {isAdmin && (
                         <DropdownMenuItem asChild>
                           <Link to="/admin" className="cursor-pointer">
-                            <Shield className="mr-2 h-4 w-4" />{" "}
+                            <Shield className="mr-2 h-4 w-4" />
                             {headerSettings.admin_label || defaultHeaderSettings.admin_label}
                           </Link>
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={signOut} className="cursor-pointer">
-                        <LogOut className="mr-2 h-4 w-4" />{" "}
+                        <LogOut className="mr-2 h-4 w-4" />
                         {headerSettings.sign_out_label || defaultHeaderSettings.sign_out_label}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -408,6 +410,8 @@ const Header = () => {
               <Link
                 key={`${link.label}-${link.to}`}
                 to={link.to}
+                target={link.openInNewTab ? "_blank" : undefined}
+                rel={link.openInNewTab ? "noopener noreferrer" : undefined}
                 className={`block py-3 font-display text-sm uppercase tracking-widest transition-colors hover:text-primary ${
                   isActiveLink(location.pathname, link.to) ? "text-primary" : "text-secondary-foreground"
                 }`}

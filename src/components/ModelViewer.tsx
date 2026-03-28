@@ -120,7 +120,7 @@ function applyMaterials(obj: THREE.Object3D, ext: string, selectedColor: string,
           ? sourceMat
           : null;
 
-      const appearanceExists = baseMat ? hasEmbeddedAppearance(mesh, baseMat, ext) : false;
+      const appearanceExists = baseMat ? hasEmbeddedAppearance(mesh, baseMat as THREE.Material & Partial<THREE.MeshStandardMaterial>, ext) : false;
 
       if (appearanceExists && baseMat) {
         const cloned = baseMat.clone();

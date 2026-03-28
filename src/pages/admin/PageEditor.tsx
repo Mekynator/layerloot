@@ -174,7 +174,7 @@ const placementLabel = (pageKey: string, placement?: string) => {
     products: { after_products: "After products" },
     contact: { after_contact: "After contact" },
     gallery: { after_gallery: "After gallery" },
-    "create-your-own": { after_create_your_own: "After tools" },
+    create: { after_create_your_own: "After tools" },
     "submit-design": { after_submit_design: "After submit form" },
   };
   return map[pageKey]?.[placement] || placement;

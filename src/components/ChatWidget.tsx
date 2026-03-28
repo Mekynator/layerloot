@@ -1,20 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Bot,
-  Gift,
-  Link as LinkIcon,
-  MapPin,
-  MessageCircle,
-  Send,
-  ShoppingBag,
-  TicketPercent,
-  Trash2,
-  User,
-  X,
-  Wand2,
-  PackageSearch,
-  Clock3,
-} from "lucide-react";
+import { Bot, MapPin, MessageCircle, Send, Trash2, User, X, Wand2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -30,6 +15,8 @@ type Msg = {
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 const STORAGE_KEY = "layerloot-chat-history";
+const PROMPT_BUBBLE_DELAY_MS = 8000;
+const PROMPT_BUBBLE_REAPPEAR_MS = 120000;
 
 function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -92,15 +79,19 @@ function HorizontalSuggestions({ items, onPick }: { items: string[]; onPick: (va
     startX.current = clientX;
     startScrollLeft.current = ref.current.scrollLeft;
   };
+
   const moveDrag = (clientX: number) => {
     if (!isDown.current || !ref.current) return;
     const delta = clientX - startX.current;
     if (Math.abs(delta) > 6) moved.current = true;
     ref.current.scrollLeft = startScrollLeft.current - delta;
   };
+
   const endDrag = () => {
     isDown.current = false;
-    window.setTimeout(() => { moved.current = false; }, 0);
+    window.setTimeout(() => {
+      moved.current = false;
+    }, 0);
   };
 
   return (
@@ -121,7 +112,9 @@ function HorizontalSuggestions({ items, onPick }: { items: string[]; onPick: (va
           <button
             key={item}
             type="button"
-            onClick={() => { if (!moved.current) onPick(item); }}
+            onClick={() => {
+              if (!moved.current) onPick(item);
+            }}
             className="whitespace-nowrap rounded-full border bg-background px-3 py-1.5 text-xs text-foreground transition hover:-translate-y-0.5 hover:bg-muted"
           >
             {item}
@@ -139,9 +132,17 @@ function MarkdownMessage({ content }: { content: string }) {
         components={{
           a: ({ href, children }) => {
             if (href?.startsWith("/")) {
-              return <Link to={href} className="text-primary underline">{children}</Link>;
+              return (
+                <Link to={href} className="text-primary underline">
+                  {children}
+                </Link>
+              );
             }
-            return <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline">{children}</a>;
+            return (
+              <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                {children}
+              </a>
+            );
           },
         }}
       >
@@ -179,8 +180,14 @@ async function streamChat({
 
   if (!resp.ok || !resp.body) {
     const text = await resp.text().catch(() => "");
-    if (resp.status === 429) { onError("I'm getting too many requests right now. Please try again in a moment."); return; }
-    if (resp.status === 402) { onError("AI credits are currently exhausted. Please try again later."); return; }
+    if (resp.status === 429) {
+      onError("I'm getting too many requests right now. Please try again in a moment.");
+      return;
+    }
+    if (resp.status === 402) {
+      onError("AI credits are currently exhausted. Please try again later.");
+      return;
+    }
     onError(text || "Failed to connect");
     return;
   }
@@ -205,7 +212,10 @@ async function streamChat({
       if (!line.startsWith("data: ")) continue;
 
       const jsonStr = line.slice(6).trim();
-      if (jsonStr === "[DONE]") { streamDone = true; break; }
+      if (jsonStr === "[DONE]") {
+        streamDone = true;
+        break;
+      }
 
       try {
         const parsed = JSON.parse(jsonStr);
@@ -218,7 +228,6 @@ async function streamChat({
     }
   }
 
-  // Flush remaining
   if (textBuffer.trim()) {
     for (let raw of textBuffer.split("\n")) {
       if (!raw) continue;
@@ -227,11 +236,14 @@ async function streamChat({
       if (!raw.startsWith("data: ")) continue;
       const jsonStr = raw.slice(6).trim();
       if (jsonStr === "[DONE]") continue;
+
       try {
         const parsed = JSON.parse(jsonStr);
         const content = parsed.choices?.[0]?.delta?.content as string | undefined;
         if (content) onDelta(content);
-      } catch { /* ignore partial leftovers */ }
+      } catch {
+        // ignore partial leftovers
+      }
     }
   }
 
@@ -241,6 +253,7 @@ async function streamChat({
 const ChatWidget = () => {
   const location = useLocation();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const promptBubbleTimerRef = useRef<number | null>(null);
 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -248,15 +261,18 @@ const ChatWidget = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
   const [showPromptBubble, setShowPromptBubble] = useState(false);
+  const [promptBubbleDismissed, setPromptBubbleDismissed] = useState(false);
 
   const [messages, setMessages] = useState<Msg[]>(() => {
     const saved = safeJsonParse<Msg[] | null>(localStorage.getItem(STORAGE_KEY), null);
     if (saved?.length) return saved;
+
     return [
       {
         id: uid(),
         role: "assistant",
-        content: "Hi! I'm LayerLoot's assistant. I can help with products, custom prints, shipping, points, and your orders. Ask me anything! 😊",
+        content:
+          "Hi! I'm LayerLoot's assistant. I can help with products, custom prints, shipping, points, and your orders. Ask me anything! 😊",
       },
     ];
   });
@@ -276,24 +292,62 @@ const ChatWidget = () => {
 
   useEffect(() => {
     let mounted = true;
+
     supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
       setUserId(data.session?.user?.id ?? null);
     });
+
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUserId(session?.user?.id ?? null);
     });
-    return () => { mounted = false; authListener.subscription.unsubscribe(); };
+
+    return () => {
+      mounted = false;
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
-    if (open) { setShowPromptBubble(false); return; }
-    const timer = window.setTimeout(() => setShowPromptBubble(true), 8000);
-    return () => window.clearTimeout(timer);
-  }, [open, location.pathname]);
+    if (promptBubbleTimerRef.current) {
+      window.clearTimeout(promptBubbleTimerRef.current);
+      promptBubbleTimerRef.current = null;
+    }
+
+    if (open) {
+      setShowPromptBubble(false);
+      return;
+    }
+
+    const delay = promptBubbleDismissed ? PROMPT_BUBBLE_REAPPEAR_MS : PROMPT_BUBBLE_DELAY_MS;
+
+    promptBubbleTimerRef.current = window.setTimeout(() => {
+      setShowPromptBubble(true);
+      setPromptBubbleDismissed(false);
+    }, delay);
+
+    return () => {
+      if (promptBubbleTimerRef.current) {
+        window.clearTimeout(promptBubbleTimerRef.current);
+        promptBubbleTimerRef.current = null;
+      }
+    };
+  }, [open, location.pathname, promptBubbleDismissed]);
+
+  const dismissPromptBubble = () => {
+    setShowPromptBubble(false);
+    setPromptBubbleDismissed(true);
+  };
+
+  const openChat = () => {
+    setOpen(true);
+    setShowPromptBubble(false);
+    setPromptBubbleDismissed(false);
+  };
 
   const requestLocation = () => {
     if (!navigator.geolocation) return;
+
     navigator.geolocation.getCurrentPosition(
       (pos) => setGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       () => {},
@@ -318,9 +372,8 @@ const ChatWidget = () => {
     const upsertAssistant = (nextChunk: string) => {
       assistantSoFar += nextChunk;
       const currentContent = assistantSoFar;
-      setMessages((prev) =>
-        prev.map((m) => (m.id === assistantMsgId ? { ...m, content: currentContent } : m)),
-      );
+
+      setMessages((prev) => prev.map((m) => (m.id === assistantMsgId ? { ...m, content: currentContent } : m)));
     };
 
     try {
@@ -365,6 +418,7 @@ const ChatWidget = () => {
           : "Hi! I'm LayerLoot's assistant. I can help you find products, explain shipping, and guide custom print requests.",
       },
     ];
+
     setMessages(reset);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(reset));
   };
@@ -375,21 +429,31 @@ const ChatWidget = () => {
 
       <AnimatePresence>
         {!open && showPromptBubble && (
-          <motion.button
+          <motion.div
             initial={{ opacity: 0, y: 12, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.96 }}
-            onClick={() => { setOpen(true); setShowPromptBubble(false); }}
             className="fixed bottom-24 right-6 z-50 max-w-[260px] rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-xl"
           >
-            <div className="mb-1 flex items-center gap-2 text-sm font-medium text-foreground">
-              <Wand2 className="h-4 w-4 text-primary" />
-              Need help choosing?
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Ask about your points, latest order, free shipping, custom prints, or gift ideas.
-            </div>
-          </motion.button>
+            <button
+              type="button"
+              onClick={dismissPromptBubble}
+              aria-label="Close help popup"
+              className="absolute right-2 top-2 rounded-full p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+
+            <button type="button" onClick={openChat} className="block w-full text-left">
+              <div className="mb-1 flex items-center gap-2 pr-6 text-sm font-medium text-foreground">
+                <Wand2 className="h-4 w-4 text-primary" />
+                Need help choosing?
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Ask about your points, latest order, free shipping, custom prints, or gift ideas.
+              </div>
+            </button>
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -402,11 +466,7 @@ const ChatWidget = () => {
             whileHover={{ y: -4, scale: 1.04 }}
             className="fixed bottom-6 right-6 z-50"
           >
-            <Button
-              onClick={() => { setOpen(true); setShowPromptBubble(false); }}
-              size="lg"
-              className="relative h-14 w-14 rounded-full shadow-2xl"
-            >
+            <Button onClick={openChat} size="lg" className="relative h-14 w-14 rounded-full shadow-2xl">
               <MessageCircle className="h-6 w-6" />
               <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-background text-[9px] font-bold text-primary shadow">
                 ✦
@@ -431,16 +491,37 @@ const ChatWidget = () => {
                   LayerLoot Assistant
                 </div>
               </div>
+
               <div className="flex items-center gap-1">
                 {!geo && (
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-primary-foreground hover:bg-primary/80" onClick={requestLocation} title="Share location for delivery help">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-primary-foreground hover:bg-primary/80"
+                    onClick={requestLocation}
+                    title="Share location for delivery help"
+                  >
                     <MapPin className="h-4 w-4" />
                   </Button>
                 )}
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-primary-foreground hover:bg-primary/80" onClick={clearChat} title="Clear chat">
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-primary-foreground hover:bg-primary/80"
+                  onClick={clearChat}
+                  title="Clear chat"
+                >
                   <Trash2 className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-primary-foreground hover:bg-primary/80" onClick={() => setOpen(false)} title="Close">
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-primary-foreground hover:bg-primary/80"
+                  onClick={() => setOpen(false)}
+                  title="Close"
+                >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
@@ -460,6 +541,7 @@ const ChatWidget = () => {
                   >
                     {msg.role === "user" ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
                   </div>
+
                   <div
                     className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                       msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
@@ -481,7 +563,10 @@ const ChatWidget = () => {
             </div>
 
             <form
-              onSubmit={(e) => { e.preventDefault(); send(); }}
+              onSubmit={(e) => {
+                e.preventDefault();
+                send();
+              }}
               className="flex items-center gap-2 border-t border-border bg-card px-4 py-3"
             >
               <Input
@@ -491,7 +576,12 @@ const ChatWidget = () => {
                 className="flex-1 rounded-full border-border bg-muted text-sm"
                 disabled={loading}
               />
-              <Button type="submit" size="icon" className="h-9 w-9 shrink-0 rounded-full transition-transform hover:scale-105" disabled={loading || !input.trim()}>
+              <Button
+                type="submit"
+                size="icon"
+                className="h-9 w-9 shrink-0 rounded-full transition-transform hover:scale-105"
+                disabled={loading || !input.trim()}
+              >
                 <Send className="h-4 w-4" />
               </Button>
             </form>

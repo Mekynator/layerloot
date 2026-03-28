@@ -786,7 +786,22 @@ const AdminCustomOrders = () => {
                     </div>
 
                     <div>
-                      <Label>Admin Notes</Label>
+                      <Label>Request Fee Status</Label>
+                      <Select value={feeStatusUpdate} onValueChange={setFeeStatusUpdate}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {FEE_STATUSES.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {s.replace(/_/g, " ")}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
                       <Textarea
                         value={adminNotes}
                         onChange={(e) => setAdminNotes(e.target.value)}

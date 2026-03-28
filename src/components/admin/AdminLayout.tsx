@@ -15,6 +15,7 @@ import {
   Menu,
   X,
   Box,
+  TicketPercent,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ const sidebarLinks = [
   { to: "/admin/categories", label: "Categories", icon: FolderTree },
   { to: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { to: "/admin/custom-orders", label: "Custom Orders", icon: Box },
+  { to: "/admin/discounts", label: "Discounts", icon: TicketPercent },
   { to: "/admin/clients", label: "Users", icon: Users },
   { to: "/admin/reviews", label: "Reviews", icon: Star },
   { to: "/admin/editor", label: "Page Editor", icon: FileText },
@@ -48,6 +50,9 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
 
   if (loading || !isAdmin) return null;
 
+  const isActive = (to: string) =>
+    location.pathname === to || (to !== "/admin" && location.pathname.startsWith(`${to}/`));
+
   const navContent = (
     <>
       <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4">
@@ -69,7 +74,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             key={to}
             to={to}
             className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-              location.pathname === to
+              isActive(to)
                 ? "bg-sidebar-accent text-sidebar-primary"
                 : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             }`}
@@ -104,7 +109,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         </Button>
 
         <span className="ml-2 font-display text-sm font-bold uppercase tracking-wider text-sidebar-foreground">
-          {sidebarLinks.find((l) => l.to === location.pathname)?.label || "Admin"}
+          {sidebarLinks.find((l) => isActive(l.to))?.label || "Admin"}
         </span>
       </div>
 

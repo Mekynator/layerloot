@@ -41,7 +41,7 @@ export default function InstagramAutoFeedBlock({
   const [current, setCurrent] = useState(0);
 
   const username = String(instagramUsername).trim().replace(/^@/, "");
-  const profileUrl = username ? `https://www.instagram.com/${username}` : "https://www.instagram.com";
+  const profileUrl = username ? `https://www.instagram.com/${username}` : "https://www.instagram.com/layerloot3d";
 
   useEffect(() => {
     let mounted = true;

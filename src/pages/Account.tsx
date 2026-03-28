@@ -1107,6 +1107,7 @@ const Account = () => {
             },
             { key: "rewards" as const, label: "Rewards Store", icon: Gift, hasDot: false },
             { key: "vouchers" as const, label: "My Vouchers", icon: Star, hasDot: false },
+            { key: "settings" as const, label: "Settings", icon: Settings, hasDot: false },
           ].map(({ key, label, icon: Icon, hasDot }) => (
             <Button
               key={key}

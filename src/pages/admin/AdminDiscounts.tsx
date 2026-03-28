@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Trash2, Save, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,16 @@ interface DiscountCode {
   created_at: string;
 }
 
+interface ProductOption {
+  id: string;
+  name: string;
+}
+
+interface CategoryOption {
+  id: string;
+  name: string;
+}
+
 interface ProfileRow {
   id: string;
   user_id: string | null;
@@ -64,87 +74,124 @@ const emptyDiscount: Omit<DiscountCode, "id" | "created_at" | "used_count"> = {
   expires_at: null,
 };
 
-const buildUserLabel = (profile: ProfileRow) => {
-  const username = profile.username?.trim();
-  const displayName = profile.display_name?.trim();
-  const fullName = profile.full_name?.trim();
+const buildUserOption = (profile: ProfileRow): UserOption => {
+  const username = profile.username?.trim() || "";
+  const displayName = profile.display_name?.trim() || "";
+  const fullName = profile.full_name?.trim() || "";
 
-  if (username && displayName) return { label: username, secondary: displayName };
-  if (username && fullName) return { label: username, secondary: fullName };
-  if (username) return { label: username };
-  if (displayName && fullName && displayName !== fullName) return { label: displayName, secondary: fullName };
-  if (displayName) return { label: displayName };
-  if (fullName) return { label: fullName };
-  return { label: profile.user_id || profile.id };
+  if (username) {
+    const secondary =
+      displayName && displayName !== username ? displayName : fullName && fullName !== username ? fullName : undefined;
+
+    return {
+      id: profile.user_id || profile.id,
+      label: username,
+      secondary,
+    };
+  }
+
+  if (displayName) {
+    return {
+      id: profile.user_id || profile.id,
+      label: displayName,
+      secondary: fullName && fullName !== displayName ? fullName : undefined,
+    };
+  }
+
+  if (fullName) {
+    return {
+      id: profile.user_id || profile.id,
+      label: fullName,
+    };
+  }
+
+  return {
+    id: profile.user_id || profile.id,
+    label: profile.user_id || profile.id,
+  };
 };
 
 const AdminDiscounts = () => {
   const { toast } = useToast();
+
   const [discounts, setDiscounts] = useState<DiscountCode[]>([]);
-  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [products, setProducts] = useState<ProductOption[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<DiscountCode | null>(null);
   const [form, setForm] = useState(emptyDiscount);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const fetchAll = async () => {
-    {form.scope === "user" && (
-  <div>
-    <Label>User</Label>
-    <Select
-      value={form.scope_target_user_id ?? undefined}
-      onValueChange={(v) => setForm({ ...form, scope_target_user_id: v })}
-    >
-      <SelectTrigger>
-        <SelectValue placeholder="Select user" />
-      </SelectTrigger>
-      <SelectContent>
-        {users.length > 0 ? (
-          users.map((user) => (
-            <SelectItem key={user.id} value={user.id}>
-              {user.secondary && user.secondary !== user.label
-                ? `${user.label} (${user.secondary})`
-                : user.label}
-            </SelectItem>
-          ))
-        ) : (
-          <SelectItem value="empty-users-list" disabled>
-            No users found
-          </SelectItem>
-        )}
-      </SelectContent>
-    </Select>
-  </div>
-)}
-      const mappedUsers =
-        (u as ProfileRow[] | null)?.map((profile) => {
-          const built = buildUserLabel(profile);
-          return {
-            id: profile.user_id || profile.id,
-            label: built.label,
-            secondary: built.secondary,
-          };
-        }) ?? [];
+    setLoading(true);
 
-      const uniqueUsers = Array.from(new Map(mappedUsers.map((user) => [user.id, user])).values()).sort((a, b) =>
-        a.label.localeCompare(b.label),
-      );
+    const [
+      { data: discountData, error: discountError },
+      { data: productData, error: productError },
+      { data: categoryData, error: categoryError },
+      { data: profileData, error: profileError },
+    ] = await Promise.all([
+      supabase.from("discount_codes").select("*").order("created_at", { ascending: false }),
+      supabase.from("products").select("id, name").order("name"),
+      supabase.from("categories").select("id, name").order("name"),
+      supabase.from("profiles").select("id, user_id, username, display_name, full_name"),
+    ]);
 
-      setUsers(uniqueUsers);
+    console.log("profiles result:", profileData);
+    console.log("profiles error:", profileError);
+
+    if (discountError) {
+      toast({
+        title: "Failed to load discounts",
+        description: discountError.message,
+        variant: "destructive",
+      });
     }
+
+    if (productError) {
+      toast({
+        title: "Failed to load products",
+        description: productError.message,
+        variant: "destructive",
+      });
+    }
+
+    if (categoryError) {
+      toast({
+        title: "Failed to load categories",
+        description: categoryError.message,
+        variant: "destructive",
+      });
+    }
+
+    if (profileError) {
+      toast({
+        title: "Failed to load users",
+        description: profileError.message,
+        variant: "destructive",
+      });
+    }
+
+    setDiscounts((discountData as DiscountCode[]) ?? []);
+    setProducts((productData as ProductOption[]) ?? []);
+    setCategories((categoryData as CategoryOption[]) ?? []);
+
+    const mappedUsers = (profileData as ProfileRow[] | null)?.map(buildUserOption) ?? [];
+
+    const uniqueUsers = Array.from(new Map(mappedUsers.map((user) => [user.id, user])).values()).sort((a, b) =>
+      a.label.localeCompare(b.label),
+    );
+
+    setUsers(uniqueUsers);
+    setLoading(false);
   };
 
   useEffect(() => {
     fetchAll();
   }, []);
-
-  const selectedUserLabel = useMemo(() => {
-    const found = users.find((user) => user.id === form.scope_target_user_id);
-    if (!found) return "";
-    return found.secondary ? `${found.label} (${found.secondary})` : found.label;
-  }, [users, form.scope_target_user_id]);
 
   const openCreate = () => {
     setEditing(null);
@@ -155,23 +202,23 @@ const AdminDiscounts = () => {
     setDialogOpen(true);
   };
 
-  const openEdit = (d: DiscountCode) => {
-    setEditing(d);
+  const openEdit = (discount: DiscountCode) => {
+    setEditing(discount);
     setForm({
-      code: d.code,
-      description: d.description || "",
-      discount_type: d.discount_type,
-      discount_value: d.discount_value,
-      scope: d.scope,
-      scope_target_id: d.scope_target_id,
-      scope_target_user_id: d.scope_target_user_id,
-      min_order_amount: d.min_order_amount,
-      min_quantity: d.min_quantity,
-      max_uses: d.max_uses,
-      is_stackable: d.is_stackable,
-      is_active: d.is_active,
-      starts_at: d.starts_at,
-      expires_at: d.expires_at,
+      code: discount.code,
+      description: discount.description || "",
+      discount_type: discount.discount_type,
+      discount_value: discount.discount_value,
+      scope: discount.scope,
+      scope_target_id: discount.scope_target_id,
+      scope_target_user_id: discount.scope_target_user_id,
+      min_order_amount: discount.min_order_amount,
+      min_quantity: discount.min_quantity,
+      max_uses: discount.max_uses,
+      is_stackable: discount.is_stackable,
+      is_active: discount.is_active,
+      starts_at: discount.starts_at,
+      expires_at: discount.expires_at,
     });
     setDialogOpen(true);
   };
@@ -218,20 +265,34 @@ const AdminDiscounts = () => {
     setSaving(false);
 
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
       return;
     }
 
-    toast({ title: editing ? "Discount updated" : "Discount created" });
+    toast({
+      title: editing ? "Discount updated" : "Discount created",
+    });
+
     setDialogOpen(false);
     fetchAll();
   };
 
-  const toggleActive = async (d: DiscountCode) => {
-    const { error } = await supabase.from("discount_codes").update({ is_active: !d.is_active }).eq("id", d.id);
+  const toggleActive = async (discount: DiscountCode) => {
+    const { error } = await supabase
+      .from("discount_codes")
+      .update({ is_active: !discount.is_active })
+      .eq("id", discount.id);
 
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
       return;
     }
 
@@ -242,7 +303,11 @@ const AdminDiscounts = () => {
     const { error } = await supabase.from("discount_codes").delete().eq("id", id);
 
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
       return;
     }
 
@@ -250,17 +315,25 @@ const AdminDiscounts = () => {
     fetchAll();
   };
 
-  const getScopeLabel = (d: DiscountCode) => {
-    if (d.scope === "product") return products.find((p) => p.id === d.scope_target_id)?.name || "Specific product";
-    if (d.scope === "category") return categories.find((c) => c.id === d.scope_target_id)?.name || "Specific category";
+  const getScopeLabel = (discount: DiscountCode) => {
+    if (discount.scope === "product") {
+      return products.find((product) => product.id === discount.scope_target_id)?.name || "Specific product";
+    }
 
-    if (d.scope === "user") {
-      const user = users.find((u) => u.id === d.scope_target_user_id);
+    if (discount.scope === "category") {
+      return categories.find((category) => category.id === discount.scope_target_id)?.name || "Specific category";
+    }
+
+    if (discount.scope === "user") {
+      const user = users.find((item) => item.id === discount.scope_target_user_id);
       if (!user) return "Specific user";
       return user.secondary ? `${user.label} (${user.secondary})` : user.label;
     }
 
-    if (d.scope === "bulk") return `Bulk (min ${d.min_quantity})`;
+    if (discount.scope === "bulk") {
+      return `Bulk (min ${discount.min_quantity})`;
+    }
+
     return "All products";
   };
 
@@ -273,7 +346,8 @@ const AdminDiscounts = () => {
         </div>
 
         <Button onClick={openCreate} className="font-display uppercase tracking-wider">
-          <Plus className="mr-1 h-4 w-4" /> New Discount
+          <Plus className="mr-1 h-4 w-4" />
+          New Discount
         </Button>
       </div>
 
@@ -295,17 +369,17 @@ const AdminDiscounts = () => {
             </TableHeader>
 
             <TableBody>
-              {discounts.map((d) => (
-                <TableRow key={d.id}>
+              {discounts.map((discount) => (
+                <TableRow key={discount.id}>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      <code className="font-mono text-sm font-bold">{d.code}</code>
+                      <code className="font-mono text-sm font-bold">{discount.code}</code>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6"
                         onClick={() => {
-                          navigator.clipboard.writeText(d.code);
+                          navigator.clipboard.writeText(discount.code);
                           toast({ title: "Copied!" });
                         }}
                       >
@@ -314,25 +388,25 @@ const AdminDiscounts = () => {
                     </div>
                   </TableCell>
 
-                  <TableCell className="text-sm capitalize">{d.discount_type.replace("_", " ")}</TableCell>
+                  <TableCell className="text-sm capitalize">{discount.discount_type.replace("_", " ")}</TableCell>
 
                   <TableCell className="font-display text-sm font-semibold">
-                    {d.discount_type === "percentage"
-                      ? `${d.discount_value}%`
-                      : d.discount_type === "free_shipping"
+                    {discount.discount_type === "percentage"
+                      ? `${discount.discount_value}%`
+                      : discount.discount_type === "free_shipping"
                         ? "Free"
-                        : `${d.discount_value} kr`}
+                        : `${discount.discount_value} kr`}
                   </TableCell>
 
-                  <TableCell className="text-sm">{getScopeLabel(d)}</TableCell>
+                  <TableCell className="text-sm">{getScopeLabel(discount)}</TableCell>
 
                   <TableCell className="text-sm">
-                    {d.used_count}
-                    {d.max_uses ? `/${d.max_uses}` : ""}
+                    {discount.used_count}
+                    {discount.max_uses ? `/${discount.max_uses}` : ""}
                   </TableCell>
 
                   <TableCell>
-                    {d.is_stackable ? (
+                    {discount.is_stackable ? (
                       <Badge variant="outline" className="text-xs">
                         Yes
                       </Badge>
@@ -342,23 +416,23 @@ const AdminDiscounts = () => {
                   </TableCell>
 
                   <TableCell className="text-xs text-muted-foreground">
-                    {d.expires_at ? `Until ${new Date(d.expires_at).toLocaleDateString()}` : "No expiry"}
+                    {discount.expires_at ? `Until ${new Date(discount.expires_at).toLocaleDateString()}` : "No expiry"}
                   </TableCell>
 
                   <TableCell>
-                    <Switch checked={d.is_active} onCheckedChange={() => toggleActive(d)} />
+                    <Switch checked={discount.is_active} onCheckedChange={() => toggleActive(discount)} />
                   </TableCell>
 
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => openEdit(d)}>
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(discount)}>
                         Edit
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-destructive"
-                        onClick={() => deleteDiscount(d.id)}
+                        onClick={() => deleteDiscount(discount.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -367,7 +441,7 @@ const AdminDiscounts = () => {
                 </TableRow>
               ))}
 
-              {discounts.length === 0 && (
+              {!loading && discounts.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
                     No discount codes yet.
@@ -412,7 +486,10 @@ const AdminDiscounts = () => {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Discount Type</Label>
-                <Select value={form.discount_type} onValueChange={(v) => setForm({ ...form, discount_type: v })}>
+                <Select
+                  value={form.discount_type}
+                  onValueChange={(value) => setForm({ ...form, discount_type: value })}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -429,7 +506,12 @@ const AdminDiscounts = () => {
                 <Input
                   type="number"
                   value={form.discount_value}
-                  onChange={(e) => setForm({ ...form, discount_value: Number(e.target.value) })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      discount_value: Number(e.target.value),
+                    })
+                  }
                   disabled={form.discount_type === "free_shipping"}
                 />
               </div>
@@ -439,10 +521,10 @@ const AdminDiscounts = () => {
               <Label>Scope</Label>
               <Select
                 value={form.scope}
-                onValueChange={(v) =>
+                onValueChange={(value) =>
                   setForm({
                     ...form,
-                    scope: v,
+                    scope: value,
                     scope_target_id: null,
                     scope_target_user_id: null,
                   })
@@ -465,16 +547,16 @@ const AdminDiscounts = () => {
               <div>
                 <Label>Product</Label>
                 <Select
-                  value={form.scope_target_id || ""}
-                  onValueChange={(v) => setForm({ ...form, scope_target_id: v })}
+                  value={form.scope_target_id ?? undefined}
+                  onValueChange={(value) => setForm({ ...form, scope_target_id: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select product" />
                   </SelectTrigger>
                   <SelectContent>
-                    {products.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
+                    {products.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -486,16 +568,16 @@ const AdminDiscounts = () => {
               <div>
                 <Label>Category</Label>
                 <Select
-                  value={form.scope_target_id || ""}
-                  onValueChange={(v) => setForm({ ...form, scope_target_id: v })}
+                  value={form.scope_target_id ?? undefined}
+                  onValueChange={(value) => setForm({ ...form, scope_target_id: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -507,23 +589,23 @@ const AdminDiscounts = () => {
               <div>
                 <Label>User</Label>
                 <Select
-                  value={form.scope_target_user_id || ""}
-                  onValueChange={(v) => setForm({ ...form, scope_target_user_id: v })}
+                  value={form.scope_target_user_id ?? undefined}
+                  onValueChange={(value) => setForm({ ...form, scope_target_user_id: value })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select user">{selectedUserLabel || "Select user"}</SelectValue>
+                    <SelectValue placeholder="Select user" />
                   </SelectTrigger>
                   <SelectContent>
-                    {users.length === 0 ? (
-                      <SelectItem value="no-users" disabled>
-                        No users found
-                      </SelectItem>
-                    ) : (
+                    {users.length > 0 ? (
                       users.map((user) => (
                         <SelectItem key={user.id} value={user.id}>
                           {user.secondary ? `${user.label} (${user.secondary})` : user.label}
                         </SelectItem>
                       ))
+                    ) : (
+                      <SelectItem value="empty-users-list" disabled>
+                        No users found
+                      </SelectItem>
                     )}
                   </SelectContent>
                 </Select>
@@ -536,7 +618,12 @@ const AdminDiscounts = () => {
                 <Input
                   type="number"
                   value={form.min_order_amount}
-                  onChange={(e) => setForm({ ...form, min_order_amount: Number(e.target.value) })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      min_order_amount: Number(e.target.value),
+                    })
+                  }
                 />
               </div>
 
@@ -545,7 +632,12 @@ const AdminDiscounts = () => {
                 <Input
                   type="number"
                   value={form.min_quantity}
-                  onChange={(e) => setForm({ ...form, min_quantity: Number(e.target.value) })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      min_quantity: Number(e.target.value),
+                    })
+                  }
                 />
               </div>
 
@@ -554,7 +646,12 @@ const AdminDiscounts = () => {
                 <Input
                   type="number"
                   value={form.max_uses ?? ""}
-                  onChange={(e) => setForm({ ...form, max_uses: e.target.value ? Number(e.target.value) : null })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      max_uses: e.target.value ? Number(e.target.value) : null,
+                    })
+                  }
                   placeholder="Unlimited"
                 />
               </div>
@@ -592,18 +689,22 @@ const AdminDiscounts = () => {
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
               <div className="flex items-center gap-2">
-                <Switch checked={form.is_stackable} onCheckedChange={(v) => setForm({ ...form, is_stackable: v })} />
+                <Switch
+                  checked={form.is_stackable}
+                  onCheckedChange={(value) => setForm({ ...form, is_stackable: value })}
+                />
                 <Label>Stackable with other discounts/vouchers</Label>
               </div>
 
               <div className="flex items-center gap-2">
-                <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
+                <Switch checked={form.is_active} onCheckedChange={(value) => setForm({ ...form, is_active: value })} />
                 <Label>Active</Label>
               </div>
             </div>
 
             <Button onClick={handleSave} disabled={saving} className="w-full font-display uppercase tracking-wider">
-              <Save className="mr-1 h-4 w-4" /> {saving ? "Saving..." : editing ? "Update Discount" : "Create Discount"}
+              <Save className="mr-1 h-4 w-4" />
+              {saving ? "Saving..." : editing ? "Update Discount" : "Create Discount"}
             </Button>
           </div>
         </DialogContent>

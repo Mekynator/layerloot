@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useSearchParams } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
@@ -46,6 +46,50 @@ const queryClient = new QueryClient({
   },
 });
 
+const AppShell = () => {
+  const [searchParams] = useSearchParams();
+  const isEditorPreview = searchParams.get("editorPreview") === "1";
+
+  return (
+    <>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/products" element={<Products />} />
+          <Route path="/products/:slug" element={<ProductDetail />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/cart" element={<Cart />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/account" element={<Account />} />
+          <Route path="/orders/:orderId" element={<OrderTracking />} />
+          <Route path="/create" element={<CreateYourOwn />} />
+          <Route path="/gallery" element={<Gallery />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/submit-design" element={<SubmitDesign />} />
+          <Route path="/admin" element={<Dashboard />} />
+          <Route path="/admin/products" element={<AdminProducts />} />
+          <Route path="/admin/products/:productId/variants" element={<AdminVariants />} />
+          <Route path="/admin/categories" element={<AdminCategories />} />
+          <Route path="/admin/orders" element={<AdminOrders />} />
+          <Route path="/admin/clients" element={<AdminClients />} />
+          <Route path="/admin/shipping" element={<AdminShipping />} />
+          <Route path="/admin/custom-orders" element={<AdminCustomOrders />} />
+          <Route path="/admin/discounts" element={<AdminDiscounts />} />
+          <Route path="/admin/reviews" element={<AdminReviews />} />
+          <Route path="/admin/content" element={<AdminContent />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin/editor" element={<PageEditor />} />
+          <Route path="/pages/:slug" element={<DynamicPage />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Layout>
+
+      {!isEditorPreview && <ChatWidget />}
+      {!isEditorPreview && <PromotionPopup />}
+    </>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -54,39 +98,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Layout>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/products" element={<Products />} />
-                <Route path="/products/:slug" element={<ProductDetail />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/cart" element={<Cart />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/account" element={<Account />} />
-                <Route path="/orders/:orderId" element={<OrderTracking />} />
-                <Route path="/create" element={<CreateYourOwn />} />
-                <Route path="/gallery" element={<Gallery />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/submit-design" element={<SubmitDesign />} />
-                <Route path="/admin" element={<Dashboard />} />
-                <Route path="/admin/products" element={<AdminProducts />} />
-                <Route path="/admin/products/:productId/variants" element={<AdminVariants />} />
-                <Route path="/admin/categories" element={<AdminCategories />} />
-                <Route path="/admin/orders" element={<AdminOrders />} />
-                <Route path="/admin/clients" element={<AdminClients />} />
-                <Route path="/admin/shipping" element={<AdminShipping />} />
-                <Route path="/admin/custom-orders" element={<AdminCustomOrders />} />
-                <Route path="/admin/discounts" element={<AdminDiscounts />} />
-                <Route path="/admin/reviews" element={<AdminReviews />} />
-                <Route path="/admin/content" element={<AdminContent />} />
-                <Route path="/admin/settings" element={<AdminSettings />} />
-                <Route path="/admin/editor" element={<PageEditor />} />
-                <Route path="/pages/:slug" element={<DynamicPage />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Layout>
-            <ChatWidget />
-            <PromotionPopup />
+            <AppShell />
           </BrowserRouter>
         </CartProvider>
       </AuthProvider>

@@ -22,6 +22,16 @@ interface BlockEditorPanelProps {
 
 type ActionType = "none" | "internal_link" | "external_link";
 
+type PageOption = {
+  id: string;
+  name: string;
+  title: string | null;
+  slug: string;
+  full_path: string;
+  page_type: string;
+  parent_id: string | null;
+};
+
 const ICON_OPTIONS = [
   "ShoppingBag",
   "Palette",
@@ -62,6 +72,12 @@ const routeFromPage = (page: string) => {
   return `/${page}`;
 };
 
+const normalizePath = (value?: string | null) => {
+  if (!value) return "/";
+  if (value === "/") return "/";
+  return `/${value.replace(/^\/+|\/+$/g, "")}`;
+};
+
 const toActionType = (value: unknown): ActionType => {
   if (value === "internal_link" || value === "external_link") return value;
   return "none";
@@ -77,7 +93,25 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [pageSearch, setPageSearch] = useState("");
+  const [sitePages, setSitePages] = useState<PageOption[]>([]);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const loadSitePages = async () => {
+      const { data, error } = await supabase
+        .from("site_pages")
+        .select("id,name,title,slug,full_path,page_type,parent_id")
+        .eq("is_published", true)
+        .order("sort_order", { ascending: true });
+
+      if (!error) {
+        setSitePages((data as PageOption[]) ?? []);
+      }
+    };
+
+    void loadSitePages();
+  }, []);
 
   useEffect(() => {
     if (!block) return;
@@ -178,7 +212,60 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
     }
   }, [form.page, block?.page]);
 
-  const buttonTargetPages = availablePages.filter((p) => !p.startsWith("global_"));
+  const fallbackButtonTargetPages = availablePages.filter((p) => !p.startsWith("global_"));
+
+  const buttonTargetPages = useMemo(() => {
+    if (sitePages.length === 0) {
+      return fallbackButtonTargetPages.map((p, index) => ({
+        id: `fallback-${index}`,
+        label: prettyPageLabel(p),
+        value: normalizePath(routeFromPage(p)),
+        slug: p,
+      }));
+    }
+
+    const map = new Map<string, { id: string; label: string; value: string; slug: string; parent_id: string | null }>();
+
+    sitePages
+      .filter((page) => page.page_type !== "global")
+      .forEach((page) => {
+        map.set(page.id, {
+          id: page.id,
+          label: page.title || page.name || prettyPageLabel(page.slug),
+          value: normalizePath(page.full_path),
+          slug: page.slug,
+          parent_id: page.parent_id,
+        });
+      });
+
+    return Array.from(map.values());
+  }, [sitePages, fallbackButtonTargetPages]);
+
+  const pageLookup = useMemo(() => {
+    const byId = new Map(sitePages.map((page) => [page.id, page]));
+    return buttonTargetPages.map((page) => {
+      const source = byId.get(page.id);
+      if (!source?.parent_id) return page;
+
+      const parent = byId.get(source.parent_id);
+      if (!parent) return page;
+
+      return {
+        ...page,
+        label: `${parent.title || parent.name || prettyPageLabel(parent.slug)} / ${page.label}`,
+      };
+    });
+  }, [buttonTargetPages, sitePages]);
+
+  const filteredPageOptions = useMemo(() => {
+    const term = pageSearch.trim().toLowerCase();
+    if (!term) return pageLookup;
+
+    return pageLookup.filter((page) => {
+      const haystack = `${page.label} ${page.slug} ${page.value}`.toLowerCase();
+      return haystack.includes(term);
+    });
+  }, [pageLookup, pageSearch]);
 
   const updateForm = (key: string, value: any) => {
     setForm((prev: any) => ({ ...prev, [key]: value }));
@@ -274,6 +361,36 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
     onSave();
   };
 
+  const renderPagePicker = (
+    currentTarget: string,
+    onSelect: (value: string) => void,
+    placeholder = "Search page or child page",
+  ) => (
+    <div className="space-y-2 rounded-md border border-border p-3">
+      <div>
+        <Label>Page Search</Label>
+        <Input value={pageSearch} onChange={(e) => setPageSearch(e.target.value)} placeholder={placeholder} />
+      </div>
+
+      <div>
+        <Label>Internal Page</Label>
+        <Select value={currentTarget || "__none__"} onValueChange={(value) => value !== "__none__" && onSelect(value)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select page" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">Select page</SelectItem>
+            {filteredPageOptions.map((page) => (
+              <SelectItem key={page.id} value={page.value}>
+                {page.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
+
   const renderActionEditor = (prefix: "section" | "button", data: any, onChange: (patch: any) => void) => (
     <div className="space-y-2 rounded-md border border-border p-3">
       <div>
@@ -289,6 +406,9 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
           </SelectContent>
         </Select>
       </div>
+
+      {toActionType(data?.actionType) === "internal_link" &&
+        renderPagePicker(data?.actionTarget || "", (value) => onChange({ actionTarget: value }))}
 
       {toActionType(data?.actionType) !== "none" && (
         <>
@@ -1482,35 +1602,6 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
                   )}
 
                   {BLOCKS_WITH_BUTTONS.has(t) && renderButtonsEditor()}
-
-                  <div>
-                    <Label>Quick Internal Link</Label>
-                    <Select
-                      value={
-                        buttonTargetPages.includes((form.content.section_actionTarget || "").replace(/^\//, ""))
-                          ? form.content.section_actionTarget || ""
-                          : "__custom__"
-                      }
-                      onValueChange={(v) => {
-                        if (v !== "__custom__") {
-                          updateContent("section_actionType", "internal_link");
-                          updateContent("section_actionTarget", v);
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a page" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {buttonTargetPages.map((p) => (
-                          <SelectItem key={p} value={routeFromPage(p)}>
-                            {prettyPageLabel(p)}
-                          </SelectItem>
-                        ))}
-                        <SelectItem value="__custom__">Custom target</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
                 </AccordionContent>
               </AccordionItem>
 

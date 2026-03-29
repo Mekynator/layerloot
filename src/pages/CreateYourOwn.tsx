@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Image, Gift, Heart, Gamepad2, Swords, Monitor, Upload, Send, Box, Star, CreditCard } from "lucide-react";
+import { Image, Gift, Heart, Gamepad2, Swords, Monitor, Upload, Send, Box, Star, CreditCard, Home, Baby, Dog, Palette, Music, Trophy, Flower2, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -378,6 +378,14 @@ const GIFT_CATEGORIES = [
   { value: "fantasy", label: "Fantasy Fan", icon: Swords },
   { value: "desk", label: "Desk Decoration", icon: Monitor },
   { value: "personalized", label: "Personalized Gift", icon: Heart },
+  { value: "home", label: "Home & Living", icon: Home },
+  { value: "kids", label: "Kids & Baby", icon: Baby },
+  { value: "pets", label: "Pet Lovers", icon: Dog },
+  { value: "art", label: "Art & Creative", icon: Palette },
+  { value: "music", label: "Music Fan", icon: Music },
+  { value: "sports", label: "Sports & Trophy", icon: Trophy },
+  { value: "garden", label: "Garden & Nature", icon: Flower2 },
+  { value: "tools", label: "Tools & Gadgets", icon: Wrench },
 ];
 
 const GiftFinder = () => {
@@ -404,7 +412,7 @@ const GiftFinder = () => {
     <div className="space-y-6">
       <p className="text-muted-foreground">Who are you shopping for?</p>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {GIFT_CATEGORIES.map(({ value, label, icon: Icon }) => (
           <button
             key={value}

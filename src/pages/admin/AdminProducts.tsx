@@ -62,7 +62,7 @@ const AdminProducts = () => {
   const [form, setForm] = useState(emptyProduct);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [modelFile, setModelFile] = useState<File | null>(null);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [pricingProductId, setPricingProductId] = useState<string | null>(null);
@@ -82,17 +82,21 @@ const AdminProducts = () => {
 
   const generateSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
-  const uploadImage = async (): Promise<string | null> => {
-    if (!imageFile) return null;
-    if (imageFile.size > MAX_PRODUCT_IMAGE_SIZE_BYTES) {
-      throw new Error("Image file is too large. Maximum allowed size is 20 MB.");
+  const uploadImages = async (): Promise<string[]> => {
+    if (imageFiles.length === 0) return [];
+    const urls: string[] = [];
+    for (const file of imageFiles) {
+      if (file.size > MAX_PRODUCT_IMAGE_SIZE_BYTES) {
+        throw new Error(`Image "${file.name}" is too large. Maximum allowed size is 20 MB.`);
+      }
+      const ext = file.name.split(".").pop();
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from("product-images").upload(path, file);
+      if (error) throw new Error(`Image upload failed: ${error.message}`);
+      const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+      urls.push(data.publicUrl);
     }
-    const ext = imageFile.name.split(".").pop();
-    const path = `${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("product-images").upload(path, imageFile);
-    if (error) throw new Error(`Image upload failed: ${error.message}`);
-    const { data } = supabase.storage.from("product-images").getPublicUrl(path);
-    return data.publicUrl;
+    return urls;
   };
 
   const uploadModel = async (): Promise<string | null> => {
@@ -121,8 +125,8 @@ const AdminProducts = () => {
   const handleSubmit = async () => {
     try {
       let images = form.images;
-      const uploadedUrl = await uploadImage();
-      if (uploadedUrl) images = [...images, uploadedUrl];
+      const uploadedUrls = await uploadImages();
+      if (uploadedUrls.length > 0) images = [...images, ...uploadedUrls];
 
       let model_url = form.model_url || null;
       const uploadedModelUrl = await uploadModel();
@@ -169,7 +173,7 @@ const AdminProducts = () => {
       setOpen(false);
       setForm(emptyProduct);
       setEditingId(null);
-      setImageFile(null);
+      setImageFiles([]);
       setModelFile(null);
       fetchProducts();
     } catch (error: any) {
@@ -217,7 +221,7 @@ const AdminProducts = () => {
     <AdminLayout>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="font-display text-3xl font-bold uppercase text-foreground">Products</h1>
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(emptyProduct); setEditingId(null); setImageFile(null); setModelFile(null); } }}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(emptyProduct); setEditingId(null); setImageFiles([]); setModelFile(null); } }}>
           <DialogTrigger asChild>
             <Button className="font-display uppercase tracking-wider"><Plus className="mr-1 h-4 w-4" /> Add Product</Button>
           </DialogTrigger>
@@ -233,10 +237,6 @@ const AdminProducts = () => {
                 <div>
                   <Label>Name</Label>
                   <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: generateSlug(e.target.value) })} />
-                </div>
-                <div>
-                  <Label>Slug</Label>
-                  <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
                 </div>
                 <div>
                   <Label>Description</Label>
@@ -260,8 +260,22 @@ const AdminProducts = () => {
                   </div>
                 </div>
                 <div>
-                  <Label>Product Image (max 20 MB)</Label>
-                  <Input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] ?? null)} />
+                  <Label>Product Images (max 20 MB each, multiple allowed)</Label>
+                  <Input type="file" accept="image/*" multiple onChange={(e) => setImageFiles(Array.from(e.target.files ?? []))} />
+                  {form.images.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {form.images.map((url, i) => (
+                        <div key={i} className="relative group">
+                          <img src={url} alt="" className="h-16 w-16 rounded object-cover border border-border" />
+                          <button
+                            type="button"
+                            onClick={() => setForm({ ...form, images: form.images.filter((_, idx) => idx !== i) })}
+                            className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <Label>3D Model (STL, OBJ, 3MF, max 500 MB)</Label>

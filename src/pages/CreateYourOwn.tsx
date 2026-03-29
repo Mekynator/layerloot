@@ -391,22 +391,37 @@ const GIFT_CATEGORIES = [
 const GiftFinder = () => {
   const [selected, setSelected] = useState<string | null>(null);
   const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    supabase.from("categories").select("id, name, slug").then(({ data }) => {
+      setCategories(data ?? []);
+    });
+  }, []);
 
   useEffect(() => {
     if (!selected) return;
     setLoading(true);
 
+    const matchedCategory = categories.find((c) => c.slug === selected);
+    if (!matchedCategory) {
+      setProducts([]);
+      setLoading(false);
+      return;
+    }
+
     supabase
       .from("products")
       .select("id, name, slug, price, images, is_featured")
       .eq("is_active", true)
+      .eq("category_id", matchedCategory.id)
       .limit(8)
       .then(({ data }) => {
         setProducts(data ?? []);
         setLoading(false);
       });
-  }, [selected]);
+  }, [selected, categories]);
 
   return (
     <div className="space-y-6">

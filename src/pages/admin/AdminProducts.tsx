@@ -62,7 +62,7 @@ const AdminProducts = () => {
   const [form, setForm] = useState(emptyProduct);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [modelFile, setModelFile] = useState<File | null>(null);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [pricingProductId, setPricingProductId] = useState<string | null>(null);
@@ -82,17 +82,21 @@ const AdminProducts = () => {
 
   const generateSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
-  const uploadImage = async (): Promise<string | null> => {
-    if (!imageFile) return null;
-    if (imageFile.size > MAX_PRODUCT_IMAGE_SIZE_BYTES) {
-      throw new Error("Image file is too large. Maximum allowed size is 20 MB.");
+  const uploadImages = async (): Promise<string[]> => {
+    if (imageFiles.length === 0) return [];
+    const urls: string[] = [];
+    for (const file of imageFiles) {
+      if (file.size > MAX_PRODUCT_IMAGE_SIZE_BYTES) {
+        throw new Error(`Image "${file.name}" is too large. Maximum allowed size is 20 MB.`);
+      }
+      const ext = file.name.split(".").pop();
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from("product-images").upload(path, file);
+      if (error) throw new Error(`Image upload failed: ${error.message}`);
+      const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+      urls.push(data.publicUrl);
     }
-    const ext = imageFile.name.split(".").pop();
-    const path = `${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("product-images").upload(path, imageFile);
-    if (error) throw new Error(`Image upload failed: ${error.message}`);
-    const { data } = supabase.storage.from("product-images").getPublicUrl(path);
-    return data.publicUrl;
+    return urls;
   };
 
   const uploadModel = async (): Promise<string | null> => {
@@ -121,8 +125,8 @@ const AdminProducts = () => {
   const handleSubmit = async () => {
     try {
       let images = form.images;
-      const uploadedUrl = await uploadImage();
-      if (uploadedUrl) images = [...images, uploadedUrl];
+      const uploadedUrls = await uploadImages();
+      if (uploadedUrls.length > 0) images = [...images, ...uploadedUrls];
 
       let model_url = form.model_url || null;
       const uploadedModelUrl = await uploadModel();

@@ -4,6 +4,7 @@ import Header from "./Header";
 import Footer from "./Footer";
 import GlobalSectionRenderer from "./GlobalSectionRenderer";
 import PageBackgroundSlideshow from "@/components/layout/PageBackgroundSlideshow";
+import ThemeRuntime from "@/components/theme/ThemeRuntime";
 
 const Layout = ({ children }: { children: ReactNode }) => {
   const [searchParams] = useSearchParams();
@@ -11,9 +12,10 @@ const Layout = ({ children }: { children: ReactNode }) => {
 
   return (
     <div
-      className="relative isolate flex min-h-screen flex-col"
+      className="relative isolate flex min-h-screen flex-col overflow-x-hidden"
       data-editor-preview={isEditorPreview ? "true" : "false"}
     >
+      <ThemeRuntime />
       <PageBackgroundSlideshow />
       <div className="relative z-10 flex min-h-screen flex-col">
         <Header />

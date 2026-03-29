@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -47,6 +47,12 @@
 
     --glow-primary: 0 0 20px hsl(25 95% 53% / 0.3);
     --glow-primary-strong: 0 0 30px hsl(25 95% 53% / 0.5);
+
+    --theme-overlay-tint: 220 20% 10%;
+    --theme-overlay-strength: 0.35;
+    --theme-image-opacity: 0.28;
+    --theme-pattern-opacity: 0.28;
+    --theme-effect-opacity: 0.7;
   }
 
   .dark {
@@ -97,20 +103,35 @@
     @apply border-border;
   }
 
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    width: 100%;
+  }
+
   body {
     @apply bg-background text-foreground font-sans;
+    margin: 0;
+    overflow-x: hidden;
+    background-image: none;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Oswald', sans-serif;
+  #root {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    text-align: initial;
+    isolation: isolate;
   }
-}
 
-@layer base {
-  body {
-    background-image:
-      radial-gradient(circle at top, hsl(var(--primary) / 0.08), transparent 24%),
-      linear-gradient(to bottom, hsl(var(--background)), hsl(var(--background)));
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "Oswald", sans-serif;
   }
 }
 
@@ -118,13 +139,384 @@
   .glow-primary {
     box-shadow: var(--glow-primary);
   }
+
   .glow-primary-strong {
     box-shadow: var(--glow-primary-strong);
   }
+
   .section-surface {
     @apply rounded-3xl border border-border/70 bg-card/85 shadow-sm backdrop-blur-sm;
   }
+
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+.theme-image-layer {
+  filter: saturate(1.05) contrast(1.02);
+  transform: scale(1.02);
+}
+
+.theme-pattern-layer,
+.theme-effect-layer {
+  mix-blend-mode: screen;
+}
+
+.theme-pattern-layer::before,
+.theme-pattern-layer::after,
+.theme-effect-layer::before,
+.theme-effect-layer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.theme-pattern--none::before,
+.theme-effect--none::before,
+.theme-effect--none::after {
+  display: none;
+}
+
+.theme-pattern--dots::before {
+  background-image: radial-gradient(circle, hsl(var(--foreground) / 0.14) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.theme-pattern--grid::before {
+  background-image:
+    linear-gradient(hsl(var(--foreground) / 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--foreground) / 0.1) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.theme-pattern--waves::before {
+  background-image:
+    radial-gradient(ellipse at top, hsl(var(--accent) / 0.22), transparent 58%),
+    radial-gradient(ellipse at bottom, hsl(var(--primary) / 0.16), transparent 62%);
+  background-size:
+    240px 120px,
+    280px 140px;
+  background-position:
+    0 0,
+    60px 50px;
+}
+
+.theme-pattern--grain::before {
+  background-image:
+    radial-gradient(circle at 20% 30%, hsl(var(--foreground) / 0.08) 0 1px, transparent 1px),
+    radial-gradient(circle at 80% 60%, hsl(var(--foreground) / 0.08) 0 1px, transparent 1px),
+    radial-gradient(circle at 50% 80%, hsl(var(--foreground) / 0.08) 0 1px, transparent 1px);
+  background-size:
+    18px 18px,
+    26px 26px,
+    22px 22px;
+}
+
+.theme-pattern--snowflakes::before {
+  background-image:
+    radial-gradient(circle, hsl(var(--foreground) / 0.18) 2px, transparent 2px),
+    radial-gradient(circle, hsl(var(--foreground) / 0.14) 1px, transparent 1px);
+  background-size:
+    48px 48px,
+    26px 26px;
+  background-position:
+    0 0,
+    10px 10px;
+}
+
+.theme-pattern--diagonal::before {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    hsl(var(--foreground) / 0.08) 0,
+    hsl(var(--foreground) / 0.08) 2px,
+    transparent 2px,
+    transparent 14px
+  );
+}
+
+.theme-pattern--hex::before {
+  background-image:
+    linear-gradient(
+      30deg,
+      hsl(var(--foreground) / 0.09) 12%,
+      transparent 12.5%,
+      transparent 87%,
+      hsl(var(--foreground) / 0.09) 87.5%,
+      hsl(var(--foreground) / 0.09)
+    ),
+    linear-gradient(
+      150deg,
+      hsl(var(--foreground) / 0.09) 12%,
+      transparent 12.5%,
+      transparent 87%,
+      hsl(var(--foreground) / 0.09) 87.5%,
+      hsl(var(--foreground) / 0.09)
+    ),
+    linear-gradient(
+      90deg,
+      hsl(var(--foreground) / 0.07) 2%,
+      transparent 2.5%,
+      transparent 97%,
+      hsl(var(--foreground) / 0.07) 97.5%,
+      hsl(var(--foreground) / 0.07)
+    );
+  background-size: 52px 90px;
+  background-position:
+    0 0,
+    0 0,
+    26px 45px;
+}
+
+.theme-pattern--confetti::before {
+  background-image:
+    radial-gradient(circle at 10% 20%, hsl(var(--accent) / 0.22) 0 5px, transparent 5px),
+    radial-gradient(circle at 40% 70%, hsl(var(--primary) / 0.18) 0 6px, transparent 6px),
+    radial-gradient(circle at 70% 35%, hsl(var(--secondary) / 0.18) 0 4px, transparent 4px),
+    radial-gradient(circle at 85% 75%, hsl(var(--foreground) / 0.12) 0 5px, transparent 5px);
+  background-size: 280px 220px;
+}
+
+.theme-pattern--stars::before {
+  background-image:
+    radial-gradient(circle, hsl(var(--foreground) / 0.22) 1.5px, transparent 1.5px),
+    radial-gradient(circle, hsl(var(--accent) / 0.18) 1px, transparent 1px);
+  background-size:
+    80px 80px,
+    42px 42px;
+  background-position:
+    0 0,
+    14px 18px;
+}
+
+.theme-pattern--spiderweb::before {
+  background:
+    radial-gradient(
+      circle at top right,
+      transparent 0 20%,
+      hsl(var(--foreground) / 0.11) 20.4% 20.8%,
+      transparent 21.1% 100%
+    ),
+    repeating-linear-gradient(-20deg, transparent 0 22px, hsl(var(--foreground) / 0.09) 22px 23px),
+    repeating-linear-gradient(35deg, transparent 0 28px, hsl(var(--foreground) / 0.08) 28px 29px);
+  background-size:
+    cover,
+    240px 240px,
+    240px 240px;
+  background-position:
+    top right,
+    top right,
+    top right;
+}
+
+.theme-pattern--hearts::before {
+  background-image:
+    radial-gradient(circle at 30% 30%, hsl(var(--accent) / 0.12) 0 6px, transparent 6px),
+    radial-gradient(circle at 40% 30%, hsl(var(--accent) / 0.12) 0 6px, transparent 6px),
+    radial-gradient(circle at 35% 40%, hsl(var(--accent) / 0.12) 0 8px, transparent 8px);
+  background-size: 110px 110px;
+}
+
+.theme-effect--shimmer::before {
+  background: linear-gradient(
+    110deg,
+    transparent 10%,
+    hsl(var(--accent) / 0.12) 30%,
+    transparent 50%,
+    hsl(var(--primary) / 0.1) 70%,
+    transparent 90%
+  );
+  transform: translateX(-120%);
+  animation: shimmerSweep 8s linear infinite;
+}
+
+.theme-effect--aurora::before {
+  background:
+    radial-gradient(ellipse at 20% 20%, hsl(var(--accent) / 0.18), transparent 50%),
+    radial-gradient(ellipse at 80% 15%, hsl(var(--primary) / 0.16), transparent 48%),
+    radial-gradient(ellipse at 50% 0%, hsl(var(--secondary) / 0.14), transparent 46%);
+  filter: blur(18px);
+  animation: auroraDrift 16s ease-in-out infinite alternate;
+}
+
+.theme-effect--twinkle::before {
+  background-image:
+    radial-gradient(circle, hsl(var(--foreground) / 0.24) 1px, transparent 1px),
+    radial-gradient(circle, hsl(var(--accent) / 0.22) 1px, transparent 1px);
+  background-size:
+    60px 60px,
+    90px 90px;
+  animation: twinklePulse 3.2s ease-in-out infinite;
+}
+
+.theme-effect--particles .theme-particle,
+.theme-effect--snow .theme-particle,
+.theme-effect--falling-leaves .theme-particle,
+.theme-effect--fireflies .theme-particle,
+.theme-effect--petals .theme-particle,
+.theme-effect--bats .theme-particle {
+  position: absolute;
+  top: -10%;
+  display: block;
+  opacity: 0.9;
+  animation-name: floatDown;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.theme-effect--particles .theme-particle {
+  border-radius: 9999px;
+  background: hsl(var(--accent) / 0.7);
+  box-shadow: 0 0 14px hsl(var(--accent) / 0.28);
+}
+
+.theme-effect--snow .theme-particle {
+  border-radius: 9999px;
+  background: hsl(var(--foreground) / 0.9);
+  box-shadow: 0 0 10px hsl(var(--foreground) / 0.22);
+}
+
+.theme-effect--falling-leaves .theme-particle {
+  width: 16px !important;
+  height: 12px !important;
+  border-radius: 70% 30% 70% 30%;
+  background: linear-gradient(135deg, hsl(var(--primary) / 0.82), hsl(var(--accent) / 0.72));
+  transform: rotate(18deg);
+}
+
+.theme-effect--fireflies .theme-particle {
+  width: 9px !important;
+  height: 9px !important;
+  border-radius: 9999px;
+  background: hsl(var(--accent) / 0.82);
+  box-shadow: 0 0 18px hsl(var(--accent) / 0.48);
+  animation-name: fireflyDrift;
+}
+
+.theme-effect--petals .theme-particle {
+  width: 18px !important;
+  height: 12px !important;
+  border-radius: 70% 0 70% 0;
+  background: linear-gradient(135deg, hsl(var(--accent) / 0.8), hsl(var(--foreground) / 0.55));
+}
+
+.theme-effect--bats .theme-particle {
+  width: 18px !important;
+  height: 8px !important;
+  background: hsl(var(--foreground) / 0.75);
+  clip-path: polygon(
+    0 65%,
+    20% 20%,
+    38% 62%,
+    50% 32%,
+    62% 62%,
+    80% 20%,
+    100% 65%,
+    80% 56%,
+    62% 78%,
+    50% 48%,
+    38% 78%,
+    20% 56%
+  );
+  animation-name: batFly;
+}
+
+.theme-motion-off *,
+[data-motion="off"] .theme-pattern-layer::before,
+[data-motion="off"] .theme-pattern-layer::after,
+[data-motion="off"] .theme-effect-layer::before,
+[data-motion="off"] .theme-effect-layer::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+.theme-speed-slow .theme-particle {
+  animation-duration: calc(var(--particle-duration, 12s) * 1.4) !important;
+}
+.theme-speed-normal .theme-particle {
+  animation-duration: var(--particle-duration, 12s) !important;
+}
+.theme-speed-fast .theme-particle {
+  animation-duration: calc(var(--particle-duration, 12s) * 0.7) !important;
+}
+
+@keyframes shimmerSweep {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes auroraDrift {
+  0% {
+    transform: translate3d(-2%, 0, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(2%, 2%, 0) scale(1.08);
+  }
+}
+
+@keyframes twinklePulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.03);
+  }
+}
+
+@keyframes floatDown {
+  0% {
+    transform: translate3d(0, -12vh, 0) rotate(0deg);
+  }
+  100% {
+    transform: translate3d(80px, 110vh, 0) rotate(260deg);
+  }
+}
+
+@keyframes fireflyDrift {
+  0% {
+    transform: translate3d(0, -10vh, 0) scale(0.8);
+    opacity: 0.25;
+  }
+  25% {
+    opacity: 1;
+  }
+  50% {
+    transform: translate3d(60px, 45vh, 0) scale(1.05);
+  }
+  100% {
+    transform: translate3d(-40px, 105vh, 0) scale(0.8);
+    opacity: 0.2;
+  }
+}
+
+@keyframes batFly {
+  0% {
+    transform: translate3d(0, -12vh, 0) rotate(0deg) scale(0.8);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(130px, 70vh, 0) rotate(15deg) scale(1.1);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-pattern-layer::before,
+  .theme-pattern-layer::after,
+  .theme-effect-layer::before,
+  .theme-effect-layer::after,
+  .theme-particle {
+    animation: none !important;
+    transition: none !important;
   }
 }

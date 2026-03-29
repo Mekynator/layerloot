@@ -235,10 +235,6 @@ const AdminProducts = () => {
                   <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: generateSlug(e.target.value) })} />
                 </div>
                 <div>
-                  <Label>Slug</Label>
-                  <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
-                </div>
-                <div>
                   <Label>Description</Label>
                   <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
                 </div>

@@ -162,9 +162,8 @@ const Contact = () => {
               <h2 className="font-display text-xl font-semibold uppercase text-foreground">Get in Touch</h2>
 
               <div className="space-y-4">
-                {[
+              {[
                   { icon: Mail, label: "Email", value: contact.email },
-                  { icon: Phone, label: "Phone", value: contact.phone },
                   { icon: MapPin, label: "Location", value: contact.address },
                 ].map(({ icon: Icon, label, value }) => (
                   <div key={label} className="flex items-start gap-3">

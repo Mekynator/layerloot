@@ -173,7 +173,7 @@ const AdminProducts = () => {
       setOpen(false);
       setForm(emptyProduct);
       setEditingId(null);
-      setImageFile(null);
+      setImageFiles([]);
       setModelFile(null);
       fetchProducts();
     } catch (error: any) {
@@ -221,7 +221,7 @@ const AdminProducts = () => {
     <AdminLayout>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="font-display text-3xl font-bold uppercase text-foreground">Products</h1>
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(emptyProduct); setEditingId(null); setImageFile(null); setModelFile(null); } }}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(emptyProduct); setEditingId(null); setImageFiles([]); setModelFile(null); } }}>
           <DialogTrigger asChild>
             <Button className="font-display uppercase tracking-wider"><Plus className="mr-1 h-4 w-4" /> Add Product</Button>
           </DialogTrigger>
@@ -260,8 +260,22 @@ const AdminProducts = () => {
                   </div>
                 </div>
                 <div>
-                  <Label>Product Image (max 20 MB)</Label>
-                  <Input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] ?? null)} />
+                  <Label>Product Images (max 20 MB each, multiple allowed)</Label>
+                  <Input type="file" accept="image/*" multiple onChange={(e) => setImageFiles(Array.from(e.target.files ?? []))} />
+                  {form.images.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {form.images.map((url, i) => (
+                        <div key={i} className="relative group">
+                          <img src={url} alt="" className="h-16 w-16 rounded object-cover border border-border" />
+                          <button
+                            type="button"
+                            onClick={() => setForm({ ...form, images: form.images.filter((_, idx) => idx !== i) })}
+                            className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <Label>3D Model (STL, OBJ, 3MF, max 500 MB)</Label>

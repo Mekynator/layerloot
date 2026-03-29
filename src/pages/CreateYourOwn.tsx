@@ -412,7 +412,7 @@ const GiftFinder = () => {
     <div className="space-y-6">
       <p className="text-muted-foreground">Who are you shopping for?</p>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {GIFT_CATEGORIES.map(({ value, label, icon: Icon }) => (
           <button
             key={value}

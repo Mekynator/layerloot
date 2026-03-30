@@ -268,14 +268,12 @@ export default function Lithophane({
   const [notes, setNotes] = useState(initialNotes);
   const [allowRotation, setAllowRotation] = useState(false);
   const [viewerRevision, setViewerRevision] = useState(0);
-
   const [sourceFileName, setSourceFileName] = useState<string | null>(null);
   const [originalSourceDataUrl, setOriginalSourceDataUrl] = useState<string | null>(null);
   const [croppedImageDataUrl, setCroppedImageDataUrl] = useState<string | null>(null);
   const [cropState, setCropState] = useState<CropState | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-
   const [uploadProgress, setUploadProgress] = useState<UploadProgressState>({
     active: false,
     progress: 0,
@@ -338,24 +336,18 @@ export default function Lithophane({
   const runUploadProgress = async (selectedFile: File) => {
     setUploadProgress({ active: true, progress: 8, status: "Reading image..." });
     await sleep(120);
-
     const dataUrl = await readFileAsDataUrl(selectedFile);
-
     setUploadProgress({ active: true, progress: 34, status: "Detecting orientation..." });
     await sleep(120);
-
     const detected = await detectOrientation(dataUrl);
     setAutoDetectedOrientation(detected);
     setOrientation(detected);
-
     setUploadProgress({ active: true, progress: 70, status: "Preparing editor..." });
     await sleep(150);
-
     setSourceFileName(selectedFile.name);
     setOriginalSourceDataUrl(dataUrl);
     setEditorOpen(true);
     setStep(2);
-
     setUploadProgress({ active: true, progress: 100, status: "Ready to crop" });
     await sleep(180);
     setUploadProgress({ active: false, progress: 0, status: "" });
@@ -365,7 +357,6 @@ export default function Lithophane({
     if (!file) return;
     const allowed = ["image/jpeg", "image/png", "image/webp"];
     if (!allowed.includes(file.type)) return;
-
     try {
       await runUploadProgress(file);
     } catch (error) {
@@ -431,18 +422,8 @@ export default function Lithophane({
         shape,
         orientation,
         autoDetectedOrientation,
-        dimensions: {
-          widthMm,
-          heightMm,
-          borderMm,
-        },
-        scene: {
-          lightEnabled,
-          lightTone,
-          sceneMode,
-          allowRotation,
-          viewerRevision,
-        },
+        dimensions: { widthMm, heightMm, borderMm },
+        scene: { lightEnabled, lightTone, sceneMode, allowRotation, viewerRevision },
         imageEditor: cropState,
         pricing: {
           estimatedPrice,
@@ -501,7 +482,6 @@ export default function Lithophane({
               4 Review
             </StepPill>
           </div>
-
           <div className="flex flex-wrap gap-2">
             <ToggleChip active={!allowRotation} onClick={() => setAllowRotation(false)}>
               Front view
@@ -586,12 +566,10 @@ export default function Lithophane({
                   >
                     <ImageIcon className="mb-3 h-8 w-8 text-slate-500" />
                   </motion.div>
-
                   <div className="text-sm font-semibold text-slate-900">
                     {sourceFileName ? "Replace image and reopen editor" : "Drop photo here or click to upload"}
                   </div>
                   <div className="mt-1 text-xs text-slate-600">PNG, JPG, WEBP</div>
-
                   <input
                     type="file"
                     accept="image/png,image/jpeg,image/webp"
@@ -599,7 +577,6 @@ export default function Lithophane({
                     onChange={(e) => void handleFileChange(e.target.files?.[0])}
                   />
                 </label>
-
                 {uploadProgress.active && (
                   <UploadOverlay progress={uploadProgress.progress} status={uploadProgress.status} />
                 )}
@@ -613,7 +590,6 @@ export default function Lithophane({
                 >
                   Reopen crop editor
                 </ToggleChip>
-
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
                   Auto orientation: <span className="font-semibold capitalize">{autoDetectedOrientation}</span>
                 </div>
@@ -752,7 +728,6 @@ export default function Lithophane({
                 Dark room
               </ToggleChip>
             </div>
-
             <div className="mt-4 flex flex-wrap gap-2">
               <ToggleChip
                 active={lightEnabled}

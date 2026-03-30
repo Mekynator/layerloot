@@ -317,7 +317,6 @@ function SceneShell({
   sceneMode,
   lightEnabled,
   lightTone,
-  shape,
   children,
 }: {
   sceneMode: Props["sceneMode"];
@@ -330,7 +329,6 @@ function SceneShell({
   const floatAmount = sceneMode === "wall" ? 0.01 : 0.06;
   const yPosition = sceneMode === "desk" ? 0.02 : 0.03;
   const zPosition = sceneMode === "wall" ? 0.63 : 0;
-  const wallRotationY = shape === "arched" ? 0 : 0;
 
   return (
     <>
@@ -368,9 +366,7 @@ function SceneShell({
       )}
 
       <Float speed={1.02} rotationIntensity={0} floatIntensity={floatAmount}>
-        <group position={[0, yPosition, zPosition]} rotation={[0, wallRotationY, 0]}>
-          {children}
-        </group>
+        <group position={[0, yPosition, zPosition]}>{children}</group>
       </Float>
     </>
   );
@@ -409,7 +405,6 @@ export default function Lithophane3DViewer(props: Props) {
             lightTone={props.lightTone}
           />
         </SceneShell>
-
         <Environment preset="studio" />
       </Suspense>
 

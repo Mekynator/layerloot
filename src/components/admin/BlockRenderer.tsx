@@ -48,7 +48,7 @@ type ImageItem = {
   colSpan?: number;
   rowSpan?: number;
   order?: number;
-  objectFit?: string;
+  objectFit?: CSSProperties["objectFit"];
 };
 
 type ImageCollectionContent = {

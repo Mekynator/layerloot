@@ -33,7 +33,7 @@ const ProductDetail = () => {
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
   const [currentImage, setCurrentImage] = useState(0);
   const [show3D, setShow3D] = useState(false);
-  const [reviewForm, setReviewForm] = useState({ rating: 5, title: "", comment: "", imageUrl: "" });
+  const [reviewForm, setReviewForm] = useState({ rating: 5, title: "", comment: "" });
   const [submitting, setSubmitting] = useState(false);
 
   const product = data?.product ?? null;
@@ -68,15 +68,13 @@ const ProductDetail = () => {
       rating: reviewForm.rating,
       title: reviewForm.title || null,
       comment: reviewForm.comment || null,
-      reviewer_name: reviewerName,
-      image_url: reviewForm.imageUrl || null,
     });
     setSubmitting(false);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Review submitted!", description: "It will appear after admin approval." });
-      setReviewForm({ rating: 5, title: "", comment: "", imageUrl: "" });
+      setReviewForm({ rating: 5, title: "", comment: "" });
       queryClient.invalidateQueries({ queryKey: ["product-detail", slug] });
       queryClient.invalidateQueries({ queryKey: ["storefront-catalog"] });
     }
@@ -275,15 +273,7 @@ const ProductDetail = () => {
                   <Input placeholder="Review title (optional)" value={reviewForm.title} onChange={(e) => setReviewForm({ ...reviewForm, title: e.target.value })} />
                   <Textarea placeholder="Your review..." value={reviewForm.comment} onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })} rows={4} />
                 </div>
-                <div className="space-y-4">
-                  <Input
-                    placeholder="Optional image URL"
-                    value={reviewForm.imageUrl}
-                    onChange={(e) => setReviewForm({ ...reviewForm, imageUrl: e.target.value })}
-                  />
-                  <div className="rounded-2xl border border-border/70 bg-muted/30 p-4 text-sm text-muted-foreground">
-                    Add a public image URL if you want your finished print to appear alongside your review.
-                  </div>
+                <div className="flex items-end">
                   <Button onClick={handleSubmitReview} disabled={submitting} className="font-display uppercase tracking-wider">
                     {submitting ? "Submitting..." : "Submit Review"}
                   </Button>

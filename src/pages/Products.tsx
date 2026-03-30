@@ -47,7 +47,7 @@ const Products = () => {
 
       <section className="py-8 md:py-10">
         <div className="container space-y-8">
-          <div className="flex flex-col gap-3">
+          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-3">
             <div className="space-y-2">
               <h1 className="font-display text-4xl font-bold uppercase text-foreground">Products</h1>
               <p className="max-w-2xl text-balance text-muted-foreground">
@@ -55,11 +55,15 @@ const Products = () => {
                 browsing.
               </p>
             </div>
-          </div>
+          </motion.div>
 
           <div className="flex flex-col gap-8 lg:flex-row">
             <aside className="w-full shrink-0 lg:w-64">
-              <div className="section-surface p-4">
+              <motion.div
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="section-surface p-4"
+              >
                 <div className="mb-4 flex items-center gap-2">
                   <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
                   <span className="font-display text-sm uppercase tracking-widest text-muted-foreground">
@@ -68,7 +72,8 @@ const Products = () => {
                 </div>
 
                 <nav className="flex flex-row flex-wrap gap-2 lg:flex-col lg:gap-1">
-                  <button
+                  <motion.button
+                    whileHover={{ x: 2 }}
                     onClick={() => setSearchParams({})}
                     className={`rounded-xl px-3 py-2 text-left font-display text-sm uppercase tracking-wider transition-all duration-200 ${
                       activeCategory === "all"
@@ -77,14 +82,15 @@ const Products = () => {
                     }`}
                   >
                     All Products
-                  </button>
+                  </motion.button>
 
                   {parentCategories.map((category) => {
                     const children = categories.filter((child) => child.parent_id === category.id);
 
                     return (
                       <div key={category.id} className="space-y-1">
-                        <button
+                        <motion.button
+                          whileHover={{ x: 2 }}
                           onClick={() => setSearchParams({ category: category.slug })}
                           className={`w-full rounded-xl px-3 py-2 text-left font-display text-sm uppercase tracking-wider transition-all duration-200 ${
                             activeCategory === category.slug
@@ -93,10 +99,11 @@ const Products = () => {
                           }`}
                         >
                           {category.name}
-                        </button>
+                        </motion.button>
 
                         {children.map((subCategory) => (
-                          <button
+                          <motion.button
+                            whileHover={{ x: 2 }}
                             key={subCategory.id}
                             onClick={() => setSearchParams({ category: subCategory.slug })}
                             className={`ml-3 w-full rounded-xl px-3 py-1.5 text-left font-display text-xs uppercase tracking-wider transition-all duration-200 ${
@@ -106,17 +113,21 @@ const Products = () => {
                             }`}
                           >
                             {subCategory.name}
-                          </button>
+                          </motion.button>
                         ))}
                       </div>
                     );
                   })}
                 </nav>
-              </div>
+              </motion.div>
             </aside>
 
             <div className="min-w-0 flex-1 space-y-6">
-              <div className="section-surface p-4 md:p-5">
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="section-surface p-4 md:p-5"
+              >
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -127,9 +138,16 @@ const Products = () => {
                       className="h-11 rounded-xl border-border/70 bg-background/80 pl-10"
                     />
                   </div>
-                  <div className="text-sm text-muted-foreground">{filtered.length} products</div>
+                  <motion.div
+                    key={filtered.length}
+                    initial={{ opacity: 0.6 }}
+                    animate={{ opacity: 1 }}
+                    className="text-sm text-muted-foreground"
+                  >
+                    {filtered.length} products
+                  </motion.div>
                 </div>
-              </div>
+              </motion.div>
 
               {isLoading ? (
                 <ProductGridSkeleton count={6} />
@@ -151,12 +169,16 @@ const Products = () => {
               )}
 
               {!isLoading && filtered.length === 0 ? (
-                <div className="section-surface px-6 py-12 text-center">
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="section-surface px-6 py-12 text-center"
+                >
                   <h2 className="font-display text-2xl font-bold uppercase text-foreground">No products found</h2>
                   <p className="mt-2 text-muted-foreground">
                     Try another category or broaden your search to discover more prints.
                   </p>
-                </div>
+                </motion.div>
               ) : null}
             </div>
           </div>

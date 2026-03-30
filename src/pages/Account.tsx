@@ -18,10 +18,12 @@ import {
   History,
   Settings,
   MapPin,
+  LampDesk,
+  Box,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -85,6 +87,10 @@ interface CustomOrder {
   production_status: "pending" | "queued" | "in_production" | "completed" | "shipped" | "cancelled";
   request_fee_status?: string;
   request_fee_amount?: number;
+  metadata?: {
+    order_type?: "custom-print" | "lithophane" | null;
+    [key: string]: any;
+  } | null;
 }
 
 interface CustomOrderMessage {
@@ -207,18 +213,26 @@ function isCustomOrderDone(order: CustomOrder) {
   );
 }
 
+function detectCustomOrderType(order: CustomOrder): "custom-print" | "lithophane" {
+  const metadataType = order.metadata?.order_type;
+  if (metadataType === "lithophane") return "lithophane";
+  if (metadataType === "custom-print") return "custom-print";
+
+  const raw = (order.description || "").toLowerCase();
+  if (raw.includes("lithophane custom order") || raw.includes('"component": "lithophane"')) {
+    return "lithophane";
+  }
+
+  return "custom-print";
+}
+
 function isVoucherUsedOrArchived(voucher: UserVoucher, currentUserId: string, currentUserEmail?: string | null) {
   const remainingBalance = voucher.balance !== null ? Number(voucher.balance) : null;
   const normalizedEmail = (currentUserEmail || "").trim().toLowerCase();
   const recipientEmail = (voucher.recipient_email || "").trim().toLowerCase();
   const giftedAway = Boolean(recipientEmail) && voucher.user_id === currentUserId && recipientEmail !== normalizedEmail;
 
-  return (
-    voucher.is_used ||
-    !!voucher.used_at ||
-    giftedAway ||
-    (remainingBalance !== null && remainingBalance <= 0)
-  );
+  return voucher.is_used || !!voucher.used_at || giftedAway || (remainingBalance !== null && remainingBalance <= 0);
 }
 
 function parseCustomOrderDescription(description: string) {
@@ -322,17 +336,33 @@ function groupVouchersByDefinition(vouchers: UserVoucher[]) {
 
   return Array.from(groups.values()).map((group) => ({
     ...group,
-    items: [...group.items].sort(
-      (a, b) => new Date(b.redeemed_at).getTime() - new Date(a.redeemed_at).getTime(),
-    ),
+    items: [...group.items].sort((a, b) => new Date(b.redeemed_at).getTime() - new Date(a.redeemed_at).getTime()),
   }));
+}
+
+function customTypeBadge(orderType: "custom-print" | "lithophane") {
+  return orderType === "lithophane" ? (
+    <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-700 text-xs uppercase">
+      <LampDesk className="mr-1 h-3 w-3" />
+      Lithophane
+    </Badge>
+  ) : (
+    <Badge variant="outline" className="border-sky-500/30 bg-sky-500/10 text-sky-700 text-xs uppercase">
+      <Box className="mr-1 h-3 w-3" />
+      Custom 3D Print
+    </Badge>
+  );
 }
 
 const Account = () => {
   const { user, isAdmin, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } = useAccountOverview(user?.id, user?.email);
+  const {
+    data: overview,
+    isLoading: overviewLoading,
+    refetch: refetchOverview,
+  } = useAccountOverview(user?.id, user?.email);
 
   const [showHistory, setShowHistory] = useState(false);
   const [tab, setTab] = useState<AccountTab>("orders");
@@ -348,7 +378,13 @@ const Account = () => {
   const [sendingReply, setSendingReply] = useState(false);
   const [processingCustomPaymentOrderId, setProcessingCustomPaymentOrderId] = useState<string | null>(null);
   const [redeemingKey, setRedeemingKey] = useState<string | null>(null);
-  const [shippingAddress, setShippingAddress] = useState({ name: "", street: "", city: "", zip: "", country: "Denmark" });
+  const [shippingAddress, setShippingAddress] = useState({
+    name: "",
+    street: "",
+    city: "",
+    zip: "",
+    country: "Denmark",
+  });
   const [savingAddress, setSavingAddress] = useState(false);
   const [seenState, setSeenState] = useState<SeenState>({
     ordersLastSeenAt: null,
@@ -362,10 +398,22 @@ const Account = () => {
   useEffect(() => {
     if (!user) return;
     setSeenState(readSeenState(user.id));
-    // Load shipping address
-    supabase.from("profiles").select("shipping_address").eq("user_id", user.id).maybeSingle().then(({ data }) => {
-      if (data?.shipping_address) setShippingAddress({ name: "", street: "", city: "", zip: "", country: "Denmark", ...(data.shipping_address as any) });
-    });
+    supabase
+      .from("profiles")
+      .select("shipping_address")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.shipping_address)
+          setShippingAddress({
+            name: "",
+            street: "",
+            city: "",
+            zip: "",
+            country: "Denmark",
+            ...(data.shipping_address as any),
+          });
+      });
   }, [user]);
 
   const pointsBalance = overview?.pointsBalance ?? 0;
@@ -384,7 +432,12 @@ const Account = () => {
   const userVouchers = (overview?.userVouchers ?? []) as UserVoucher[];
 
   const parsedCustomOrders = useMemo(
-    () => customOrders.map((order) => ({ ...order, parsed: parseCustomOrderDescription(order.description) })),
+    () =>
+      customOrders.map((order) => ({
+        ...order,
+        parsed: parseCustomOrderDescription(order.description),
+        orderType: detectCustomOrderType(order),
+      })),
     [customOrders],
   );
 
@@ -409,7 +462,6 @@ const Account = () => {
   );
 
   const activeVoucherGroups = useMemo(() => groupVouchersByDefinition(activeVouchers), [activeVouchers]);
-
   const usedVoucherGroups = useMemo(() => groupVouchersByDefinition(usedVouchers), [usedVouchers]);
 
   const latestOrderActivityAt = useMemo(() => getLatestDate(orders.map((order) => order.created_at)), [orders]);
@@ -459,26 +511,32 @@ const Account = () => {
 
     setRedeemingKey(reward.key);
 
-    // Find or create voucher definition
     let voucherId: string | null = null;
     const matchedVoucher = findMatchingVoucher(reward, vouchers);
 
     if (matchedVoucher) {
       voucherId = matchedVoucher.id;
     } else {
-      // Create the voucher definition if it doesn't exist
-      const { data: newVoucher, error: createError } = await supabase.from("vouchers").insert({
-        name: reward.name,
-        description: reward.description,
-        discount_type: reward.discountType,
-        discount_value: reward.discountValue,
-        points_cost: reward.pointsCost,
-        is_active: true,
-      }).select("id").single();
+      const { data: newVoucher, error: createError } = await supabase
+        .from("vouchers")
+        .insert({
+          name: reward.name,
+          description: reward.description,
+          discount_type: reward.discountType,
+          discount_value: reward.discountValue,
+          points_cost: reward.pointsCost,
+          is_active: true,
+        })
+        .select("id")
+        .single();
 
       if (createError || !newVoucher) {
         setRedeemingKey(null);
-        toast({ title: "Error", description: createError?.message || "Could not create voucher", variant: "destructive" });
+        toast({
+          title: "Error",
+          description: createError?.message || "Could not create voucher",
+          variant: "destructive",
+        });
         return;
       }
       voucherId = newVoucher.id;
@@ -666,7 +724,10 @@ const Account = () => {
   };
 
   const renderCustomOrdersList = (
-    list: (CustomOrder & { parsed: ReturnType<typeof parseCustomOrderDescription> })[],
+    list: (CustomOrder & {
+      parsed: ReturnType<typeof parseCustomOrderDescription>;
+      orderType: "custom-print" | "lithophane";
+    })[],
   ) => {
     if (list.length === 0) {
       return (
@@ -683,21 +744,27 @@ const Account = () => {
           const messages = customOrderMessages[order.id] || [];
           const currentQuote = order.final_agreed_price ?? order.quoted_price ?? null;
           const hasUnreadForThisOrder = hasUnreadActivityForOrder(order);
-          const feePaid = order.request_fee_status === "paid";
+          const feePaid = order.orderType === "lithophane" ? true : order.request_fee_status === "paid";
+          const showFeeBadge = order.orderType === "custom-print" && !feePaid;
+          const showFeeGate = order.orderType === "custom-print" && !feePaid;
 
           return (
             <Card key={order.id}>
               <CardContent className="p-5">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <p className="font-display text-lg font-semibold uppercase text-card-foreground">
                         Custom Request #{order.id.slice(0, 8)}
                       </p>
                       {hasUnreadForThisOrder && <span className="h-2.5 w-2.5 rounded-full bg-destructive" />}
+                      {customTypeBadge(order.orderType)}
                       {customStatusBadge(order.status)}
-                      {!feePaid && (
-                        <Badge variant="outline" className="border-yellow-500/30 bg-yellow-500/10 text-yellow-600 text-xs uppercase">
+                      {showFeeBadge && (
+                        <Badge
+                          variant="outline"
+                          className="border-yellow-500/30 bg-yellow-500/10 text-yellow-600 text-xs uppercase"
+                        >
                           Fee Unpaid
                         </Badge>
                       )}
@@ -738,7 +805,7 @@ const Account = () => {
                   </div>
 
                   <div className="flex gap-2">
-                    {!feePaid ? (
+                    {showFeeGate ? (
                       <Button
                         onClick={async () => {
                           try {
@@ -760,7 +827,11 @@ const Account = () => {
                             }
                             if (data?.url) window.location.href = data.url;
                           } catch (err: any) {
-                            toast({ title: "Error", description: err?.message || "Could not start payment", variant: "destructive" });
+                            toast({
+                              title: "Error",
+                              description: err?.message || "Could not start payment",
+                              variant: "destructive",
+                            });
                           } finally {
                             setProcessingCustomPaymentOrderId(null);
                           }
@@ -769,7 +840,9 @@ const Account = () => {
                         className="font-display uppercase tracking-wider"
                       >
                         <DollarSign className="mr-1 h-4 w-4" />
-                        {processingCustomPaymentOrderId === order.id ? "Redirecting..." : `Pay ${order.request_fee_amount ?? 100} kr Fee`}
+                        {processingCustomPaymentOrderId === order.id
+                          ? "Redirecting..."
+                          : `Pay ${order.request_fee_amount ?? 100} kr Fee`}
                       </Button>
                     ) : (
                       <Button
@@ -783,11 +856,12 @@ const Account = () => {
                   </div>
                 </div>
 
-                {!feePaid && (
+                {showFeeGate && (
                   <div className="mt-4 rounded-md border border-yellow-500/20 bg-yellow-500/5 p-4">
-                    <p className="text-sm text-foreground font-medium">Request Fee Required</p>
+                    <p className="text-sm font-medium text-foreground">Request Fee Required</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      A one-time request fee of {order.request_fee_amount ?? 100} kr is required before your custom order can be reviewed. This fee will be deducted from your final order total.
+                      A one-time request fee of {order.request_fee_amount ?? 100} kr is required before your custom
+                      order can be reviewed. This fee will be deducted from your final order total.
                     </p>
                   </div>
                 )}
@@ -954,9 +1028,15 @@ const Account = () => {
                               {Number(order.final_agreed_price).toFixed(2)} kr
                             </span>
                           </p>
-                          <p className="mt-2 text-xs text-muted-foreground">
-                            The 100 kr custom request fee should be deducted from the final order total at checkout.
-                          </p>
+                          {order.orderType === "custom-print" ? (
+                            <p className="mt-2 text-xs text-muted-foreground">
+                              The 100 kr custom request fee should be deducted from the final order total at checkout.
+                            </p>
+                          ) : (
+                            <p className="mt-2 text-xs text-muted-foreground">
+                              Lithophane orders do not include a request fee.
+                            </p>
+                          )}
                           <Button
                             onClick={async () => {
                               try {
@@ -1253,63 +1333,61 @@ const Account = () => {
             {overviewLoading && !overview ? <RewardsGridSkeleton count={4} /> : null}
             <div className="grid gap-4 sm:grid-cols-2">
               {REWARD_CATALOG.map((reward) => {
-              const canRedeem = pointsBalance >= reward.pointsCost;
+                const canRedeem = pointsBalance >= reward.pointsCost;
 
-              return (
-                <motion.div
-                  key={reward.key}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Card className="h-full">
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="font-display text-lg uppercase">{reward.name}</CardTitle>
-                        {reward.badge && (
-                          <Badge variant="outline" className="font-display text-xs">
-                            {reward.badge === "Shipping" ? <Truck className="mr-1 h-3 w-3" /> : null}
-                            {reward.badge}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">{reward.description}</p>
-                    </CardHeader>
-
-                    <CardContent className="space-y-4">
-                      <div className="flex items-end justify-between gap-4">
-                        <div>
-                          {reward.discountType === "free_shipping" ? (
-                            <>
-                              <span className="font-display text-2xl font-bold text-primary">Free delivery</span>
-                              <span className="ml-1 text-sm text-muted-foreground">discount</span>
-                            </>
-                          ) : (
-                            <>
-                              <span className="font-display text-2xl font-bold text-primary">
-                                {reward.discountValue} kr
-                              </span>
-                              <span className="ml-1 text-sm text-muted-foreground">
-                                {reward.discountType === "gift_card" ? "gift card" : "discount"}
-                              </span>
-                            </>
+                return (
+                  <motion.div
+                    key={reward.key}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Card className="h-full">
+                      <CardContent className="space-y-4 p-6">
+                        <div className="flex items-center gap-2">
+                          <div className="font-display text-lg uppercase">{reward.name}</div>
+                          {reward.badge && (
+                            <Badge variant="outline" className="font-display text-xs">
+                              {reward.badge === "Shipping" ? <Truck className="mr-1 h-3 w-3" /> : null}
+                              {reward.badge}
+                            </Badge>
                           )}
                         </div>
+                        <p className="text-sm text-muted-foreground">{reward.description}</p>
 
-                        <Button
-                          size="sm"
-                          onClick={() => redeemReward(reward)}
-                          disabled={!canRedeem || redeemingKey === reward.key}
-                          className="font-display uppercase tracking-wider"
-                        >
-                          <Star className="mr-1 h-3 w-3" />
-                          {redeemingKey === reward.key ? "Redeeming..." : `${reward.pointsCost} pts`}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              );
+                        <div className="flex items-end justify-between gap-4">
+                          <div>
+                            {reward.discountType === "free_shipping" ? (
+                              <>
+                                <span className="font-display text-2xl font-bold text-primary">Free delivery</span>
+                                <span className="ml-1 text-sm text-muted-foreground">discount</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="font-display text-2xl font-bold text-primary">
+                                  {reward.discountValue} kr
+                                </span>
+                                <span className="ml-1 text-sm text-muted-foreground">
+                                  {reward.discountType === "gift_card" ? "gift card" : "discount"}
+                                </span>
+                              </>
+                            )}
+                          </div>
+
+                          <Button
+                            size="sm"
+                            onClick={() => redeemReward(reward)}
+                            disabled={!canRedeem || redeemingKey === reward.key}
+                            className="font-display uppercase tracking-wider"
+                          >
+                            <Star className="mr-1 h-3 w-3" />
+                            {redeemingKey === reward.key ? "Redeeming..." : `${reward.pointsCost} pts`}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
               })}
             </div>
           </>
@@ -1362,7 +1440,11 @@ const Account = () => {
                             {group.label}
                             <span className="ml-2 text-xs text-muted-foreground">(x{group.items.length})</span>
                           </p>
-                          {isGiftCard ? <Badge variant="outline" className="text-xs">Gift Card</Badge> : null}
+                          {isGiftCard ? (
+                            <Badge variant="outline" className="text-xs">
+                              Gift Card
+                            </Badge>
+                          ) : null}
                         </div>
                         {isGiftCard ? (
                           <p className="mt-1 text-sm text-muted-foreground">
@@ -1374,7 +1456,11 @@ const Account = () => {
                         <Badge variant={voucherView === "active" ? "default" : "secondary"}>
                           {voucherView === "active" ? "Active" : "Used"}
                         </Badge>
-                        {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                        {isExpanded ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
                       </div>
                     </button>
 
@@ -1382,7 +1468,8 @@ const Account = () => {
                       <CardContent className="space-y-3 border-t border-border bg-background/40 p-4">
                         {group.items.map((uv) => {
                           const recipientEmail = (uv.recipient_email || "").trim().toLowerCase();
-                          const isReceived = recipientEmail !== "" && recipientEmail === (user?.email || "").trim().toLowerCase();
+                          const isReceived =
+                            recipientEmail !== "" && recipientEmail === (user?.email || "").trim().toLowerCase();
                           const isGifted = !!uv.recipient_email && !isReceived;
                           const isUsed = uv.is_used || !!uv.used_at || (uv.balance !== null && Number(uv.balance) <= 0);
 
@@ -1393,7 +1480,10 @@ const Account = () => {
                                   <p className="font-mono text-lg font-bold text-primary">{uv.code}</p>
                                   {uv.balance !== null ? (
                                     <p className="text-sm text-muted-foreground">
-                                      Balance: <span className="font-bold text-foreground">{Number(uv.balance).toFixed(2)} kr</span>
+                                      Balance:{" "}
+                                      <span className="font-bold text-foreground">
+                                        {Number(uv.balance).toFixed(2)} kr
+                                      </span>
                                     </p>
                                   ) : null}
                                   {isGifted && uv.recipient_email ? (
@@ -1401,26 +1491,34 @@ const Account = () => {
                                       Sent to: {uv.recipient_name ? `${uv.recipient_name} ` : ""}({uv.recipient_email})
                                     </p>
                                   ) : null}
-                                  {isReceived ? <p className="text-xs text-muted-foreground">Received gift card</p> : null}
-                                  <p className="text-xs text-muted-foreground">Redeemed: {new Date(uv.redeemed_at).toLocaleString()}</p>
-                                  {uv.used_at ? <p className="text-xs text-muted-foreground">Used: {new Date(uv.used_at).toLocaleString()}</p> : null}
+                                  {isReceived ? (
+                                    <p className="text-xs text-muted-foreground">Received gift card</p>
+                                  ) : null}
+                                  <p className="text-xs text-muted-foreground">
+                                    Redeemed: {new Date(uv.redeemed_at).toLocaleString()}
+                                  </p>
+                                  {uv.used_at ? (
+                                    <p className="text-xs text-muted-foreground">
+                                      Used: {new Date(uv.used_at).toLocaleString()}
+                                    </p>
+                                  ) : null}
                                 </div>
 
                                 <div className="flex flex-wrap items-center gap-2">
                                   {voucherView === "active" &&
-                                    uv.vouchers?.discount_type === "gift_card" &&
-                                    !uv.recipient_email &&
-                                    uv.user_id === user?.id &&
-                                    !uv.is_used ? (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setGiftingVoucherId(giftingVoucherId === uv.id ? null : uv.id)}
-                                        className="font-display text-xs uppercase tracking-wider"
-                                      >
-                                        <Send className="mr-1 h-3 w-3" /> Gift
-                                      </Button>
-                                    ) : null}
+                                  uv.vouchers?.discount_type === "gift_card" &&
+                                  !uv.recipient_email &&
+                                  uv.user_id === user?.id &&
+                                  !uv.is_used ? (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => setGiftingVoucherId(giftingVoucherId === uv.id ? null : uv.id)}
+                                      className="font-display text-xs uppercase tracking-wider"
+                                    >
+                                      <Send className="mr-1 h-3 w-3" /> Gift
+                                    </Button>
+                                  ) : null}
 
                                   {isUsed ? (
                                     <Badge variant="secondary">Used</Badge>
@@ -1477,17 +1575,51 @@ const Account = () => {
           <Card>
             <CardContent className="space-y-6 p-6">
               <div>
-                <h3 className="font-display text-lg font-bold uppercase text-foreground mb-4">
+                <h3 className="mb-4 font-display text-lg font-bold uppercase text-foreground">
                   <MapPin className="mr-2 inline h-5 w-5" />
                   Default Shipping Address
                 </h3>
-                <p className="text-sm text-muted-foreground mb-4">This address will be auto-filled at checkout.</p>
+                <p className="mb-4 text-sm text-muted-foreground">This address will be auto-filled at checkout.</p>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div><Label>Full Name</Label><Input value={shippingAddress.name} onChange={(e) => setShippingAddress({ ...shippingAddress, name: e.target.value })} placeholder="John Doe" /></div>
-                  <div><Label>Street Address</Label><Input value={shippingAddress.street} onChange={(e) => setShippingAddress({ ...shippingAddress, street: e.target.value })} placeholder="123 Main St" /></div>
-                  <div><Label>City</Label><Input value={shippingAddress.city} onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })} placeholder="Copenhagen" /></div>
-                  <div><Label>Zip Code</Label><Input value={shippingAddress.zip} onChange={(e) => setShippingAddress({ ...shippingAddress, zip: e.target.value })} placeholder="2100" /></div>
-                  <div><Label>Country</Label><Input value={shippingAddress.country} onChange={(e) => setShippingAddress({ ...shippingAddress, country: e.target.value })} /></div>
+                  <div>
+                    <Label>Full Name</Label>
+                    <Input
+                      value={shippingAddress.name}
+                      onChange={(e) => setShippingAddress({ ...shippingAddress, name: e.target.value })}
+                      placeholder="John Doe"
+                    />
+                  </div>
+                  <div>
+                    <Label>Street Address</Label>
+                    <Input
+                      value={shippingAddress.street}
+                      onChange={(e) => setShippingAddress({ ...shippingAddress, street: e.target.value })}
+                      placeholder="123 Main St"
+                    />
+                  </div>
+                  <div>
+                    <Label>City</Label>
+                    <Input
+                      value={shippingAddress.city}
+                      onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
+                      placeholder="Copenhagen"
+                    />
+                  </div>
+                  <div>
+                    <Label>Zip Code</Label>
+                    <Input
+                      value={shippingAddress.zip}
+                      onChange={(e) => setShippingAddress({ ...shippingAddress, zip: e.target.value })}
+                      placeholder="2100"
+                    />
+                  </div>
+                  <div>
+                    <Label>Country</Label>
+                    <Input
+                      value={shippingAddress.country}
+                      onChange={(e) => setShippingAddress({ ...shippingAddress, country: e.target.value })}
+                    />
+                  </div>
                 </div>
                 <Button
                   className="mt-4 font-display uppercase tracking-wider"
@@ -1495,9 +1627,15 @@ const Account = () => {
                   onClick={async () => {
                     if (!user) return;
                     setSavingAddress(true);
-                    const { error } = await supabase.from("profiles").update({ shipping_address: shippingAddress as any }).eq("user_id", user.id);
+                    const { error } = await supabase
+                      .from("profiles")
+                      .update({ shipping_address: shippingAddress as any })
+                      .eq("user_id", user.id);
                     setSavingAddress(false);
-                    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+                    if (error) {
+                      toast({ title: "Error", description: error.message, variant: "destructive" });
+                      return;
+                    }
                     toast({ title: "Address saved!" });
                   }}
                 >

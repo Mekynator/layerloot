@@ -51,16 +51,13 @@ type ImageItem = {
   objectFit?: string;
 };
 
-type Props = {
-  content?: {
-    heading?: string;
-    columns?: number;
-    items?: ImageItem[];
-  };
-  className?: string;
+type ImageCollectionContent = {
+  heading?: string;
+  columns?: number;
+  items?: ImageItem[];
 };
 
-const ImageCollectionBlock = ({ content, className }: Props) => {
+const ImageCollectionBlock = ({ content, className }: { content?: ImageCollectionContent; className?: string }) => {
   const items = (content?.items ?? [])
     .filter((item) => item?.visible !== false && item?.image)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
@@ -73,7 +70,7 @@ const ImageCollectionBlock = ({ content, className }: Props) => {
         src={item.image}
         alt={item.title || "Gallery image"}
         className="h-full w-full rounded-2xl transition-transform duration-300 group-hover:scale-[1.02]"
-        style={{ objectFit: (item.objectFit as any) || "cover" }}
+        style={{ objectFit: item.objectFit || "cover" }}
       />
       {(item.title || item.subtitle) && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-2xl bg-gradient-to-t from-black/70 to-transparent p-4 text-white">
@@ -140,8 +137,6 @@ const ImageCollectionBlock = ({ content, className }: Props) => {
     </section>
   );
 };
-
-export default ImageCollectionBlock;
 
 type InstagramMediaItem = {
   id: string;
@@ -479,6 +474,10 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
         </div>,
       );
     case "image":
+      if (Array.isArray(c.items) && c.items.length > 0) {
+        return withSection(block, "py-6 md:py-10", <ImageCollectionBlock content={c} className="px-0 py-0 md:px-0" />);
+      }
+
       return withSection(
         block,
         "py-16",
@@ -1161,46 +1160,97 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
 
 const CarouselBlock = ({ block }: { block: SiteBlock }) => {
   const [current, setCurrent] = useState(0);
-  const images: string[] = block.content?.images || [];
-  if (images.length === 0) return null;
+  const slides = Array.isArray(block.content?.slides)
+    ? block.content.slides.filter((slide: any) => slide?.visible !== false && slide?.image)
+    : [];
+  const legacyImages: string[] = Array.isArray(block.content?.images) ? block.content.images : [];
+  const hasSlides = slides.length > 0;
+  const imageCount = hasSlides ? slides.length : legacyImages.length;
+
+  if (imageCount === 0) return null;
 
   useEffect(() => {
-    if (images.length <= 1) return;
-    const timer = window.setInterval(() => setCurrent((p) => (p + 1) % images.length), 6500);
+    if (imageCount <= 1) return;
+    const timer = window.setInterval(() => setCurrent((p) => (p + 1) % imageCount), 6500);
     return () => window.clearInterval(timer);
-  }, [images.length]);
+  }, [imageCount]);
+
+  const currentSlide = hasSlides ? slides[current] : null;
+  const currentImage = hasSlides ? currentSlide?.image : legacyImages[current];
+  const currentAction = currentSlide ? resolveItemAction(currentSlide) : normalizeAction({ actionType: "none" });
+
+  const imageNode = (
+    <motion.img
+      key={`${current}-${currentImage}`}
+      src={currentImage}
+      alt={currentSlide?.title || ""}
+      className="h-full w-full object-contain"
+      initial={{ opacity: 0, x: 50 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -50 }}
+      transition={{ duration: 0.4 }}
+    />
+  );
+
+  const wrappedImage = (() => {
+    if (!hasSlides || !currentAction.actionTarget || isEditorPreviewMode()) return imageNode;
+
+    if (currentAction.actionType === "internal_link") {
+      const target = currentAction.actionTarget.startsWith("/")
+        ? currentAction.actionTarget
+        : `/${currentAction.actionTarget}`;
+      return (
+        <Link to={target} target={currentAction.openInNewTab ? "_blank" : "_self"} className="block h-full w-full">
+          {imageNode}
+        </Link>
+      );
+    }
+
+    if (currentAction.actionType === "external_link") {
+      return (
+        <a
+          href={currentAction.actionTarget}
+          target={currentAction.openInNewTab ? "_blank" : "_self"}
+          rel={currentAction.openInNewTab ? "noopener noreferrer" : undefined}
+          className="block h-full w-full"
+        >
+          {imageNode}
+        </a>
+      );
+    }
+
+    return imageNode;
+  })();
 
   return withSection(
     block,
     "py-16",
     <div className="container">
-      {block.title && (
-        <h2 className="mb-8 text-center font-display text-3xl font-bold uppercase text-foreground">{block.title}</h2>
+      {(block.title || block.content?.heading) && (
+        <h2 className="mb-8 text-center font-display text-3xl font-bold uppercase text-foreground">
+          {block.content?.heading || block.title}
+        </h2>
       )}
 
       <div className="relative overflow-hidden rounded-lg">
         <div className="aspect-[21/9] overflow-hidden">
-          <AnimatePresence mode="wait">
-            <motion.img
-              key={current}
-              src={images[current]}
-              alt=""
-              className="h-full w-full object-contain"
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -50 }}
-              transition={{ duration: 0.4 }}
-            />
-          </AnimatePresence>
+          <AnimatePresence mode="wait">{wrappedImage}</AnimatePresence>
         </div>
 
-        {images.length > 1 && (
+        {currentSlide && (currentSlide.title || currentSlide.subtitle) && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-5 text-white">
+            {currentSlide.title && <h3 className="font-display text-lg font-bold uppercase">{currentSlide.title}</h3>}
+            {currentSlide.subtitle && <p className="mt-1 text-sm text-white/80">{currentSlide.subtitle}</p>}
+          </div>
+        )}
+
+        {imageCount > 1 && (
           <>
             <Button
               variant="ghost"
               size="icon"
               className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background"
-              onClick={() => setCurrent((p) => (p - 1 + images.length) % images.length)}
+              onClick={() => setCurrent((p) => (p - 1 + imageCount) % imageCount)}
             >
               <ChevronLeft className="h-[45px] w-[45px] text-primary" />
             </Button>
@@ -1209,13 +1259,13 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
               variant="ghost"
               size="icon"
               className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background"
-              onClick={() => setCurrent((p) => (p + 1) % images.length)}
+              onClick={() => setCurrent((p) => (p + 1) % imageCount)}
             >
               <ChevronRight className="h-[45px] w-[45px] text-primary" />
             </Button>
 
             <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
-              {images.map((_, i) => (
+              {Array.from({ length: imageCount }).map((_, i) => (
                 <button
                   key={i}
                   onClick={() => setCurrent(i)}

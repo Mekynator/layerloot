@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Layers, Mail, MapPin, Phone } from "lucide-react";
+import { Mail, MapPin, Phone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import logoImg from "@/assets/logo.png";
 import { useFooterNavLinks } from "@/components/admin/NavLinkEditor";
 import GlobalSectionRenderer from "@/components/layout/GlobalSectionRenderer";
 
@@ -139,7 +140,7 @@ const Footer = () => {
                   />
                 ) : (
                   <>
-                    {footerSettings.show_logo_icon && <Layers className="h-6 w-6 text-primary" />}
+                    {footerSettings.show_logo_icon && <img src={logoImg} alt="LayerLoot" style={{ height: `${logoHeight}px` }} className="w-auto object-contain" />}
                     {footerSettings.show_logo_text && (
                       <span className="font-display text-xl font-bold uppercase tracking-wider text-secondary-foreground">
                         {branding.logo_text_left || "Layer"}

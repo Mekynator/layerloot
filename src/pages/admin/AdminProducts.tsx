@@ -248,12 +248,12 @@ const AdminProducts = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div><Label>Stock</Label><Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: parseInt(e.target.value) || 0 })} /></div>
-                  <div>
-                    <Label>Category</Label>
+                   <div>
+                    <Label>Gift Finder Tag</Label>
                     <Select value={form.category_id ?? "none"} onValueChange={(v) => setForm({ ...form, category_id: v === "none" ? null : v })}>
-                      <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Select tag" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="none">No tag</SelectItem>
                         {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                       </SelectContent>
                     </Select>

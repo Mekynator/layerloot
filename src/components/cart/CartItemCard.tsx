@@ -1,4 +1,6 @@
+import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, Minus, Plus, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { CartItem } from "@/types/cart";
 
@@ -19,21 +21,28 @@ export default function CartItemCard({
   onRemove,
   onSaveForLater,
 }: CartItemCardProps) {
+  const [pulse, setPulse] = useState(false);
+
+  useEffect(() => {
+    setPulse(true);
+    const timer = window.setTimeout(() => setPulse(false), 350);
+    return () => window.clearTimeout(timer);
+  }, [item.quantity]);
+
   return (
-    <article className="rounded-2xl border bg-card p-4 shadow-sm transition-all hover:shadow-md">
+    <motion.article
+      layout
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10, scale: 0.98 }}
+      className="rounded-2xl border bg-card p-4 shadow-sm transition-all hover:shadow-md"
+    >
       <div className="flex flex-col gap-4 md:flex-row md:items-center">
         <div className="h-28 w-28 shrink-0 overflow-hidden rounded-xl bg-muted">
           {item.image_url ? (
-            <img
-              src={item.image_url}
-              alt={item.title}
-              className="h-full w-full object-cover"
-              loading="lazy"
-            />
+            <img src={item.image_url} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
           ) : (
-            <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-              No preview
-            </div>
+            <div className="flex h-full items-center justify-center text-xs text-muted-foreground">No preview</div>
           )}
         </div>
 
@@ -61,21 +70,23 @@ export default function CartItemCard({
                     {item.material_grams ? `${item.material_grams}g` : "—"}
                   </div>
                   <div>
-                    <span className="font-medium text-foreground">Dispatch:</span>{" "}
-                    {item.dispatch_note ?? "—"}
+                    <span className="font-medium text-foreground">Dispatch:</span> {item.dispatch_note ?? "—"}
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="text-right">
+            <motion.div animate={pulse ? { scale: [1, 1.04, 1] } : { scale: 1 }} className="text-right">
               <div className="text-2xl font-bold">{(item.price * item.quantity).toFixed(2)} DKK</div>
               <div className="text-xs text-muted-foreground">{item.price.toFixed(2)} DKK each</div>
-            </div>
+            </motion.div>
           </div>
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 rounded-xl border p-1">
+            <motion.div
+              animate={pulse ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+              className="flex items-center gap-2 rounded-xl border p-1"
+            >
               <Button
                 variant="ghost"
                 size="icon"
@@ -95,7 +106,7 @@ export default function CartItemCard({
               >
                 <Plus className="h-4 w-4" />
               </Button>
-            </div>
+            </motion.div>
 
             <div className="flex items-center gap-2">
               <Button
@@ -119,6 +130,6 @@ export default function CartItemCard({
           </div>
         </div>
       </div>
-    </article>
+    </motion.article>
   );
 }

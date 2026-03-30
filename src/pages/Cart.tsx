@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Trash2,
@@ -12,7 +12,10 @@ import {
   Bookmark,
   ArrowRight,
   Star,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -58,6 +61,11 @@ export default function CartPage() {
   const [selectedDiscountCode, setSelectedDiscountCode] = useState<string>("");
   const [manualDiscountCode, setManualDiscountCode] = useState("");
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [recentlyChanged, setRecentlyChanged] = useState<Record<string, "inc" | "dec" | "added">>({});
+  const [removingIds, setRemovingIds] = useState<string[]>([]);
+  const [savedToast, setSavedToast] = useState<string>("");
+
+  const checkoutButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     const raw = localStorage.getItem("layerloot_saved_items");
@@ -73,6 +81,12 @@ export default function CartPage() {
   useEffect(() => {
     localStorage.setItem("layerloot_saved_items", JSON.stringify(savedItems));
   }, [savedItems]);
+
+  useEffect(() => {
+    if (!savedToast) return;
+    const timer = window.setTimeout(() => setSavedToast(""), 1800);
+    return () => window.clearTimeout(timer);
+  }, [savedToast]);
 
   const selectedDiscount = useMemo(() => {
     return (accountData?.availableDiscountCodes ?? []).find((d) => d.code === selectedDiscountCode) ?? null;
@@ -113,20 +127,41 @@ export default function CartPage() {
     return Array.from(map.values()).slice(0, 4);
   }, [cartItems]);
 
+  const markItemChanged = (id: string, type: "inc" | "dec" | "added") => {
+    setRecentlyChanged((prev) => ({ ...prev, [id]: type }));
+    window.setTimeout(() => {
+      setRecentlyChanged((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }, 700);
+  };
+
   const handleSaveForLater = (item: CartItemExt) => {
     setSavedItems((prev) => {
       const exists = prev.some((saved) => saved.id === item.id);
       if (exists) return prev;
       return [...prev, item];
     });
+    setSavedToast(`${item.name} saved for later`);
     removeItem(item.id);
   };
 
   const handleMoveToCart = (item: CartItemExt) => {
     if (typeof addItem === "function") {
       addItem(item);
+      markItemChanged(item.id, "added");
       setSavedItems((prev) => prev.filter((saved) => saved.id !== item.id));
     }
+  };
+
+  const handleRemove = (id: string) => {
+    setRemovingIds((prev) => [...prev, id]);
+    window.setTimeout(() => {
+      removeItem(id);
+      setRemovingIds((prev) => prev.filter((itemId) => itemId !== id));
+    }, 220);
   };
 
   const handleCheckout = async () => {
@@ -141,6 +176,10 @@ export default function CartPage() {
       }
 
       setIsCheckingOut(true);
+
+      if (checkoutButtonRef.current) {
+        checkoutButtonRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
 
       const {
         data: { session },
@@ -164,9 +203,7 @@ export default function CartPage() {
           success_url: `${window.location.origin}/checkout/success`,
           cancel_url: `${window.location.origin}/cart`,
         },
-        headers: session?.access_token
-          ? { Authorization: `Bearer ${session.access_token}` }
-          : undefined,
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
       });
 
       if (error) {
@@ -195,7 +232,11 @@ export default function CartPage() {
     return (
       <div className="py-10 md:py-14">
         <div className="container max-w-6xl">
-          <div className="rounded-2xl border border-border bg-card px-6 py-16 text-center shadow-sm">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl border border-border bg-card px-6 py-16 text-center shadow-sm"
+          >
             <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-muted">
               <ShoppingBag className="h-10 w-10 text-muted-foreground" />
             </div>
@@ -219,7 +260,7 @@ export default function CartPage() {
                 </Button>
               </Link>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     );
@@ -228,11 +269,26 @@ export default function CartPage() {
   return (
     <div className="py-8 md:py-10">
       <div className="container max-w-6xl">
-        <h1 className="mb-8 font-display text-4xl font-bold uppercase text-foreground">Shopping Cart</h1>
+        <div className="mb-8 flex items-center justify-between gap-4">
+          <h1 className="font-display text-4xl font-bold uppercase text-foreground">Shopping Cart</h1>
+
+          <AnimatePresence>
+            {savedToast && (
+              <motion.div
+                initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                className="hidden rounded-full border border-primary/20 bg-background px-3 py-1.5 text-xs font-medium text-primary shadow-sm md:block"
+              >
+                {savedToast}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         <div className="grid gap-8 lg:grid-cols-[1.4fr_0.8fr]">
           <div className="space-y-6">
-            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+            <motion.div layout className="rounded-2xl border border-border bg-card p-4 shadow-sm">
               <div className="mb-3 flex items-center gap-2">
                 <Truck className="h-4 w-4 text-primary" />
                 <span className="text-sm font-medium text-card-foreground">
@@ -242,146 +298,187 @@ export default function CartPage() {
                 </span>
               </div>
               <Progress value={shippingProgress} className="h-2" />
-            </div>
+            </motion.div>
 
             <div className="space-y-4">
-              {cartItems.map((item) => {
-                const lineTotal = item.price * item.quantity;
+              <AnimatePresence initial={false}>
+                {cartItems.map((item) => {
+                  const lineTotal = item.price * item.quantity;
+                  const changedState = recentlyChanged[item.id];
+                  const isRemoving = removingIds.includes(item.id);
 
-                return (
-                  <div
-                    key={item.id}
-                    className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
-                  >
-                    <div className="flex flex-col gap-4 md:flex-row md:items-center">
-                      <div className="flex gap-4">
-                        <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-muted">
-                          <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="mb-1 flex flex-wrap items-center gap-2">
-                            <h3 className="font-display text-base font-bold uppercase text-card-foreground md:text-lg">
-                              {item.name}
-                            </h3>
-                            {item.badge && (
-                              <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
-                                {item.badge}
-                              </span>
-                            )}
+                  return (
+                    <motion.div
+                      key={item.id}
+                      layout
+                      initial={{ opacity: 0, y: 14 }}
+                      animate={{
+                        opacity: isRemoving ? 0 : 1,
+                        y: 0,
+                        scale: changedState ? [1, 1.015, 1] : 1,
+                      }}
+                      exit={{ opacity: 0, y: -10, scale: 0.96 }}
+                      transition={{ duration: 0.25 }}
+                      className={`rounded-2xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md ${
+                        changedState === "added" ? "ring-1 ring-primary/30" : ""
+                      }`}
+                    >
+                      <div className="flex flex-col gap-4 md:flex-row md:items-center">
+                        <div className="flex gap-4">
+                          <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-muted">
+                            <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
                           </div>
 
-                          {(item.material || item.color || item.size) && (
-                            <p className="text-sm text-muted-foreground">
-                              {[item.material, item.color, item.size].filter(Boolean).join(" • ")}
-                            </p>
-                          )}
-
-                          {(item.printTime || item.materialGrams || item.dispatchEstimate) && (
-                            <div className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
-                              {item.printTime && (
-                                <div className="flex items-center gap-2">
-                                  <Clock3 className="h-4 w-4 text-primary" />
-                                  <span>Print: {item.printTime}</span>
-                                </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="mb-1 flex flex-wrap items-center gap-2">
+                              <h3 className="font-display text-base font-bold uppercase text-card-foreground md:text-lg">
+                                {item.name}
+                              </h3>
+                              {item.badge && (
+                                <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
+                                  {item.badge}
+                                </span>
                               )}
-
-                              {item.materialGrams && (
-                                <div className="flex items-center gap-2">
-                                  <Package className="h-4 w-4 text-primary" />
-                                  <span>Material: {item.materialGrams}g</span>
-                                </div>
-                              )}
-
-                              {item.dispatchEstimate && (
-                                <div className="flex items-center gap-2">
-                                  <Truck className="h-4 w-4 text-primary" />
-                                  <span>{item.dispatchEstimate}</span>
-                                </div>
+                              {changedState === "added" && (
+                                <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-600">
+                                  Added back
+                                </span>
                               )}
                             </div>
-                          )}
 
-                          <div className="mt-3 flex flex-wrap items-center gap-3">
-                            <button
-                              onClick={() => handleSaveForLater(item)}
-                              className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                            >
-                              <Bookmark className="h-4 w-4" />
-                              Save for later
-                            </button>
+                            {(item.material || item.color || item.size) && (
+                              <p className="text-sm text-muted-foreground">
+                                {[item.material, item.color, item.size].filter(Boolean).join(" • ")}
+                              </p>
+                            )}
+
+                            {(item.printTime || item.materialGrams || item.dispatchEstimate) && (
+                              <div className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
+                                {item.printTime && (
+                                  <div className="flex items-center gap-2">
+                                    <Clock3 className="h-4 w-4 text-primary" />
+                                    <span>Print: {item.printTime}</span>
+                                  </div>
+                                )}
+
+                                {item.materialGrams && (
+                                  <div className="flex items-center gap-2">
+                                    <Package className="h-4 w-4 text-primary" />
+                                    <span>Material: {item.materialGrams}g</span>
+                                  </div>
+                                )}
+
+                                {item.dispatchEstimate && (
+                                  <div className="flex items-center gap-2">
+                                    <Truck className="h-4 w-4 text-primary" />
+                                    <span>{item.dispatchEstimate}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            <div className="mt-3 flex flex-wrap items-center gap-3">
+                              <button
+                                onClick={() => handleSaveForLater(item)}
+                                className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                              >
+                                <Bookmark className="h-4 w-4" />
+                                Save for later
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-center justify-between gap-4 md:ml-auto md:min-w-[250px]">
-                        <div className="flex items-center gap-2 rounded-xl border border-border bg-background/60 p-1">
+                        <div className="flex items-center justify-between gap-4 md:ml-auto md:min-w-[250px]">
+                          <motion.div
+                            animate={changedState ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+                            transition={{ duration: 0.3 }}
+                            className="flex items-center gap-2 rounded-xl border border-border bg-background/60 p-1"
+                          >
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9"
+                              onClick={() => {
+                                updateQuantity(item.id, Math.max(1, item.quantity - 1));
+                                markItemChanged(item.id, "dec");
+                              }}
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+
+                            <span className="w-8 text-center font-display text-sm font-semibold">{item.quantity}</span>
+
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9"
+                              onClick={() => {
+                                updateQuantity(item.id, item.quantity + 1);
+                                markItemChanged(item.id, "inc");
+                              }}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </motion.div>
+
+                          <motion.div
+                            animate={changedState ? { scale: [1, 1.04, 1] } : { scale: 1 }}
+                            transition={{ duration: 0.35 }}
+                            className="text-right"
+                          >
+                            <p className="text-sm text-muted-foreground">{item.price.toFixed(2)} kr each</p>
+                            <p className="font-display text-lg font-bold text-foreground">{lineTotal.toFixed(2)} kr</p>
+                          </motion.div>
+
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-9 w-9"
-                            onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                            className="text-muted-foreground hover:text-destructive"
+                            onClick={() => handleRemove(item.id)}
+                            disabled={isRemoving}
                           >
-                            <Minus className="h-4 w-4" />
-                          </Button>
-
-                          <span className="w-8 text-center font-display text-sm font-semibold">{item.quantity}</span>
-
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9"
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          >
-                            <Plus className="h-4 w-4" />
+                            {isRemoving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                           </Button>
                         </div>
-
-                        <div className="text-right">
-                          <p className="text-sm text-muted-foreground">{item.price.toFixed(2)} kr each</p>
-                          <p className="font-display text-lg font-bold text-foreground">{lineTotal.toFixed(2)} kr</p>
-                        </div>
-
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-muted-foreground hover:text-destructive"
-                          onClick={() => removeItem(item.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
             </div>
 
             {savedItems.length > 0 && (
-              <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <motion.div layout className="rounded-2xl border border-border bg-card p-5 shadow-sm">
                 <h2 className="mb-4 font-display text-xl font-bold uppercase text-foreground">Saved for Later</h2>
 
                 <div className="space-y-3">
-                  {savedItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex flex-col gap-3 rounded-xl border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                      <div className="flex items-center gap-3">
-                        <img src={item.image} alt={item.name} className="h-16 w-16 rounded-lg object-cover" />
-                        <div>
-                          <p className="font-display text-sm font-bold uppercase text-foreground">{item.name}</p>
-                          <p className="text-sm text-muted-foreground">{item.price.toFixed(2)} kr</p>
+                  <AnimatePresence initial={false}>
+                    {savedItems.map((item) => (
+                      <motion.div
+                        key={item.id}
+                        layout
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                        className="flex flex-col gap-3 rounded-xl border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="flex items-center gap-3">
+                          <img src={item.image} alt={item.name} className="h-16 w-16 rounded-lg object-cover" />
+                          <div>
+                            <p className="font-display text-sm font-bold uppercase text-foreground">{item.name}</p>
+                            <p className="text-sm text-muted-foreground">{item.price.toFixed(2)} kr</p>
+                          </div>
                         </div>
-                      </div>
 
-                      <Button variant="outline" onClick={() => handleMoveToCart(item)}>
-                        Move to Cart
-                      </Button>
-                    </div>
-                  ))}
+                        <Button variant="outline" onClick={() => handleMoveToCart(item)}>
+                          Move to Cart
+                        </Button>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {recommendedProducts.length > 0 && (
@@ -414,7 +511,7 @@ export default function CartPage() {
 
           <div className="space-y-6">
             {accountLoading && user ? <CartSummarySkeleton /> : null}
-            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm lg:sticky lg:top-24">
+            <motion.div layout className="rounded-2xl border border-border bg-card p-6 shadow-sm lg:sticky lg:top-24">
               <h2 className="mb-5 font-display text-2xl font-bold uppercase text-foreground">Order Summary</h2>
 
               <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
@@ -489,18 +586,51 @@ export default function CartPage() {
 
                   <div className="flex items-center justify-between">
                     <span className="font-display text-lg font-bold uppercase text-foreground">Total</span>
-                    <span className="font-display text-2xl font-bold text-primary">{finalTotal.toFixed(2)} kr</span>
+                    <motion.span
+                      key={finalTotal}
+                      initial={{ scale: 0.96, opacity: 0.7 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="font-display text-2xl font-bold text-primary"
+                    >
+                      {finalTotal.toFixed(2)} kr
+                    </motion.span>
                   </div>
                 </div>
 
-                <Button
-                  className="mt-2 w-full font-display uppercase tracking-wider"
-                  size="lg"
-                  onClick={handleCheckout}
-                  disabled={isCheckingOut}
-                >
-                  {isCheckingOut ? "Redirecting..." : "Continue to Secure Checkout"}
-                </Button>
+                <div className="relative">
+                  <Button
+                    ref={checkoutButtonRef}
+                    className="mt-2 w-full font-display uppercase tracking-wider"
+                    size="lg"
+                    onClick={handleCheckout}
+                    disabled={isCheckingOut}
+                  >
+                    {isCheckingOut ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Redirecting...
+                      </>
+                    ) : (
+                      "Continue to Secure Checkout"
+                    )}
+                  </Button>
+
+                  <AnimatePresence>
+                    {isCheckingOut && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="mt-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-primary"
+                      >
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Preparing secure Stripe checkout...
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
 
                 <div className="space-y-2 pt-2 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
@@ -517,7 +647,7 @@ export default function CartPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             <Link
               to="/products"

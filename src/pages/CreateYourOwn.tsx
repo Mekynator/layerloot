@@ -1,20 +1,43 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Image, Gift, Heart, Gamepad2, Swords, Monitor, Upload, Send, Box, Star, CreditCard, Home, Baby, Dog, Palette, Music, Trophy, Flower2, Wrench, Tag, Camera, Bike, Car, Book, Coffee, Zap } from "lucide-react";
+import {
+  Baby,
+  Box,
+  CheckCircle2,
+  CreditCard,
+  Dog,
+  FileImage,
+  Flower2,
+  Gamepad2,
+  Gift,
+  Home,
+  Image,
+  Loader2,
+  Monitor,
+  Music,
+  Palette,
+  Send,
+  Swords,
+  Trophy,
+  Upload,
+  Wrench,
+  Star,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import ModelViewer from "@/components/ModelViewer";
 import Lithophane, { LithophaneSubmitPayload } from "@/components/Lithophane";
-import { motion } from "framer-motion";
 import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 import { ReviewCardSkeleton, SectionCardSkeleton } from "@/components/shared/loading-states";
 
@@ -63,6 +86,74 @@ type ToolReview = {
   created_at: string;
 };
 
+type ProgressState = {
+  open: boolean;
+  progress: number;
+  status: string;
+};
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const animateProgress = async (
+  setState: React.Dispatch<React.SetStateAction<ProgressState>>,
+  to: number,
+  status?: string,
+  duration = 350,
+) => {
+  const steps = Math.max(1, Math.floor(duration / 35));
+  const increment = Math.max(0, to);
+
+  setState((prev) => {
+    const start = prev.progress;
+    const diff = increment - start;
+    let currentStep = 0;
+
+    const run = async () => {
+      while (currentStep < steps) {
+        currentStep += 1;
+        const nextValue = start + (diff * currentStep) / steps;
+        setState((latest) => ({
+          ...latest,
+          progress: Math.min(to, Math.max(latest.progress, Number(nextValue.toFixed(0)))),
+          status: status ?? latest.status,
+          open: true,
+        }));
+        await sleep(35);
+      }
+    };
+
+    void run();
+    return {
+      ...prev,
+      open: true,
+      status: status ?? prev.status,
+    };
+  });
+
+  await sleep(duration + 20);
+};
+
+const setProgressInstant = (
+  setState: React.Dispatch<React.SetStateAction<ProgressState>>,
+  progress: number,
+  status: string,
+) => {
+  setState({
+    open: true,
+    progress,
+    status,
+  });
+};
+
+const resetProgress = async (setState: React.Dispatch<React.SetStateAction<ProgressState>>) => {
+  await sleep(250);
+  setState({
+    open: false,
+    progress: 0,
+    status: "",
+  });
+};
+
 const getUserDisplayName = (user: any) => {
   if (!user) return "";
   return (
@@ -100,7 +191,7 @@ const readFunctionErrorMessage = async (error: any) => {
       }
     }
   } catch {
-    // fall through to default message
+    // noop
   }
 
   return error?.message || "Edge function call failed";
@@ -133,6 +224,136 @@ const startRequestFeeCheckout = async (customOrderId: string) => {
 
   window.location.href = data.url;
 };
+
+const UploadProgressOverlay = ({ progress, status }: { progress: number; status: string }) => (
+  <AnimatePresence>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-xl bg-background/85 px-5 text-center backdrop-blur-sm"
+    >
+      <Loader2 className="mb-3 h-7 w-7 animate-spin text-primary" />
+      <p className="text-sm font-semibold text-foreground">{status}</p>
+      <div className="mt-4 h-2 w-full max-w-xs overflow-hidden rounded-full bg-muted">
+        <motion.div
+          className="h-full rounded-full bg-primary"
+          initial={{ width: 0 }}
+          animate={{ width: `${progress}%` }}
+          transition={{ ease: "easeOut", duration: 0.25 }}
+        />
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">{Math.round(progress)}%</p>
+    </motion.div>
+  </AnimatePresence>
+);
+
+const ProcessingDialog = ({ open, progress, status, title }: ProgressState & { title: string }) => (
+  <Dialog open={open}>
+    <DialogContent
+      className="sm:max-w-md [&>button]:hidden"
+      onEscapeKeyDown={(e) => e.preventDefault()}
+      onInteractOutside={(e) => e.preventDefault()}
+    >
+      <div className="py-2">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{status || "Working on your request..."}</DialogDescription>
+        </DialogHeader>
+
+        <div className="mt-5">
+          <div className="h-3 overflow-hidden rounded-full bg-muted">
+            <motion.div
+              className="h-full rounded-full bg-primary"
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ ease: "easeOut", duration: 0.3 }}
+            />
+          </div>
+
+          <div className="mt-3 flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">{status}</span>
+            <span className="font-semibold text-foreground">{Math.round(progress)}%</span>
+          </div>
+        </div>
+      </div>
+    </DialogContent>
+  </Dialog>
+);
+
+const FileStatusCard = ({
+  fileName,
+  previewUrl,
+  alt,
+  icon = <CheckCircle2 className="h-4 w-4 text-green-500" />,
+}: {
+  fileName: string;
+  previewUrl?: string | null;
+  alt: string;
+  icon?: React.ReactNode;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 6 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="mt-3 overflow-hidden rounded-xl border border-border bg-card"
+  >
+    {previewUrl ? (
+      <img src={previewUrl} alt={alt} className="h-56 w-full object-cover bg-muted/20" />
+    ) : (
+      <div className="flex h-28 items-center justify-center bg-muted/20">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <FileImage className="h-4 w-4" />
+          3D file ready
+        </div>
+      </div>
+    )}
+
+    <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium text-foreground">{fileName}</p>
+        <p className="text-xs text-muted-foreground">Ready</p>
+      </div>
+      {icon}
+    </div>
+  </motion.div>
+);
+
+const UploadDropzone = ({
+  label,
+  sublabel,
+  icon,
+  onClick,
+  dragActive,
+  children,
+}: {
+  label: string;
+  sublabel: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+  dragActive?: boolean;
+  children?: React.ReactNode;
+}) => (
+  <motion.div
+    whileHover={{ y: -2 }}
+    className={`relative mt-2 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-all ${
+      dragActive
+        ? "border-primary bg-primary/10 shadow-[0_0_30px_rgba(249,115,22,0.12)]"
+        : "border-border hover:border-primary/70 hover:bg-primary/5"
+    }`}
+    onClick={onClick}
+  >
+    <motion.div
+      animate={dragActive ? { scale: [1, 1.06, 1] } : { scale: 1 }}
+      transition={{ duration: 1.1, repeat: dragActive ? Infinity : 0 }}
+      className="mb-3"
+    >
+      {icon}
+    </motion.div>
+    <p className="text-sm font-medium text-foreground">{label}</p>
+    <p className="mt-1 text-xs text-muted-foreground">{sublabel}</p>
+    {children}
+  </motion.div>
+);
 
 const ReviewSection = ({ toolType, title }: { toolType: "custom-print" | "lithophane"; title: string }) => {
   const [reviews, setReviews] = useState<ToolReview[]>([]);
@@ -170,11 +391,24 @@ const ReviewSection = ({ toolType, title }: { toolType: "custom-print" | "lithop
           <ReviewCardSkeleton />
         </div>
       ) : reviews.length === 0 ? (
-        <SectionCardSkeleton lines={2} />
+        <motion.div
+          initial={{ opacity: 0.6 }}
+          animate={{ opacity: 1 }}
+          transition={{ repeat: Infinity, duration: 1.4, repeatType: "reverse" }}
+        >
+          <SectionCardSkeleton lines={3} />
+        </motion.div>
       ) : (
         <div className="grid gap-4 md:grid-cols-3">
-          {reviews.map((review) => (
-            <div key={review.id} className="rounded-xl border border-border bg-card p-4">
+          {reviews.map((review, index) => (
+            <motion.div
+              key={review.id}
+              initial={{ opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ delay: index * 0.06, duration: 0.25 }}
+              className="rounded-xl border border-border bg-card p-4"
+            >
               <div className="mb-2 flex items-center justify-between gap-2">
                 <p className="font-medium text-foreground">{review.title || "Verified Customer"}</p>
                 <div className="flex gap-1">
@@ -184,7 +418,7 @@ const ReviewSection = ({ toolType, title }: { toolType: "custom-print" | "lithop
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">{review.comment}</p>
-            </div>
+            </motion.div>
           ))}
         </div>
       )}
@@ -199,6 +433,11 @@ const LithophaneOrderSection = () => {
   const userName = getUserDisplayName(user);
   const userEmail = user?.email || "";
   const [submittingLithophane, setSubmittingLithophane] = useState(false);
+  const [lithophaneProgress, setLithophaneProgress] = useState<ProgressState>({
+    open: false,
+    progress: 0,
+    status: "",
+  });
 
   const dataUrlToBlob = (dataUrl: string) => {
     const [meta, base64] = dataUrl.split(",");
@@ -230,6 +469,7 @@ const LithophaneOrderSection = () => {
     }
 
     setSubmittingLithophane(true);
+    setProgressInstant(setLithophaneProgress, 6, "Preparing lithophane order...");
 
     const uploadedPaths: string[] = [];
     let orderCreated = false;
@@ -247,6 +487,8 @@ const LithophaneOrderSection = () => {
       const processedPath = `${user.id}/lithophane/${timestamp}-${safeBaseName}-processed.png`;
       const previewPath = `${user.id}/lithophane/${timestamp}-${safeBaseName}-preview.png`;
 
+      await animateProgress(setLithophaneProgress, 24, "Uploading source image...", 320);
+
       const { error: sourceUploadError } = await supabase.storage
         .from(CUSTOM_ORDER_FILES_BUCKET)
         .upload(sourcePath, dataUrlToBlob(payload.sourceDataUrl), {
@@ -259,6 +501,8 @@ const LithophaneOrderSection = () => {
       sourceImageUrl = supabase.storage.from(CUSTOM_ORDER_FILES_BUCKET).getPublicUrl(sourcePath).data.publicUrl;
 
       if (payload.processedDataUrl) {
+        await animateProgress(setLithophaneProgress, 48, "Uploading processed image...", 320);
+
         const { error: processedUploadError } = await supabase.storage
           .from(CUSTOM_ORDER_FILES_BUCKET)
           .upload(processedPath, dataUrlToBlob(payload.processedDataUrl), {
@@ -272,6 +516,8 @@ const LithophaneOrderSection = () => {
       }
 
       if (payload.previewScreenshotDataUrl) {
+        await animateProgress(setLithophaneProgress, 68, "Preparing preview...", 320);
+
         const { error: previewUploadError } = await supabase.storage
           .from(CUSTOM_ORDER_FILES_BUCKET)
           .upload(previewPath, dataUrlToBlob(payload.previewScreenshotDataUrl), {
@@ -304,6 +550,8 @@ const LithophaneOrderSection = () => {
         JSON.stringify(payload.designJson, null, 2),
       ].join("\n");
 
+      await animateProgress(setLithophaneProgress, 86, "Creating order...", 300);
+
       const { error } = await supabase.from("custom_orders" as any).insert({
         user_id: user.id,
         name: userName || "Account User",
@@ -325,6 +573,8 @@ const LithophaneOrderSection = () => {
       if (error) throw error;
       orderCreated = true;
 
+      await animateProgress(setLithophaneProgress, 100, "Lithophane order submitted", 280);
+
       toast({
         title: "Lithophane submitted!",
         description: "Your lithophane design was added to custom orders successfully.",
@@ -341,11 +591,14 @@ const LithophaneOrderSection = () => {
       });
     } finally {
       setSubmittingLithophane(false);
+      await resetProgress(setLithophaneProgress);
     }
   };
 
   return (
     <div className="space-y-6">
+      <ProcessingDialog {...lithophaneProgress} title="Submitting lithophane" />
+
       {!user && (
         <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
           Please{" "}
@@ -363,33 +616,46 @@ const LithophaneOrderSection = () => {
         </div>
       )}
 
-      <Lithophane
-        onSubmitDesign={handleLithophaneSubmit}
-        submitLabel={submittingLithophane ? "Submitting..." : "Order Lithophane"}
-      />
+      <div className={submittingLithophane ? "pointer-events-none opacity-80" : ""}>
+        <Lithophane
+          onSubmitDesign={handleLithophaneSubmit}
+          submitLabel={submittingLithophane ? "Submitting..." : "Order Lithophane"}
+        />
+      </div>
 
       <ReviewSection toolType="lithophane" title="Lithophane Reviews" />
     </div>
   );
 };
 
-const ICON_MAP: Record<string, any> = {
-  Gamepad2, Swords, Monitor, Heart, Home, Baby, Dog, Palette, Music, Trophy,
-  Flower2, Wrench, Gift, Star, Camera, Bike, Car, Book, Coffee, Zap, Tag,
-};
+const GIFT_CATEGORIES = [
+  { value: "gamer", label: "Gamer", icon: Gamepad2 },
+  { value: "fantasy", label: "Fantasy Fan", icon: Swords },
+  { value: "desk", label: "Desk Decoration", icon: Monitor },
+  { value: "personalized", label: "Personalized Gift", icon: Gift },
+  { value: "home", label: "Home & Living", icon: Home },
+  { value: "kids", label: "Kids & Baby", icon: Baby },
+  { value: "pets", label: "Pet Lovers", icon: Dog },
+  { value: "art", label: "Art & Creative", icon: Palette },
+  { value: "music", label: "Music Fan", icon: Music },
+  { value: "sports", label: "Sports & Trophy", icon: Trophy },
+  { value: "garden", label: "Garden & Nature", icon: Flower2 },
+  { value: "tools", label: "Tools & Gadgets", icon: Wrench },
+];
 
 const GiftFinder = () => {
   const [selected, setSelected] = useState<string | null>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [tagsLoading, setTagsLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from("categories").select("id, name, slug, icon_name").order("sort_order").then(({ data }) => {
-      setCategories(data ?? []);
-      setTagsLoading(false);
-    });
+    supabase
+      .from("categories")
+      .select("id, name, slug")
+      .then(({ data }) => {
+        setCategories(data ?? []);
+      });
   }, []);
 
   useEffect(() => {
@@ -417,33 +683,31 @@ const GiftFinder = () => {
 
   return (
     <div className="space-y-6">
-      <p className="text-muted-foreground">Who are you shopping for?</p>
+      <p className="text-sm text-muted-foreground">Pick a vibe.</p>
 
-      {tagsLoading ? (
-        <div className="py-8 text-center text-muted-foreground">Loading tags...</div>
-      ) : categories.length === 0 ? (
-        <div className="py-8 text-center text-muted-foreground">No gift finder tags configured yet.</div>
-      ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {categories.map((cat) => {
-            const IconComp = ICON_MAP[cat.icon_name] || Tag;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setSelected(cat.slug)}
-                className={`flex items-center gap-3 rounded-lg border p-4 text-left transition-all ${
-                  selected === cat.slug
-                    ? "border-primary bg-primary/10 text-foreground"
-                    : "border-border text-muted-foreground hover:border-primary/50"
-                }`}
-              >
-                <IconComp className="h-6 w-6 text-primary" />
-                <span className="font-display text-sm uppercase tracking-wider">{cat.name}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {GIFT_CATEGORIES.map(({ value, label, icon: Icon }, index) => (
+          <motion.button
+            key={value}
+            type="button"
+            onClick={() => setSelected(value)}
+            initial={{ opacity: 0, y: 8 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: index * 0.03 }}
+            whileHover={{ y: -3, scale: 1.01 }}
+            whileTap={{ scale: 0.98 }}
+            className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all ${
+              selected === value
+                ? "border-primary bg-primary/10 text-foreground shadow-[0_0_24px_rgba(249,115,22,0.12)]"
+                : "border-border text-muted-foreground hover:border-primary/50"
+            }`}
+          >
+            <Icon className="h-6 w-6 text-primary" />
+            <span className="font-display text-sm uppercase tracking-wider">{label}</span>
+          </motion.button>
+        ))}
+      </div>
 
       {selected && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -455,10 +719,14 @@ const GiftFinder = () => {
                 <Link
                   key={p.id}
                   to={`/products/${p.slug}`}
-                  className="group overflow-hidden rounded-lg border border-border transition-all hover:-translate-y-1 hover:border-primary"
+                  className="group overflow-hidden rounded-xl border border-border transition-all hover:-translate-y-1 hover:border-primary"
                 >
                   {p.images?.[0] && (
-                    <img src={p.images[0]} alt={p.name} className="aspect-square w-full object-cover" />
+                    <img
+                      src={p.images[0]}
+                      alt={p.name}
+                      className="aspect-square w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
                   )}
                   <div className="p-3">
                     <p className="truncate text-sm font-medium text-foreground group-hover:text-primary">{p.name}</p>
@@ -469,7 +737,7 @@ const GiftFinder = () => {
             </div>
           ) : (
             <div className="py-8 text-center">
-              <p className="mb-3 text-muted-foreground">No specific matches yet — request a custom 3D print instead.</p>
+              <p className="mb-3 text-muted-foreground">No direct match yet — use the custom print tab.</p>
             </div>
           )}
         </motion.div>
@@ -498,7 +766,28 @@ const CustomPrintOrder = () => {
   const [referenceImage, setReferenceImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [referenceImagePreviewUrl, setReferenceImagePreviewUrl] = useState<string | null>(null);
+
   const [submitting, setSubmitting] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+
+  const [modelProgress, setModelProgress] = useState<ProgressState>({
+    open: false,
+    progress: 0,
+    status: "",
+  });
+  const [referenceProgress, setReferenceProgress] = useState<ProgressState>({
+    open: false,
+    progress: 0,
+    status: "",
+  });
+  const [submitProgress, setSubmitProgress] = useState<ProgressState>({
+    open: false,
+    progress: 0,
+    status: "",
+  });
+
+  const [modelDragActive, setModelDragActive] = useState(false);
+  const [referenceDragActive, setReferenceDragActive] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -508,11 +797,10 @@ const CustomPrintOrder = () => {
   }, [previewUrl, referenceImagePreviewUrl]);
 
   const selectedColorHex = COLORS.find((c) => c.value === form.color)?.hex || "#f5f5f5";
+  const uploadBusy = modelProgress.open || referenceProgress.open;
+  const submitDisabled = submitting || uploadBusy || (!file && !referenceImage) || !user;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (!selectedFile) return;
-
+  const processModelFile = async (selectedFile: File) => {
     const ext = selectedFile.name.split(".").pop()?.toLowerCase();
     if (!["stl", "obj", "3mf"].includes(ext ?? "")) {
       toast({
@@ -523,14 +811,21 @@ const CustomPrintOrder = () => {
       return;
     }
 
+    setProgressInstant(setModelProgress, 8, "Reading 3D model...");
+    await animateProgress(setModelProgress, 34, "Checking file...", 280);
+    await animateProgress(setModelProgress, 72, "Preparing 3D preview...", 420);
+
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+
+    const nextPreviewUrl = URL.createObjectURL(selectedFile);
     setFile(selectedFile);
-    setPreviewUrl(URL.createObjectURL(selectedFile));
+    setPreviewUrl(nextPreviewUrl);
+
+    await animateProgress(setModelProgress, 100, "Model ready", 220);
+    await resetProgress(setModelProgress);
   };
 
-  const handleReferenceImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedImage = e.target.files?.[0];
-    if (!selectedImage) return;
-
+  const processReferenceImage = async (selectedImage: File) => {
     if (!selectedImage.type.startsWith("image/")) {
       toast({
         title: "Invalid image",
@@ -540,11 +835,52 @@ const CustomPrintOrder = () => {
       return;
     }
 
+    setProgressInstant(setReferenceProgress, 10, "Reading image...");
+    await animateProgress(setReferenceProgress, 38, "Optimizing preview...", 280);
+    await animateProgress(setReferenceProgress, 80, "Preparing image...", 360);
+
+    if (referenceImagePreviewUrl) URL.revokeObjectURL(referenceImagePreviewUrl);
+
+    const nextPreviewUrl = URL.createObjectURL(selectedImage);
     setReferenceImage(selectedImage);
-    setReferenceImagePreviewUrl(URL.createObjectURL(selectedImage));
+    setReferenceImagePreviewUrl(nextPreviewUrl);
+
+    await animateProgress(setReferenceProgress, 100, "Image ready", 220);
+    await resetProgress(setReferenceProgress);
   };
 
-  const handleSubmit = async () => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+    await processModelFile(selectedFile);
+    e.target.value = "";
+  };
+
+  const handleReferenceImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedImage = e.target.files?.[0];
+    if (!selectedImage) return;
+    await processReferenceImage(selectedImage);
+    e.target.value = "";
+  };
+
+  const handleDrop = async (event: React.DragEvent<HTMLDivElement>, type: "model" | "reference") => {
+    event.preventDefault();
+
+    if (type === "model") setModelDragActive(false);
+    if (type === "reference") setReferenceDragActive(false);
+
+    const droppedFile = event.dataTransfer.files?.[0];
+    if (!droppedFile) return;
+
+    if (type === "model") {
+      await processModelFile(droppedFile);
+      return;
+    }
+
+    await processReferenceImage(droppedFile);
+  };
+
+  const openPaymentDialog = () => {
     if (!user) {
       toast({
         title: "Please sign in",
@@ -572,7 +908,13 @@ const CustomPrintOrder = () => {
       return;
     }
 
+    setPaymentDialogOpen(true);
+  };
+
+  const handleSubmit = async () => {
+    setPaymentDialogOpen(false);
     setSubmitting(true);
+    setProgressInstant(setSubmitProgress, 6, "Preparing custom order...");
 
     const uploadedPaths: string[] = [];
     let orderCreated = false;
@@ -584,7 +926,9 @@ const CustomPrintOrder = () => {
 
       if (file) {
         const ext = file.name.split(".").pop();
-        const modelPath = `${user.id}/${Date.now()}-model.${ext}`;
+        const modelPath = `${user!.id}/${Date.now()}-model.${ext}`;
+
+        await animateProgress(setSubmitProgress, 24, "Uploading 3D model...", 320);
 
         const { error: uploadError } = await supabase.storage.from(CUSTOM_ORDER_FILES_BUCKET).upload(modelPath, file);
         if (uploadError) throw uploadError;
@@ -597,7 +941,9 @@ const CustomPrintOrder = () => {
 
       if (referenceImage) {
         const imageExt = referenceImage.name.split(".").pop();
-        const imagePath = `${user.id}/${Date.now()}-reference.${imageExt}`;
+        const imagePath = `${user!.id}/${Date.now()}-reference.${imageExt}`;
+
+        await animateProgress(setSubmitProgress, 52, "Uploading reference image...", 320);
 
         const { error: imageUploadError } = await supabase.storage
           .from(CUSTOM_ORDER_FILES_BUCKET)
@@ -624,10 +970,12 @@ const CustomPrintOrder = () => {
         ...(referenceImageUrl ? [`Reference Image URL: ${referenceImageUrl}`] : []),
       ].join("\n");
 
+      await animateProgress(setSubmitProgress, 80, "Creating custom order...", 280);
+
       const { data: insertedOrder, error } = await supabase
         .from("custom_orders")
         .insert({
-          user_id: user.id,
+          user_id: user!.id,
           name: userName || "Account User",
           email: userEmail,
           description: fullDescription,
@@ -652,6 +1000,7 @@ const CustomPrintOrder = () => {
       if (!insertedOrder?.id) throw new Error("Order was created but ID was not returned");
       orderCreated = true;
 
+      await animateProgress(setSubmitProgress, 94, "Redirecting to payment...", 260);
       await startRequestFeeCheckout(insertedOrder.id);
     } catch (error: any) {
       if (!orderCreated) {
@@ -665,11 +1014,42 @@ const CustomPrintOrder = () => {
       });
     } finally {
       setSubmitting(false);
+      await resetProgress(setSubmitProgress);
     }
   };
 
   return (
     <div className="space-y-6">
+      <ProcessingDialog {...submitProgress} title="Submitting custom order" />
+
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-primary" />
+              Request fee required
+            </DialogTitle>
+            <DialogDescription>
+              A {REQUEST_FEE_DKK} kr custom request fee is charged before the order is submitted.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
+            After successful payment, your custom request is created and sent to the admin team for review. This amount
+            will later be <span className="font-semibold">deducted from the final quoted price</span>.
+          </div>
+
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button type="button" variant="outline" onClick={() => setPaymentDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleSubmit} disabled={submitting || uploadBusy}>
+              {submitting ? "Preparing..." : "Continue to payment"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {!user && (
         <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
           Please{" "}
@@ -691,14 +1071,29 @@ const CustomPrintOrder = () => {
         <div className="space-y-4">
           <div>
             <Label>Upload 3D Model</Label>
+
             <div
-              className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-8 transition-colors hover:border-primary"
-              onClick={() => document.getElementById("custom-model-upload")?.click()}
+              className="relative"
+              onDragOver={(e) => {
+                e.preventDefault();
+                setModelDragActive(true);
+              }}
+              onDragLeave={() => setModelDragActive(false)}
+              onDrop={(e) => void handleDrop(e, "model")}
             >
-              <Upload className="mb-2 h-8 w-8 text-muted-foreground" />
-              <p className="text-sm font-medium text-foreground">{file ? file.name : "Click to upload"}</p>
-              <p className="text-xs text-muted-foreground">STL, OBJ, 3MF files supported</p>
+              <UploadDropzone
+                label={file ? file.name : "Click to upload"}
+                sublabel="STL, OBJ, 3MF files supported"
+                icon={<Upload className="h-8 w-8 text-muted-foreground" />}
+                dragActive={modelDragActive}
+                onClick={() => document.getElementById("custom-model-upload")?.click()}
+              />
+
+              {modelProgress.open && (
+                <UploadProgressOverlay progress={modelProgress.progress} status={modelProgress.status} />
+              )}
             </div>
+
             <input
               id="custom-model-upload"
               type="file"
@@ -710,16 +1105,29 @@ const CustomPrintOrder = () => {
 
           <div>
             <Label>Add Reference Picture</Label>
+
             <div
-              className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-6 transition-colors hover:border-primary"
-              onClick={() => document.getElementById("custom-reference-image-upload")?.click()}
+              className="relative"
+              onDragOver={(e) => {
+                e.preventDefault();
+                setReferenceDragActive(true);
+              }}
+              onDragLeave={() => setReferenceDragActive(false)}
+              onDrop={(e) => void handleDrop(e, "reference")}
             >
-              <Image className="mb-2 h-8 w-8 text-muted-foreground" />
-              <p className="text-sm font-medium text-foreground">
-                {referenceImage ? referenceImage.name : "Click to upload reference image"}
-              </p>
-              <p className="text-xs text-muted-foreground">PNG, JPG, JPEG, WEBP supported</p>
+              <UploadDropzone
+                label={referenceImage ? referenceImage.name : "Click to upload reference image"}
+                sublabel="PNG, JPG, JPEG, WEBP supported"
+                icon={<Image className="h-8 w-8 text-muted-foreground" />}
+                dragActive={referenceDragActive}
+                onClick={() => document.getElementById("custom-reference-image-upload")?.click()}
+              />
+
+              {referenceProgress.open && (
+                <UploadProgressOverlay progress={referenceProgress.progress} status={referenceProgress.status} />
+              )}
             </div>
+
             <input
               id="custom-reference-image-upload"
               type="file"
@@ -728,16 +1136,16 @@ const CustomPrintOrder = () => {
               className="hidden"
             />
 
-            {referenceImagePreviewUrl && (
-              <div className="mt-3 overflow-hidden rounded-xl border border-border bg-card">
-                <img
-                  src={referenceImagePreviewUrl}
-                  alt="Reference preview"
-                  className="h-72 w-full object-contain bg-muted/20"
-                />
-              </div>
+            {referenceImage && (
+              <FileStatusCard
+                fileName={referenceImage.name}
+                previewUrl={referenceImagePreviewUrl}
+                alt="Reference preview"
+              />
             )}
           </div>
+
+          {file && !previewUrl && <FileStatusCard fileName={file.name} alt="3D model file" />}
 
           {previewUrl && (
             <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}>
@@ -749,8 +1157,11 @@ const CustomPrintOrder = () => {
                   selectedColor={selectedColorHex}
                 />
               </div>
+
+              {file && <FileStatusCard fileName={file.name} alt="3D model preview" />}
+
               <p className="mt-2 text-xs text-muted-foreground">
-                The colors may vary from real 3D printed colors and light sources.
+                Preview colors may differ slightly from the finished printed material.
               </p>
             </motion.div>
           )}
@@ -777,14 +1188,19 @@ const CustomPrintOrder = () => {
           <div>
             <Label>Color</Label>
             <div className="mt-2 flex flex-wrap gap-2">
-              {COLORS.map((color) => (
-                <button
+              {COLORS.map((color, index) => (
+                <motion.button
                   key={color.value}
                   type="button"
                   onClick={() => setForm({ ...form, color: color.value })}
-                  className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-all ${
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.02 }}
+                  whileHover={{ y: -2, scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-all ${
                     form.color === color.value
-                      ? "border-primary bg-primary/10 text-foreground"
+                      ? "border-primary bg-primary/10 text-foreground shadow-[0_0_20px_rgba(249,115,22,0.14)]"
                       : "border-border text-muted-foreground hover:border-primary"
                   }`}
                 >
@@ -793,7 +1209,7 @@ const CustomPrintOrder = () => {
                     style={{ backgroundColor: color.hex }}
                   />
                   {color.label}
-                </button>
+                </motion.button>
               ))}
             </div>
           </div>
@@ -805,12 +1221,16 @@ const CustomPrintOrder = () => {
               onValueChange={(value) => setForm({ ...form, quality: value })}
               className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2"
             >
-              {QUALITIES.map((quality) => (
-                <label
+              {QUALITIES.map((quality, index) => (
+                <motion.label
                   key={quality.value}
-                  className={`flex cursor-pointer items-center gap-2 rounded-md border p-3 transition-all ${
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                  whileHover={{ y: -2 }}
+                  className={`flex cursor-pointer items-center gap-2 rounded-xl border p-3 transition-all ${
                     form.quality === quality.value
-                      ? "border-primary bg-primary/10"
+                      ? "border-primary bg-primary/10 shadow-[0_0_22px_rgba(249,115,22,0.12)]"
                       : "border-border hover:border-primary"
                   }`}
                 >
@@ -819,7 +1239,7 @@ const CustomPrintOrder = () => {
                     <p className="text-sm font-medium text-foreground">{quality.label}</p>
                     <p className="text-xs text-muted-foreground">{quality.desc}</p>
                   </div>
-                </label>
+                </motion.label>
               ))}
             </RadioGroup>
           </div>
@@ -863,23 +1283,12 @@ const CustomPrintOrder = () => {
           </div>
 
           <Button
-            onClick={handleSubmit}
-            disabled={submitting || (!file && !referenceImage) || !user}
+            onClick={openPaymentDialog}
+            disabled={submitDisabled}
             className="w-full font-display uppercase tracking-wider"
           >
-            {submitting ? "Preparing Payment..." : `Pay ${REQUEST_FEE_DKK} kr & Submit Custom Order`}
+            {submitting ? "Preparing..." : "Submit custom order"}
           </Button>
-
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
-            <div className="mb-2 flex items-center gap-2 font-semibold">
-              <CreditCard className="h-4 w-4" />
-              Request fee required before submission
-            </div>
-            A <span className="font-semibold">{REQUEST_FEE_DKK} kr custom request fee</span> is charged before the order
-            is submitted. After successful payment, your custom request is created and sent to the admin team for
-            review. This amount will later be{" "}
-            <span className="font-semibold">deducted from the final quoted price</span>.
-          </div>
         </div>
       </div>
 
@@ -921,10 +1330,7 @@ const CreateYourOwn = () => {
               Create Your <span className="text-primary">Own</span>
             </h1>
 
-            <p className="mb-8 max-w-2xl text-muted-foreground">
-              Use our tools to create custom 3D printed products. Upload a photo for a lithophane, explore gift ideas,
-              or submit a custom 3D print order directly from this page.
-            </p>
+            <p className="mb-8 max-w-2xl text-muted-foreground">Upload, customize, submit.</p>
           </motion.div>
 
           <Tabs defaultValue="custom-print" className="space-y-6">

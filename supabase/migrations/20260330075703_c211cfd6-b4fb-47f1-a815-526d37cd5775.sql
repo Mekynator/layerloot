@@ -1,0 +1,1 @@
+ALTER TABLE public.categories ADD COLUMN icon_name text DEFAULT NULL;

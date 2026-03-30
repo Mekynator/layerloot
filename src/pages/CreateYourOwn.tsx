@@ -123,7 +123,6 @@ type GiftFinderTag = {
   name: string;
   slug: string;
   icon_key: keyof typeof GIFT_FINDER_ICON_MAP | null;
-  description?: string | null;
   is_active?: boolean;
 };
 
@@ -683,7 +682,7 @@ const GiftFinder = () => {
     const fetchTags = async () => {
       const { data, error } = await supabase
         .from("gift_finder_tags")
-        .select("id, name, slug, icon_key, description, is_active")
+        .select("id, name, slug, icon_key, is_active")
         .eq("is_active", true)
         .order("sort_order", { ascending: true });
 
@@ -810,9 +809,6 @@ const GiftFinder = () => {
               <Icon className="h-6 w-6 text-primary" />
               <div className="min-w-0">
                 <span className="block font-display text-sm uppercase tracking-wider">{tag.name}</span>
-                {tag.description ? (
-                  <span className="mt-1 block truncate text-[11px] text-muted-foreground">{tag.description}</span>
-                ) : null}
               </div>
             </motion.button>
           );

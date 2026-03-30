@@ -33,6 +33,115 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { useFeaturedProducts } from "@/hooks/use-storefront";
 import { ProductGridSkeleton } from "@/components/shared/loading-states";
 import { fadeUp } from "@/lib/motion";
+import { cn } from "@/lib/utils";
+
+type ActionType = "none" | "internal_link" | "external_link";
+
+type ImageItem = {
+  image: string;
+  title?: string;
+  subtitle?: string;
+  actionType?: ActionType;
+  actionTarget?: string;
+  openInNewTab?: boolean;
+  visible?: boolean;
+  colSpan?: number;
+  rowSpan?: number;
+  order?: number;
+  objectFit?: string;
+};
+
+type Props = {
+  content?: {
+    heading?: string;
+    columns?: number;
+    items?: ImageItem[];
+  };
+  className?: string;
+};
+
+const ImageCollectionBlock = ({ content, className }: Props) => {
+  const items = (content?.items ?? [])
+    .filter((item) => item?.visible !== false && item?.image)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+  const columns = Math.min(Math.max(content?.columns ?? 3, 1), 4);
+
+  const renderImage = (item: ImageItem) => (
+    <>
+      <img
+        src={item.image}
+        alt={item.title || "Gallery image"}
+        className="h-full w-full rounded-2xl transition-transform duration-300 group-hover:scale-[1.02]"
+        style={{ objectFit: (item.objectFit as any) || "cover" }}
+      />
+      {(item.title || item.subtitle) && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-2xl bg-gradient-to-t from-black/70 to-transparent p-4 text-white">
+          {item.title && <p className="text-sm font-semibold uppercase tracking-wide">{item.title}</p>}
+          {item.subtitle && <p className="mt-1 text-xs text-white/80">{item.subtitle}</p>}
+        </div>
+      )}
+    </>
+  );
+
+  const renderCard = (item: ImageItem, index: number) => {
+    const card = (
+      <div
+        className="group relative overflow-hidden rounded-2xl border border-border/60 bg-muted/20"
+        style={{
+          gridColumn: `span ${Math.min(Math.max(item.colSpan ?? 1, 1), columns)}`,
+          gridRow: `span ${Math.min(Math.max(item.rowSpan ?? 1, 1), 4)}`,
+          minHeight: 220,
+        }}
+      >
+        {renderImage(item)}
+      </div>
+    );
+
+    if (item.actionType === "internal_link" && item.actionTarget) {
+      const href = item.actionTarget.startsWith("/") ? item.actionTarget : `/${item.actionTarget}`;
+      return (
+        <Link key={`${item.image}-${index}`} to={href} className="block">
+          {card}
+        </Link>
+      );
+    }
+
+    if (item.actionType === "external_link" && item.actionTarget) {
+      return (
+        <a
+          key={`${item.image}-${index}`}
+          href={item.actionTarget}
+          target={item.openInNewTab ? "_blank" : "_self"}
+          rel={item.openInNewTab ? "noreferrer noopener" : undefined}
+          className="block"
+        >
+          {card}
+        </a>
+      );
+    }
+
+    return <div key={`${item.image}-${index}`}>{card}</div>;
+  };
+
+  if (items.length === 0) return null;
+
+  return (
+    <section className={cn("mx-auto w-full max-w-7xl px-4 py-10 md:px-6", className)}>
+      {content?.heading && (
+        <h2 className="mb-6 text-center text-3xl font-black uppercase tracking-wide">{content.heading}</h2>
+      )}
+      <div
+        className="grid gap-4"
+        style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, gridAutoRows: "220px" }}
+      >
+        {items.map((item, index) => renderCard(item, index))}
+      </div>
+    </section>
+  );
+};
+
+export default ImageCollectionBlock;
 
 type InstagramMediaItem = {
   id: string;

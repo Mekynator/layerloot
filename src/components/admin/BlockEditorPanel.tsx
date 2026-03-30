@@ -1,15 +1,13 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Trash2, Plus, ArrowUp, ArrowDown, Search } from "lucide-react";
+import { Trash2, Plus, ArrowUp, ArrowDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { SiteBlock } from "./BlockRenderer";
@@ -23,1659 +21,803 @@ interface BlockEditorPanelProps {
 }
 
 type ActionType = "none" | "internal_link" | "external_link";
-
-type PageOption = {
-  id: string;
-  name: string;
-  title: string | null;
-  slug: string;
-  full_path: string;
-  page_type: string;
-  parent_id: string | null;
-};
-
-type LinkablePageOption = {
-  id: string;
-  label: string;
-  route: string;
-  slug: string;
-  pageType: "main" | "child";
-  parentLabel?: string;
-};
+type RepeaterItem = Record<string, any>;
 
 const ICON_OPTIONS = [
-  "ShoppingBag",
-  "Palette",
-  "Upload",
-  "Printer",
-  "Package",
   "Truck",
   "Shield",
   "Star",
-  "Mail",
-  "ExternalLink",
-  "Box",
-  "Sparkles",
-  "CheckCircle2",
+  "ShoppingBag",
+  "Palette",
+  "Upload",
+  "Package",
   "HelpCircle",
-  "Gem",
-  "Wrench",
-  "Home",
   "Gift",
+  "Heart",
+  "Sparkles",
   "BadgeCheck",
-  "Instagram",
 ];
 
-const BLOCKS_WITH_BUTTONS = new Set(["hero", "cta", "button", "banner", "featured_products"]);
-const BLOCKS_WITH_REPEATERS = new Set(["entry_cards", "how_it_works", "faq", "trust_badges"]);
-const DEFAULT_PLACEMENT = "__default__";
-
-const prettyPageLabel = (page: string) =>
-  page
-    .replace(/^global_/, "global ")
-    .replace(/-/g, " ")
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (m) => m.toUpperCase());
-
-const routeFromPage = (page: string) => {
-  if (page === "home") return "/";
-  if (page.startsWith("global_")) return "";
-  return `/${page}`;
+const DEFAULT_ITEMS: Record<string, RepeaterItem[]> = {
+  faq: [
+    { question: "What materials do you offer?", answer: "We offer PLA, PETG, resin, and more.", visible: true },
+    { question: "How long does printing take?", answer: "Most orders are printed within 2-5 days.", visible: true },
+  ],
+  trust_badges: [
+    { icon: "Truck", title: "Free Shipping", desc: "On orders over 500 kr", visible: true },
+    { icon: "Shield", title: "Secure Checkout", desc: "Protected checkout", visible: true },
+    { icon: "Star", title: "Rewards", desc: "Earn points on purchases", visible: true },
+  ],
+  entry_cards: [
+    {
+      icon: "ShoppingBag",
+      title: "Shop Products",
+      desc: "Explore ready-made items.",
+      cta: "Browse",
+      actionType: "internal_link",
+      actionTarget: "/products",
+      openInNewTab: false,
+      visible: true,
+    },
+  ],
+  image: [
+    {
+      image: "",
+      title: "Image 1",
+      subtitle: "",
+      actionType: "none",
+      actionTarget: "",
+      openInNewTab: false,
+      visible: true,
+      colSpan: 1,
+      rowSpan: 1,
+      order: 1,
+      objectFit: "cover",
+    },
+  ],
+  carousel: [
+    {
+      image: "",
+      title: "Slide 1",
+      subtitle: "",
+      actionType: "none",
+      actionTarget: "",
+      openInNewTab: false,
+      visible: true,
+    },
+  ],
 };
 
-const normalizePath = (value?: string | null) => {
-  if (!value) return "/";
-  if (value === "/") return "/";
-  return `/${value.replace(/^\/+|\/+$/g, "")}`;
+const getRepeaterKey = (blockType?: string | null) => {
+  switch (blockType) {
+    case "faq":
+      return "items";
+    case "trust_badges":
+      return "badges";
+    case "entry_cards":
+      return "cards";
+    case "image":
+      return "items";
+    case "carousel":
+      return "slides";
+    default:
+      return null;
+  }
 };
 
-const toActionType = (value: unknown): ActionType => {
-  if (value === "internal_link" || value === "external_link") return value;
-  return "none";
-};
-
-const PageTargetPicker = ({
-  value,
-  options,
-  onSelect,
-  placeholder = "Search page or child page",
-}: {
-  value: string;
-  options: LinkablePageOption[];
-  onSelect: (value: string) => void;
-  placeholder?: string;
-}) => {
-  const [search, setSearch] = useState("");
-
-  const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return options;
-    return options.filter((page) =>
-      `${page.label} ${page.slug} ${page.route} ${page.parentLabel || ""}`.toLowerCase().includes(term),
-    );
-  }, [options, search]);
-
-  const active = options.find((page) => page.route === normalizePath(value));
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-2 rounded-md border border-border p-3"
-    >
-      <div>
-        <Label>Search Internal Page</Label>
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={placeholder}
-            className="pl-8"
-          />
-        </div>
-      </div>
-
-      <div>
-        <Label>Choose Page</Label>
-        <div className="max-h-44 space-y-1 overflow-y-auto rounded-md border border-border bg-background p-2">
-          {filtered.length === 0 ? (
-            <p className="px-1 py-2 text-sm text-muted-foreground">No pages found.</p>
-          ) : (
-            filtered.map((page) => {
-              const selected = normalizePath(value) === page.route;
-              return (
-                <button
-                  key={page.id}
-                  type="button"
-                  onClick={() => onSelect(page.route)}
-                  className={`flex w-full items-center justify-between rounded-md px-2 py-2 text-left transition-colors ${
-                    selected ? "bg-primary/10 text-foreground" : "hover:bg-muted"
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">{page.label}</p>
-                    <p className="truncate text-xs text-muted-foreground">{page.route}</p>
-                  </div>
-                  <Badge variant="secondary" className="ml-2 shrink-0 text-[10px] uppercase">
-                    {page.pageType}
-                  </Badge>
-                </button>
-              );
-            })
-          )}
-        </div>
-      </div>
-
-      {active && (
-        <p className="text-xs text-muted-foreground">
-          Selected: <span className="font-medium text-foreground">{active.label}</span> → {active.route}
-        </p>
-      )}
-    </motion.div>
-  );
+const normalizeContent = (block: SiteBlock | null) => {
+  if (!block) return {};
+  const base = typeof block.content === "object" && block.content ? { ...(block.content as Record<string, any>) } : {};
+  const repeaterKey = getRepeaterKey(block.block_type);
+  if (!repeaterKey) return base;
+  const existing = base[repeaterKey];
+  if (Array.isArray(existing) && existing.length > 0) return base;
+  return { ...base, [repeaterKey]: DEFAULT_ITEMS[block.block_type] ?? [] };
 };
 
 const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPanelProps) => {
-  const [form, setForm] = useState<any>({
-    title: "",
-    page: "home",
-    block_type: "",
-    is_active: true,
-    content: {},
-  });
-  const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [sitePages, setSitePages] = useState<PageOption[]>([]);
   const { toast } = useToast();
-
-  useEffect(() => {
-    const loadSitePages = async () => {
-      const { data, error } = await supabase
-        .from("site_pages")
-        .select("id,name,title,slug,full_path,page_type,parent_id")
-        .eq("is_published", true)
-        .order("sort_order", { ascending: true });
-
-      if (!error) {
-        setSitePages((data as PageOption[]) ?? []);
-      }
-    };
-
-    void loadSitePages();
-  }, []);
+  const [title, setTitle] = useState("");
+  const [isActive, setIsActive] = useState(true);
+  const [content, setContent] = useState<Record<string, any>>({});
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!block) return;
-
-    const content = { ...(block.content || {}) };
-
-    if (!Array.isArray(content.buttons) && BLOCKS_WITH_BUTTONS.has(block.block_type)) {
-      const fallbackButtons: any[] = [];
-      if (content.button_text) {
-        fallbackButtons.push({
-          text: content.button_text,
-          icon: content.button_icon || "",
-          iconPosition: "left",
-          variant:
-            content.button_variant ||
-            (content.style === "outline" ? "outline" : content.style === "ghost" ? "ghost" : "default"),
-          actionType: /^https?:\/\//i.test(content.button_link || "") ? "external_link" : "internal_link",
-          actionTarget: content.button_link || "",
-          openInNewTab: false,
-          visible: true,
-        });
-      }
-
-      if (content.secondary_button_text) {
-        fallbackButtons.push({
-          text: content.secondary_button_text,
-          icon: "",
-          iconPosition: "left",
-          variant: "outline",
-          actionType: /^https?:\/\//i.test(content.secondary_button_link || "") ? "external_link" : "internal_link",
-          actionTarget: content.secondary_button_link || "",
-          openInNewTab: false,
-          visible: true,
-        });
-      }
-
-      if (fallbackButtons.length > 0) {
-        content.buttons = fallbackButtons;
-      }
-    }
-
-    setForm({
-      title: block.title ?? "",
-      page: block.page ?? "home",
-      block_type: block.block_type,
-      is_active: block.is_active ?? true,
-      content,
-    });
+    setTitle(block.title || "");
+    setIsActive(block.is_active ?? true);
+    setContent(normalizeContent(block));
   }, [block]);
 
-  const availablePages = useMemo(() => {
-    const extras = [
-      "gallery",
-      "create-your-own",
-      "submit-design",
-      "global_header_top",
-      "global_header_bottom",
-      "global_before_main",
-      "global_after_main",
-      "global_footer_top",
-      "global_footer_bottom",
-    ];
+  const repeaterKey = useMemo(() => getRepeaterKey(block?.block_type), [block?.block_type]);
+  const repeaterItems = useMemo(() => {
+    if (!repeaterKey) return [];
+    return Array.isArray(content[repeaterKey]) ? content[repeaterKey] : [];
+  }, [content, repeaterKey]);
 
-    return Array.from(new Set([...pages, ...extras]));
-  }, [pages]);
-
-  const placementOptions = useMemo(() => {
-    const page = form.page || block?.page || "home";
-
-    switch (page) {
-      case "products":
-        return [
-          { value: DEFAULT_PLACEMENT, label: "Before products" },
-          { value: "after_products", label: "After products" },
-        ];
-      case "contact":
-        return [
-          { value: DEFAULT_PLACEMENT, label: "Before contact section" },
-          { value: "after_contact", label: "After contact section" },
-        ];
-      case "gallery":
-        return [
-          { value: DEFAULT_PLACEMENT, label: "Before gallery" },
-          { value: "after_gallery", label: "After gallery" },
-        ];
-      case "create-your-own":
-        return [
-          { value: DEFAULT_PLACEMENT, label: "Before tools section" },
-          { value: "after_create_your_own", label: "After tools section" },
-        ];
-      case "submit-design":
-        return [
-          { value: DEFAULT_PLACEMENT, label: "Before submit form" },
-          { value: "after_submit_design", label: "After submit form" },
-        ];
-      default:
-        return [{ value: DEFAULT_PLACEMENT, label: "Default position" }];
-    }
-  }, [form.page, block?.page]);
-
-  const fallbackButtonTargetPages = availablePages.filter((p) => !p.startsWith("global_"));
-
-  const internalPageOptions = useMemo<LinkablePageOption[]>(() => {
-    if (sitePages.length === 0) {
-      return fallbackButtonTargetPages.map((p, index) => ({
-        id: `fallback-${index}`,
-        label: prettyPageLabel(p),
-        route: normalizePath(routeFromPage(p)),
-        slug: p,
-        pageType: p.includes("/") ? "child" : "main",
-      }));
-    }
-
-    const pageById = new Map(sitePages.map((page) => [page.id, page]));
-    return sitePages
-      .filter((page) => page.page_type !== "global")
-      .map((page) => {
-        const parent = page.parent_id ? pageById.get(page.parent_id) : null;
-        const label = page.title || page.name || prettyPageLabel(page.slug);
-        return {
-          id: page.id,
-          label: parent ? `${parent.title || parent.name || prettyPageLabel(parent.slug)} / ${label}` : label,
-          route: normalizePath(page.full_path),
-          slug: page.slug,
-          pageType: page.parent_id ? "child" : "main",
-          parentLabel: parent ? parent.title || parent.name || prettyPageLabel(parent.slug) : undefined,
-        };
-      });
-  }, [sitePages, fallbackButtonTargetPages]);
-
-  const updateForm = (key: string, value: any) => {
-    setForm((prev: any) => ({ ...prev, [key]: value }));
+  const patchContent = (key: string, value: any) => {
+    setContent((prev) => ({ ...prev, [key]: value }));
   };
 
-  const updateContent = (key: string, value: any) => {
-    setForm((prev: any) => ({
-      ...prev,
-      content: { ...prev.content, [key]: value },
-    }));
+  const patchItem = (index: number, patch: Partial<RepeaterItem>) => {
+    if (!repeaterKey) return;
+    setContent((prev) => {
+      const items = Array.isArray(prev[repeaterKey]) ? [...prev[repeaterKey]] : [];
+      items[index] = { ...items[index], ...patch };
+      return { ...prev, [repeaterKey]: items };
+    });
   };
 
-  const updateArrayItem = (key: string, index: number, patch: any) => {
-    const current = [...(form.content?.[key] || [])];
-    current[index] = { ...current[index], ...patch };
-    updateContent(key, current);
+  const addItem = () => {
+    if (!block || !repeaterKey) return;
+    const defaults = DEFAULT_ITEMS[block.block_type] ?? [{}];
+    const template = defaults[0] ?? {};
+    setContent((prev) => {
+      const items = Array.isArray(prev[repeaterKey]) ? [...prev[repeaterKey]] : [];
+      items.push({ ...template, order: items.length + 1 });
+      return { ...prev, [repeaterKey]: items };
+    });
   };
 
-  const addArrayItem = (key: string, item: any) => {
-    updateContent(key, [...(form.content?.[key] || []), item]);
+  const removeItem = (index: number) => {
+    if (!repeaterKey) return;
+    setContent((prev) => {
+      const items = Array.isArray(prev[repeaterKey]) ? [...prev[repeaterKey]] : [];
+      items.splice(index, 1);
+      return { ...prev, [repeaterKey]: items.map((item, i) => ({ ...item, order: i + 1 })) };
+    });
   };
 
-  const removeArrayItem = (key: string, index: number) => {
-    const current = [...(form.content?.[key] || [])];
-    current.splice(index, 1);
-    updateContent(key, current);
-  };
-
-  const reorderArrayItem = (key: string, index: number, direction: "up" | "down") => {
-    const current = [...(form.content?.[key] || [])];
-    const target = direction === "up" ? index - 1 : index + 1;
-    if (target < 0 || target >= current.length) return;
-    [current[index], current[target]] = [current[target], current[index]];
-    updateContent(key, current);
-  };
-
-  const uploadFile = async (file: File): Promise<string | null> => {
-    setUploading(true);
-    const ext = file.name.split(".").pop();
-    const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-
-    const { error } = await supabase.storage.from("site-assets").upload(path, file);
-    setUploading(false);
-
-    if (error) {
-      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
-      return null;
-    }
-
-    const { data } = supabase.storage.from("site-assets").getPublicUrl(path);
-    return data.publicUrl;
-  };
-
-  const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>, field: string) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const url = await uploadFile(file);
-    if (url) updateContent(field, url);
-  };
-
-  const handleCarouselUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    const urls: string[] = [];
-
-    for (const file of files) {
-      const url = await uploadFile(file);
-      if (url) urls.push(url);
-    }
-
-    updateContent("images", [...(form.content.images || []), ...urls]);
+  const moveItem = (index: number, direction: -1 | 1) => {
+    if (!repeaterKey) return;
+    setContent((prev) => {
+      const items = Array.isArray(prev[repeaterKey]) ? [...prev[repeaterKey]] : [];
+      const nextIndex = index + direction;
+      if (nextIndex < 0 || nextIndex >= items.length) return prev;
+      const [moved] = items.splice(index, 1);
+      items.splice(nextIndex, 0, moved);
+      return { ...prev, [repeaterKey]: items.map((item, i) => ({ ...item, order: i + 1 })) };
+    });
   };
 
   const handleSave = async () => {
     if (!block) return;
     setSaving(true);
-
-    const payload = {
-      title: form.title || null,
-      page: form.page,
-      is_active: form.is_active,
-      content: form.content,
-    };
-
-    const { error } = await supabase.from("site_blocks").update(payload).eq("id", block.id);
+    const { error } = await supabase
+      .from("site_blocks")
+      .update({ title: title.trim() || block.title, content, is_active: isActive })
+      .eq("id", block.id);
     setSaving(false);
 
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Save failed", description: error.message, variant: "destructive" });
       return;
     }
 
-    toast({ title: "Block saved" });
+    toast({ title: "Block updated" });
     onSave();
   };
 
-  const renderActionEditor = (prefix: "section" | "button", data: any, onChange: (patch: any) => void) => {
-    const actionType = toActionType(data?.actionType);
+  const renderActionEditor = (item: RepeaterItem, index: number) => {
+    const actionType = (item.actionType || "none") as ActionType;
 
     return (
-      <div className="space-y-2 rounded-md border border-border p-3">
+      <div className="space-y-3 rounded-md border border-border p-3">
         <div>
-          <Label>{prefix === "section" ? "Section click action" : "Button action"}</Label>
-          <Select value={actionType} onValueChange={(v) => onChange({ actionType: v })}>
+          <Label>Click action</Label>
+          <Select value={actionType} onValueChange={(value: ActionType) => patchItem(index, { actionType: value })}>
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue placeholder="Select action" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">None</SelectItem>
-              <SelectItem value="internal_link">Internal Link</SelectItem>
+              <SelectItem value="none">No action</SelectItem>
+              <SelectItem value="internal_link">Internal page</SelectItem>
               <SelectItem value="external_link">External URL</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         {actionType === "internal_link" && (
-          <PageTargetPicker
-            value={data?.actionTarget || ""}
-            options={internalPageOptions}
-            onSelect={(value) => onChange({ actionType: "internal_link", actionTarget: value })}
-          />
+          <div>
+            <Label>Target page</Label>
+            <Select
+              value={item.actionTarget || ""}
+              onValueChange={(value) => patchItem(index, { actionTarget: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose page" />
+              </SelectTrigger>
+              <SelectContent>
+                {pages.map((page) => (
+                  <SelectItem key={page} value={page}>
+                    {page}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {actionType === "external_link" && (
+          <div>
+            <Label>External URL</Label>
+            <Input
+              value={item.actionTarget || ""}
+              onChange={(e) => patchItem(index, { actionTarget: e.target.value })}
+              placeholder="https://..."
+            />
+          </div>
         )}
 
         {actionType !== "none" && (
-          <>
+          <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
             <div>
-              <Label>Target</Label>
-              <Input
-                placeholder={actionType === "internal_link" ? "/products" : "https://example.com"}
-                value={data?.actionTarget || ""}
-                onChange={(e) => onChange({ actionTarget: e.target.value })}
-              />
+              <p className="text-sm font-medium">Open in new tab</p>
+              <p className="text-xs text-muted-foreground">Useful for external URLs</p>
             </div>
-            <label className="flex items-center gap-2 text-sm">
-              <Switch checked={Boolean(data?.openInNewTab)} onCheckedChange={(v) => onChange({ openInNewTab: v })} />
-              Open in new tab
-            </label>
-          </>
+            <Switch
+              checked={Boolean(item.openInNewTab)}
+              onCheckedChange={(checked) => patchItem(index, { openInNewTab: checked })}
+            />
+          </div>
         )}
       </div>
     );
   };
 
-  const renderButtonsEditor = () => (
+  const renderFaqEditor = () => (
     <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <Label>Section heading</Label>
+          <Input value={content.heading || ""} onChange={(e) => patchContent("heading", e.target.value)} />
+        </div>
+        <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+          <div>
+            <p className="text-sm font-medium">Visible</p>
+            <p className="text-xs text-muted-foreground">Show this section on page</p>
+          </div>
+          <Switch
+            checked={content.visibility ?? true}
+            onCheckedChange={(checked) => patchContent("visibility", checked)}
+          />
+        </div>
+      </div>
+
       <div className="flex items-center justify-between">
-        <Label>Buttons</Label>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() =>
-            addArrayItem("buttons", {
-              text: "New Button",
-              icon: "",
-              iconPosition: "left",
-              variant: "default",
-              actionType: "internal_link",
-              actionTarget: "/",
-              openInNewTab: false,
-              visible: true,
-            })
-          }
-        >
-          <Plus className="mr-1 h-3.5 w-3.5" /> Add Button
+        <Label>FAQ items</Label>
+        <Button type="button" size="sm" variant="outline" onClick={addItem}>
+          <Plus className="mr-1 h-4 w-4" /> Add item
         </Button>
       </div>
 
-      {(form.content.buttons || []).map((btn: any, index: number) => (
-        <motion.div key={index} layout className="space-y-2 rounded-md border border-border p-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">Button {index + 1}</p>
-            <div className="flex items-center gap-1">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => reorderArrayItem("buttons", index, "up")}
-              >
-                <ArrowUp className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => reorderArrayItem("buttons", index, "down")}
-              >
-                <ArrowDown className="h-4 w-4" />
-              </Button>
-              <Button type="button" variant="ghost" size="icon" onClick={() => removeArrayItem("buttons", index)}>
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </div>
-          </div>
-
-          <label className="flex items-center gap-2 text-sm">
-            <Switch
-              checked={btn.visible !== false}
-              onCheckedChange={(v) => updateArrayItem("buttons", index, { visible: v })}
-            />
-            Visible
-          </label>
-
-          <div>
-            <Label>Text</Label>
-            <Input
-              value={btn.text || ""}
-              onChange={(e) => updateArrayItem("buttons", index, { text: e.target.value })}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label>Icon</Label>
-              <Select
-                value={btn.icon || "__none__"}
-                onValueChange={(v) => updateArrayItem("buttons", index, { icon: v === "__none__" ? "" : v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="No icon" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">No icon</SelectItem>
-                  {ICON_OPTIONS.map((icon) => (
-                    <SelectItem key={icon} value={icon}>
-                      {icon}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>Icon Position</Label>
-              <Select
-                value={btn.iconPosition || "left"}
-                onValueChange={(v) => updateArrayItem("buttons", index, { iconPosition: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="left">Left</SelectItem>
-                  <SelectItem value="right">Right</SelectItem>
-                  <SelectItem value="top">Top</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div>
-            <Label>Variant</Label>
-            <Select
-              value={btn.variant || "default"}
-              onValueChange={(v) => updateArrayItem("buttons", index, { variant: v })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="default">Default</SelectItem>
-                <SelectItem value="outline">Outline</SelectItem>
-                <SelectItem value="ghost">Ghost</SelectItem>
-                <SelectItem value="secondary">Secondary</SelectItem>
-                <SelectItem value="link">Link</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {renderActionEditor("button", btn, (patch) => updateArrayItem("buttons", index, patch))}
-        </motion.div>
-      ))}
+      <Accordion type="multiple" className="space-y-2">
+        {repeaterItems.map((item, index) => (
+          <AccordionItem key={`faq-${index}`} value={`faq-${index}`} className="rounded-md border border-border px-3">
+            <AccordionTrigger className="py-3 text-left text-sm">
+              {item.question || `FAQ item ${index + 1}`}
+            </AccordionTrigger>
+            <AccordionContent className="space-y-3 pb-3">
+              <div>
+                <Label>Question</Label>
+                <Input value={item.question || ""} onChange={(e) => patchItem(index, { question: e.target.value })} />
+              </div>
+              <div>
+                <Label>Answer</Label>
+                <Textarea
+                  value={item.answer || ""}
+                  onChange={(e) => patchItem(index, { answer: e.target.value })}
+                  rows={4}
+                />
+              </div>
+              <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium">Visible</p>
+                  <p className="text-xs text-muted-foreground">Hide without deleting</p>
+                </div>
+                <Switch
+                  checked={item.visible ?? true}
+                  onCheckedChange={(checked) => patchItem(index, { visible: checked })}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => moveItem(index, -1)}
+                  disabled={index === 0}
+                >
+                  <ArrowUp className="mr-1 h-4 w-4" /> Up
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => moveItem(index, 1)}
+                  disabled={index === repeaterItems.length - 1}
+                >
+                  <ArrowDown className="mr-1 h-4 w-4" /> Down
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => removeItem(index)}
+                  className="ml-auto"
+                >
+                  <Trash2 className="mr-1 h-4 w-4" /> Delete
+                </Button>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
     </div>
   );
 
-  const renderStyleEditor = () => (
+  const renderTrustBadgesEditor = () => (
     <div className="space-y-3">
-      <div>
-        <Label>Background Image URL</Label>
-        <Input
-          value={form.content.bg_image || form.content.backgroundImage || ""}
-          onChange={(e) => {
-            updateContent("bg_image", e.target.value);
-            updateContent("backgroundImage", e.target.value);
-          }}
-        />
-      </div>
-
-      <div>
-        <Label>Upload Background Image</Label>
-        <Input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, "bg_image")} />
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <Label>Background Color</Label>
-          <Input
-            value={form.content.bg_color || form.content.backgroundColor || ""}
-            onChange={(e) => {
-              updateContent("bg_color", e.target.value);
-              updateContent("backgroundColor", e.target.value);
-            }}
-            placeholder="#ffffff"
-          />
-        </div>
-        <div>
-          <Label>Text Color</Label>
-          <Input
-            value={form.content.text_color || form.content.textColor || ""}
-            onChange={(e) => {
-              updateContent("text_color", e.target.value);
-              updateContent("textColor", e.target.value);
-            }}
-            placeholder="#111111"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <Label>Padding Top (px)</Label>
-          <Input
-            type="number"
-            value={form.content.paddingTop ?? ""}
-            onChange={(e) => updateContent("paddingTop", e.target.value === "" ? null : parseInt(e.target.value) || 0)}
-          />
-        </div>
-        <div>
-          <Label>Padding Bottom (px)</Label>
-          <Input
-            type="number"
-            value={form.content.paddingBottom ?? ""}
-            onChange={(e) =>
-              updateContent("paddingBottom", e.target.value === "" ? null : parseInt(e.target.value) || 0)
-            }
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <Label>Margin Top (px)</Label>
-          <Input
-            type="number"
-            value={form.content.marginTop ?? ""}
-            onChange={(e) => updateContent("marginTop", e.target.value === "" ? null : parseInt(e.target.value) || 0)}
-          />
-        </div>
-        <div>
-          <Label>Margin Bottom (px)</Label>
-          <Input
-            type="number"
-            value={form.content.marginBottom ?? ""}
-            onChange={(e) =>
-              updateContent("marginBottom", e.target.value === "" ? null : parseInt(e.target.value) || 0)
-            }
-          />
-        </div>
-      </div>
-
-      <div>
-        <Label>Custom Class Name</Label>
-        <Input
-          value={form.content.customClassName || form.content.className || ""}
-          onChange={(e) => {
-            updateContent("customClassName", e.target.value);
-            updateContent("className", e.target.value);
-          }}
-          placeholder="my-extra-block-class"
-        />
-      </div>
-    </div>
-  );
-
-  const renderLayoutEditor = () => (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <Label>Content Alignment</Label>
-          <Select value={form.content.alignment || "center"} onValueChange={(v) => updateContent("alignment", v)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="left">Left</SelectItem>
-              <SelectItem value="center">Center</SelectItem>
-              <SelectItem value="right">Right</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <Label>Button Alignment</Label>
-          <Select
-            value={form.content.buttonAlignment || "center"}
-            onValueChange={(v) => updateContent("buttonAlignment", v)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="left">Left</SelectItem>
-              <SelectItem value="center">Center</SelectItem>
-              <SelectItem value="right">Right</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <Label>Vertical Alignment</Label>
-          <Select
-            value={form.content.verticalAlignment || "center"}
-            onValueChange={(v) => updateContent("verticalAlignment", v)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="top">Top</SelectItem>
-              <SelectItem value="center">Center</SelectItem>
-              <SelectItem value="bottom">Bottom</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
+      <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <Label>Columns</Label>
-          <Input
-            type="number"
-            min={1}
-            max={4}
-            value={form.content.columns ?? ""}
-            onChange={(e) =>
-              updateContent(
-                "columns",
-                e.target.value === "" ? null : Math.max(1, Math.min(4, parseInt(e.target.value) || 1)),
-              )
-            }
+          <Select
+            value={String(content.columns || 3)}
+            onValueChange={(value) => patchContent("columns", Number(value))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="2">2</SelectItem>
+              <SelectItem value="3">3</SelectItem>
+              <SelectItem value="4">4</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+          <div>
+            <p className="text-sm font-medium">Visible</p>
+            <p className="text-xs text-muted-foreground">Show this section on page</p>
+          </div>
+          <Switch
+            checked={content.visibility ?? true}
+            onCheckedChange={(checked) => patchContent("visibility", checked)}
           />
         </div>
       </div>
 
-      <div>
-        <Label>Image Position</Label>
-        <Select value={form.content.imagePosition || "left"} onValueChange={(v) => updateContent("imagePosition", v)}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="left">Image Left / Text Right</SelectItem>
-            <SelectItem value="right">Image Right / Text Left</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex items-center justify-between">
+        <Label>Badges</Label>
+        <Button type="button" size="sm" variant="outline" onClick={addItem}>
+          <Plus className="mr-1 h-4 w-4" /> Add badge
+        </Button>
       </div>
-    </div>
-  );
 
-  const handleItemImageUpload = async (e: ChangeEvent<HTMLInputElement>, arrayKey: string, index: number) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const url = await uploadFile(file);
-    if (url) updateArrayItem(arrayKey, index, { image: url });
-  };
-
-  const renderMediaPicker = (item: any, arrayKey: string, index: number) => (
-    <div className="space-y-2 rounded-md border border-dashed border-border p-2">
-      <Label className="text-xs text-muted-foreground">Visual (Icon or Image)</Label>
-      <div className="flex items-center gap-2">
-        <label className="flex items-center gap-1.5 text-xs">
-          <input
-            type="radio"
-            name={`media-${arrayKey}-${index}`}
-            checked={!item.image}
-            onChange={() => updateArrayItem(arrayKey, index, { image: "" })}
-            className="accent-primary"
-          />
-          Icon
-        </label>
-        <label className="flex items-center gap-1.5 text-xs">
-          <input
-            type="radio"
-            name={`media-${arrayKey}-${index}`}
-            checked={!!item.image}
-            onChange={() => updateArrayItem(arrayKey, index, { image: item.image || "placeholder" })}
-            className="accent-primary"
-          />
-          Image
-        </label>
-      </div>
-      {!item.image ? (
-        <Select value={item.icon || "Package"} onValueChange={(v) => updateArrayItem(arrayKey, index, { icon: v })}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {ICON_OPTIONS.map((icon) => (
-              <SelectItem key={icon} value={icon}>
-                {icon}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ) : (
-        <div className="space-y-1">
-          {item.image && item.image !== "placeholder" && (
-            <img src={item.image} alt="" className="h-16 w-16 rounded object-cover" />
-          )}
-          <Input type="file" accept="image/*" onChange={(e) => handleItemImageUpload(e, arrayKey, index)} />
-          <Input
-            value={item.image === "placeholder" ? "" : item.image || ""}
-            onChange={(e) => updateArrayItem(arrayKey, index, { image: e.target.value })}
-            placeholder="Or paste image URL"
-          />
-        </div>
-      )}
-    </div>
-  );
-
-  const renderRepeaterEditor = () => {
-    const t = form.block_type;
-
-    if (t === "entry_cards") {
-      return (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label>Cards</Label>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                addArrayItem("cards", {
-                  icon: "ShoppingBag",
-                  title: "New Card",
-                  desc: "",
-                  cta: "Learn more",
-                  actionType: "internal_link",
-                  actionTarget: "/",
-                  openInNewTab: false,
-                  visible: true,
-                })
-              }
-            >
-              <Plus className="mr-1 h-3.5 w-3.5" /> Add Card
-            </Button>
-          </div>
-          {(form.content.cards || []).map((card: any, index: number) => (
-            <motion.div key={index} layout className="space-y-2 rounded-md border p-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Card {index + 1}</p>
-                <div className="flex items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => reorderArrayItem("cards", index, "up")}
-                  >
-                    <ArrowUp className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => reorderArrayItem("cards", index, "down")}
-                  >
-                    <ArrowDown className="h-4 w-4" />
-                  </Button>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeArrayItem("cards", index)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+      <Accordion type="multiple" className="space-y-2">
+        {repeaterItems.map((item, index) => (
+          <AccordionItem
+            key={`badge-${index}`}
+            value={`badge-${index}`}
+            className="rounded-md border border-border px-3"
+          >
+            <AccordionTrigger className="py-3 text-left text-sm">{item.title || `Badge ${index + 1}`}</AccordionTrigger>
+            <AccordionContent className="space-y-3 pb-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label>Title</Label>
+                  <Input value={item.title || ""} onChange={(e) => patchItem(index, { title: e.target.value })} />
                 </div>
-              </div>
-              <label className="flex items-center gap-2 text-sm">
-                <Switch
-                  checked={card.visible !== false}
-                  onCheckedChange={(v) => updateArrayItem("cards", index, { visible: v })}
-                />{" "}
-                Visible
-              </label>
-              <Input
-                value={card.title || ""}
-                onChange={(e) => updateArrayItem("cards", index, { title: e.target.value })}
-                placeholder="Title"
-              />
-              <Textarea
-                value={card.desc || ""}
-                onChange={(e) => updateArrayItem("cards", index, { desc: e.target.value })}
-                rows={3}
-                placeholder="Description"
-              />
-              <Input
-                value={card.cta || ""}
-                onChange={(e) => updateArrayItem("cards", index, { cta: e.target.value })}
-                placeholder="CTA text"
-              />
-              {renderMediaPicker(card, "cards", index)}
-              {renderActionEditor(
-                "button",
-                {
-                  actionType: toActionType(card.actionType),
-                  actionTarget: card.actionTarget || card.link || "",
-                  openInNewTab: Boolean(card.openInNewTab),
-                },
-                (patch) => updateArrayItem("cards", index, { ...patch, link: patch.actionTarget ?? card.link }),
-              )}
-            </motion.div>
-          ))}
-        </div>
-      );
-    }
-
-    if (t === "how_it_works") {
-      return (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label>Steps</Label>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => addArrayItem("steps", { icon: "Package", title: "New Step", desc: "", visible: true })}
-            >
-              <Plus className="mr-1 h-3.5 w-3.5" /> Add Step
-            </Button>
-          </div>
-          {(form.content.steps || []).map((step: any, index: number) => (
-            <motion.div key={index} layout className="space-y-2 rounded-md border p-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Step {index + 1}</p>
-                <div className="flex items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => reorderArrayItem("steps", index, "up")}
-                  >
-                    <ArrowUp className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => reorderArrayItem("steps", index, "down")}
-                  >
-                    <ArrowDown className="h-4 w-4" />
-                  </Button>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeArrayItem("steps", index)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                <div>
+                  <Label>Icon</Label>
+                  <Select value={item.icon || "Truck"} onValueChange={(value) => patchItem(index, { icon: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ICON_OPTIONS.map((icon) => (
+                        <SelectItem key={icon} value={icon}>
+                          {icon}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
-              <label className="flex items-center gap-2 text-sm">
-                <Switch
-                  checked={step.visible !== false}
-                  onCheckedChange={(v) => updateArrayItem("steps", index, { visible: v })}
-                />{" "}
-                Visible
-              </label>
-              <Input
-                value={step.title || ""}
-                onChange={(e) => updateArrayItem("steps", index, { title: e.target.value })}
-                placeholder="Step title"
-              />
-              <Textarea
-                value={step.desc || ""}
-                onChange={(e) => updateArrayItem("steps", index, { desc: e.target.value })}
-                rows={2}
-                placeholder="Step description"
-              />
-              {renderMediaPicker(step, "steps", index)}
-              {renderActionEditor(
-                "button",
-                {
-                  actionType: toActionType(step.actionType),
-                  actionTarget: step.actionTarget || "",
-                  openInNewTab: Boolean(step.openInNewTab),
-                },
-                (patch) => updateArrayItem("steps", index, patch),
-              )}
-            </motion.div>
-          ))}
-        </div>
-      );
-    }
-
-    if (t === "faq") {
-      return (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label>FAQ Items</Label>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => addArrayItem("items", { q: "New question", a: "New answer", visible: true })}
-            >
-              <Plus className="mr-1 h-3.5 w-3.5" /> Add Item
-            </Button>
-          </div>
-          {(form.content.items || []).map((item: any, index: number) => (
-            <motion.div key={index} layout className="space-y-2 rounded-md border p-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">FAQ {index + 1}</p>
-                <div className="flex items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => reorderArrayItem("items", index, "up")}
-                  >
-                    <ArrowUp className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => reorderArrayItem("items", index, "down")}
-                  >
-                    <ArrowDown className="h-4 w-4" />
-                  </Button>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeArrayItem("items", index)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              </div>
-              <label className="flex items-center gap-2 text-sm">
-                <Switch
-                  checked={item.visible !== false}
-                  onCheckedChange={(v) => updateArrayItem("items", index, { visible: v })}
-                />{" "}
-                Visible
-              </label>
-              <Input
-                value={item.q || ""}
-                onChange={(e) => updateArrayItem("items", index, { q: e.target.value })}
-                placeholder="Question"
-              />
-              <Textarea
-                value={item.a || ""}
-                onChange={(e) => updateArrayItem("items", index, { a: e.target.value })}
-                rows={4}
-                placeholder="Answer"
-              />
-            </motion.div>
-          ))}
-        </div>
-      );
-    }
-
-    if (t === "trust_badges") {
-      return (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label>Badges</Label>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => addArrayItem("badges", { icon: "Shield", title: "New Badge", desc: "", visible: true })}
-            >
-              <Plus className="mr-1 h-3.5 w-3.5" /> Add Badge
-            </Button>
-          </div>
-          {(form.content.badges || []).map((badge: any, index: number) => (
-            <motion.div key={index} layout className="space-y-2 rounded-md border p-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Badge {index + 1}</p>
-                <div className="flex items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => reorderArrayItem("badges", index, "up")}
-                  >
-                    <ArrowUp className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => reorderArrayItem("badges", index, "down")}
-                  >
-                    <ArrowDown className="h-4 w-4" />
-                  </Button>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeArrayItem("badges", index)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              </div>
-              <label className="flex items-center gap-2 text-sm">
-                <Switch
-                  checked={badge.visible !== false}
-                  onCheckedChange={(v) => updateArrayItem("badges", index, { visible: v })}
-                />{" "}
-                Visible
-              </label>
-              <Input
-                value={badge.title || ""}
-                onChange={(e) => updateArrayItem("badges", index, { title: e.target.value })}
-                placeholder="Title"
-              />
-              <Textarea
-                value={badge.desc || ""}
-                onChange={(e) => updateArrayItem("badges", index, { desc: e.target.value })}
-                rows={2}
-                placeholder="Description"
-              />
-              {renderMediaPicker(badge, "badges", index)}
-              {renderActionEditor(
-                "button",
-                {
-                  actionType: toActionType(badge.actionType),
-                  actionTarget: badge.actionTarget || "",
-                  openInNewTab: Boolean(badge.openInNewTab),
-                },
-                (patch) => updateArrayItem("badges", index, patch),
-              )}
-            </motion.div>
-          ))}
-        </div>
-      );
-    }
-
-    return null;
-  };
-
-  const renderTypeContentEditor = () => {
-    const t = form.block_type;
-
-    if (t === "hero" || t === "banner" || t === "cta") {
-      return (
-        <div className="space-y-3">
-          {t === "hero" && (
-            <>
-              <div>
-                <Label>Eyebrow / Badge</Label>
-                <Input value={form.content.eyebrow ?? ""} onChange={(e) => updateContent("eyebrow", e.target.value)} />
               </div>
               <div>
-                <Label>Icon</Label>
-                <Select
-                  value={form.content.icon || "__none__"}
-                  onValueChange={(v) => updateContent("icon", v === "__none__" ? "" : v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">No icon</SelectItem>
-                    {ICON_OPTIONS.map((icon) => (
-                      <SelectItem key={icon} value={icon}>
-                        {icon}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Description</Label>
+                <Input value={item.desc || ""} onChange={(e) => patchItem(index, { desc: e.target.value })} />
               </div>
-            </>
-          )}
-          <div>
-            <Label>Heading</Label>
-            <Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} />
-          </div>
-          <div>
-            <Label>Subheading</Label>
-            <Textarea
-              value={form.content.subheading ?? ""}
-              onChange={(e) => updateContent("subheading", e.target.value)}
-              rows={3}
-            />
-          </div>
-        </div>
-      );
-    }
-
-    if (t === "shipping_banner") {
-      return (
-        <div>
-          <Label>Banner Text</Label>
-          <Input value={form.content.text ?? ""} onChange={(e) => updateContent("text", e.target.value)} />
-        </div>
-      );
-    }
-
-    if (t === "text") {
-      return (
-        <div className="space-y-3">
-          <div>
-            <Label>Heading</Label>
-            <Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} />
-          </div>
-          <div>
-            <Label>Body</Label>
-            <Textarea
-              value={form.content.body ?? ""}
-              onChange={(e) => updateContent("body", e.target.value)}
-              rows={8}
-            />
-          </div>
-        </div>
-      );
-    }
-
-    if (t === "image") {
-      return (
-        <div className="space-y-3">
-          <div>
-            <Label>Image URL</Label>
-            <Input value={form.content.image_url ?? ""} onChange={(e) => updateContent("image_url", e.target.value)} />
-          </div>
-          <div>
-            <Label>Upload Image</Label>
-            <Input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, "image_url")} />
-          </div>
-          <div>
-            <Label>Alt Text</Label>
-            <Input value={form.content.alt ?? ""} onChange={(e) => updateContent("alt", e.target.value)} />
-          </div>
-        </div>
-      );
-    }
-
-    if (t === "carousel") {
-      return (
-        <div className="space-y-3">
-          <Label>Carousel Images</Label>
-          <Input type="file" accept="image/*" multiple onChange={handleCarouselUpload} />
-          <div className="flex flex-wrap gap-2">
-            {(form.content.images || []).map((img: string, i: number) => (
-              <div key={i} className="relative">
-                <img src={img} alt="" className="h-16 w-16 rounded object-cover" />
-                <button
+              <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium">Visible</p>
+                  <p className="text-xs text-muted-foreground">Hide without deleting</p>
+                </div>
+                <Switch
+                  checked={item.visible ?? true}
+                  onCheckedChange={(checked) => patchItem(index, { visible: checked })}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
                   type="button"
-                  className="absolute -right-1 -top-1 rounded-full bg-destructive p-0.5 text-destructive-foreground"
-                  onClick={() =>
-                    updateContent(
-                      "images",
-                      (form.content.images || []).filter((_: string, j: number) => j !== i),
-                    )
-                  }
+                  variant="outline"
+                  size="sm"
+                  onClick={() => moveItem(index, -1)}
+                  disabled={index === 0}
                 >
-                  <Trash2 className="h-3 w-3" />
-                </button>
+                  <ArrowUp className="mr-1 h-4 w-4" /> Up
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => moveItem(index, 1)}
+                  disabled={index === repeaterItems.length - 1}
+                >
+                  <ArrowDown className="mr-1 h-4 w-4" /> Down
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => removeItem(index)}
+                  className="ml-auto"
+                >
+                  <Trash2 className="mr-1 h-4 w-4" /> Delete
+                </Button>
               </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </div>
+  );
 
-    if (t === "video") {
-      return (
-        <div className="space-y-3">
-          <div>
-            <Label>Video URL</Label>
-            <Input value={form.content.video_url ?? ""} onChange={(e) => updateContent("video_url", e.target.value)} />
-          </div>
-          <div>
-            <Label>Caption</Label>
-            <Input value={form.content.caption ?? ""} onChange={(e) => updateContent("caption", e.target.value)} />
-          </div>
-        </div>
-      );
-    }
+  const renderEntryCardsEditor = () => (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <Label>Cards</Label>
+        <Button type="button" size="sm" variant="outline" onClick={addItem}>
+          <Plus className="mr-1 h-4 w-4" /> Add card
+        </Button>
+      </div>
 
-    if (t === "spacer") {
-      return (
+      <Accordion type="multiple" className="space-y-2">
+        {repeaterItems.map((item, index) => (
+          <AccordionItem key={`card-${index}`} value={`card-${index}`} className="rounded-md border border-border px-3">
+            <AccordionTrigger className="py-3 text-left text-sm">{item.title || `Card ${index + 1}`}</AccordionTrigger>
+            <AccordionContent className="space-y-3 pb-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label>Title</Label>
+                  <Input value={item.title || ""} onChange={(e) => patchItem(index, { title: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Icon</Label>
+                  <Select
+                    value={item.icon || "ShoppingBag"}
+                    onValueChange={(value) => patchItem(index, { icon: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ICON_OPTIONS.map((icon) => (
+                        <SelectItem key={icon} value={icon}>
+                          {icon}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label>Description</Label>
+                <Textarea
+                  value={item.desc || ""}
+                  onChange={(e) => patchItem(index, { desc: e.target.value })}
+                  rows={3}
+                />
+              </div>
+              <div>
+                <Label>Button label</Label>
+                <Input value={item.cta || ""} onChange={(e) => patchItem(index, { cta: e.target.value })} />
+              </div>
+              {renderActionEditor(item, index)}
+              <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium">Visible</p>
+                  <p className="text-xs text-muted-foreground">Hide without deleting</p>
+                </div>
+                <Switch
+                  checked={item.visible ?? true}
+                  onCheckedChange={(checked) => patchItem(index, { visible: checked })}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => moveItem(index, -1)}
+                  disabled={index === 0}
+                >
+                  <ArrowUp className="mr-1 h-4 w-4" /> Up
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => moveItem(index, 1)}
+                  disabled={index === repeaterItems.length - 1}
+                >
+                  <ArrowDown className="mr-1 h-4 w-4" /> Down
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => removeItem(index)}
+                  className="ml-auto"
+                >
+                  <Trash2 className="mr-1 h-4 w-4" /> Delete
+                </Button>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </div>
+  );
+
+  const renderImageCollectionEditor = (mode: "image" | "carousel") => (
+    <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <Label>Height (px)</Label>
+          <Label>Section heading</Label>
           <Input
-            type="number"
-            value={form.content.height ?? 40}
-            onChange={(e) => updateContent("height", parseInt(e.target.value) || 40)}
+            value={content.heading || ""}
+            onChange={(e) => patchContent("heading", e.target.value)}
+            placeholder="Optional heading"
           />
         </div>
-      );
-    }
-
-    if (t === "html") {
-      return (
-        <div>
-          <Label>HTML Code</Label>
-          <Textarea
-            value={form.content.html ?? ""}
-            onChange={(e) => updateContent("html", e.target.value)}
-            rows={10}
-            className="font-mono text-xs"
-          />
-        </div>
-      );
-    }
-
-    if (t === "embed") {
-      return (
-        <div className="space-y-3">
+        {mode === "image" ? (
           <div>
-            <Label>Heading</Label>
-            <Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} />
-          </div>
-          <div>
-            <Label>Embed URL</Label>
-            <Input value={form.content.embed_url ?? ""} onChange={(e) => updateContent("embed_url", e.target.value)} />
-          </div>
-          <div>
-            <Label>Height (px)</Label>
-            <Input
-              type="number"
-              value={form.content.height ?? 400}
-              onChange={(e) => updateContent("height", parseInt(e.target.value) || 400)}
-            />
-          </div>
-        </div>
-      );
-    }
-
-    if (t === "newsletter") {
-      return (
-        <div className="space-y-3">
-          <div>
-            <Label>Heading</Label>
-            <Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} />
-          </div>
-          <div>
-            <Label>Subheading</Label>
-            <Input
-              value={form.content.subheading ?? ""}
-              onChange={(e) => updateContent("subheading", e.target.value)}
-            />
-          </div>
-          <div>
-            <Label>Submit Button Text</Label>
-            <Input
-              value={form.content.submit_text ?? ""}
-              onChange={(e) => updateContent("submit_text", e.target.value)}
-            />
-          </div>
-        </div>
-      );
-    }
-
-    if (t === "how_it_works" || t === "trust_badges" || t === "entry_cards" || t === "faq") {
-      return (
-        <div className="space-y-3">
-          <div>
-            <Label>Heading</Label>
-            <Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} />
-          </div>
-          <div>
-            <Label>Subheading</Label>
-            <Textarea
-              value={form.content.subheading ?? ""}
-              onChange={(e) => updateContent("subheading", e.target.value)}
-              rows={2}
-            />
-          </div>
-        </div>
-      );
-    }
-
-    if (t === "categories" || t === "featured_products") {
-      return (
-        <div className="space-y-3">
-          <div>
-            <Label>Heading</Label>
-            <Input value={form.content.heading ?? ""} onChange={(e) => updateContent("heading", e.target.value)} />
-          </div>
-          <div>
-            <Label>Subheading</Label>
-            <Input
-              value={form.content.subheading ?? ""}
-              onChange={(e) => updateContent("subheading", e.target.value)}
-            />
-          </div>
-          <div>
-            <Label>Limit</Label>
-            <Input
-              type="number"
-              value={form.content.limit ?? (t === "categories" ? 6 : 8)}
-              onChange={(e) => updateContent("limit", parseInt(e.target.value) || (t === "categories" ? 6 : 8))}
-            />
-          </div>
-          {t === "featured_products" && (
-            <>
-              <div>
-                <Label>View All Button Text</Label>
-                <Input
-                  value={form.content.view_all_text ?? ""}
-                  onChange={(e) => updateContent("view_all_text", e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>View All Link</Label>
-                <Input
-                  value={form.content.view_all_link ?? ""}
-                  onChange={(e) => updateContent("view_all_link", e.target.value)}
-                />
-              </div>
-              <PageTargetPicker
-                value={form.content.view_all_link ?? ""}
-                options={internalPageOptions}
-                onSelect={(value) => updateContent("view_all_link", value)}
-              />
-            </>
-          )}
-        </div>
-      );
-    }
-
-    if (t === "button") {
-      return (
-        <div className="space-y-3">
-          <div>
-            <Label>Legacy Button Text</Label>
-            <Input
-              value={form.content.button_text ?? ""}
-              onChange={(e) => updateContent("button_text", e.target.value)}
-            />
-          </div>
-          <div>
-            <Label>Legacy Button Link</Label>
-            <Input
-              value={form.content.button_link ?? ""}
-              onChange={(e) => updateContent("button_link", e.target.value)}
-            />
-          </div>
-          <PageTargetPicker
-            value={form.content.button_link ?? ""}
-            options={internalPageOptions}
-            onSelect={(value) => updateContent("button_link", value)}
-          />
-          <div>
-            <Label>Legacy Style</Label>
-            <Select value={form.content.style ?? "default"} onValueChange={(v) => updateContent("style", v)}>
+            <Label>Columns</Label>
+            <Select
+              value={String(content.columns || 3)}
+              onValueChange={(value) => patchContent("columns", Number(value))}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="default">Default</SelectItem>
-                <SelectItem value="outline">Outline</SelectItem>
-                <SelectItem value="ghost">Ghost</SelectItem>
+                <SelectItem value="1">1</SelectItem>
+                <SelectItem value="2">2</SelectItem>
+                <SelectItem value="3">3</SelectItem>
+                <SelectItem value="4">4</SelectItem>
               </SelectContent>
             </Select>
           </div>
-        </div>
-      );
-    }
-
-    if (t === "instagram_auto_feed") {
-      return (
-        <div className="space-y-3">
-          <div>
-            <Label>Title</Label>
-            <Input value={form.content.title ?? ""} onChange={(e) => updateContent("title", e.target.value)} />
-          </div>
-          <div>
-            <Label>Subtitle</Label>
-            <Textarea
-              value={form.content.subtitle ?? ""}
-              onChange={(e) => updateContent("subtitle", e.target.value)}
-              rows={2}
-            />
-          </div>
-          <div>
-            <Label>Instagram Username or Profile URL</Label>
-            <Input
-              value={form.content.instagramUsername ?? ""}
-              onChange={(e) => updateContent("instagramUsername", e.target.value)}
-              placeholder="layerloot3d or https://www.instagram.com/layerloot3d"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
+        ) : (
+          <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
             <div>
-              <Label>Items to Show</Label>
-              <Input
-                type="number"
-                min={1}
-                max={20}
-                value={form.content.itemsToShow ?? 10}
-                onChange={(e) =>
-                  updateContent("itemsToShow", Math.max(1, Math.min(20, parseInt(e.target.value) || 10)))
-                }
-              />
+              <p className="text-sm font-medium">Autoplay</p>
+              <p className="text-xs text-muted-foreground">Auto move to next slide</p>
             </div>
-            <div>
-              <Label>Loop Speed (ms)</Label>
-              <Input
-                type="number"
-                min={1500}
-                step={500}
-                value={form.content.intervalMs ?? 3000}
-                onChange={(e) => updateContent("intervalMs", Math.max(1500, parseInt(e.target.value) || 3000))}
-              />
-            </div>
-          </div>
-          <div>
-            <Label>Layout</Label>
-            <Select value={form.content.layout ?? "slider"} onValueChange={(v) => updateContent("layout", v)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="slider">Slider</SelectItem>
-                <SelectItem value="grid">Grid</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Edge Function Name</Label>
-            <Input
-              value={form.content.functionName ?? "instagram-feed"}
-              onChange={(e) => updateContent("functionName", e.target.value)}
-              placeholder="instagram-feed"
-            />
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <Switch checked={form.content.autoplay !== false} onCheckedChange={(v) => updateContent("autoplay", v)} />{" "}
-            Autoplay loop
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <Switch checked={!!form.content.showCaptions} onCheckedChange={(v) => updateContent("showCaptions", v)} />{" "}
-            Show captions
-          </label>
-          <label className="flex items-center gap-2 text-sm">
             <Switch
-              checked={form.content.showProfileButton !== false}
-              onCheckedChange={(v) => updateContent("showProfileButton", v)}
-            />{" "}
-            Show profile button
-          </label>
-        </div>
-      );
-    }
+              checked={content.autoplay ?? false}
+              onCheckedChange={(checked) => patchContent("autoplay", checked)}
+            />
+          </div>
+        )}
+      </div>
 
-    return null;
-  };
+      <div className="flex items-center justify-between">
+        <Label>{mode === "image" ? "Image tiles" : "Slides"}</Label>
+        <Button type="button" size="sm" variant="outline" onClick={addItem}>
+          <Plus className="mr-1 h-4 w-4" /> Add {mode === "image" ? "image" : "slide"}
+        </Button>
+      </div>
 
-  const t = form.block_type;
+      <Accordion type="multiple" className="space-y-2">
+        {repeaterItems.map((item, index) => (
+          <AccordionItem
+            key={`${mode}-${index}`}
+            value={`${mode}-${index}`}
+            className="rounded-md border border-border px-3"
+          >
+            <AccordionTrigger className="py-3 text-left text-sm">
+              {item.title || `${mode === "image" ? "Image" : "Slide"} ${index + 1}`}
+            </AccordionTrigger>
+            <AccordionContent className="space-y-3 pb-3">
+              <div>
+                <Label>Image URL</Label>
+                <Input
+                  value={item.image || ""}
+                  onChange={(e) => patchItem(index, { image: e.target.value })}
+                  placeholder="https://..."
+                />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label>Title</Label>
+                  <Input value={item.title || ""} onChange={(e) => patchItem(index, { title: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Subtitle</Label>
+                  <Input value={item.subtitle || ""} onChange={(e) => patchItem(index, { subtitle: e.target.value })} />
+                </div>
+              </div>
+
+              {mode === "image" && (
+                <div className="grid gap-3 sm:grid-cols-4">
+                  <div>
+                    <Label>Col span</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={item.colSpan || 1}
+                      onChange={(e) => patchItem(index, { colSpan: Number(e.target.value || 1) })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Row span</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={item.rowSpan || 1}
+                      onChange={(e) => patchItem(index, { rowSpan: Number(e.target.value || 1) })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Order</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={item.order || index + 1}
+                      onChange={(e) => patchItem(index, { order: Number(e.target.value || index + 1) })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Fit</Label>
+                    <Input
+                      value={item.objectFit || "cover"}
+                      onChange={(e) => patchItem(index, { objectFit: e.target.value })}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {renderActionEditor(item, index)}
+
+              <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium">Visible</p>
+                  <p className="text-xs text-muted-foreground">Hide without deleting</p>
+                </div>
+                <Switch
+                  checked={item.visible ?? true}
+                  onCheckedChange={(checked) => patchItem(index, { visible: checked })}
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => moveItem(index, -1)}
+                  disabled={index === 0}
+                >
+                  <ArrowUp className="mr-1 h-4 w-4" /> Up
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => moveItem(index, 1)}
+                  disabled={index === repeaterItems.length - 1}
+                >
+                  <ArrowDown className="mr-1 h-4 w-4" /> Down
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => removeItem(index)}
+                  className="ml-auto"
+                >
+                  <Trash2 className="mr-1 h-4 w-4" /> Delete
+                </Button>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </div>
+  );
+
+  const renderGenericEditor = () => (
+    <div className="space-y-4">
+      {Object.entries(content).map(([key, value]) => {
+        if (Array.isArray(value)) return null;
+        if (typeof value === "boolean") {
+          return (
+            <div key={key} className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+              <div>
+                <p className="text-sm font-medium capitalize">{key.replace(/_/g, " ")}</p>
+              </div>
+              <Switch checked={value} onCheckedChange={(checked) => patchContent(key, checked)} />
+            </div>
+          );
+        }
+        if (typeof value === "string" && value.length > 100) {
+          return (
+            <div key={key}>
+              <Label className="capitalize">{key.replace(/_/g, " ")}</Label>
+              <Textarea value={value} onChange={(e) => patchContent(key, e.target.value)} rows={4} />
+            </div>
+          );
+        }
+        return (
+          <div key={key}>
+            <Label className="capitalize">{key.replace(/_/g, " ")}</Label>
+            <Input value={String(value ?? "")} onChange={(e) => patchContent(key, e.target.value)} />
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  if (!block) return null;
 
   return (
-    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent className="overflow-y-auto sm:max-w-xl">
+    <Sheet open={open} onOpenChange={(value) => !value && onClose()}>
+      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-2xl">
         <SheetHeader>
-          <SheetTitle className="font-display uppercase">Edit Block</SheetTitle>
+          <SheetTitle className="font-display uppercase tracking-wider">
+            Edit {block.block_type.replace(/_/g, " ")}
+          </SheetTitle>
         </SheetHeader>
 
-        {block && (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-6 space-y-4">
+        <div className="mt-6 space-y-5">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <Label>Internal Title</Label>
-              <Input value={form.title ?? ""} onChange={(e) => updateForm("title", e.target.value)} />
+              <Label>Block title</Label>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} />
             </div>
-
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
               <div>
-                <Label>Placement</Label>
-                <Select
-                  value={form.content?.placement ?? DEFAULT_PLACEMENT}
-                  onValueChange={(v) => updateContent("placement", v === DEFAULT_PLACEMENT ? "" : v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select placement" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {placementOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <p className="text-sm font-medium">Block visible</p>
+                <p className="text-xs text-muted-foreground">Turn the whole block on or off</p>
               </div>
-
-              <div className="flex items-end gap-2 pb-1">
-                <label className="flex items-center gap-2 text-sm">
-                  <Switch checked={!!form.is_active} onCheckedChange={(v) => updateForm("is_active", v)} />
-                  Active
-                </label>
-              </div>
+              <Switch checked={isActive} onCheckedChange={setIsActive} />
             </div>
+          </div>
 
-            <label className="flex items-center gap-2 text-sm">
-              <Switch
-                checked={form.content.visibility !== false}
-                onCheckedChange={(v) => updateContent("visibility", v)}
-              />
-              Section visible
-            </label>
+          {block.block_type === "faq" && renderFaqEditor()}
+          {block.block_type === "trust_badges" && renderTrustBadgesEditor()}
+          {block.block_type === "entry_cards" && renderEntryCardsEditor()}
+          {block.block_type === "image" && renderImageCollectionEditor("image")}
+          {block.block_type === "carousel" && renderImageCollectionEditor("carousel")}
+          {!["faq", "trust_badges", "entry_cards", "image", "carousel"].includes(block.block_type) &&
+            renderGenericEditor()}
 
-            <Accordion
-              type="multiple"
-              defaultValue={["content", "style", "actions", "layout"]}
-              className="w-full space-y-2"
-            >
-              <AccordionItem value="content" className="rounded-md border border-border px-3">
-                <AccordionTrigger className="font-display text-xs uppercase tracking-wider">Content</AccordionTrigger>
-                <AccordionContent className="space-y-3 pb-3">
-                  {renderTypeContentEditor()}
-                  {BLOCKS_WITH_REPEATERS.has(t) && renderRepeaterEditor()}
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="style" className="rounded-md border border-border px-3">
-                <AccordionTrigger className="font-display text-xs uppercase tracking-wider">Style</AccordionTrigger>
-                <AccordionContent className="pb-3">{renderStyleEditor()}</AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="actions" className="rounded-md border border-border px-3">
-                <AccordionTrigger className="font-display text-xs uppercase tracking-wider">Actions</AccordionTrigger>
-                <AccordionContent className="space-y-3 pb-3">
-                  {renderActionEditor(
-                    "section",
-                    {
-                      actionType: toActionType(form.content.section_actionType || form.content.actionType),
-                      actionTarget: form.content.section_actionTarget || form.content.actionTarget || "",
-                      openInNewTab: Boolean(form.content.section_openInNewTab || form.content.openInNewTab),
-                    },
-                    (patch) => {
-                      updateContent("section_actionType", patch.actionType ?? form.content.section_actionType);
-                      updateContent("section_actionTarget", patch.actionTarget ?? form.content.section_actionTarget);
-                      updateContent("section_openInNewTab", patch.openInNewTab ?? form.content.section_openInNewTab);
-                    },
-                  )}
-
-                  {BLOCKS_WITH_BUTTONS.has(t) && renderButtonsEditor()}
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="layout" className="rounded-md border border-border px-3">
-                <AccordionTrigger className="font-display text-xs uppercase tracking-wider">Layout</AccordionTrigger>
-                <AccordionContent className="pb-3">{renderLayoutEditor()}</AccordionContent>
-              </AccordionItem>
-            </Accordion>
-
-            <Button
-              onClick={handleSave}
-              disabled={saving || uploading}
-              className="w-full font-display uppercase tracking-wider"
-            >
-              {saving ? "Saving..." : uploading ? "Uploading..." : "Save Changes"}
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" onClick={onClose} className="flex-1" disabled={saving}>
+              Cancel
             </Button>
-          </motion.div>
-        )}
+            <Button
+              onClick={() => void handleSave()}
+              className="flex-1 font-display uppercase tracking-wider"
+              disabled={saving}
+            >
+              {saving ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </div>
       </SheetContent>
     </Sheet>
   );

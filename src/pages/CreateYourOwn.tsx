@@ -1,4 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type Dispatch,
+  type DragEvent,
+  type ReactNode,
+  type SetStateAction,
+} from "react";
 import { Link } from "react-router-dom";
 import {
   Baby,
@@ -18,17 +27,17 @@ import {
   Palette,
   Send,
   Sparkles,
+  Star,
   Swords,
   Trophy,
   Upload,
   Wrench,
-  Star,
   X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -39,7 +48,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import ModelViewer from "@/components/ModelViewer";
-import Lithophane, { LithophaneSubmitPayload } from "@/components/Lithophane";
+import Lithophane, { type LithophaneSubmitPayload } from "@/components/Lithophane";
 import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 import { ReviewCardSkeleton, SectionCardSkeleton } from "@/components/shared/loading-states";
 
@@ -127,10 +136,15 @@ type GiftFinderProduct = {
   is_featured?: boolean;
 };
 
+type GiftFinderLink = {
+  product_id: string;
+  gift_finder_tag_id: string;
+};
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const animateProgress = async (
-  setState: React.Dispatch<React.SetStateAction<ProgressState>>,
+  setState: Dispatch<SetStateAction<ProgressState>>,
   to: number,
   status?: string,
   duration = 350,
@@ -168,11 +182,7 @@ const animateProgress = async (
   await sleep(duration + 20);
 };
 
-const setProgressInstant = (
-  setState: React.Dispatch<React.SetStateAction<ProgressState>>,
-  progress: number,
-  status: string,
-) => {
+const setProgressInstant = (setState: Dispatch<SetStateAction<ProgressState>>, progress: number, status: string) => {
   setState({
     open: true,
     progress,
@@ -180,7 +190,7 @@ const setProgressInstant = (
   });
 };
 
-const resetProgress = async (setState: React.Dispatch<React.SetStateAction<ProgressState>>) => {
+const resetProgress = async (setState: Dispatch<SetStateAction<ProgressState>>) => {
   await sleep(250);
   setState({
     open: false,
@@ -325,7 +335,7 @@ const FileStatusCard = ({
   fileName: string;
   previewUrl?: string | null;
   alt: string;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
 }) => (
   <motion.div
     initial={{ opacity: 0, y: 6 }}
@@ -363,10 +373,10 @@ const UploadDropzone = ({
 }: {
   label: string;
   sublabel: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   onClick: () => void;
   dragActive?: boolean;
-  children?: React.ReactNode;
+  children?: ReactNode;
 }) => (
   <motion.div
     whileHover={{ y: -2 }}
@@ -405,7 +415,7 @@ const ReviewSection = ({ title }: { toolType: "custom-print" | "lithophane"; tit
         .order("created_at", { ascending: false })
         .limit(10);
 
-      if (!error) setReviews(data ?? []);
+      if (!error) setReviews((data as ToolReview[]) ?? []);
       setLoading(false);
     };
 
@@ -587,7 +597,7 @@ const LithophaneOrderSection = () => {
 
       await animateProgress(setLithophaneProgress, 86, "Creating order...", 300);
 
-      const { error } = await supabase.from("custom_orders" as any).insert({
+      const { error } = await supabase.from("custom_orders").insert({
         user_id: user.id,
         name: userName || "Account User",
         email: userEmail,
@@ -671,11 +681,17 @@ const GiftFinder = () => {
 
   useEffect(() => {
     const fetchTags = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("gift_finder_tags")
         .select("id, name, slug, icon_key, description, is_active")
         .eq("is_active", true)
         .order("sort_order", { ascending: true });
+
+      if (error) {
+        console.error("Failed to fetch Gift Finder tags:", error.message);
+        setTags([]);
+        return;
+      }
 
       setTags((data as GiftFinderTag[]) ?? []);
     };
@@ -705,9 +721,8 @@ const GiftFinder = () => {
 
       const scoreMap = new Map<string, number>();
 
-      for (const row of links) {
-        const productId = row.product_id as string;
-        scoreMap.set(productId, (scoreMap.get(productId) ?? 0) + 1);
+      for (const row of (links as GiftFinderLink[]) ?? []) {
+        scoreMap.set(row.product_id, (scoreMap.get(row.product_id) ?? 0) + 1);
       }
 
       const productIds = Array.from(scoreMap.keys());
@@ -731,8 +746,9 @@ const GiftFinder = () => {
         }))
         .sort((a, b) => {
           if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
-          if (Boolean(b.is_featured) !== Boolean(a.is_featured))
+          if (Boolean(b.is_featured) !== Boolean(a.is_featured)) {
             return Number(Boolean(b.is_featured)) - Number(Boolean(a.is_featured));
+          }
           return a.name.localeCompare(b.name);
         });
 
@@ -971,21 +987,21 @@ const CustomPrintOrder = () => {
     await resetProgress(setReferenceProgress);
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
     await processModelFile(selectedFile);
     e.target.value = "";
   };
 
-  const handleReferenceImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleReferenceImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const selectedImage = e.target.files?.[0];
     if (!selectedImage) return;
     await processReferenceImage(selectedImage);
     e.target.value = "";
   };
 
-  const handleDrop = async (event: React.DragEvent<HTMLDivElement>, type: "model" | "reference") => {
+  const handleDrop = async (event: DragEvent<HTMLDivElement>, type: "model" | "reference") => {
     event.preventDefault();
 
     if (type === "model") setModelDragActive(false);

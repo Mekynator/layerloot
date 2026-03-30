@@ -66,7 +66,7 @@ async function fetchStorefrontCatalog(page?: string): Promise<StorefrontCatalogD
     .order("created_at", { ascending: false });
 
   const categoriesReq = supabase
-    .from("product_categories")
+    .from("categories")
     .select("id, name, slug, parent_id")
     .order("sort_order", { ascending: true });
 

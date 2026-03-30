@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Pencil, Trash2, Layers, Calculator, Tag, X } from "lucide-react";
+import { Calculator, Layers, Pencil, Plus, Tag, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,6 +47,11 @@ interface GiftFinderTag {
   id: string;
   name: string;
   slug?: string;
+}
+
+interface ProductGiftFinderLink {
+  product_id: string;
+  gift_finder_tag_id: string;
 }
 
 const MAX_PRODUCT_IMAGE_SIZE_BYTES = 20 * 1024 * 1024;
@@ -106,7 +111,7 @@ const AdminProducts = () => {
 
     const productTagIdsMap = new Map<string, string[]>();
 
-    for (const row of linksData ?? []) {
+    for (const row of (linksData as ProductGiftFinderLink[]) ?? []) {
       const current = productTagIdsMap.get(row.product_id) ?? [];
       current.push(row.gift_finder_tag_id);
       productTagIdsMap.set(row.product_id, current);
@@ -123,7 +128,7 @@ const AdminProducts = () => {
   };
 
   const fetchCategories = async () => {
-    const { data, error } = await supabase.from("product_categories").select("id, name").order("name");
+    const { data, error } = await supabase.from("categories").select("id, name").order("name");
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
       return;
@@ -214,7 +219,7 @@ const AdminProducts = () => {
 
     if (uniqueIds.length === 0) return;
 
-    const rows = uniqueIds.map((gift_finder_tag_id) => ({
+    const rows: ProductGiftFinderLink[] = uniqueIds.map((gift_finder_tag_id) => ({
       product_id: productId,
       gift_finder_tag_id,
     }));
@@ -427,7 +432,7 @@ const AdminProducts = () => {
                     <Input
                       type="number"
                       value={form.stock}
-                      onChange={(e) => setForm({ ...form, stock: parseInt(e.target.value) || 0 })}
+                      onChange={(e) => setForm({ ...form, stock: parseInt(e.target.value, 10) || 0 })}
                     />
                   </div>
 

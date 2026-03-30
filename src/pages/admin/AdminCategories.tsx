@@ -66,19 +66,30 @@ const AdminCategories = () => {
   const [giftTagForm, setGiftTagForm] = useState(emptyGiftTag);
 
   const fetchCategories = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("categories")
       .select("id, name, slug, parent_id")
       .order("name", { ascending: true });
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+
     setCategories((data as Category[]) ?? []);
   };
 
   const fetchGiftFinderTags = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("gift_finder_tags")
       .select("id, name, slug, icon_key, sort_order, is_active")
       .order("sort_order", { ascending: true })
       .order("name", { ascending: true });
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
 
     setGiftFinderTags((data as GiftFinderTag[]) ?? []);
   };
@@ -413,7 +424,7 @@ const AdminCategories = () => {
                           onChange={(e) =>
                             setGiftTagForm({
                               ...giftTagForm,
-                              sort_order: parseInt(e.target.value) || 0,
+                              sort_order: parseInt(e.target.value, 10) || 0,
                             })
                           }
                         />

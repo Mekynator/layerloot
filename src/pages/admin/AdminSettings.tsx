@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ImagePlus, Palette, Save, Sparkles, Upload } from "lucide-react";
+import { Eye, ImagePlus, Palette, Save, Sparkles, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,24 +38,6 @@ interface FooterConfig {
   account_link_label: string;
   orders_link_label: string;
 }
-
-type ContactConfig = {
-  email: string;
-  phone: string;
-  address: string;
-  contact_description: string;
-  email_label: string;
-  phone_label: string;
-  address_label: string;
-  instagram_url: string;
-  facebook_url: string;
-  social_title: string;
-  social: {
-    instagram: string;
-    facebook: string;
-    youtube: string;
-  };
-};
 
 export interface ThemeGalleryImage {
   id: string;
@@ -116,20 +98,6 @@ const defaultFooter: FooterConfig = {
   orders_link_label: "Order History",
 };
 
-const defaultContact: ContactConfig = {
-  email: "",
-  phone: "",
-  address: "",
-  contact_description: "Questions, custom requests, or order help? Reach out anytime.",
-  email_label: "Email",
-  phone_label: "Phone",
-  address_label: "Address",
-  instagram_url: "",
-  facebook_url: "",
-  social_title: "Follow us",
-  social: { instagram: "", facebook: "", youtube: "" },
-};
-
 const DEFAULT_BACKGROUND_LIBRARY: ThemeGalleryImage[] = [
   {
     id: "default-dark-grid",
@@ -152,114 +120,6 @@ const DEFAULT_BACKGROUND_LIBRARY: ThemeGalleryImage[] = [
         </defs>
         <rect width="1600" height="900" fill="url(#bg)"/>
         <rect width="1600" height="900" fill="url(#glow)"/>
-        <g opacity="0.18" stroke="#ffffff">
-          <path d="M0 120H1600"/><path d="M0 240H1600"/><path d="M0 360H1600"/><path d="M0 480H1600"/><path d="M0 600H1600"/><path d="M0 720H1600"/>
-          <path d="M160 0V900"/><path d="M320 0V900"/><path d="M480 0V900"/><path d="M640 0V900"/><path d="M800 0V900"/><path d="M960 0V900"/><path d="M1120 0V900"/><path d="M1280 0V900"/><path d="M1440 0V900"/>
-        </g>
-      </svg>
-    `),
-  },
-  {
-    id: "spring-garden",
-    label: "Spring Garden",
-    category: "Seasonal",
-    url:
-      "data:image/svg+xml;utf8," +
-      encodeURIComponent(`
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">
-        <defs>
-          <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="#f4fff6"/>
-            <stop offset="55%" stop-color="#fef6fb"/>
-            <stop offset="100%" stop-color="#fffde8"/>
-          </linearGradient>
-        </defs>
-        <rect width="1600" height="900" fill="url(#bg)"/>
-        <g opacity="0.35">
-          <circle cx="180" cy="180" r="130" fill="#ffd6eb"/>
-          <circle cx="1380" cy="220" r="170" fill="#d9ffd7"/>
-          <circle cx="1180" cy="680" r="180" fill="#fff0a6"/>
-          <circle cx="420" cy="700" r="190" fill="#f1d8ff"/>
-        </g>
-      </svg>
-    `),
-  },
-  {
-    id: "summer-sky",
-    label: "Summer Sky",
-    category: "Seasonal",
-    url:
-      "data:image/svg+xml;utf8," +
-      encodeURIComponent(`
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">
-        <defs>
-          <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#8dd8ff"/>
-            <stop offset="55%" stop-color="#d8f6ff"/>
-            <stop offset="100%" stop-color="#fff2bf"/>
-          </linearGradient>
-        </defs>
-        <rect width="1600" height="900" fill="url(#bg)"/>
-        <circle cx="1260" cy="180" r="72" fill="#fff3a3"/>
-        <g fill="#ffffff" opacity="0.78">
-          <ellipse cx="280" cy="180" rx="100" ry="35"/>
-          <ellipse cx="360" cy="190" rx="75" ry="26"/>
-          <ellipse cx="1080" cy="250" rx="110" ry="34"/>
-          <ellipse cx="1170" cy="260" rx="80" ry="25"/>
-        </g>
-      </svg>
-    `),
-  },
-  {
-    id: "autumn-forest",
-    label: "Autumn Forest",
-    category: "Seasonal",
-    url:
-      "data:image/svg+xml;utf8," +
-      encodeURIComponent(`
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">
-        <defs>
-          <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#25140e"/>
-            <stop offset="45%" stop-color="#4a2614"/>
-            <stop offset="100%" stop-color="#1a110d"/>
-          </linearGradient>
-        </defs>
-        <rect width="1600" height="900" fill="url(#bg)"/>
-        <g opacity="0.5">
-          <circle cx="300" cy="180" r="120" fill="#c25c2f"/>
-          <circle cx="700" cy="140" r="90" fill="#d9a12c"/>
-          <circle cx="1120" cy="240" r="160" fill="#7f2d12"/>
-          <circle cx="1360" cy="170" r="100" fill="#a16207"/>
-        </g>
-      </svg>
-    `),
-  },
-  {
-    id: "winter-night",
-    label: "Winter Night",
-    category: "Seasonal",
-    url:
-      "data:image/svg+xml;utf8," +
-      encodeURIComponent(`
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">
-        <defs>
-          <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="#020817"/>
-            <stop offset="55%" stop-color="#0f172a"/>
-            <stop offset="100%" stop-color="#16213b"/>
-          </linearGradient>
-        </defs>
-        <rect width="1600" height="900" fill="url(#bg)"/>
-        <g fill="#ffffff" opacity="0.75">
-          <circle cx="180" cy="140" r="2.5"/>
-          <circle cx="340" cy="280" r="2"/>
-          <circle cx="520" cy="180" r="2"/>
-          <circle cx="700" cy="320" r="3"/>
-          <circle cx="920" cy="150" r="2"/>
-          <circle cx="1180" cy="260" r="2.5"/>
-          <circle cx="1450" cy="190" r="2"/>
-        </g>
       </svg>
     `),
   },
@@ -291,11 +151,6 @@ const DEFAULT_BACKGROUND_LIBRARY: ThemeGalleryImage[] = [
         <rect width="1600" height="900" fill="#100615"/>
         <circle cx="1200" cy="190" r="100" fill="#ffb703" opacity="0.9"/>
         <path d="M0 760 C220 620 380 840 620 720 S1030 840 1280 730 S1500 700 1600 760V900H0Z" fill="#1a0f24"/>
-        <path d="M0 790 C220 660 380 870 620 760 S1030 870 1280 760 S1500 730 1600 790V900H0Z" fill="#31111c"/>
-        <circle cx="250" cy="250" r="3" fill="#ffffff"/>
-        <circle cx="420" cy="120" r="2" fill="#ffffff"/>
-        <circle cx="680" cy="230" r="2.5" fill="#ffffff"/>
-        <circle cx="950" cy="160" r="2" fill="#ffffff"/>
       </svg>
     `),
   },
@@ -314,9 +169,6 @@ const DEFAULT_BACKGROUND_LIBRARY: ThemeGalleryImage[] = [
           <circle cx="310" cy="104" r="16" fill="#ffe066"/>
           <circle cx="470" cy="142" r="16" fill="#80ed99"/>
           <circle cx="680" cy="186" r="16" fill="#4cc9f0"/>
-          <circle cx="930" cy="146" r="16" fill="#ffd166"/>
-          <circle cx="1190" cy="110" r="16" fill="#ef476f"/>
-          <circle cx="1420" cy="104" r="16" fill="#06d6a0"/>
         </g>
       </svg>
     `),
@@ -350,7 +202,7 @@ const defaultTheme: ThemeConfig = {
 
 const SEASONAL_PRESETS: Record<string, Partial<ThemeConfig> & { label: string; imageId?: string }> = {
   default: {
-    label: "Default (Dark Industrial)",
+    label: "Default",
     primary: "24 95% 53%",
     secondary: "220 15% 16%",
     accent: "24 95% 53%",
@@ -364,76 +216,8 @@ const SEASONAL_PRESETS: Record<string, Partial<ThemeConfig> & { label: string; i
     background_effect: "none",
     imageId: "default-dark-grid",
   },
-  spring: {
-    label: "🌸 Spring Bloom",
-    primary: "142 60% 45%",
-    secondary: "142 20% 92%",
-    accent: "330 70% 60%",
-    background: "90 30% 96%",
-    foreground: "142 30% 15%",
-    muted: "142 15% 90%",
-    border: "142 20% 85%",
-    card: "0 0% 100%",
-    card_foreground: "142 30% 15%",
-    background_pattern: "dots",
-    background_effect: "petals",
-    overlay_tint: "120 35% 97%",
-    overlay_strength: 0.14,
-    imageId: "spring-garden",
-  },
-  summer: {
-    label: "☀️ Summer Vibes",
-    primary: "35 95% 55%",
-    secondary: "200 60% 92%",
-    accent: "190 80% 45%",
-    background: "45 40% 97%",
-    foreground: "35 40% 12%",
-    muted: "35 20% 90%",
-    border: "35 20% 85%",
-    card: "0 0% 100%",
-    card_foreground: "35 40% 12%",
-    background_pattern: "waves",
-    background_effect: "shimmer",
-    overlay_tint: "45 90% 95%",
-    overlay_strength: 0.15,
-    imageId: "summer-sky",
-  },
-  autumn: {
-    label: "🍂 Autumn Warmth",
-    primary: "15 80% 50%",
-    secondary: "30 25% 18%",
-    accent: "40 85% 55%",
-    background: "25 25% 10%",
-    foreground: "35 30% 90%",
-    muted: "25 20% 18%",
-    border: "25 20% 25%",
-    card: "25 20% 14%",
-    card_foreground: "35 30% 90%",
-    background_pattern: "grain",
-    background_effect: "falling-leaves",
-    overlay_tint: "22 35% 10%",
-    overlay_strength: 0.25,
-    imageId: "autumn-forest",
-  },
-  winter: {
-    label: "❄️ Winter Frost",
-    primary: "210 70% 55%",
-    secondary: "210 25% 15%",
-    accent: "195 80% 65%",
-    background: "215 30% 8%",
-    foreground: "210 20% 95%",
-    muted: "210 20% 18%",
-    border: "210 20% 25%",
-    card: "210 25% 12%",
-    card_foreground: "210 20% 95%",
-    background_pattern: "snowflakes",
-    background_effect: "snow",
-    overlay_tint: "215 30% 8%",
-    overlay_strength: 0.22,
-    imageId: "winter-night",
-  },
   easter: {
-    label: "🐣 Easter",
+    label: "Easter",
     primary: "334 78% 68%",
     secondary: "84 62% 92%",
     accent: "48 95% 62%",
@@ -450,7 +234,7 @@ const SEASONAL_PRESETS: Record<string, Partial<ThemeConfig> & { label: string; i
     imageId: "easter-soft",
   },
   halloween: {
-    label: "🎃 Halloween",
+    label: "Halloween",
     primary: "28 100% 56%",
     secondary: "270 24% 16%",
     accent: "45 100% 58%",
@@ -467,7 +251,7 @@ const SEASONAL_PRESETS: Record<string, Partial<ThemeConfig> & { label: string; i
     imageId: "halloween-moon",
   },
   christmas: {
-    label: "🎄 Christmas",
+    label: "Christmas",
     primary: "0 72% 56%",
     secondary: "145 45% 18%",
     accent: "48 92% 60%",
@@ -513,6 +297,19 @@ const EFFECT_OPTIONS = [
   { value: "bats", label: "Night Bats" },
 ];
 
+const COLOR_FIELDS: { key: keyof ThemeConfig; label: string }[] = [
+  { key: "primary", label: "Primary" },
+  { key: "secondary", label: "Secondary" },
+  { key: "accent", label: "Accent" },
+  { key: "background", label: "Background" },
+  { key: "foreground", label: "Foreground" },
+  { key: "muted", label: "Muted" },
+  { key: "border", label: "Border" },
+  { key: "card", label: "Card" },
+  { key: "card_foreground", label: "Card Foreground" },
+  { key: "overlay_tint", label: "Overlay Tint" },
+];
+
 const readFileAsDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -530,21 +327,375 @@ const normalizeTheme = (value?: Partial<ThemeConfig> | null): ThemeConfig => ({
       : DEFAULT_BACKGROUND_LIBRARY,
 });
 
-const normalizeContact = (value?: Partial<ContactConfig> | null): ContactConfig => ({
-  ...defaultContact,
-  ...(value ?? {}),
-  social: {
-    ...defaultContact.social,
-    ...(value?.social ?? {}),
-  },
-  instagram_url: value?.instagram_url ?? value?.social?.instagram ?? defaultContact.instagram_url,
-  facebook_url: value?.facebook_url ?? value?.social?.facebook ?? defaultContact.facebook_url,
-});
+function clamp(value: number, min = 0, max = 1) {
+  return Math.min(max, Math.max(min, Number.isFinite(value) ? value : min));
+}
+
+function hslToHex(hsl: string): string {
+  const cleaned = hsl.replace(/\s+/g, " ").trim();
+  const match = cleaned.match(/^(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)%\s+(\d+(?:\.\d+)?)%$/);
+  if (!match) return "#ffffff";
+
+  let h = Number(match[1]) / 360;
+  let s = Number(match[2]) / 100;
+  let l = Number(match[3]) / 100;
+
+  let r: number, g: number, b: number;
+
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const hue2rgb = (p: number, q: number, t: number) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1 / 3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1 / 3);
+  }
+
+  const toHex = (x: number) => {
+    const hex = Math.round(x * 255)
+      .toString(16)
+      .padStart(2, "0");
+    return hex;
+  };
+
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function hexToHsl(hex: string): string {
+  const clean = hex.replace("#", "");
+  const full =
+    clean.length === 3
+      ? clean
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : clean;
+  const r = parseInt(full.substring(0, 2), 16) / 255;
+  const g = parseInt(full.substring(2, 4), 16) / 255;
+  const b = parseInt(full.substring(4, 6), 16) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+
+    switch (max) {
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      default:
+        h = (r - g) / d + 4;
+        break;
+    }
+    h /= 6;
+  }
+
+  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+}
+
+const MiniEffectPreview = ({ theme }: { theme: ThemeConfig }) => {
+  const particles = useMemo(() => Array.from({ length: 10 }, (_, i) => i), []);
+
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[22px]">
+      {theme.background_image_url ? (
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `url("${theme.background_image_url}")`,
+            backgroundSize: theme.image_fit,
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+            opacity: clamp(theme.image_opacity),
+          }}
+        />
+      ) : null}
+
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            theme.background_pattern === "grid"
+              ? `linear-gradient(hsl(${theme.foreground} / ${clamp(theme.pattern_opacity * 0.35)}) 1px, transparent 1px), linear-gradient(90deg, hsl(${theme.foreground} / ${clamp(theme.pattern_opacity * 0.35)}) 1px, transparent 1px)`
+              : theme.background_pattern === "dots"
+                ? `radial-gradient(circle, hsl(${theme.foreground} / ${clamp(theme.pattern_opacity * 0.45)}) 1px, transparent 1px)`
+                : theme.background_pattern === "confetti"
+                  ? `radial-gradient(circle at 10% 20%, hsl(${theme.accent} / ${clamp(theme.pattern_opacity * 0.7)}) 0 4px, transparent 4px),
+                 radial-gradient(circle at 40% 70%, hsl(${theme.primary} / ${clamp(theme.pattern_opacity * 0.7)}) 0 5px, transparent 5px),
+                 radial-gradient(circle at 70% 35%, hsl(${theme.secondary} / ${clamp(theme.pattern_opacity * 0.6)}) 0 3px, transparent 3px)`
+                  : theme.background_pattern === "stars"
+                    ? `radial-gradient(circle, hsl(${theme.foreground} / ${clamp(theme.pattern_opacity * 0.7)}) 1px, transparent 1px)`
+                    : theme.background_pattern === "spiderweb"
+                      ? `repeating-linear-gradient(-20deg, transparent 0 22px, hsl(${theme.foreground} / ${clamp(theme.pattern_opacity * 0.25)}) 22px 23px),
+                 repeating-linear-gradient(35deg, transparent 0 28px, hsl(${theme.foreground} / ${clamp(theme.pattern_opacity * 0.22)}) 28px 29px)`
+                      : theme.background_pattern === "diagonal"
+                        ? `repeating-linear-gradient(-45deg, hsl(${theme.foreground} / ${clamp(theme.pattern_opacity * 0.24)}) 0 2px, transparent 2px 14px)`
+                        : `radial-gradient(circle, hsl(${theme.foreground} / ${clamp(theme.pattern_opacity * 0.35)}) 1px, transparent 1px)`,
+          backgroundSize:
+            theme.background_pattern === "grid"
+              ? "24px 24px"
+              : theme.background_pattern === "dots"
+                ? "18px 18px"
+                : theme.background_pattern === "confetti"
+                  ? "180px 140px"
+                  : theme.background_pattern === "stars"
+                    ? "48px 48px"
+                    : "100px 100px",
+        }}
+      />
+
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundColor: `hsl(${theme.overlay_tint} / ${clamp(theme.overlay_strength)})`,
+        }}
+      />
+
+      {theme.background_effect !== "none" && (
+        <div className="absolute inset-0" style={{ opacity: clamp(theme.effect_opacity) }}>
+          {theme.background_effect === "shimmer" && (
+            <div
+              className="absolute inset-y-0 -left-1/2 w-1/2"
+              style={{
+                background: `linear-gradient(110deg, transparent, hsl(${theme.accent} / 0.25), transparent)`,
+                animation: theme.enable_motion ? "miniShimmer 4s linear infinite" : "none",
+              }}
+            />
+          )}
+
+          {(theme.background_effect === "particles" ||
+            theme.background_effect === "snow" ||
+            theme.background_effect === "petals" ||
+            theme.background_effect === "fireflies" ||
+            theme.background_effect === "falling-leaves" ||
+            theme.background_effect === "bats") &&
+            particles.map((i) => (
+              <span
+                key={i}
+                className="absolute"
+                style={{
+                  left: `${8 + i * 9}%`,
+                  top: `${(i * 13) % 90}%`,
+                  width: theme.background_effect === "bats" ? 14 : 8,
+                  height: theme.background_effect === "petals" ? 10 : theme.background_effect === "bats" ? 6 : 8,
+                  borderRadius:
+                    theme.background_effect === "petals"
+                      ? "70% 0 70% 0"
+                      : theme.background_effect === "bats"
+                        ? "0"
+                        : "999px",
+                  background:
+                    theme.background_effect === "snow"
+                      ? `hsl(${theme.foreground} / 0.9)`
+                      : theme.background_effect === "petals"
+                        ? `linear-gradient(135deg, hsl(${theme.accent} / 0.8), hsl(${theme.foreground} / 0.5))`
+                        : theme.background_effect === "falling-leaves"
+                          ? `linear-gradient(135deg, hsl(${theme.primary} / 0.8), hsl(${theme.accent} / 0.7))`
+                          : theme.background_effect === "fireflies"
+                            ? `hsl(${theme.accent} / 0.95)`
+                            : theme.background_effect === "bats"
+                              ? `hsl(${theme.foreground} / 0.8)`
+                              : `hsl(${theme.accent} / 0.75)`,
+                  clipPath:
+                    theme.background_effect === "bats"
+                      ? "polygon(0 65%, 20% 20%, 38% 62%, 50% 32%, 62% 62%, 80% 20%, 100% 65%, 80% 56%, 62% 78%, 50% 48%, 38% 78%, 20% 56%)"
+                      : "none",
+                  boxShadow: theme.background_effect === "fireflies" ? `0 0 10px hsl(${theme.accent} / 0.5)` : "none",
+                  transform: `rotate(${i * 17}deg)`,
+                  animation: theme.enable_motion ? `miniFloat ${4 + (i % 4)}s linear infinite` : "none",
+                }}
+              />
+            ))}
+
+          {theme.background_effect === "twinkle" && (
+            <div
+              className="absolute inset-0"
+              style={{
+                backgroundImage: `radial-gradient(circle, hsl(${theme.foreground} / 0.55) 1px, transparent 1px)`,
+                backgroundSize: "36px 36px",
+                animation: theme.enable_motion ? "miniPulse 2.4s ease-in-out infinite" : "none",
+              }}
+            />
+          )}
+        </div>
+      )}
+
+      <style>{`
+        @keyframes miniShimmer {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(320%); }
+        }
+        @keyframes miniFloat {
+          0% { transform: translateY(-8px) rotate(0deg); opacity: .4; }
+          50% { opacity: 1; }
+          100% { transform: translateY(130px) rotate(180deg); opacity: .2; }
+        }
+        @keyframes miniPulse {
+          0%,100% { opacity: .4; }
+          50% { opacity: 1; }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+const ThemeLivePreview = ({ theme }: { theme: ThemeConfig }) => {
+  return (
+    <div
+      className="relative overflow-hidden rounded-[24px] border shadow-sm"
+      style={{
+        borderColor: `hsl(${theme.border})`,
+        backgroundColor: `hsl(${theme.background})`,
+        color: `hsl(${theme.foreground})`,
+      }}
+    >
+      <MiniEffectPreview theme={theme} />
+      <div className="relative z-10 space-y-4 p-4">
+        <div
+          className="rounded-2xl border p-4 backdrop-blur-sm"
+          style={{
+            borderColor: `hsl(${theme.border})`,
+            backgroundColor: `hsl(${theme.card} / 0.86)`,
+            color: `hsl(${theme.card_foreground})`,
+          }}
+        >
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em]" style={{ color: `hsl(${theme.muted})` }}>
+                Theme Preview
+              </p>
+              <h3 className="text-lg font-bold">LayerLoot Storefront</h3>
+            </div>
+            <button
+              type="button"
+              className="rounded-xl px-3 py-2 text-sm font-semibold"
+              style={{
+                backgroundColor: `hsl(${theme.primary})`,
+                color: "white",
+              }}
+            >
+              Shop Now
+            </button>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-[1.15fr_0.85fr]">
+            <div className="space-y-3">
+              <div
+                className="rounded-2xl border p-4"
+                style={{
+                  borderColor: `hsl(${theme.border})`,
+                  backgroundColor: `hsl(${theme.background} / 0.45)`,
+                }}
+              >
+                <div
+                  className="mb-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold"
+                  style={{
+                    backgroundColor: `hsl(${theme.accent})`,
+                    color: "white",
+                  }}
+                >
+                  Limited Edition
+                </div>
+                <p className="text-sm">
+                  Custom 3D printed collectibles, gifts and accessories with your current colors, pattern and effect.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {[1, 2].map((item) => (
+                  <div
+                    key={item}
+                    className="rounded-2xl border p-3"
+                    style={{
+                      borderColor: `hsl(${theme.border})`,
+                      backgroundColor: `hsl(${theme.card} / 0.92)`,
+                      color: `hsl(${theme.card_foreground})`,
+                    }}
+                  >
+                    <div
+                      className="mb-3 h-20 rounded-xl"
+                      style={{
+                        background: `linear-gradient(135deg, hsl(${theme.primary} / 0.95), hsl(${theme.accent} / 0.82))`,
+                      }}
+                    />
+                    <p className="text-sm font-semibold">Product card</p>
+                    <p className="text-xs" style={{ color: `hsl(${theme.muted})` }}>
+                      Card, border and text preview
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div
+              className="rounded-2xl border p-4"
+              style={{
+                borderColor: `hsl(${theme.border})`,
+                backgroundColor: `hsl(${theme.card} / 0.92)`,
+                color: `hsl(${theme.card_foreground})`,
+              }}
+            >
+              <p className="mb-3 text-sm font-semibold">Cart summary</p>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span style={{ color: `hsl(${theme.muted})` }}>Miniature</span>
+                  <span>249 kr</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span style={{ color: `hsl(${theme.muted})` }}>Shipping</span>
+                  <span>39 kr</span>
+                </div>
+                <div className="mt-3 border-t pt-3" style={{ borderColor: `hsl(${theme.border})` }}>
+                  <div className="flex items-center justify-between font-semibold">
+                    <span>Total</span>
+                    <span style={{ color: `hsl(${theme.primary})` }}>288 kr</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="mt-4 w-full rounded-xl px-3 py-2 text-sm font-semibold"
+                style={{
+                  backgroundColor: `hsl(${theme.secondary})`,
+                  color: `hsl(${theme.foreground})`,
+                }}
+              >
+                Checkout
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const AdminSettings = () => {
   const { toast } = useToast();
   const uploadRef = useRef<HTMLInputElement | null>(null);
-  const [contact, setContact] = useState<ContactConfig>(defaultContact);
+  const [contact, setContact] = useState({
+    email: "",
+    phone: "",
+    address: "",
+    social: { instagram: "", facebook: "", youtube: "" },
+  });
   const [store, setStore] = useState({ name: "LayerLoot", currency: "DKK", currency_symbol: "kr" });
   const [promo, setPromo] = useState<PromoConfig>(defaultPromo);
   const [footer, setFooter] = useState<FooterConfig>(defaultFooter);
@@ -560,7 +711,7 @@ const AdminSettings = () => {
       const { data } = await supabase.from("site_settings").select("*");
       if (data) {
         data.forEach((s: any) => {
-          if (s.key === "contact") setContact(normalizeContact(s.value as any));
+          if (s.key === "contact") setContact(s.value as any);
           if (s.key === "store") setStore(s.value as any);
           if (s.key === "promotion_popup") setPromo({ ...defaultPromo, ...(s.value as any) });
           if (s.key === "footer_settings") setFooter({ ...defaultFooter, ...(s.value as any) });
@@ -585,18 +736,8 @@ const AdminSettings = () => {
 
   const save = async () => {
     setSaving(true);
-
-    const normalizedContactForSave = {
-      ...contact,
-      social: {
-        ...contact.social,
-        instagram: contact.instagram_url,
-        facebook: contact.facebook_url,
-      },
-    };
-
     await Promise.all([
-      upsertSetting("contact", normalizedContactForSave),
+      upsertSetting("contact", contact),
       upsertSetting("store", store),
       upsertSetting("promotion_popup", promo),
       upsertSetting("footer_settings", footer),
@@ -661,15 +802,13 @@ const AdminSettings = () => {
 
   const removeUploadedImage = (id: string) => {
     setTheme((prev) => {
+      const target = (prev.available_backgrounds ?? DEFAULT_BACKGROUND_LIBRARY).find((img) => img.id === id);
       const remaining = (prev.available_backgrounds ?? DEFAULT_BACKGROUND_LIBRARY).filter((img) => img.id !== id);
       const fallbackUrl = remaining[0]?.url ?? "";
       return {
         ...prev,
         available_backgrounds: remaining.length ? remaining : DEFAULT_BACKGROUND_LIBRARY,
-        background_image_url:
-          prev.background_image_url === galleryImages.find((img) => img.id === id)?.url
-            ? fallbackUrl
-            : prev.background_image_url,
+        background_image_url: prev.background_image_url === target?.url ? fallbackUrl : prev.background_image_url,
       };
     });
   };
@@ -680,10 +819,22 @@ const AdminSettings = () => {
     return acc;
   }, {});
 
+  const setColorField = (key: keyof ThemeConfig, hex: string) => {
+    setTheme((prev) => ({
+      ...prev,
+      [key]: hexToHsl(hex),
+    }));
+  };
+
   return (
     <AdminLayout>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="font-display text-3xl font-bold uppercase text-foreground">Settings</h1>
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <div>
+          <h1 className="font-display text-3xl font-bold uppercase text-foreground">Settings</h1>
+          <p className="text-sm text-muted-foreground">
+            Friendlier theme editing with live preview, presets and color pickers.
+          </p>
+        </div>
         <Button onClick={save} disabled={saving} className="font-display uppercase tracking-wider">
           <Save className="mr-1 h-4 w-4" /> {saving ? "Saving..." : "Save Changes"}
         </Button>
@@ -718,14 +869,6 @@ const AdminSettings = () => {
                     onChange={(e) => setContact({ ...contact, address: e.target.value })}
                   />
                 </div>
-                <div>
-                  <Label>Contact Description</Label>
-                  <Textarea
-                    value={contact.contact_description}
-                    onChange={(e) => setContact({ ...contact, contact_description: e.target.value })}
-                    rows={3}
-                  />
-                </div>
               </CardContent>
             </Card>
 
@@ -737,26 +880,18 @@ const AdminSettings = () => {
                 <div>
                   <Label>Instagram URL</Label>
                   <Input
-                    value={contact.instagram_url}
+                    value={contact.social?.instagram ?? ""}
                     onChange={(e) =>
-                      setContact({
-                        ...contact,
-                        instagram_url: e.target.value,
-                        social: { ...contact.social, instagram: e.target.value },
-                      })
+                      setContact({ ...contact, social: { ...contact.social, instagram: e.target.value } })
                     }
                   />
                 </div>
                 <div>
                   <Label>Facebook URL</Label>
                   <Input
-                    value={contact.facebook_url}
+                    value={contact.social?.facebook ?? ""}
                     onChange={(e) =>
-                      setContact({
-                        ...contact,
-                        facebook_url: e.target.value,
-                        social: { ...contact.social, facebook: e.target.value },
-                      })
+                      setContact({ ...contact, social: { ...contact.social, facebook: e.target.value } })
                     }
                   />
                 </div>
@@ -765,13 +900,6 @@ const AdminSettings = () => {
                   <Input
                     value={contact.social?.youtube ?? ""}
                     onChange={(e) => setContact({ ...contact, social: { ...contact.social, youtube: e.target.value } })}
-                  />
-                </div>
-                <div>
-                  <Label>Social Section Title</Label>
-                  <Input
-                    value={contact.social_title}
-                    onChange={(e) => setContact({ ...contact, social_title: e.target.value })}
                   />
                 </div>
               </CardContent>
@@ -847,7 +975,7 @@ const AdminSettings = () => {
                   />
                 </div>
                 <div>
-                  <Label>Dismiss Key (change to re-show popup)</Label>
+                  <Label>Dismiss Key</Label>
                   <Input
                     value={promo.dismiss_key}
                     onChange={(e) => setPromo({ ...promo, dismiss_key: e.target.value })}
@@ -880,15 +1008,13 @@ const AdminSettings = () => {
                     onChange={(e) => setFooter({ ...footer, copyright_text: e.target.value })}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Logo Height (px)</Label>
-                    <Input
-                      type="number"
-                      value={footer.logo_height_px}
-                      onChange={(e) => setFooter({ ...footer, logo_height_px: parseInt(e.target.value, 10) || 32 })}
-                    />
-                  </div>
+                <div>
+                  <Label>Logo Height (px)</Label>
+                  <Input
+                    type="number"
+                    value={footer.logo_height_px}
+                    onChange={(e) => setFooter({ ...footer, logo_height_px: parseInt(e.target.value, 10) || 32 })}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -935,144 +1061,29 @@ const AdminSettings = () => {
                 </div>
               </CardContent>
             </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-display uppercase">Section Titles</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>Quick Links Title</Label>
-                  <Input
-                    value={footer.quick_links_title}
-                    onChange={(e) => setFooter({ ...footer, quick_links_title: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Account Title</Label>
-                  <Input
-                    value={footer.account_title}
-                    onChange={(e) => setFooter({ ...footer, account_title: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Contact Title</Label>
-                  <Input
-                    value={footer.contact_title}
-                    onChange={(e) => setFooter({ ...footer, contact_title: e.target.value })}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-display uppercase">Account Link Labels</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>Auth Link Label</Label>
-                  <Input
-                    value={footer.auth_link_label}
-                    onChange={(e) => setFooter({ ...footer, auth_link_label: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Account Link Label</Label>
-                  <Input
-                    value={footer.account_link_label}
-                    onChange={(e) => setFooter({ ...footer, account_link_label: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Orders Link Label</Label>
-                  <Input
-                    value={footer.orders_link_label}
-                    onChange={(e) => setFooter({ ...footer, orders_link_label: e.target.value })}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="font-display uppercase">Footer Contact Labels & Socials</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label>Email Label</Label>
-                  <Input
-                    value={contact.email_label}
-                    onChange={(e) => setContact({ ...contact, email_label: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Phone Label</Label>
-                  <Input
-                    value={contact.phone_label}
-                    onChange={(e) => setContact({ ...contact, phone_label: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Address Label</Label>
-                  <Input
-                    value={contact.address_label}
-                    onChange={(e) => setContact({ ...contact, address_label: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Social Title</Label>
-                  <Input
-                    value={contact.social_title}
-                    onChange={(e) => setContact({ ...contact, social_title: e.target.value })}
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <Label>Contact Description</Label>
-                  <Textarea
-                    value={contact.contact_description}
-                    onChange={(e) => setContact({ ...contact, contact_description: e.target.value })}
-                    rows={3}
-                  />
-                </div>
-                <div>
-                  <Label>Instagram URL</Label>
-                  <Input
-                    value={contact.instagram_url}
-                    onChange={(e) =>
-                      setContact({
-                        ...contact,
-                        instagram_url: e.target.value,
-                        social: { ...contact.social, instagram: e.target.value },
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label>Facebook URL</Label>
-                  <Input
-                    value={contact.facebook_url}
-                    onChange={(e) =>
-                      setContact({
-                        ...contact,
-                        facebook_url: e.target.value,
-                        social: { ...contact.social, facebook: e.target.value },
-                      })
-                    }
-                  />
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </TabsContent>
 
         <TabsContent value="theme" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="font-display uppercase">Seasonal Presets</CardTitle>
+              <CardTitle className="font-display uppercase">Live Theme Preview</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
+              <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+                <Eye className="h-4 w-4" />
+                Changes are previewed here before saving.
+              </div>
+              <ThemeLivePreview theme={theme} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-display uppercase">Preset Themes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
                 {Object.entries(SEASONAL_PRESETS).map(([key, preset]) => (
                   <button
                     key={key}
@@ -1099,38 +1110,29 @@ const AdminSettings = () => {
             </CardContent>
           </Card>
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
             <Card>
               <CardHeader>
-                <CardTitle className="font-display uppercase">Core Colors (HSL)</CardTitle>
+                <CardTitle className="font-display uppercase">Color Pickers</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {(
-                  [
-                    ["primary", "Primary"],
-                    ["secondary", "Secondary"],
-                    ["accent", "Accent"],
-                    ["background", "Background"],
-                    ["foreground", "Foreground"],
-                    ["muted", "Muted"],
-                    ["border", "Border"],
-                    ["card", "Card"],
-                    ["card_foreground", "Card Foreground"],
-                  ] as [keyof ThemeConfig, string][]
-                ).map(([key, label]) => (
-                  <div key={key} className="flex items-center gap-3">
-                    <div
-                      className="h-8 w-8 shrink-0 rounded-lg border border-border"
-                      style={{ backgroundColor: `hsl(${theme[key]})` }}
-                    />
-                    <div className="flex-1">
-                      <Label className="text-xs">{label}</Label>
-                      <Input
-                        value={theme[key] as string}
-                        onChange={(e) => setTheme({ ...theme, [key]: e.target.value })}
-                        placeholder="H S% L%"
-                        className="h-8 text-xs"
+              <CardContent className="grid gap-4 sm:grid-cols-2">
+                {COLOR_FIELDS.map(({ key, label }) => (
+                  <div key={String(key)} className="rounded-2xl border border-border bg-card/50 p-4">
+                    <Label className="mb-3 block text-sm">{label}</Label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={hslToHex(String(theme[key]))}
+                        onChange={(e) => setColorField(key, e.target.value)}
+                        className="h-12 w-16 cursor-pointer rounded-xl border border-border bg-transparent p-1"
                       />
+                      <div className="min-w-0 flex-1">
+                        <div
+                          className="mb-2 h-6 rounded-lg border border-border"
+                          style={{ backgroundColor: `hsl(${theme[key] as string})` }}
+                        />
+                        <p className="truncate text-xs text-muted-foreground">{theme[key] as string}</p>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1143,7 +1145,7 @@ const AdminSettings = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Background Image URL</Label>
+                  <Label>Background Image</Label>
                   <div className="flex gap-2">
                     <Input
                       value={theme.background_image_url}
@@ -1166,7 +1168,7 @@ const AdminSettings = () => {
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <Label>Background Pattern</Label>
+                    <Label>Pattern</Label>
                     <Select
                       value={theme.background_pattern}
                       onValueChange={(v) => setTheme({ ...theme, background_pattern: v })}
@@ -1185,7 +1187,7 @@ const AdminSettings = () => {
                   </div>
 
                   <div>
-                    <Label>Background Effect</Label>
+                    <Label>Effect</Label>
                     <Select
                       value={theme.background_effect}
                       onValueChange={(v) => setTheme({ ...theme, background_effect: v })}
@@ -1242,56 +1244,51 @@ const AdminSettings = () => {
                   <div>
                     <Label>Image Opacity</Label>
                     <Input
-                      type="number"
+                      type="range"
                       min={0}
                       max={1}
                       step={0.05}
                       value={theme.image_opacity}
-                      onChange={(e) => setTheme({ ...theme, image_opacity: Number(e.target.value) || 0 })}
+                      onChange={(e) => setTheme({ ...theme, image_opacity: Number(e.target.value) })}
                     />
+                    <p className="text-xs text-muted-foreground">{theme.image_opacity.toFixed(2)}</p>
                   </div>
                   <div>
                     <Label>Pattern Opacity</Label>
                     <Input
-                      type="number"
+                      type="range"
                       min={0}
                       max={1}
                       step={0.05}
                       value={theme.pattern_opacity}
-                      onChange={(e) => setTheme({ ...theme, pattern_opacity: Number(e.target.value) || 0 })}
+                      onChange={(e) => setTheme({ ...theme, pattern_opacity: Number(e.target.value) })}
                     />
+                    <p className="text-xs text-muted-foreground">{theme.pattern_opacity.toFixed(2)}</p>
                   </div>
                   <div>
                     <Label>Effect Opacity</Label>
                     <Input
-                      type="number"
+                      type="range"
                       min={0}
                       max={1}
                       step={0.05}
                       value={theme.effect_opacity}
-                      onChange={(e) => setTheme({ ...theme, effect_opacity: Number(e.target.value) || 0 })}
+                      onChange={(e) => setTheme({ ...theme, effect_opacity: Number(e.target.value) })}
                     />
+                    <p className="text-xs text-muted-foreground">{theme.effect_opacity.toFixed(2)}</p>
                   </div>
                   <div>
                     <Label>Overlay Strength</Label>
                     <Input
-                      type="number"
+                      type="range"
                       min={0}
                       max={1}
                       step={0.05}
                       value={theme.overlay_strength}
-                      onChange={(e) => setTheme({ ...theme, overlay_strength: Number(e.target.value) || 0 })}
+                      onChange={(e) => setTheme({ ...theme, overlay_strength: Number(e.target.value) })}
                     />
+                    <p className="text-xs text-muted-foreground">{theme.overlay_strength.toFixed(2)}</p>
                   </div>
-                </div>
-
-                <div>
-                  <Label>Overlay Tint (HSL)</Label>
-                  <Input
-                    value={theme.overlay_tint}
-                    onChange={(e) => setTheme({ ...theme, overlay_tint: e.target.value })}
-                    placeholder="220 20% 10%"
-                  />
                 </div>
 
                 <div className="flex items-center gap-2">

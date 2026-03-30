@@ -1,34 +1,27 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
-  Crop,
+  CheckCircle2,
+  Contrast,
   Image as ImageIcon,
-  LampDesk,
+  Loader2,
   PackageCheck,
-  Sparkles,
   SunMedium,
   Upload,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import LithophaneImageEditorModal, {
-  type CropState,
-  type SavedLithophaneImage,
-} from "@/components/LithophaneImageEditorModal";
-import Lithophane3DViewer from "@/components/Lithophane3DViewer";
+import { AnimatePresence, motion } from "framer-motion";
+import LithophaneImageEditorModal from "@/components/lithophane/LithophaneImageEditorModal";
+import Lithophane3DViewer from "@/components/lithophane/Lithophane3DViewer";
 
 export type LithophaneShape = "flat" | "arched" | "frame";
 export type LithophaneOrientation = "portrait" | "landscape";
-export type LithophaneSceneMode = "desk" | "wall" | "dark";
-export type LithophaneLightTone = "warm" | "neutral" | "cool";
+export type LithophanePreviewTab = "original" | "scene";
 
 export interface LithophaneSubmitPayload {
   sourceFileName: string | null;
   sourceDataUrl: string | null;
-  originalSourceDataUrl: string | null;
-  croppedImageDataUrl: string | null;
   processedDataUrl: string | null;
   previewScreenshotDataUrl: string | null;
-  cropState: CropState | null;
   shape: LithophaneShape;
   orientation: LithophaneOrientation;
   widthMm: number;
@@ -42,8 +35,7 @@ export interface LithophaneSubmitPayload {
   gamma: number;
   blur: number;
   lightEnabled: boolean;
-  lightTone: LithophaneLightTone;
-  sceneMode: LithophaneSceneMode;
+  lightTone: "warm" | "neutral" | "cool";
   notes: string;
   estimatedPrice: number;
   estimatedPrintHours: number;
@@ -69,8 +61,6 @@ const DEFAULTS = {
   heightMm: 160,
   borderMm: 3,
   orientation: "portrait" as LithophaneOrientation,
-  shape: "frame" as LithophaneShape,
-  sceneMode: "dark" as LithophaneSceneMode,
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -78,19 +68,13 @@ function clamp(value: number, min: number, max: number) {
 }
 
 function estimatePrice(widthMm: number, heightMm: number, borderMm: number) {
-  const widthExtra = Math.max(0, widthMm - 60);
-  const heightExtra = Math.max(0, heightMm - 80);
-  const basePrice = 100;
-  const sizeIncrease = widthExtra * 0.48 + heightExtra * 0.62;
-  const borderIncrease = borderMm * 8;
-  return Number((basePrice + sizeIncrease + borderIncrease).toFixed(2));
+  const areaFactor = (widthMm * heightMm) / 1000;
+  const borderFactor = borderMm * 1.2;
+  return Number((39 + areaFactor + borderFactor).toFixed(2));
 }
 
-function estimatePrintHours(widthMm: number, heightMm: number, borderMm: number) {
-  const baseHours = 2;
-  const sizeFactor = (widthMm * heightMm) / 9000;
-  const borderFactor = borderMm * 0.12;
-  return Number((baseHours + sizeFactor + borderFactor).toFixed(1));
+function estimatePrintHours(widthMm: number, heightMm: number) {
+  return Number((1.2 + widthMm / 80 + heightMm / 65).toFixed(1));
 }
 
 function readFileAsDataUrl(file: File): Promise<string> {
@@ -99,19 +83,6 @@ function readFileAsDataUrl(file: File): Promise<string> {
     reader.onload = () => resolve(String(reader.result));
     reader.onerror = reject;
     reader.readAsDataURL(file);
-  });
-}
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function detectOrientation(src: string): Promise<LithophaneOrientation> {
-  return new Promise((resolve, reject) => {
-    const image = new window.Image();
-    image.onload = () => resolve(image.width >= image.height ? "landscape" : "portrait");
-    image.onerror = reject;
-    image.src = src;
   });
 }
 
@@ -149,7 +120,7 @@ function Range({
         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-900">{value}</span>
       </div>
       <input
-        className="w-full cursor-pointer accent-amber-500"
+        className="w-full accent-amber-500"
         type="range"
         min={min}
         max={max}
@@ -165,12 +136,10 @@ function ToggleChip({
   active,
   children,
   onClick,
-  icon,
 }: {
   active: boolean;
   children: React.ReactNode;
   onClick: () => void;
-  icon?: React.ReactNode;
 }) {
   return (
     <motion.button
@@ -179,16 +148,19 @@ function ToggleChip({
       whileHover={{ y: -2, scale: 1.01 }}
       whileTap={{ scale: 0.98 }}
       className={[
-        "flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition",
+        "rounded-xl border px-3 py-2 text-sm font-medium transition",
         active
-          ? "border-amber-500 bg-amber-50 text-amber-700 ring-1 ring-amber-300 shadow-[0_0_24px_rgba(245,158,11,0.22)]"
-          : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:border-amber-300",
+          ? "border-amber-500 bg-amber-50 text-amber-700 shadow-[0_0_20px_rgba(245,158,11,0.14)]"
+          : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50",
       ].join(" ")}
     >
-      {icon}
       {children}
     </motion.button>
   );
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function UploadOverlay({ progress, status }: { progress: number; status: string }) {
@@ -200,13 +172,7 @@ function UploadOverlay({ progress, status }: { progress: number; status: string 
         exit={{ opacity: 0 }}
         className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-2xl bg-white/85 px-5 text-center backdrop-blur-sm"
       >
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
-          className="mb-3"
-        >
-          <Sparkles className="h-7 w-7 text-amber-500" />
-        </motion.div>
+        <Loader2 className="mb-3 h-7 w-7 animate-spin text-amber-500" />
         <p className="text-sm font-semibold text-slate-900">{status}</p>
         <div className="mt-4 h-2 w-full max-w-xs overflow-hidden rounded-full bg-slate-200">
           <motion.div
@@ -222,23 +188,6 @@ function UploadOverlay({ progress, status }: { progress: number; status: string 
   );
 }
 
-function StepPill({ active, done, children }: { active: boolean; done: boolean; children: React.ReactNode }) {
-  return (
-    <div
-      className={[
-        "rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] transition",
-        active
-          ? "border-amber-400 bg-amber-50 text-amber-700 shadow-[0_0_20px_rgba(245,158,11,0.18)]"
-          : done
-            ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-            : "border-white/15 bg-white/5 text-slate-300",
-      ].join(" ")}
-    >
-      {children}
-    </div>
-  );
-}
-
 export default function Lithophane({
   className,
   onSubmitDesign,
@@ -246,25 +195,18 @@ export default function Lithophane({
   submitLabel = "Submit Lithophane Design",
   initialNotes = "",
 }: LithophaneProps) {
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const [shape, setShape] = useState<LithophaneShape>(DEFAULTS.shape);
+  const [sourceFileName, setSourceFileName] = useState<string | null>(null);
+  const [sourceDataUrl, setSourceDataUrl] = useState<string | null>(null);
+  const [shape, setShape] = useState<LithophaneShape>("frame");
   const [orientation, setOrientation] = useState<LithophaneOrientation>(DEFAULTS.orientation);
-  const [autoDetectedOrientation, setAutoDetectedOrientation] = useState<LithophaneOrientation>(DEFAULTS.orientation);
-  const [sceneMode, setSceneMode] = useState<LithophaneSceneMode>(DEFAULTS.sceneMode);
+  const [activeTab, setActiveTab] = useState<LithophanePreviewTab>("scene");
   const [widthMm, setWidthMm] = useState(DEFAULTS.widthMm);
   const [heightMm, setHeightMm] = useState(DEFAULTS.heightMm);
   const [borderMm, setBorderMm] = useState(DEFAULTS.borderMm);
   const [lightEnabled, setLightEnabled] = useState(true);
-  const [lightTone, setLightTone] = useState<LithophaneLightTone>("warm");
+  const [lightTone, setLightTone] = useState<"warm" | "neutral" | "cool">("warm");
   const [notes, setNotes] = useState(initialNotes);
-
-  const [sourceFileName, setSourceFileName] = useState<string | null>(null);
-  const [originalSourceDataUrl, setOriginalSourceDataUrl] = useState<string | null>(null);
-  const [croppedImageDataUrl, setCroppedImageDataUrl] = useState<string | null>(null);
-  const [cropState, setCropState] = useState<CropState | null>(null);
-  const [editorOpen, setEditorOpen] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-
   const [uploadProgress, setUploadProgress] = useState<UploadProgressState>({
     active: false,
     progress: 0,
@@ -272,20 +214,13 @@ export default function Lithophane({
   });
 
   const estimatedPrice = useMemo(() => estimatePrice(widthMm, heightMm, borderMm), [widthMm, heightMm, borderMm]);
-  const estimatedPrintHours = useMemo(
-    () => estimatePrintHours(widthMm, heightMm, borderMm),
-    [widthMm, heightMm, borderMm],
-  );
+  const estimatedPrintHours = useMemo(() => estimatePrintHours(widthMm, heightMm), [widthMm, heightMm]);
 
   useEffect(() => {
     onDraftChange?.({
       sourceFileName,
-      sourceDataUrl: croppedImageDataUrl,
-      originalSourceDataUrl,
-      croppedImageDataUrl,
-      processedDataUrl: croppedImageDataUrl,
-      previewScreenshotDataUrl: croppedImageDataUrl,
-      cropState,
+      sourceDataUrl,
+      processedDataUrl: sourceDataUrl,
       shape,
       orientation,
       widthMm,
@@ -300,16 +235,13 @@ export default function Lithophane({
       blur: 0,
       lightEnabled,
       lightTone,
-      sceneMode,
       notes,
       estimatedPrice,
       estimatedPrintHours,
     });
   }, [
     sourceFileName,
-    croppedImageDataUrl,
-    originalSourceDataUrl,
-    cropState,
+    sourceDataUrl,
     shape,
     orientation,
     widthMm,
@@ -317,7 +249,6 @@ export default function Lithophane({
     borderMm,
     lightEnabled,
     lightTone,
-    sceneMode,
     notes,
     estimatedPrice,
     estimatedPrintHours,
@@ -326,26 +257,18 @@ export default function Lithophane({
 
   const runUploadProgress = async (selectedFile: File) => {
     setUploadProgress({ active: true, progress: 8, status: "Reading image..." });
-    await sleep(120);
+    await sleep(140);
+    setUploadProgress({ active: true, progress: 34, status: "Checking image..." });
+    await sleep(150);
+    setUploadProgress({ active: true, progress: 68, status: "Preparing preview..." });
 
     const dataUrl = await readFileAsDataUrl(selectedFile);
 
-    setUploadProgress({ active: true, progress: 34, status: "Detecting orientation..." });
-    await sleep(120);
-
-    const detected = await detectOrientation(dataUrl);
-    setAutoDetectedOrientation(detected);
-    setOrientation(detected);
-
-    setUploadProgress({ active: true, progress: 70, status: "Preparing editor..." });
-    await sleep(150);
-
     setSourceFileName(selectedFile.name);
-    setOriginalSourceDataUrl(dataUrl);
-    setEditorOpen(true);
-    setStep(2);
+    setSourceDataUrl(dataUrl);
+    setActiveTab("scene");
 
-    setUploadProgress({ active: true, progress: 100, status: "Ready to crop" });
+    setUploadProgress({ active: true, progress: 100, status: "Image ready" });
     await sleep(180);
     setUploadProgress({ active: false, progress: 0, status: "" });
   };
@@ -363,33 +286,24 @@ export default function Lithophane({
     }
   };
 
-  const handleImageSaved = (result: SavedLithophaneImage) => {
-    setCroppedImageDataUrl(result.croppedDataUrl);
-    setCropState(result.cropState);
-    setEditorOpen(false);
-    setStep(3);
-  };
-
   const handleReset = () => {
     setWidthMm(DEFAULTS.widthMm);
     setHeightMm(DEFAULTS.heightMm);
     setBorderMm(DEFAULTS.borderMm);
     setLightEnabled(true);
     setLightTone("warm");
-    setSceneMode(DEFAULTS.sceneMode);
-    setOrientation(autoDetectedOrientation);
-    setShape(DEFAULTS.shape);
+    setOrientation(DEFAULTS.orientation);
+    setShape("frame");
   };
+
+  const previewScreenshotDataUrl = sourceDataUrl;
 
   const submitPayload: LithophaneSubmitPayload = useMemo(
     () => ({
       sourceFileName,
-      sourceDataUrl: croppedImageDataUrl,
-      originalSourceDataUrl,
-      croppedImageDataUrl,
-      processedDataUrl: croppedImageDataUrl,
-      previewScreenshotDataUrl: croppedImageDataUrl,
-      cropState,
+      sourceDataUrl,
+      processedDataUrl: sourceDataUrl,
+      previewScreenshotDataUrl,
       shape,
       orientation,
       widthMm,
@@ -404,39 +318,32 @@ export default function Lithophane({
       blur: 0,
       lightEnabled,
       lightTone,
-      sceneMode,
       notes,
       estimatedPrice,
       estimatedPrintHours,
       designJson: {
-        version: 4,
+        version: 3,
         component: "Lithophane",
         shape,
         orientation,
-        autoDetectedOrientation,
         dimensions: {
           widthMm,
           heightMm,
           borderMm,
         },
+        image: {
+          sourceOnly: true,
+        },
         scene: {
           lightEnabled,
           lightTone,
-          sceneMode,
-        },
-        imageEditor: cropState,
-        pricing: {
-          estimatedPrice,
-          estimatedPrintHours,
-          minimumPriceRule: "60x80 border 0 = 100 DKK",
         },
       },
     }),
     [
       sourceFileName,
-      croppedImageDataUrl,
-      originalSourceDataUrl,
-      cropState,
+      sourceDataUrl,
+      previewScreenshotDataUrl,
       shape,
       orientation,
       widthMm,
@@ -444,79 +351,141 @@ export default function Lithophane({
       borderMm,
       lightEnabled,
       lightTone,
-      sceneMode,
       notes,
       estimatedPrice,
       estimatedPrintHours,
-      autoDetectedOrientation,
     ],
   );
 
+  const frameOuterStyle =
+    orientation === "portrait"
+      ? {
+          width: `${clamp(widthMm * 1.8, 240, 420)}px`,
+          height: `${clamp(heightMm * 1.8, 320, 560)}px`,
+          padding: `${clamp(borderMm * 2.2, 10, 26)}px`,
+        }
+      : {
+          width: `${clamp(widthMm * 2.1, 320, 620)}px`,
+          height: `${clamp(heightMm * 1.5, 220, 420)}px`,
+          padding: `${clamp(borderMm * 2.2, 10, 26)}px`,
+        };
+
+  const innerFrameStyle = {
+    padding: `${clamp(borderMm * 1.1, 6, 14)}px`,
+  };
+
   const uploadBusy = uploadProgress.active;
-  const readyFor3D = Boolean(croppedImageDataUrl);
 
   return (
     <div className={["space-y-6", className].filter(Boolean).join(" ")}>
-      <LithophaneImageEditorModal
-        open={editorOpen}
-        imageSrc={originalSourceDataUrl}
-        sourceFileName={sourceFileName}
-        orientation={orientation}
-        onOrientationChange={setOrientation}
-        onClose={() => setEditorOpen(false)}
-        onSave={handleImageSaved}
-      />
-
       <div className="rounded-3xl border border-slate-300 bg-[#0b1020] p-5 shadow-2xl">
-        <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-white">Lithophane Builder v2</h2>
+            <h2 className="text-xl font-semibold text-white">Lithophane Preview</h2>
             <p className="text-sm text-slate-300">
-              Upload, crop, set up the product, then inspect it in a live 3D viewer.
+              Clean workflow: upload image, choose product setup, preview the final framed look.
             </p>
           </div>
-
           <div className="flex flex-wrap gap-2">
-            <StepPill active={step === 1} done={step > 1}>1 Upload</StepPill>
-            <StepPill active={step === 2} done={step > 2}>2 Crop</StepPill>
-            <StepPill active={step === 3} done={step > 3}>3 Setup</StepPill>
-            <StepPill active={step === 4} done={false}>4 Review</StepPill>
+            {(["original", "scene"] as LithophanePreviewTab[]).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={[
+                  "rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition",
+                  activeTab === tab
+                    ? "bg-amber-400/20 text-amber-200 ring-1 ring-amber-400/50"
+                    : "bg-white/10 text-slate-200 hover:bg-white/15",
+                ].join(" ")}
+              >
+                {tab}
+              </button>
+            ))}
           </div>
         </div>
 
         <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-950 to-slate-900">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(245,158,11,0.12),transparent_34%)]" />
-          <div className="min-h-[380px] w-full md:min-h-[520px] xl:min-h-[620px]">
-            <Lithophane3DViewer
-              imageUrl={croppedImageDataUrl}
-              shape={shape}
-              orientation={orientation}
-              widthMm={widthMm}
-              heightMm={heightMm}
-              borderMm={borderMm}
-              sceneMode={sceneMode}
-              lightEnabled={lightEnabled}
-              lightTone={lightTone}
-            />
-          </div>
-
-          {!readyFor3D && (
-            <div className="pointer-events-none absolute inset-0 flex items-end justify-center pb-10">
-              <motion.div
-                animate={{ y: [0, -6, 0], opacity: [0.92, 1, 0.92] }}
-                transition={{ duration: 3, repeat: Infinity }}
-                className="rounded-full border border-white/10 bg-black/35 px-4 py-2 text-sm text-slate-200 backdrop-blur-sm"
+          <div className="aspect-[16/8] min-h-[360px] w-full md:min-h-[460px] xl:min-h-[560px]">
+            {activeTab === "original" && sourceDataUrl ? (
+              <img src={sourceDataUrl} alt="Lithophane original preview" className="h-full w-full object-contain" />
+            ) : activeTab === "scene" ? (
+              <div
+                className="relative flex h-full w-full items-center justify-center overflow-hidden"
+                style={{
+                  background:
+                    lightTone === "warm"
+                      ? "radial-gradient(circle at center, rgba(255,200,120,0.16), rgba(12,18,32,1) 55%)"
+                      : lightTone === "cool"
+                        ? "radial-gradient(circle at center, rgba(120,200,255,0.16), rgba(12,18,32,1) 55%)"
+                        : "radial-gradient(circle at center, rgba(220,220,220,0.14), rgba(12,18,32,1) 55%)",
+                }}
               >
-                Upload an image to start the 3D lithophane preview
-              </motion.div>
-            </div>
-          )}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:28px_28px] opacity-30" />
+                <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/45 to-transparent" />
+                <div className="relative flex items-end justify-center">
+                  <div
+                    className="absolute top-1/2 rounded-full blur-3xl"
+                    style={{
+                      width: orientation === "portrait" ? "240px" : "320px",
+                      height: orientation === "portrait" ? "340px" : "220px",
+                      transform: "translateY(-50%)",
+                      background: lightEnabled
+                        ? lightTone === "warm"
+                          ? "rgba(255, 196, 110, 0.48)"
+                          : lightTone === "cool"
+                            ? "rgba(142, 214, 255, 0.42)"
+                            : "rgba(255,255,255,0.35)"
+                        : "transparent",
+                    }}
+                  />
+                  <div className="absolute bottom-10 h-4 w-80 rounded-full bg-black/40 blur-md" />
+                  <div
+                    className="rounded-[30px] border border-[#5f4632] bg-[#2a1d17] shadow-2xl"
+                    style={frameOuterStyle}
+                  >
+                    <div
+                      className="h-full w-full rounded-[22px] border border-[#6e584a] bg-[#161616]"
+                      style={innerFrameStyle}
+                    >
+                      <div className="h-full w-full overflow-hidden rounded-[16px] border border-white/10 bg-black">
+                        {sourceDataUrl ? (
+                          <img
+                            src={sourceDataUrl}
+                            alt="Framed lithophane scene"
+                            className="h-full w-full object-cover opacity-95"
+                            style={{
+                              filter: lightEnabled
+                                ? lightTone === "warm"
+                                  ? "sepia(0.25) brightness(1.2) grayscale(1)"
+                                  : lightTone === "cool"
+                                    ? "grayscale(1) brightness(1.16) contrast(1.02)"
+                                    : "grayscale(1) brightness(1.1)"
+                                : "grayscale(1) brightness(0.72)",
+                            }}
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-sm text-slate-300">
+                            Upload an image to light the frame
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-slate-300">
+                Upload an image to preview the lithophane
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+      <div className="grid gap-5 xl:grid-cols-2">
         <div className="space-y-4">
-          <Section title="Step 1 · Upload image" icon={<Upload className="h-4 w-4 text-amber-500" />}>
+          <Section title="Upload image" icon={<Upload className="h-4 w-4 text-amber-500" />}>
             <div
               className="relative"
               onDragOver={(e) => {
@@ -544,12 +513,10 @@ export default function Lithophane({
                 >
                   <ImageIcon className="mb-3 h-8 w-8 text-slate-500" />
                 </motion.div>
-
                 <div className="text-sm font-semibold text-slate-900">
-                  {sourceFileName ? "Replace image and reopen editor" : "Drop photo here or click to upload"}
+                  {sourceFileName ? "Replace image" : "Drop photo here or click to upload"}
                 </div>
                 <div className="mt-1 text-xs text-slate-600">PNG, JPG, WEBP</div>
-
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/webp"
@@ -558,29 +525,44 @@ export default function Lithophane({
                 />
               </label>
 
-              {uploadProgress.active && <UploadOverlay progress={uploadProgress.progress} status={uploadProgress.status} />}
+              {uploadProgress.active && (
+                <UploadOverlay progress={uploadProgress.progress} status={uploadProgress.status} />
+              )}
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              <ToggleChip active={false} onClick={() => originalSourceDataUrl && setEditorOpen(true)} icon={<Crop className="h-4 w-4" />}>
-                Reopen crop editor
-              </ToggleChip>
+            <AnimatePresence>
+              {sourceFileName && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 6 }}
+                  className="mt-3 overflow-hidden rounded-2xl border border-slate-300 bg-white"
+                >
+                  {sourceDataUrl ? (
+                    <img src={sourceDataUrl} alt="Uploaded source" className="h-56 w-full object-cover bg-slate-100" />
+                  ) : null}
 
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
-                Auto orientation: <span className="font-semibold capitalize">{autoDetectedOrientation}</span>
-              </div>
-            </div>
+                  <div className="flex items-center justify-between gap-3 border-t border-slate-200 px-4 py-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold text-slate-900">{sourceFileName}</div>
+                      <div className="text-xs text-slate-600">Ready for lithophane preview</div>
+                    </div>
+                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </Section>
 
-          <Section title="Step 2 · Product setup" icon={<PackageCheck className="h-4 w-4 text-amber-500" />}>
+          <Section title="Product setup" icon={<PackageCheck className="h-4 w-4 text-amber-500" />}>
             <div className="grid grid-cols-3 gap-2">
-              <ToggleChip active={shape === "flat"} onClick={() => { setShape("flat"); setStep(3); }}>
+              <ToggleChip active={shape === "flat"} onClick={() => setShape("flat")}>
                 Flat
               </ToggleChip>
-              <ToggleChip active={shape === "arched"} onClick={() => { setShape("arched"); setStep(3); }}>
+              <ToggleChip active={shape === "arched"} onClick={() => setShape("arched")}>
                 Arched
               </ToggleChip>
-              <ToggleChip active={shape === "frame"} onClick={() => { setShape("frame"); setStep(3); }}>
+              <ToggleChip active={shape === "frame"} onClick={() => setShape("frame")}>
                 Framed
               </ToggleChip>
             </div>
@@ -595,9 +577,9 @@ export default function Lithophane({
             </div>
 
             <div className="mt-4 space-y-3">
-              <Range label="Width (mm)" value={widthMm} min={60} max={240} onChange={(v) => { setWidthMm(v); setStep(4); }} />
-              <Range label="Height (mm)" value={heightMm} min={80} max={300} onChange={(v) => { setHeightMm(v); setStep(4); }} />
-              <Range label="Border (mm)" value={borderMm} min={0} max={10} step={0.5} onChange={(v) => { setBorderMm(v); setStep(4); }} />
+              <Range label="Width (mm)" value={widthMm} min={60} max={240} onChange={setWidthMm} />
+              <Range label="Height (mm)" value={heightMm} min={80} max={300} onChange={setHeightMm} />
+              <Range label="Border (mm)" value={borderMm} min={0} max={10} step={0.5} onChange={setBorderMm} />
             </div>
 
             <button
@@ -608,68 +590,46 @@ export default function Lithophane({
               Reset setup
             </button>
           </Section>
-
-          <Section title="Step 3 · Scene preview" icon={<LampDesk className="h-4 w-4 text-amber-500" />}>
-            <div className="grid gap-2 sm:grid-cols-3">
-              <ToggleChip active={sceneMode === "desk"} onClick={() => setSceneMode("desk")}>
-                Desk
-              </ToggleChip>
-              <ToggleChip active={sceneMode === "wall"} onClick={() => setSceneMode("wall")}>
-                Wall
-              </ToggleChip>
-              <ToggleChip active={sceneMode === "dark"} onClick={() => setSceneMode("dark")}>
-                Dark room
-              </ToggleChip>
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              <ToggleChip active={lightEnabled} onClick={() => setLightEnabled((v) => !v)} icon={<SunMedium className="h-4 w-4" />}>
-                {lightEnabled ? "Lamp on" : "Lamp off"}
-              </ToggleChip>
-              <ToggleChip active={lightTone === "warm"} onClick={() => setLightTone("warm")}>
-                Warm
-              </ToggleChip>
-              <ToggleChip active={lightTone === "neutral"} onClick={() => setLightTone("neutral")}>
-                Neutral
-              </ToggleChip>
-              <ToggleChip active={lightTone === "cool"} onClick={() => setLightTone("cool")}>
-                Cool
-              </ToggleChip>
-            </div>
-          </Section>
         </div>
 
         <div className="space-y-4">
           <div className="grid gap-3 md:grid-cols-2">
-            <motion.div
-              key={`${estimatedPrice}-${estimatedPrintHours}`}
-              initial={{ opacity: 0.7, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              whileHover={{ y: -2 }}
-              className="rounded-2xl border border-amber-300 bg-amber-50 p-4"
-            >
-              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-amber-800">
-                <Sparkles className="h-4 w-4" />
-                Live estimate
+            <motion.div whileHover={{ y: -2 }} className="rounded-2xl border border-slate-300 bg-white p-4">
+              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                <SunMedium className="h-4 w-4 text-amber-500" />
+                Light preview
               </div>
-              <p className="text-lg font-bold text-slate-900">{estimatedPrice} DKK</p>
-              <p className="mt-1 text-xs text-slate-700">Starts at 100 DKK for 60 × 80 mm with 0 mm border.</p>
-              <p className="mt-2 text-xs text-slate-600">~{estimatedPrintHours} hrs estimated print time</p>
+              <div className="flex flex-wrap gap-2">
+                <ToggleChip active={lightEnabled} onClick={() => setLightEnabled((v) => !v)}>
+                  {lightEnabled ? "Lamp on" : "Lamp off"}
+                </ToggleChip>
+                <ToggleChip active={lightTone === "warm"} onClick={() => setLightTone("warm")}>
+                  Warm
+                </ToggleChip>
+                <ToggleChip active={lightTone === "neutral"} onClick={() => setLightTone("neutral")}>
+                  Neutral
+                </ToggleChip>
+                <ToggleChip active={lightTone === "cool"} onClick={() => setLightTone("cool")}>
+                  Cool
+                </ToggleChip>
+              </div>
             </motion.div>
 
             <motion.div whileHover={{ y: -2 }} className="rounded-2xl border border-slate-300 bg-white p-4">
-              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <Crop className="h-4 w-4 text-amber-500" />
-                Crop status
+              <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                <Contrast className="h-4 w-4 text-amber-500" />
+                Print estimate
               </div>
-              <p className="text-sm font-semibold text-slate-900">{cropState ? "Saved for production" : "Not saved yet"}</p>
-              <p className="mt-1 text-xs text-slate-600">
-                The saved crop/zoom position is included in the order metadata for admin review.
+              <p className="text-sm font-semibold text-slate-900">
+                ~{estimatedPrintHours} hrs · {estimatedPrice} DKK
+              </p>
+              <p className="mt-1 text-xs leading-5 text-slate-600">
+                Preview estimate only. Final admin quote can adjust it.
               </p>
             </motion.div>
           </div>
 
-          <Section title="Step 4 · Order summary" icon={<PackageCheck className="h-4 w-4 text-amber-500" />}>
+          <Section title="Order summary" icon={<PackageCheck className="h-4 w-4 text-amber-500" />}>
             <div className="grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
               <div className="flex justify-between gap-3 border-b border-slate-200 pb-2">
                 <span>Type</span>
@@ -678,16 +638,6 @@ export default function Lithophane({
               <div className="flex justify-between gap-3 border-b border-slate-200 pb-2">
                 <span>Orientation</span>
                 <span className="capitalize font-semibold text-slate-900">{orientation}</span>
-              </div>
-              <div className="flex justify-between gap-3 border-b border-slate-200 pb-2">
-                <span>Scene</span>
-                <span className="capitalize font-semibold text-slate-900">{sceneMode}</span>
-              </div>
-              <div className="flex justify-between gap-3 border-b border-slate-200 pb-2">
-                <span>Light</span>
-                <span className="capitalize font-semibold text-slate-900">
-                  {lightEnabled ? `${lightTone} / on` : "off"}
-                </span>
               </div>
               <div className="flex justify-between gap-3 border-b border-slate-200 pb-2">
                 <span>Size</span>
@@ -715,16 +665,14 @@ export default function Lithophane({
             />
           </Section>
 
-          <motion.button
+          <button
             type="button"
-            whileHover={{ y: -2, scale: 1.01 }}
-            whileTap={{ scale: 0.98 }}
             onClick={() => void onSubmitDesign?.(submitPayload)}
-            disabled={!croppedImageDataUrl || uploadBusy}
-            className="w-full rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-3 text-sm font-semibold text-slate-950 shadow-[0_0_30px_rgba(245,158,11,0.32)] transition hover:from-amber-300 hover:to-orange-400 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:text-slate-100 disabled:shadow-none"
+            disabled={!sourceDataUrl || uploadBusy}
+            className="w-full rounded-2xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:text-slate-100"
           >
             {submitLabel}
-          </motion.button>
+          </button>
         </div>
       </div>
     </div>

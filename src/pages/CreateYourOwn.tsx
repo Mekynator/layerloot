@@ -596,7 +596,7 @@ const LithophaneOrderSection = () => {
 
       await animateProgress(setLithophaneProgress, 86, "Creating order...", 300);
 
-      const { error } = await supabase.from("custom_orders").insert({
+      const orderPayload = {
         user_id: user.id,
         name: userName || "Account User",
         email: userEmail,
@@ -608,11 +608,16 @@ const LithophaneOrderSection = () => {
           source_image_url: sourceImageUrl,
           processed_image_url: processedImageUrl,
           preview_image_url: previewImageUrl,
+          cropped_image_url: payload.croppedImageDataUrl ?? null,
+          original_source_image_url: payload.originalSourceDataUrl ?? null,
+          crop_state: payload.cropState ?? null,
           estimated_price: payload.estimatedPrice,
           estimated_print_hours: payload.estimatedPrintHours,
           lithophane_config: payload.designJson,
         },
-      });
+      } as any;
+
+      const { error } = await supabase.from("custom_orders").insert(orderPayload);
 
       if (error) throw error;
       orderCreated = true;

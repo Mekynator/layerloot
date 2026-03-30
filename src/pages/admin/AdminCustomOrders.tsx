@@ -58,6 +58,11 @@ interface CustomOrder {
     reference_image_filename?: string | null;
     uploaded_model_url?: string | null;
     uploaded_model_filename?: string | null;
+    source_image_url?: string | null;
+    processed_image_url?: string | null;
+    preview_image_url?: string | null;
+    cropped_image_url?: string | null;
+    original_source_image_url?: string | null;
     [key: string]: any;
   } | null;
 }
@@ -118,11 +123,19 @@ function detectOrderType(order: CustomOrder): "lithophane" | "custom-print" {
 
 function parseCustomOrder(order: CustomOrder): ParsedCustomOrder {
   const raw = order.description || "";
-  const marker = "\n--- Options ---";
+  const orderType = detectOrderType(order);
+  const marker = "
+--- Options ---";
   const parts = raw.split(marker);
 
-  const customer_description = (parts[0] || "").trim();
+  let customer_description = (parts[0] || "").trim();
   const optionsText = (parts[1] || "").trim();
+
+  if (orderType === "lithophane") {
+    const lithoMarker = "
+--- Lithophane Config JSON ---";
+    customer_description = raw.split(lithoMarker)[0].trim();
+  }
 
   const parsed: Record<string, string> = {
     material: "",
@@ -133,7 +146,8 @@ function parseCustomOrder(order: CustomOrder): ParsedCustomOrder {
     referenceImageUrl: "",
   };
 
-  optionsText.split("\n").forEach((line) => {
+  optionsText.split("
+").forEach((line) => {
     const [key, ...rest] = line.split(":");
     if (!key || rest.length === 0) return;
 
@@ -158,7 +172,7 @@ function parseCustomOrder(order: CustomOrder): ParsedCustomOrder {
     scale: parsed.scale || "-",
     reference_image_url: order.metadata?.reference_image_url || parsed.referenceImageUrl || null,
     reference_image_filename: order.metadata?.reference_image_filename || null,
-    order_type_label: detectOrderType(order),
+    order_type_label: orderType,
   };
 }
 
@@ -561,9 +575,7 @@ const AdminCustomOrders = () => {
       : groupedOrders;
 
   const filtered =
-    filterStatus === "all"
-      ? productionFilteredOrders
-      : productionFilteredOrders.filter((o) => o.status === filterStatus);
+    filterStatus === "all" ? productionFilteredOrders : productionFilteredOrders.filter((o) => o.status === filterStatus);
 
   return (
     <AdminLayout>
@@ -707,15 +719,7 @@ const AdminCustomOrders = () => {
               {filtered.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={12} className="py-8 text-center text-muted-foreground">
-                    No{" "}
-                    {viewGroup === "done"
-                      ? "completed"
-                      : productionTypeFilter === "lithophane"
-                        ? "lithophane"
-                        : productionTypeFilter === "custom-print"
-                          ? "custom 3D print"
-                          : "custom print"}{" "}
-                    requests found in this tab.
+                    No {viewGroup === "done" ? "completed" : productionTypeFilter === "lithophane" ? "lithophane" : productionTypeFilter === "custom-print" ? "custom 3D print" : "custom print"} requests found in this tab.
                   </TableCell>
                 </TableRow>
               )}
@@ -810,11 +814,39 @@ const AdminCustomOrders = () => {
                   </div>
                 </div>
 
-                <div>
-                  <Label className="text-xs text-muted-foreground">Customer Description</Label>
-                  <pre className="mt-1 whitespace-pre-wrap rounded-md border border-border bg-muted p-3 text-sm text-foreground">
-                    {selectedOrder.customer_description || "-"}
-                  </pre>
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Customer Description</Label>
+                    <pre className="mt-1 whitespace-pre-wrap rounded-md border border-border bg-muted p-3 text-sm text-foreground">
+                      {selectedOrder.customer_description || "-"}
+                    </pre>
+                  </div>
+
+                  {selectedOrder.order_type_label === "lithophane" &&
+                  (selectedOrder.metadata?.original_source_image_url ||
+                    selectedOrder.metadata?.source_image_url ||
+                    selectedOrder.metadata?.cropped_image_url ||
+                    selectedOrder.metadata?.preview_image_url) ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs text-muted-foreground">Uploaded Picture</Label>
+                        <Badge variant="outline" className="text-[10px] uppercase">Lithophane Source</Badge>
+                      </div>
+                      <div className="overflow-hidden rounded-xl border border-border bg-card">
+                        <img
+                          src={
+                            selectedOrder.metadata?.original_source_image_url ||
+                            selectedOrder.metadata?.source_image_url ||
+                            selectedOrder.metadata?.cropped_image_url ||
+                            selectedOrder.metadata?.preview_image_url ||
+                            ""
+                          }
+                          alt="Lithophane source"
+                          className="h-80 w-full object-contain bg-muted/20"
+                        />
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
 
                 {selectedOrder.reference_image_url && (
@@ -1161,6 +1193,30 @@ const AdminCustomOrders = () => {
                       <img
                         src={selectedOrder.reference_image_url}
                         alt={selectedOrder.reference_image_filename || "Reference image"}
+                        className="h-[28rem] w-full object-contain bg-muted/20"
+                      />
+                    </div>
+                  </div>
+                ) : selectedOrder.order_type_label === "lithophane" &&
+                  (selectedOrder.metadata?.original_source_image_url ||
+                    selectedOrder.metadata?.source_image_url ||
+                    selectedOrder.metadata?.cropped_image_url ||
+                    selectedOrder.metadata?.preview_image_url) ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs text-muted-foreground">Picture: lithophane source image</p>
+                    </div>
+
+                    <div className="overflow-hidden rounded-xl border border-border bg-card">
+                      <img
+                        src={
+                          selectedOrder.metadata?.original_source_image_url ||
+                          selectedOrder.metadata?.source_image_url ||
+                          selectedOrder.metadata?.cropped_image_url ||
+                          selectedOrder.metadata?.preview_image_url ||
+                          ""
+                        }
+                        alt="Lithophane source"
                         className="h-[28rem] w-full object-contain bg-muted/20"
                       />
                     </div>

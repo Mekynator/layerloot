@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -19,26 +19,40 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 
 const sidebarLinks = [
-  { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/admin/products", label: "Products", icon: Package },
-  { to: "/admin/categories", label: "Categories & Tags", icon: Tags },
-  { to: "/admin/orders", label: "Orders", icon: ShoppingCart },
-  { to: "/admin/custom-orders", label: "Custom Orders", icon: Box },
-  { to: "/admin/discounts", label: "Discounts", icon: TicketPercent },
-  { to: "/admin/clients", label: "Users", icon: Users },
-  { to: "/admin/reviews", label: "Reviews", icon: Star },
-  { to: "/admin/editor", label: "Page Editor", icon: FileText },
-  { to: "/admin/shipping", label: "Shipping", icon: Truck },
-  { to: "/admin/settings", label: "Settings", icon: Settings },
-];
+  { to: "/admin", label: "Dashboard", icon: LayoutDashboard, notificationKey: null },
+  { to: "/admin/products", label: "Products", icon: Package, notificationKey: null },
+  { to: "/admin/categories", label: "Categories & Tags", icon: Tags, notificationKey: null },
+  { to: "/admin/orders", label: "Orders", icon: ShoppingCart, notificationKey: "orders" },
+  { to: "/admin/custom-orders", label: "Custom Orders", icon: Box, notificationKey: "customOrders" },
+  { to: "/admin/discounts", label: "Discounts", icon: TicketPercent, notificationKey: null },
+  { to: "/admin/clients", label: "Users", icon: Users, notificationKey: null },
+  { to: "/admin/reviews", label: "Reviews", icon: Star, notificationKey: "reviews" },
+  { to: "/admin/editor", label: "Page Editor", icon: FileText, notificationKey: null },
+  { to: "/admin/shipping", label: "Shipping", icon: Truck, notificationKey: null },
+  { to: "/admin/settings", label: "Settings", icon: Settings, notificationKey: null },
+] as const;
+
+type NotificationState = {
+  orders: number;
+  customOrders: number;
+  reviews: number;
+};
+
+const EMPTY_NOTIFICATIONS: NotificationState = {
+  orders: 0,
+  customOrders: 0,
+  reviews: 0,
+};
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const { isAdmin, loading, user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationState>(EMPTY_NOTIFICATIONS);
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) navigate("/");
@@ -48,10 +62,51 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
     setMobileOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    if (!isAdmin) {
+      setNotifications(EMPTY_NOTIFICATIONS);
+      return;
+    }
+
+    let mounted = true;
+
+    const fetchNotifications = async () => {
+      const [ordersRes, customOrdersRes, reviewsRes] = await Promise.all([
+        supabase.from("orders").select("id", { count: "exact", head: true }).in("status", ["pending", "processing"]),
+        supabase
+          .from("custom_orders")
+          .select("id", { count: "exact", head: true })
+          .in("status", ["pending", "reviewing", "quoted", "accepted"]),
+        supabase.from("product_reviews").select("id", { count: "exact", head: true }).eq("is_approved", false),
+      ]);
+
+      if (!mounted) return;
+
+      setNotifications({
+        orders: ordersRes.count ?? 0,
+        customOrders: customOrdersRes.count ?? 0,
+        reviews: reviewsRes.count ?? 0,
+      });
+    };
+
+    void fetchNotifications();
+    const interval = window.setInterval(fetchNotifications, 30000);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+    };
+  }, [isAdmin]);
+
   if (loading || !isAdmin) return null;
 
   const isActive = (to: string) =>
     location.pathname === to || (to !== "/admin" && location.pathname.startsWith(`${to}/`));
+
+  const getNotificationCount = (key: (typeof sidebarLinks)[number]["notificationKey"]) => {
+    if (!key) return 0;
+    return notifications[key];
+  };
 
   const navContent = (
     <>
@@ -69,20 +124,38 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
       </div>
 
       <nav className="space-y-1 p-3">
-        {sidebarLinks.map(({ to, label, icon: Icon }) => (
-          <Link
-            key={to}
-            to={to}
-            className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-              isActive(to)
-                ? "bg-sidebar-accent text-sidebar-primary"
-                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            }`}
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-          </Link>
-        ))}
+        {sidebarLinks.map(({ to, label, icon: Icon, notificationKey }) => {
+          const notificationCount = getNotificationCount(notificationKey);
+          const active = isActive(to);
+
+          return (
+            <Link
+              key={to}
+              to={to}
+              className={`flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                active
+                  ? "bg-sidebar-accent text-sidebar-primary"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              }`}
+            >
+              <span className="flex items-center gap-3">
+                <span className="relative inline-flex">
+                  <Icon className="h-4 w-4" />
+                  {notificationCount > 0 && (
+                    <span className="absolute -right-1.5 -top-1.5 h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_0_2px_hsl(var(--sidebar))]" />
+                  )}
+                </span>
+                {label}
+              </span>
+
+              {notificationCount > 0 && (
+                <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-500">
+                  {notificationCount}
+                </span>
+              )}
+            </Link>
+          );
+        })}
       </nav>
 
       <div className="mt-auto border-t border-sidebar-border p-3">

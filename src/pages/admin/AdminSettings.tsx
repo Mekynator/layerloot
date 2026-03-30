@@ -39,6 +39,24 @@ interface FooterConfig {
   orders_link_label: string;
 }
 
+type ContactConfig = {
+  email: string;
+  phone: string;
+  address: string;
+  contact_description: string;
+  email_label: string;
+  phone_label: string;
+  address_label: string;
+  instagram_url: string;
+  facebook_url: string;
+  social_title: string;
+  social: {
+    instagram: string;
+    facebook: string;
+    youtube: string;
+  };
+};
+
 export interface ThemeGalleryImage {
   id: string;
   label: string;
@@ -96,6 +114,20 @@ const defaultFooter: FooterConfig = {
   auth_link_label: "Login / Register",
   account_link_label: "My Account",
   orders_link_label: "Order History",
+};
+
+const defaultContact: ContactConfig = {
+  email: "",
+  phone: "",
+  address: "",
+  contact_description: "Questions, custom requests, or order help? Reach out anytime.",
+  email_label: "Email",
+  phone_label: "Phone",
+  address_label: "Address",
+  instagram_url: "",
+  facebook_url: "",
+  social_title: "Follow us",
+  social: { instagram: "", facebook: "", youtube: "" },
 };
 
 const DEFAULT_BACKGROUND_LIBRARY: ThemeGalleryImage[] = [
@@ -498,15 +530,21 @@ const normalizeTheme = (value?: Partial<ThemeConfig> | null): ThemeConfig => ({
       : DEFAULT_BACKGROUND_LIBRARY,
 });
 
+const normalizeContact = (value?: Partial<ContactConfig> | null): ContactConfig => ({
+  ...defaultContact,
+  ...(value ?? {}),
+  social: {
+    ...defaultContact.social,
+    ...(value?.social ?? {}),
+  },
+  instagram_url: value?.instagram_url ?? value?.social?.instagram ?? defaultContact.instagram_url,
+  facebook_url: value?.facebook_url ?? value?.social?.facebook ?? defaultContact.facebook_url,
+});
+
 const AdminSettings = () => {
   const { toast } = useToast();
   const uploadRef = useRef<HTMLInputElement | null>(null);
-  const [contact, setContact] = useState({
-    email: "",
-    phone: "",
-    address: "",
-    social: { instagram: "", facebook: "", youtube: "" },
-  });
+  const [contact, setContact] = useState<ContactConfig>(defaultContact);
   const [store, setStore] = useState({ name: "LayerLoot", currency: "DKK", currency_symbol: "kr" });
   const [promo, setPromo] = useState<PromoConfig>(defaultPromo);
   const [footer, setFooter] = useState<FooterConfig>(defaultFooter);
@@ -522,7 +560,7 @@ const AdminSettings = () => {
       const { data } = await supabase.from("site_settings").select("*");
       if (data) {
         data.forEach((s: any) => {
-          if (s.key === "contact") setContact(s.value as any);
+          if (s.key === "contact") setContact(normalizeContact(s.value as any));
           if (s.key === "store") setStore(s.value as any);
           if (s.key === "promotion_popup") setPromo({ ...defaultPromo, ...(s.value as any) });
           if (s.key === "footer_settings") setFooter({ ...defaultFooter, ...(s.value as any) });
@@ -547,8 +585,18 @@ const AdminSettings = () => {
 
   const save = async () => {
     setSaving(true);
+
+    const normalizedContactForSave = {
+      ...contact,
+      social: {
+        ...contact.social,
+        instagram: contact.instagram_url,
+        facebook: contact.facebook_url,
+      },
+    };
+
     await Promise.all([
-      upsertSetting("contact", contact),
+      upsertSetting("contact", normalizedContactForSave),
       upsertSetting("store", store),
       upsertSetting("promotion_popup", promo),
       upsertSetting("footer_settings", footer),
@@ -670,6 +718,14 @@ const AdminSettings = () => {
                     onChange={(e) => setContact({ ...contact, address: e.target.value })}
                   />
                 </div>
+                <div>
+                  <Label>Contact Description</Label>
+                  <Textarea
+                    value={contact.contact_description}
+                    onChange={(e) => setContact({ ...contact, contact_description: e.target.value })}
+                    rows={3}
+                  />
+                </div>
               </CardContent>
             </Card>
 
@@ -681,18 +737,26 @@ const AdminSettings = () => {
                 <div>
                   <Label>Instagram URL</Label>
                   <Input
-                    value={contact.social?.instagram ?? ""}
+                    value={contact.instagram_url}
                     onChange={(e) =>
-                      setContact({ ...contact, social: { ...contact.social, instagram: e.target.value } })
+                      setContact({
+                        ...contact,
+                        instagram_url: e.target.value,
+                        social: { ...contact.social, instagram: e.target.value },
+                      })
                     }
                   />
                 </div>
                 <div>
                   <Label>Facebook URL</Label>
                   <Input
-                    value={contact.social?.facebook ?? ""}
+                    value={contact.facebook_url}
                     onChange={(e) =>
-                      setContact({ ...contact, social: { ...contact.social, facebook: e.target.value } })
+                      setContact({
+                        ...contact,
+                        facebook_url: e.target.value,
+                        social: { ...contact.social, facebook: e.target.value },
+                      })
                     }
                   />
                 </div>
@@ -701,6 +765,13 @@ const AdminSettings = () => {
                   <Input
                     value={contact.social?.youtube ?? ""}
                     onChange={(e) => setContact({ ...contact, social: { ...contact.social, youtube: e.target.value } })}
+                  />
+                </div>
+                <div>
+                  <Label>Social Section Title</Label>
+                  <Input
+                    value={contact.social_title}
+                    onChange={(e) => setContact({ ...contact, social_title: e.target.value })}
                   />
                 </div>
               </CardContent>
@@ -918,6 +989,76 @@ const AdminSettings = () => {
                   <Input
                     value={footer.orders_link_label}
                     onChange={(e) => setFooter({ ...footer, orders_link_label: e.target.value })}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="font-display uppercase">Footer Contact Labels & Socials</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Label>Email Label</Label>
+                  <Input
+                    value={contact.email_label}
+                    onChange={(e) => setContact({ ...contact, email_label: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Phone Label</Label>
+                  <Input
+                    value={contact.phone_label}
+                    onChange={(e) => setContact({ ...contact, phone_label: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Address Label</Label>
+                  <Input
+                    value={contact.address_label}
+                    onChange={(e) => setContact({ ...contact, address_label: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Social Title</Label>
+                  <Input
+                    value={contact.social_title}
+                    onChange={(e) => setContact({ ...contact, social_title: e.target.value })}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label>Contact Description</Label>
+                  <Textarea
+                    value={contact.contact_description}
+                    onChange={(e) => setContact({ ...contact, contact_description: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <Label>Instagram URL</Label>
+                  <Input
+                    value={contact.instagram_url}
+                    onChange={(e) =>
+                      setContact({
+                        ...contact,
+                        instagram_url: e.target.value,
+                        social: { ...contact.social, instagram: e.target.value },
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label>Facebook URL</Label>
+                  <Input
+                    value={contact.facebook_url}
+                    onChange={(e) =>
+                      setContact({
+                        ...contact,
+                        facebook_url: e.target.value,
+                        social: { ...contact.social, facebook: e.target.value },
+                      })
+                    }
                   />
                 </div>
               </CardContent>

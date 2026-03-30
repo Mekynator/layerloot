@@ -73,10 +73,6 @@ const DEFAULTS = {
   sceneMode: "dark" as LithophaneSceneMode,
 };
 
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
-
 function estimatePrice(widthMm: number, heightMm: number, borderMm: number) {
   const widthExtra = Math.max(0, widthMm - 60);
   const heightExtra = Math.max(0, heightMm - 80);
@@ -257,6 +253,7 @@ export default function Lithophane({
   const [lightEnabled, setLightEnabled] = useState(true);
   const [lightTone, setLightTone] = useState<LithophaneLightTone>("warm");
   const [notes, setNotes] = useState(initialNotes);
+  const [allowRotation, setAllowRotation] = useState(false);
 
   const [sourceFileName, setSourceFileName] = useState<string | null>(null);
   const [originalSourceDataUrl, setOriginalSourceDataUrl] = useState<string | null>(null);
@@ -379,6 +376,7 @@ export default function Lithophane({
     setSceneMode(DEFAULTS.sceneMode);
     setOrientation(autoDetectedOrientation);
     setShape(DEFAULTS.shape);
+    setAllowRotation(false);
   };
 
   const submitPayload: LithophaneSubmitPayload = useMemo(
@@ -423,6 +421,7 @@ export default function Lithophane({
           lightEnabled,
           lightTone,
           sceneMode,
+          allowRotation,
         },
         imageEditor: cropState,
         pricing: {
@@ -449,11 +448,11 @@ export default function Lithophane({
       estimatedPrice,
       estimatedPrintHours,
       autoDetectedOrientation,
+      allowRotation,
     ],
   );
 
   const uploadBusy = uploadProgress.active;
-  const readyFor3D = Boolean(croppedImageDataUrl);
 
   return (
     <div className={["space-y-6", className].filter(Boolean).join(" ")}>
@@ -468,14 +467,7 @@ export default function Lithophane({
       />
 
       <div className="rounded-3xl border border-slate-300 bg-[#0b1020] p-5 shadow-2xl">
-        <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-white">Lithophane Builder v2</h2>
-            <p className="text-sm text-slate-300">
-              Upload, crop, set up the product, then inspect it in a live 3D viewer.
-            </p>
-          </div>
-
+        <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-end">
           <div className="flex flex-wrap gap-2">
             <StepPill active={step === 1} done={step > 1}>
               1 Upload
@@ -494,7 +486,7 @@ export default function Lithophane({
 
         <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-950 to-slate-900">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(245,158,11,0.12),transparent_34%)]" />
-          <div className="min-h-[380px] w-full md:min-h-[520px] xl:min-h-[620px]">
+          <div className="h-[620px] w-full">
             <Lithophane3DViewer
               imageUrl={croppedImageDataUrl}
               shape={shape}
@@ -505,10 +497,11 @@ export default function Lithophane({
               sceneMode={sceneMode}
               lightEnabled={lightEnabled}
               lightTone={lightTone}
+              allowRotation={allowRotation}
             />
           </div>
 
-          {!readyFor3D && (
+          {!croppedImageDataUrl && (
             <div className="pointer-events-none absolute inset-0 flex items-end justify-center pb-10">
               <motion.div
                 animate={{ y: [0, -6, 0], opacity: [0.92, 1, 0.92] }}
@@ -522,7 +515,7 @@ export default function Lithophane({
         </div>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+      <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="space-y-4">
           <Section title="Step 1 · Upload image" icon={<Upload className="h-4 w-4 text-amber-500" />}>
             <div
@@ -660,6 +653,12 @@ export default function Lithophane({
               />
             </div>
 
+            <div className="mt-4 flex flex-wrap gap-2">
+              <ToggleChip active={allowRotation} onClick={() => setAllowRotation((v) => !v)}>
+                {allowRotation ? "Rotation on" : "Rotation off"}
+              </ToggleChip>
+            </div>
+
             <button
               type="button"
               onClick={handleReset}
@@ -668,7 +667,9 @@ export default function Lithophane({
               Reset setup
             </button>
           </Section>
+        </div>
 
+        <div className="space-y-4">
           <Section title="Step 3 · Scene preview" icon={<LampDesk className="h-4 w-4 text-amber-500" />}>
             <div className="grid gap-2 sm:grid-cols-3">
               <ToggleChip active={sceneMode === "desk"} onClick={() => setSceneMode("desk")}>
@@ -701,39 +702,6 @@ export default function Lithophane({
               </ToggleChip>
             </div>
           </Section>
-        </div>
-
-        <div className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-2">
-            <motion.div
-              key={`${estimatedPrice}-${estimatedPrintHours}`}
-              initial={{ opacity: 0.7, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              whileHover={{ y: -2 }}
-              className="rounded-2xl border border-amber-300 bg-amber-50 p-4"
-            >
-              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-amber-800">
-                <Sparkles className="h-4 w-4" />
-                Live estimate
-              </div>
-              <p className="text-lg font-bold text-slate-900">{estimatedPrice} DKK</p>
-              <p className="mt-1 text-xs text-slate-700">Starts at 100 DKK for 60 × 80 mm with 0 mm border.</p>
-              <p className="mt-2 text-xs text-slate-600">~{estimatedPrintHours} hrs estimated print time</p>
-            </motion.div>
-
-            <motion.div whileHover={{ y: -2 }} className="rounded-2xl border border-slate-300 bg-white p-4">
-              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <Crop className="h-4 w-4 text-amber-500" />
-                Crop status
-              </div>
-              <p className="text-sm font-semibold text-slate-900">
-                {cropState ? "Saved for production" : "Not saved yet"}
-              </p>
-              <p className="mt-1 text-xs text-slate-600">
-                The saved crop/zoom position is included in the order metadata for admin review.
-              </p>
-            </motion.div>
-          </div>
 
           <Section title="Step 4 · Order summary" icon={<PackageCheck className="h-4 w-4 text-amber-500" />}>
             <div className="grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
@@ -765,11 +733,35 @@ export default function Lithophane({
                 <span>Border</span>
                 <span className="font-semibold text-slate-900">{borderMm} mm</span>
               </div>
+              <div className="flex justify-between gap-3 border-b border-slate-200 pb-2">
+                <span>Rotation</span>
+                <span className="font-semibold text-slate-900">{allowRotation ? "Enabled" : "Front only"}</span>
+              </div>
+              <div className="flex justify-between gap-3 border-b border-slate-200 pb-2">
+                <span>Crop status</span>
+                <span className="font-semibold text-slate-900">{cropState ? "Saved" : "Pending"}</span>
+              </div>
               <div className="flex justify-between gap-3 sm:col-span-2">
                 <span>Estimated price</span>
                 <span className="font-semibold text-amber-700">{estimatedPrice} DKK</span>
               </div>
             </div>
+
+            <motion.div
+              key={`${estimatedPrice}-${estimatedPrintHours}`}
+              initial={{ opacity: 0.7, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              whileHover={{ y: -2 }}
+              className="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4"
+            >
+              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-amber-800">
+                <Sparkles className="h-4 w-4" />
+                Live estimate
+              </div>
+              <p className="text-lg font-bold text-slate-900">{estimatedPrice} DKK</p>
+              <p className="mt-1 text-xs text-slate-700">Starts at 100 DKK for 60 × 80 mm with 0 mm border.</p>
+              <p className="mt-2 text-xs text-slate-600">~{estimatedPrintHours} hrs estimated print time</p>
+            </motion.div>
           </Section>
 
           <Section title="Customer note" icon={<AlertTriangle className="h-4 w-4 text-amber-500" />}>

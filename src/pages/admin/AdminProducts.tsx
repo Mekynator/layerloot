@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Pencil, Trash2, Layers, Calculator } from "lucide-react";
+import { Plus, Pencil, Trash2, Layers, Calculator, Tag, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,6 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
@@ -26,7 +25,6 @@ interface Product {
   price: number;
   compare_at_price: number | null;
   category_id: string | null;
-  gift_finder_tag_id: string | null;
   images: string[];
   stock: number;
   is_featured: boolean;
@@ -37,6 +35,7 @@ interface Product {
   weight_grams?: number | null;
   finish_type?: string | null;
   material_type?: string | null;
+  giftFinderTags?: GiftFinderTag[];
 }
 
 interface Category {
@@ -47,6 +46,7 @@ interface Category {
 interface GiftFinderTag {
   id: string;
   name: string;
+  slug?: string;
 }
 
 const MAX_PRODUCT_IMAGE_SIZE_BYTES = 20 * 1024 * 1024;
@@ -59,7 +59,6 @@ const emptyProduct = {
   price: 0,
   compare_at_price: null as number | null,
   category_id: null as string | null,
-  gift_finder_tag_id: null as string | null,
   images: [] as string[],
   stock: 0,
   is_featured: false,
@@ -70,6 +69,7 @@ const emptyProduct = {
   weight_grams: null as number | null,
   finish_type: null as string | null,
   material_type: null as string | null,
+  gift_finder_tag_ids: [] as string[],
 };
 
 const AdminProducts = () => {
@@ -83,39 +83,73 @@ const AdminProducts = () => {
   const [modelFile, setModelFile] = useState<File | null>(null);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [pricingProductId, setPricingProductId] = useState<string | null>(null);
+  const [giftTagPickerValue, setGiftTagPickerValue] = useState<string>("none");
   const { toast } = useToast();
 
-  const categoryMap = useMemo(() => new Map(categories.map((category) => [category.id, category.name])), [categories]);
-
-  const giftTagMap = useMemo(() => new Map(giftFinderTags.map((tag) => [tag.id, tag.name])), [giftFinderTags]);
-
-  const resetEditor = () => {
-    setForm(emptyProduct);
-    setEditingId(null);
-    setImageFiles([]);
-    setModelFile(null);
-  };
+  const giftFinderTagMap = useMemo(() => new Map(giftFinderTags.map((tag) => [tag.id, tag])), [giftFinderTags]);
 
   const fetchProducts = async () => {
-    const { data } = await supabase.from("products").select("*").order("created_at", { ascending: false });
-    setProducts((data as Product[]) ?? []);
+    const [{ data: productsData, error: productsError }, { data: linksData, error: linksError }] = await Promise.all([
+      supabase.from("products").select("*").order("created_at", { ascending: false }),
+      supabase.from("product_gift_finder_tags").select("product_id, gift_finder_tag_id"),
+    ]);
+
+    if (productsError) {
+      toast({ title: "Error", description: productsError.message, variant: "destructive" });
+      return;
+    }
+
+    if (linksError) {
+      toast({ title: "Error", description: linksError.message, variant: "destructive" });
+      return;
+    }
+
+    const productTagIdsMap = new Map<string, string[]>();
+
+    for (const row of linksData ?? []) {
+      const current = productTagIdsMap.get(row.product_id) ?? [];
+      current.push(row.gift_finder_tag_id);
+      productTagIdsMap.set(row.product_id, current);
+    }
+
+    const normalizedProducts = ((productsData as Product[]) ?? []).map((product) => ({
+      ...product,
+      giftFinderTags: (productTagIdsMap.get(product.id) ?? [])
+        .map((tagId) => giftFinderTagMap.get(tagId))
+        .filter(Boolean) as GiftFinderTag[],
+    }));
+
+    setProducts(normalizedProducts);
   };
 
   const fetchCategories = async () => {
-    const { data } = await supabase.from("categories").select("id, name").order("name", { ascending: true });
+    const { data, error } = await supabase.from("product_categories").select("id, name").order("name");
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
     setCategories((data as Category[]) ?? []);
   };
 
   const fetchGiftFinderTags = async () => {
-    const { data } = await supabase.from("gift_finder_tags").select("id, name").order("name", { ascending: true });
+    const { data, error } = await supabase.from("gift_finder_tags").select("id, name, slug").order("sort_order");
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
     setGiftFinderTags((data as GiftFinderTag[]) ?? []);
   };
 
   useEffect(() => {
-    void fetchProducts();
     void fetchCategories();
     void fetchGiftFinderTags();
   }, []);
+
+  useEffect(() => {
+    if (giftFinderTags.length > 0) {
+      void fetchProducts();
+    }
+  }, [giftFinderTags.length]);
 
   const generateSlug = (name: string) =>
     name
@@ -123,24 +157,28 @@ const AdminProducts = () => {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
 
+  const resetFormState = () => {
+    setForm(emptyProduct);
+    setEditingId(null);
+    setImageFiles([]);
+    setModelFile(null);
+    setGiftTagPickerValue("none");
+  };
+
   const uploadImages = async (): Promise<string[]> => {
     if (imageFiles.length === 0) return [];
     const urls: string[] = [];
-
     for (const file of imageFiles) {
       if (file.size > MAX_PRODUCT_IMAGE_SIZE_BYTES) {
         throw new Error(`Image "${file.name}" is too large. Maximum allowed size is 20 MB.`);
       }
-
       const ext = file.name.split(".").pop();
       const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const { error } = await supabase.storage.from("product-images").upload(path, file);
       if (error) throw new Error(`Image upload failed: ${error.message}`);
-
       const { data } = supabase.storage.from("product-images").getPublicUrl(path);
       urls.push(data.publicUrl);
     }
-
     return urls;
   };
 
@@ -149,12 +187,10 @@ const AdminProducts = () => {
     if (modelFile.size > MAX_PRODUCT_MODEL_SIZE_BYTES) {
       throw new Error("3D model file is too large. Maximum allowed size is 500 MB.");
     }
-
     const ext = modelFile.name.split(".").pop();
     const path = `${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from("3d-models").upload(path, modelFile);
     if (error) throw new Error(`Model upload failed: ${error.message}`);
-
     const { data } = supabase.storage.from("3d-models").getPublicUrl(path);
     return data.publicUrl;
   };
@@ -167,6 +203,24 @@ const AdminProducts = () => {
     } catch (e) {
       console.warn("Could not delete old model file:", e);
     }
+  };
+
+  const syncProductGiftTags = async (productId: string, tagIds: string[]) => {
+    const { error: deleteError } = await supabase.from("product_gift_finder_tags").delete().eq("product_id", productId);
+
+    if (deleteError) throw deleteError;
+
+    const uniqueIds = Array.from(new Set(tagIds.filter(Boolean)));
+
+    if (uniqueIds.length === 0) return;
+
+    const rows = uniqueIds.map((gift_finder_tag_id) => ({
+      product_id: productId,
+      gift_finder_tag_id,
+    }));
+
+    const { error: insertError } = await supabase.from("product_gift_finder_tags").insert(rows);
+    if (insertError) throw insertError;
   };
 
   const handleSubmit = async () => {
@@ -189,7 +243,6 @@ const AdminProducts = () => {
         price: form.price,
         compare_at_price: form.compare_at_price || null,
         category_id: form.category_id || null,
-        gift_finder_tag_id: form.gift_finder_tag_id || null,
         images,
         stock: form.stock,
         is_featured: form.is_featured,
@@ -202,25 +255,33 @@ const AdminProducts = () => {
         material_type: form.material_type || null,
       };
 
+      let savedProductId = editingId;
+
       if (editingId) {
         const { error } = await supabase.from("products").update(payload).eq("id", editingId);
         if (error) {
           toast({ title: "Error", description: error.message, variant: "destructive" });
           return;
         }
+        savedProductId = editingId;
         toast({ title: "Product updated" });
       } else {
-        const { error } = await supabase.from("products").insert(payload);
+        const { data, error } = await supabase.from("products").insert(payload).select("id").single();
         if (error) {
           toast({ title: "Error", description: error.message, variant: "destructive" });
           return;
         }
+        savedProductId = data?.id ?? null;
         toast({ title: "Product created" });
       }
 
+      if (savedProductId) {
+        await syncProductGiftTags(savedProductId, form.gift_finder_tag_ids);
+      }
+
       setOpen(false);
-      resetEditor();
-      void fetchProducts();
+      resetFormState();
+      await fetchProducts();
     } catch (error: any) {
       toast({
         title: "Upload error",
@@ -238,7 +299,6 @@ const AdminProducts = () => {
       price: Number(product.price),
       compare_at_price: product.compare_at_price ? Number(product.compare_at_price) : null,
       category_id: product.category_id,
-      gift_finder_tag_id: product.gift_finder_tag_id,
       images: product.images ?? [],
       stock: product.stock,
       is_featured: product.is_featured,
@@ -249,8 +309,10 @@ const AdminProducts = () => {
       weight_grams: product.weight_grams ? Number(product.weight_grams) : null,
       finish_type: product.finish_type ?? null,
       material_type: product.material_type ?? null,
+      gift_finder_tag_ids: product.giftFinderTags?.map((tag) => tag.id) ?? [],
     });
     setEditingId(product.id);
+    setGiftTagPickerValue("none");
     setOpen(true);
   };
 
@@ -261,12 +323,30 @@ const AdminProducts = () => {
       return;
     }
     toast({ title: "Product deleted" });
-    void fetchProducts();
+    await fetchProducts();
   };
 
   const openPricing = (productId: string) => {
     setPricingProductId(productId);
     setPricingOpen(true);
+  };
+
+  const addGiftFinderTagToForm = (tagId: string) => {
+    if (!tagId || tagId === "none") return;
+    setForm((prev) => ({
+      ...prev,
+      gift_finder_tag_ids: prev.gift_finder_tag_ids.includes(tagId)
+        ? prev.gift_finder_tag_ids
+        : [...prev.gift_finder_tag_ids, tagId],
+    }));
+    setGiftTagPickerValue("none");
+  };
+
+  const removeGiftFinderTagFromForm = (tagId: string) => {
+    setForm((prev) => ({
+      ...prev,
+      gift_finder_tag_ids: prev.gift_finder_tag_ids.filter((id) => id !== tagId),
+    }));
   };
 
   return (
@@ -276,9 +356,9 @@ const AdminProducts = () => {
 
         <Dialog
           open={open}
-          onOpenChange={(value) => {
-            setOpen(value);
-            if (!value) resetEditor();
+          onOpenChange={(nextOpen) => {
+            setOpen(nextOpen);
+            if (!nextOpen) resetFormState();
           }}
         >
           <DialogTrigger asChild>
@@ -307,13 +387,7 @@ const AdminProducts = () => {
                   <Label>Name</Label>
                   <Input
                     value={form.name}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        name: e.target.value,
-                        slug: generateSlug(e.target.value),
-                      })
-                    }
+                    onChange={(e) => setForm({ ...form, name: e.target.value, slug: generateSlug(e.target.value) })}
                   />
                 </div>
 
@@ -342,12 +416,7 @@ const AdminProducts = () => {
                       type="number"
                       step="0.01"
                       value={form.compare_at_price ?? ""}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          compare_at_price: parseFloat(e.target.value) || null,
-                        })
-                      }
+                      onChange={(e) => setForm({ ...form, compare_at_price: parseFloat(e.target.value) || null })}
                     />
                   </div>
                 </div>
@@ -383,32 +452,53 @@ const AdminProducts = () => {
                   </div>
                 </div>
 
-                <div>
-                  <Label>Gift Finder Tag</Label>
-                  <Select
-                    value={form.gift_finder_tag_id ?? "none"}
-                    onValueChange={(value) =>
-                      setForm({
-                        ...form,
-                        gift_finder_tag_id: value === "none" ? null : value,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Gift Finder tag" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No tag</SelectItem>
-                      {giftFinderTags.map((tag) => (
-                        <SelectItem key={tag.id} value={tag.id}>
-                          {tag.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    This is only used inside the Gift Finder on Create Your Own. It stays hidden on the storefront UI.
-                  </p>
+                <div className="space-y-3">
+                  <div>
+                    <Label>Gift Finder Tags</Label>
+                    <Select value={giftTagPickerValue} onValueChange={addGiftFinderTagToForm}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Add gift finder tag" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Select tag</SelectItem>
+                        {giftFinderTags.map((tag) => (
+                          <SelectItem key={tag.id} value={tag.id} disabled={form.gift_finder_tag_ids.includes(tag.id)}>
+                            {tag.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {form.gift_finder_tag_ids.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {form.gift_finder_tag_ids.map((tagId) => {
+                        const tag = giftFinderTagMap.get(tagId);
+                        if (!tag) return null;
+
+                        return (
+                          <div
+                            key={tag.id}
+                            className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-foreground"
+                          >
+                            <Tag className="h-3.5 w-3.5 text-primary" />
+                            {tag.name}
+                            <button
+                              type="button"
+                              onClick={() => removeGiftFinderTagFromForm(tag.id)}
+                              className="text-muted-foreground transition-colors hover:text-destructive"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Hidden from the product UI. Used only by Gift Finder on Create Your Own.
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -426,7 +516,7 @@ const AdminProducts = () => {
                           <img src={url} alt="" className="h-16 w-16 rounded border border-border object-cover" />
                           <button
                             type="button"
-                            onClick={() => setForm({ ...form, images: form.images.filter((_, i) => i !== index) })}
+                            onClick={() => setForm({ ...form, images: form.images.filter((_, idx) => idx !== index) })}
                             className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100"
                           >
                             ×
@@ -452,14 +542,14 @@ const AdminProducts = () => {
                     <Switch
                       checked={form.is_featured}
                       onCheckedChange={(value) => setForm({ ...form, is_featured: value })}
-                    />
+                    />{" "}
                     Featured
                   </label>
                   <label className="flex items-center gap-2 text-sm">
                     <Switch
                       checked={form.is_active}
                       onCheckedChange={(value) => setForm({ ...form, is_active: value })}
-                    />
+                    />{" "}
                     Active
                   </label>
                 </div>
@@ -480,6 +570,7 @@ const AdminProducts = () => {
                       onChange={(e) => setForm({ ...form, print_time_hours: parseFloat(e.target.value) || null })}
                     />
                   </div>
+
                   <div>
                     <Label>Weight (grams)</Label>
                     <Input
@@ -550,6 +641,7 @@ const AdminProducts = () => {
                         }
                       />
                     </div>
+
                     <div>
                       <Label className="text-xs text-muted-foreground">Width</Label>
                       <Input
@@ -567,6 +659,7 @@ const AdminProducts = () => {
                         }
                       />
                     </div>
+
                     <div>
                       <Label className="text-xs text-muted-foreground">Height</Label>
                       <Input
@@ -602,14 +695,14 @@ const AdminProducts = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Product</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Gift Finder</TableHead>
                 <TableHead>Price</TableHead>
+                <TableHead>Gift Finder</TableHead>
                 <TableHead>Stock</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
+
             <TableBody>
               {products.map((product) => (
                 <TableRow key={product.id}>
@@ -625,24 +718,34 @@ const AdminProducts = () => {
                     </div>
                   </TableCell>
 
-                  <TableCell>
-                    <span className="text-sm text-muted-foreground">
-                      {product.category_id ? (categoryMap.get(product.category_id) ?? "Unknown") : "—"}
-                    </span>
-                  </TableCell>
-
-                  <TableCell>
-                    {product.gift_finder_tag_id ? (
-                      <Badge variant="secondary">{giftTagMap.get(product.gift_finder_tag_id) ?? "Unknown"}</Badge>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-
                   <TableCell className="font-display font-bold text-primary">
                     {Number(product.price).toFixed(2)} DKK
                   </TableCell>
+
+                  <TableCell>
+                    {product.giftFinderTags?.length ? (
+                      <div className="flex flex-wrap gap-1">
+                        {product.giftFinderTags.slice(0, 3).map((tag) => (
+                          <span
+                            key={tag.id}
+                            className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary"
+                          >
+                            {tag.name}
+                          </span>
+                        ))}
+                        {product.giftFinderTags.length > 3 ? (
+                          <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            +{product.giftFinderTags.length - 3}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">No tags</span>
+                    )}
+                  </TableCell>
+
                   <TableCell>{product.stock}</TableCell>
+
                   <TableCell>
                     <span
                       className={`font-display text-xs uppercase ${
@@ -652,6 +755,7 @@ const AdminProducts = () => {
                       {product.is_active ? "Active" : "Draft"}
                     </span>
                   </TableCell>
+
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"
@@ -661,15 +765,18 @@ const AdminProducts = () => {
                     >
                       <Calculator className="h-4 w-4" />
                     </Button>
+
                     <Link to={`/admin/products/${product.id}/variants`}>
                       <Button variant="ghost" size="icon" title="Manage Variants">
                         <Layers className="h-4 w-4" />
                       </Button>
                     </Link>
+
                     <Button variant="ghost" size="icon" onClick={() => editProduct(product)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => deleteProduct(product.id)}>
+
+                    <Button variant="ghost" size="icon" onClick={() => void deleteProduct(product.id)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </TableCell>
@@ -678,7 +785,7 @@ const AdminProducts = () => {
 
               {products.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
                     No products yet.
                   </TableCell>
                 </TableRow>
@@ -693,7 +800,13 @@ const AdminProducts = () => {
           <DialogHeader>
             <DialogTitle className="font-display uppercase">Product Pricing Calculator</DialogTitle>
           </DialogHeader>
-          <PricingCalculator productId={pricingProductId} onPriceCalculated={() => undefined} />
+
+          <PricingCalculator
+            productId={pricingProductId}
+            onPriceCalculated={() => {
+              // optional hook
+            }}
+          />
         </DialogContent>
       </Dialog>
     </AdminLayout>

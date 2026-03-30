@@ -17,13 +17,14 @@ import {
   Music,
   Palette,
   Send,
+  Sparkles,
   Swords,
   Trophy,
   Upload,
   Wrench,
   Star,
+  X,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -79,6 +80,21 @@ const QUALITIES = [
   { value: "low", label: "Low", desc: "0.8mm – Lowest detail" },
 ];
 
+const GIFT_FINDER_ICON_MAP = {
+  gamer: Gamepad2,
+  fantasy: Swords,
+  desk: Monitor,
+  personalized: Gift,
+  home: Home,
+  kids: Baby,
+  pets: Dog,
+  art: Palette,
+  music: Music,
+  sports: Trophy,
+  garden: Flower2,
+  tools: Wrench,
+} as const;
+
 type ToolReview = {
   id: string;
   title: string | null;
@@ -97,40 +113,18 @@ type GiftFinderTag = {
   id: string;
   name: string;
   slug: string;
-  icon_key: string | null;
-  sort_order: number | null;
-  is_active: boolean;
+  icon_key: keyof typeof GIFT_FINDER_ICON_MAP | null;
+  description?: string | null;
+  is_active?: boolean;
 };
 
-const GIFT_TAG_ICON_MAP: Record<string, LucideIcon> = {
-  gamer: Gamepad2,
-  fantasy: Swords,
-  fantasy_fan: Swords,
-  desk: Monitor,
-  desk_decoration: Monitor,
-  personalized: Gift,
-  personalized_gift: Gift,
-  home: Home,
-  home_living: Home,
-  kids: Baby,
-  kids_baby: Baby,
-  pets: Dog,
-  pet_lovers: Dog,
-  art: Palette,
-  art_creative: Palette,
-  music: Music,
-  music_fan: Music,
-  sports: Trophy,
-  sports_trophy: Trophy,
-  garden: Flower2,
-  garden_nature: Flower2,
-  tools: Wrench,
-  tools_gadgets: Wrench,
-};
-
-const getGiftTagIcon = (tag: Pick<GiftFinderTag, "slug" | "icon_key">): LucideIcon => {
-  const key = (tag.icon_key || tag.slug || "").toLowerCase().replace(/[^a-z0-9]+/g, "_");
-  return GIFT_TAG_ICON_MAP[key] || Gift;
+type GiftFinderProduct = {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  images: string[] | null;
+  is_featured?: boolean;
 };
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -396,7 +390,7 @@ const UploadDropzone = ({
   </motion.div>
 );
 
-const ReviewSection = ({ toolType, title }: { toolType: "custom-print" | "lithophane"; title: string }) => {
+const ReviewSection = ({ title }: { toolType: "custom-print" | "lithophane"; title: string }) => {
   const [reviews, setReviews] = useState<ToolReview[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -415,8 +409,8 @@ const ReviewSection = ({ toolType, title }: { toolType: "custom-print" | "lithop
       setLoading(false);
     };
 
-    fetchReviews();
-  }, [toolType]);
+    void fetchReviews();
+  }, []);
 
   return (
     <div className="mt-8">
@@ -670,134 +664,194 @@ const LithophaneOrderSection = () => {
 };
 
 const GiftFinder = () => {
-  const [selected, setSelected] = useState<string | null>(null);
-  const [products, setProducts] = useState<any[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [tags, setTags] = useState<GiftFinderTag[]>([]);
-  const [loadingTags, setLoadingTags] = useState(true);
-  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [products, setProducts] = useState<(GiftFinderProduct & { matchScore: number })[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchTags = async () => {
-      setLoadingTags(true);
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("gift_finder_tags")
-        .select("id, name, slug, icon_key, sort_order, is_active")
+        .select("id, name, slug, icon_key, description, is_active")
         .eq("is_active", true)
-        .order("sort_order", { ascending: true })
-        .order("name", { ascending: true });
+        .order("sort_order", { ascending: true });
 
-      if (!error) {
-        setTags((data as GiftFinderTag[]) ?? []);
-      }
-
-      setLoadingTags(false);
+      setTags((data as GiftFinderTag[]) ?? []);
     };
 
     void fetchTags();
   }, []);
 
   useEffect(() => {
-    if (!selected) return;
-
-    const fetchProducts = async () => {
-      setLoadingProducts(true);
-      const selectedTag = tags.find((tag) => tag.slug === selected);
-
-      if (!selectedTag) {
+    const fetchMatches = async () => {
+      if (selectedTagIds.length === 0) {
         setProducts([]);
-        setLoadingProducts(false);
         return;
       }
 
-      const { data } = await supabase
+      setLoading(true);
+
+      const { data: links, error: linkError } = await supabase
+        .from("product_gift_finder_tags")
+        .select("product_id, gift_finder_tag_id")
+        .in("gift_finder_tag_id", selectedTagIds);
+
+      if (linkError || !links?.length) {
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
+
+      const scoreMap = new Map<string, number>();
+
+      for (const row of links) {
+        const productId = row.product_id as string;
+        scoreMap.set(productId, (scoreMap.get(productId) ?? 0) + 1);
+      }
+
+      const productIds = Array.from(scoreMap.keys());
+
+      const { data: productRows, error: productError } = await supabase
         .from("products")
         .select("id, name, slug, price, images, is_featured")
         .eq("is_active", true)
-        .eq("gift_finder_tag_id", selectedTag.id)
-        .order("is_featured", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(8);
+        .in("id", productIds);
 
-      setProducts(data ?? []);
-      setLoadingProducts(false);
+      if (productError || !productRows?.length) {
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
+
+      const rankedProducts = ((productRows as GiftFinderProduct[]) ?? [])
+        .map((product) => ({
+          ...product,
+          matchScore: scoreMap.get(product.id) ?? 0,
+        }))
+        .sort((a, b) => {
+          if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
+          if (Boolean(b.is_featured) !== Boolean(a.is_featured))
+            return Number(Boolean(b.is_featured)) - Number(Boolean(a.is_featured));
+          return a.name.localeCompare(b.name);
+        });
+
+      setProducts(rankedProducts);
+      setLoading(false);
     };
 
-    void fetchProducts();
-  }, [selected, tags]);
+    void fetchMatches();
+  }, [selectedTagIds]);
 
-  const selectedTagName = useMemo(() => tags.find((tag) => tag.slug === selected)?.name ?? null, [selected, tags]);
+  const selectedTags = useMemo(() => tags.filter((tag) => selectedTagIds.includes(tag.id)), [selectedTagIds, tags]);
+
+  const toggleTag = (tagId: string) => {
+    setSelectedTagIds((prev) => (prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]));
+  };
+
+  const clearTags = () => setSelectedTagIds([]);
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-muted-foreground">Who are you shopping for?</p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm text-muted-foreground">Pick one or more vibes.</p>
+          <p className="text-xs text-muted-foreground">
+            Smarter matching ranks products higher when they fit more of the selected gift types.
+          </p>
+        </div>
 
-      {loadingTags ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, index) => (
-            <div key={index} className="h-[74px] animate-pulse rounded-xl border border-border bg-muted/30" />
+        {selectedTagIds.length > 0 && (
+          <Button type="button" variant="outline" size="sm" onClick={clearTags}>
+            <X className="mr-2 h-4 w-4" />
+            Clear selection
+          </Button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {tags.map((tag, index) => {
+          const Icon = GIFT_FINDER_ICON_MAP[tag.icon_key ?? "personalized"] ?? Gift;
+          const isSelected = selectedTagIds.includes(tag.id);
+
+          return (
+            <motion.button
+              key={tag.id}
+              type="button"
+              onClick={() => toggleTag(tag.id)}
+              initial={{ opacity: 0, y: 8 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.03 }}
+              whileHover={{ y: -3, scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all ${
+                isSelected
+                  ? "border-primary bg-primary/10 text-foreground shadow-[0_0_24px_rgba(249,115,22,0.12)]"
+                  : "border-border text-muted-foreground hover:border-primary/50"
+              }`}
+            >
+              <Icon className="h-6 w-6 text-primary" />
+              <div className="min-w-0">
+                <span className="block font-display text-sm uppercase tracking-wider">{tag.name}</span>
+                {tag.description ? (
+                  <span className="mt-1 block truncate text-[11px] text-muted-foreground">{tag.description}</span>
+                ) : null}
+              </div>
+            </motion.button>
+          );
+        })}
+      </div>
+
+      {selectedTags.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {selectedTags.map((tag) => (
+            <div
+              key={tag.id}
+              className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-foreground"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
+              {tag.name}
+            </div>
           ))}
         </div>
-      ) : tags.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">
-          No Gift Finder tags yet. Add them in admin first.
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {tags.map((tag, index) => {
-            const Icon = getGiftTagIcon(tag);
+      ) : null}
 
-            return (
-              <motion.button
-                key={tag.id}
-                type="button"
-                onClick={() => setSelected(tag.slug)}
-                initial={{ opacity: 0, y: 8 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.03 }}
-                whileHover={{ y: -3, scale: 1.01 }}
-                whileTap={{ scale: 0.98 }}
-                className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all ${
-                  selected === tag.slug
-                    ? "border-primary bg-primary/10 text-foreground shadow-[0_0_24px_rgba(249,115,22,0.12)]"
-                    : "border-border text-muted-foreground hover:border-primary/50"
-                }`}
-              >
-                <Icon className="h-6 w-6 text-primary" />
-                <span className="font-display text-sm uppercase tracking-wider">{tag.name}</span>
-              </motion.button>
-            );
-          })}
-        </div>
-      )}
-
-      {selected && (
+      {selectedTagIds.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          {loadingProducts ? (
-            <div className="py-8 text-center text-muted-foreground">Searching...</div>
+          {loading ? (
+            <div className="py-8 text-center text-muted-foreground">Searching for the best gift matches...</div>
           ) : products.length > 0 ? (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Showing matches for <span className="font-medium text-foreground">{selectedTagName}</span>
+                Showing the best matches first based on how many selected tags each product fits.
               </p>
 
               <div className="grid grid-cols-2 gap-3">
-                {products.map((p) => (
+                {products.map((product) => (
                   <Link
-                    key={p.id}
-                    to={`/products/${p.slug}`}
+                    key={product.id}
+                    to={`/products/${product.slug}`}
                     className="group overflow-hidden rounded-xl border border-border transition-all hover:-translate-y-1 hover:border-primary"
                   >
-                    {p.images?.[0] && (
+                    {product.images?.[0] && (
                       <img
-                        src={p.images[0]}
-                        alt={p.name}
+                        src={product.images[0]}
+                        alt={product.name}
                         className="aspect-square w-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     )}
-                    <div className="p-3">
-                      <p className="truncate text-sm font-medium text-foreground group-hover:text-primary">{p.name}</p>
-                      <p className="text-xs font-semibold text-primary">{p.price} kr</p>
+
+                    <div className="space-y-1 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate text-sm font-medium text-foreground group-hover:text-primary">
+                          {product.name}
+                        </p>
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                          {product.matchScore} match{product.matchScore === 1 ? "" : "es"}
+                        </span>
+                      </div>
+                      <p className="text-xs font-semibold text-primary">{product.price} kr</p>
                     </div>
                   </Link>
                 ))}
@@ -805,7 +859,7 @@ const GiftFinder = () => {
             </div>
           ) : (
             <div className="py-8 text-center">
-              <p className="mb-3 text-muted-foreground">No specific matches yet — request a custom 3D print instead.</p>
+              <p className="mb-3 text-muted-foreground">No direct match yet — use the custom print tab.</p>
             </div>
           )}
         </motion.div>
@@ -1369,13 +1423,18 @@ const CreateYourOwn = () => {
   const [pageBlocks, setPageBlocks] = useState<SiteBlock[]>([]);
 
   useEffect(() => {
-    supabase
-      .from("site_blocks")
-      .select("*")
-      .eq("page", "create-your-own")
-      .eq("is_active", true)
-      .order("sort_order")
-      .then(({ data }) => setPageBlocks((data as SiteBlock[]) ?? []));
+    const fetchBlocks = async () => {
+      const { data } = await supabase
+        .from("site_blocks")
+        .select("*")
+        .eq("page", "create-your-own")
+        .eq("is_active", true)
+        .order("sort_order");
+
+      setPageBlocks((data as SiteBlock[]) ?? []);
+    };
+
+    void fetchBlocks();
   }, []);
 
   const topBlocks = pageBlocks.filter(

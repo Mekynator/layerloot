@@ -64,15 +64,18 @@ async function fetchStorefrontCatalog(page?: string): Promise<StorefrontCatalogD
     )
     .eq("is_active", true)
     .order("created_at", { ascending: false });
+
   const categoriesReq = supabase
-    .from("categories")
+    .from("product_categories")
     .select("id, name, slug, parent_id")
-    .order("name", { ascending: true });
+    .order("sort_order", { ascending: true });
+
   const reviewsReq = supabase
     .from("product_reviews")
     .select("id, product_id, rating, title, comment, created_at, user_id, is_approved")
     .eq("is_approved", true)
     .order("created_at", { ascending: false });
+
   const galleryReq = supabase
     .from("gallery_posts")
     .select("id, image_url, product_id, product_name, comment, created_at")

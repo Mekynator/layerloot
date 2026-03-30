@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ShoppingCart, User, Menu, X, LogOut, Shield } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import logoImg from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
@@ -48,6 +49,15 @@ type HeaderSettings = {
 type SeenState = {
   ordersLastSeenAt: string | null;
   customRequestsLastSeenAt: string | null;
+};
+
+type FlyToCartState = {
+  visible: boolean;
+  image: string | null;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 };
 
 const defaultBranding: BrandingSettings = {
@@ -139,11 +149,26 @@ const Header = () => {
   const [branding, setBranding] = useState<BrandingSettings>(defaultBranding);
   const [headerSettings, setHeaderSettings] = useState<HeaderSettings>(defaultHeaderSettings);
   const [hasAccountNotifications, setHasAccountNotifications] = useState(false);
+  const [cartPulse, setCartPulse] = useState(false);
+  const [cartGlow, setCartGlow] = useState(false);
+  const [cartToast, setCartToast] = useState<{ visible: boolean; text: string }>({
+    visible: false,
+    text: "",
+  });
+  const [flyToCart, setFlyToCart] = useState<FlyToCartState>({
+    visible: false,
+    image: null,
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+  });
 
   const location = useLocation();
   const { totalItems } = useCart();
   const { user, isAdmin, signOut } = useAuth();
   const navLinks = useNavLinks();
+  const cartButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     const fetchAdminAlerts = async () => {
@@ -252,6 +277,50 @@ const Header = () => {
     setMobileOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    const handleAddToCartEvent = (event: Event) => {
+      const detail = (event as CustomEvent).detail as {
+        name?: string;
+        image?: string | null;
+        sourceRect?: { left: number; top: number; width: number; height: number } | null;
+      };
+
+      setCartPulse(true);
+      setCartGlow(true);
+      setCartToast({
+        visible: true,
+        text: detail?.name ? `${detail.name} added to cart` : "Added to cart",
+      });
+
+      window.setTimeout(() => setCartPulse(false), 550);
+      window.setTimeout(() => setCartGlow(false), 1600);
+      window.setTimeout(() => setCartToast({ visible: false, text: "" }), 1900);
+
+      const cartRect = cartButtonRef.current?.getBoundingClientRect();
+      const sourceRect = detail?.sourceRect;
+
+      if (detail?.image && cartRect && sourceRect) {
+        setFlyToCart({
+          visible: true,
+          image: detail.image,
+          x: sourceRect.left,
+          y: sourceRect.top,
+          width: sourceRect.width,
+          height: sourceRect.height,
+        });
+
+        window.setTimeout(() => {
+          setFlyToCart((prev) => ({ ...prev, visible: false }));
+        }, 900);
+      }
+    };
+
+    window.addEventListener("layerloot:add-to-cart", handleAddToCartEvent as EventListener);
+    return () => {
+      window.removeEventListener("layerloot:add-to-cart", handleAddToCartEvent as EventListener);
+    };
+  }, []);
+
   const logoLeft = branding.logo_text_left || "Layer";
   const logoRight = branding.logo_text_right || branding.brand_accent || "Loot";
   const logoLink = branding.logo_link || "/";
@@ -269,9 +338,40 @@ const Header = () => {
     [navLinks],
   );
 
+  const cartDestinationRect = cartButtonRef.current?.getBoundingClientRect();
+
   return (
     <>
       <GlobalSectionRenderer page="global_header_top" />
+
+      <AnimatePresence>
+        {flyToCart.visible && flyToCart.image && cartDestinationRect && (
+          <motion.img
+            src={flyToCart.image}
+            alt=""
+            className="pointer-events-none fixed z-[80] rounded-xl object-cover shadow-2xl"
+            initial={{
+              left: flyToCart.x,
+              top: flyToCart.y,
+              width: flyToCart.width,
+              height: flyToCart.height,
+              opacity: 0.95,
+              scale: 1,
+            }}
+            animate={{
+              left: cartDestinationRect.left + cartDestinationRect.width / 2 - 18,
+              top: cartDestinationRect.top + cartDestinationRect.height / 2 - 18,
+              width: 36,
+              height: 36,
+              opacity: 0.15,
+              scale: 0.35,
+              rotate: 12,
+            }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.75, ease: "easeInOut" }}
+          />
+        )}
+      </AnimatePresence>
 
       <header className="sticky top-0 z-50 border-b border-border bg-secondary">
         <div className="container flex h-16 items-center justify-between">
@@ -285,7 +385,14 @@ const Header = () => {
               />
             ) : (
               <>
-                {headerSettings.show_logo_icon && <img src={logoImg} alt={logoAlt} style={{ height: `${logoHeight}px` }} className="w-auto object-contain" />}
+                {headerSettings.show_logo_icon && (
+                  <img
+                    src={logoImg}
+                    alt={logoAlt}
+                    style={{ height: `${logoHeight}px` }}
+                    className="w-auto object-contain"
+                  />
+                )}
                 {headerSettings.show_logo_text && (
                   <span className={headerSettings.logo_text_class || defaultHeaderSettings.logo_text_class}>
                     {logoLeft}
@@ -312,22 +419,60 @@ const Header = () => {
             </nav>
           )}
 
-          <div className="flex items-center gap-2">
+          <div className="relative flex items-center gap-2">
             {headerSettings.show_cart_icon && (
-              <Link to="/cart">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative text-secondary-foreground hover:text-foreground"
-                >
-                  <ShoppingCart className="h-5 w-5" />
-                  {totalItems > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-xs font-bold text-primary">
-                      {totalItems}
-                    </span>
+              <div className="relative">
+                <Link to="/cart">
+                  <motion.div
+                    animate={
+                      cartPulse
+                        ? {
+                            scale: [1, 0.92, 1.12, 1],
+                            rotate: [0, -6, 4, 0],
+                          }
+                        : {
+                            scale: 1,
+                            rotate: 0,
+                          }
+                    }
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                  >
+                    <Button
+                      ref={cartButtonRef}
+                      variant="ghost"
+                      size="icon"
+                      className={`relative text-secondary-foreground transition-all hover:text-foreground ${
+                        cartGlow ? "shadow-[0_0_28px_hsl(var(--primary)/0.35)]" : ""
+                      }`}
+                    >
+                      <ShoppingCart className="h-5 w-5" />
+                      {totalItems > 0 && (
+                        <motion.span
+                          key={totalItems}
+                          initial={{ scale: 0.7, opacity: 0.5 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-xs font-bold text-primary"
+                        >
+                          {totalItems}
+                        </motion.span>
+                      )}
+                    </Button>
+                  </motion.div>
+                </Link>
+
+                <AnimatePresence>
+                  {cartToast.visible && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -6, scale: 0.96 }}
+                      className="pointer-events-none absolute right-0 top-full mt-2 whitespace-nowrap rounded-full border border-primary/20 bg-background/95 px-3 py-1.5 text-xs font-medium text-primary shadow-lg"
+                    >
+                      {cartToast.text}
+                    </motion.div>
                   )}
-                </Button>
-              </Link>
+                </AnimatePresence>
+              </div>
             )}
 
             {isAdmin && headerSettings.show_admin_icon && (

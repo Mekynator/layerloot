@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Package,
-  FolderTree,
+  Gift,
   ShoppingCart,
   Users,
   Truck,
@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 const sidebarLinks = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { to: "/admin/products", label: "Products", icon: Package },
-  { to: "/admin/categories", label: "Categories", icon: FolderTree },
+  { to: "/admin/categories", label: "Gift Finder Tags", icon: Gift },
   { to: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { to: "/admin/custom-orders", label: "Custom Orders", icon: Box },
   { to: "/admin/discounts", label: "Discounts", icon: TicketPercent },

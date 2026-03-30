@@ -401,7 +401,7 @@ const ProductDetail = () => {
           </div>
 
           {user ? (
-            <Card className="w-full max-w-3xl border-border/70 shadow-sm">
+            <Card className="w-full max-w-3xl border-border/70 shadow-sm lg:ml-2">
               <CardContent className="grid gap-4 p-6 md:grid-cols-[1fr_auto] md:items-end">
                 <div className="space-y-4">
                   <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-foreground">

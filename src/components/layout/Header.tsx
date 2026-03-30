@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { ShoppingCart, User, Menu, X, Layers, LogOut, Shield } from "lucide-react";
+import { ShoppingCart, User, Menu, X, LogOut, Shield } from "lucide-react";
+import logoImg from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -284,7 +285,7 @@ const Header = () => {
               />
             ) : (
               <>
-                {headerSettings.show_logo_icon && <Layers className="h-7 w-7 text-primary" />}
+                {headerSettings.show_logo_icon && <img src={logoImg} alt={logoAlt} style={{ height: `${logoHeight}px` }} className="w-auto object-contain" />}
                 {headerSettings.show_logo_text && (
                   <span className={headerSettings.logo_text_class || defaultHeaderSettings.logo_text_class}>
                     {logoLeft}

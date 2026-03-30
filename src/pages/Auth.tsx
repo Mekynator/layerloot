@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Layers } from "lucide-react";
+import logoImg from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,7 +49,7 @@ const Auth = () => {
     <div className="flex min-h-[70vh] items-center justify-center py-16">
       <div className="w-full max-w-md rounded-lg border border-border bg-card p-8">
         <div className="mb-6 flex flex-col items-center">
-          <Layers className="mb-2 h-8 w-8 text-primary" />
+          <img src={logoImg} alt="LayerLoot" className="mb-2 h-16 w-auto object-contain" />
           <h1 className="font-display text-2xl font-bold uppercase text-card-foreground">
             {isLogin ? "Welcome Back" : "Create Account"}
           </h1>

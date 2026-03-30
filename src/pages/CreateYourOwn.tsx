@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Image, Gift, Heart, Gamepad2, Swords, Monitor, Upload, Send, Box, Star, CreditCard, Home, Baby, Dog, Palette, Music, Trophy, Flower2, Wrench } from "lucide-react";
+import { Image, Gift, Heart, Gamepad2, Swords, Monitor, Upload, Send, Box, Star, CreditCard, Home, Baby, Dog, Palette, Music, Trophy, Flower2, Wrench, Tag, Camera, Bike, Car, Book, Coffee, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -373,30 +373,22 @@ const LithophaneOrderSection = () => {
   );
 };
 
-const GIFT_CATEGORIES = [
-  { value: "gamer", label: "Gamer", icon: Gamepad2 },
-  { value: "fantasy", label: "Fantasy Fan", icon: Swords },
-  { value: "desk", label: "Desk Decoration", icon: Monitor },
-  { value: "personalized", label: "Personalized Gift", icon: Heart },
-  { value: "home", label: "Home & Living", icon: Home },
-  { value: "kids", label: "Kids & Baby", icon: Baby },
-  { value: "pets", label: "Pet Lovers", icon: Dog },
-  { value: "art", label: "Art & Creative", icon: Palette },
-  { value: "music", label: "Music Fan", icon: Music },
-  { value: "sports", label: "Sports & Trophy", icon: Trophy },
-  { value: "garden", label: "Garden & Nature", icon: Flower2 },
-  { value: "tools", label: "Tools & Gadgets", icon: Wrench },
-];
+const ICON_MAP: Record<string, any> = {
+  Gamepad2, Swords, Monitor, Heart, Home, Baby, Dog, Palette, Music, Trophy,
+  Flower2, Wrench, Gift, Star, Camera, Bike, Car, Book, Coffee, Zap, Tag,
+};
 
 const GiftFinder = () => {
   const [selected, setSelected] = useState<string | null>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [tagsLoading, setTagsLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from("categories").select("id, name, slug").then(({ data }) => {
+    supabase.from("categories").select("id, name, slug, icon_name").order("sort_order").then(({ data }) => {
       setCategories(data ?? []);
+      setTagsLoading(false);
     });
   }, []);
 
@@ -427,22 +419,31 @@ const GiftFinder = () => {
     <div className="space-y-6">
       <p className="text-muted-foreground">Who are you shopping for?</p>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {GIFT_CATEGORIES.map(({ value, label, icon: Icon }) => (
-          <button
-            key={value}
-            onClick={() => setSelected(value)}
-            className={`flex items-center gap-3 rounded-lg border p-4 text-left transition-all ${
-              selected === value
-                ? "border-primary bg-primary/10 text-foreground"
-                : "border-border text-muted-foreground hover:border-primary/50"
-            }`}
-          >
-            <Icon className="h-6 w-6 text-primary" />
-            <span className="font-display text-sm uppercase tracking-wider">{label}</span>
-          </button>
-        ))}
-      </div>
+      {tagsLoading ? (
+        <div className="py-8 text-center text-muted-foreground">Loading tags...</div>
+      ) : categories.length === 0 ? (
+        <div className="py-8 text-center text-muted-foreground">No gift finder tags configured yet.</div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {categories.map((cat) => {
+            const IconComp = ICON_MAP[cat.icon_name] || Tag;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setSelected(cat.slug)}
+                className={`flex items-center gap-3 rounded-lg border p-4 text-left transition-all ${
+                  selected === cat.slug
+                    ? "border-primary bg-primary/10 text-foreground"
+                    : "border-border text-muted-foreground hover:border-primary/50"
+                }`}
+              >
+                <IconComp className="h-6 w-6 text-primary" />
+                <span className="font-display text-sm uppercase tracking-wider">{cat.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {selected && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>

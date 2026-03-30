@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Baby,
@@ -23,6 +23,7 @@ import {
   Wrench,
   Star,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -90,6 +91,46 @@ type ProgressState = {
   open: boolean;
   progress: number;
   status: string;
+};
+
+type GiftFinderTag = {
+  id: string;
+  name: string;
+  slug: string;
+  icon_key: string | null;
+  sort_order: number | null;
+  is_active: boolean;
+};
+
+const GIFT_TAG_ICON_MAP: Record<string, LucideIcon> = {
+  gamer: Gamepad2,
+  fantasy: Swords,
+  fantasy_fan: Swords,
+  desk: Monitor,
+  desk_decoration: Monitor,
+  personalized: Gift,
+  personalized_gift: Gift,
+  home: Home,
+  home_living: Home,
+  kids: Baby,
+  kids_baby: Baby,
+  pets: Dog,
+  pet_lovers: Dog,
+  art: Palette,
+  art_creative: Palette,
+  music: Music,
+  music_fan: Music,
+  sports: Trophy,
+  sports_trophy: Trophy,
+  garden: Flower2,
+  garden_nature: Flower2,
+  tools: Wrench,
+  tools_gadgets: Wrench,
+};
+
+const getGiftTagIcon = (tag: Pick<GiftFinderTag, "slug" | "icon_key">): LucideIcon => {
+  const key = (tag.icon_key || tag.slug || "").toLowerCase().replace(/[^a-z0-9]+/g, "_");
+  return GIFT_TAG_ICON_MAP[key] || Gift;
 };
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -628,116 +669,143 @@ const LithophaneOrderSection = () => {
   );
 };
 
-const GIFT_CATEGORIES = [
-  { value: "gamer", label: "Gamer", icon: Gamepad2 },
-  { value: "fantasy", label: "Fantasy Fan", icon: Swords },
-  { value: "desk", label: "Desk Decoration", icon: Monitor },
-  { value: "personalized", label: "Personalized Gift", icon: Gift },
-  { value: "home", label: "Home & Living", icon: Home },
-  { value: "kids", label: "Kids & Baby", icon: Baby },
-  { value: "pets", label: "Pet Lovers", icon: Dog },
-  { value: "art", label: "Art & Creative", icon: Palette },
-  { value: "music", label: "Music Fan", icon: Music },
-  { value: "sports", label: "Sports & Trophy", icon: Trophy },
-  { value: "garden", label: "Garden & Nature", icon: Flower2 },
-  { value: "tools", label: "Tools & Gadgets", icon: Wrench },
-];
-
 const GiftFinder = () => {
   const [selected, setSelected] = useState<string | null>(null);
   const [products, setProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [tags, setTags] = useState<GiftFinderTag[]>([]);
+  const [loadingTags, setLoadingTags] = useState(true);
+  const [loadingProducts, setLoadingProducts] = useState(false);
 
   useEffect(() => {
-    supabase
-      .from("categories")
-      .select("id, name, slug")
-      .then(({ data }) => {
-        setCategories(data ?? []);
-      });
+    const fetchTags = async () => {
+      setLoadingTags(true);
+      const { data, error } = await supabase
+        .from("gift_finder_tags")
+        .select("id, name, slug, icon_key, sort_order, is_active")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true });
+
+      if (!error) {
+        setTags((data as GiftFinderTag[]) ?? []);
+      }
+
+      setLoadingTags(false);
+    };
+
+    void fetchTags();
   }, []);
 
   useEffect(() => {
     if (!selected) return;
-    setLoading(true);
 
-    const matchedCategory = categories.find((c) => c.slug === selected);
-    if (!matchedCategory) {
-      setProducts([]);
-      setLoading(false);
-      return;
-    }
+    const fetchProducts = async () => {
+      setLoadingProducts(true);
+      const selectedTag = tags.find((tag) => tag.slug === selected);
 
-    supabase
-      .from("products")
-      .select("id, name, slug, price, images, is_featured")
-      .eq("is_active", true)
-      .eq("category_id", matchedCategory.id)
-      .limit(8)
-      .then(({ data }) => {
-        setProducts(data ?? []);
-        setLoading(false);
-      });
-  }, [selected, categories]);
+      if (!selectedTag) {
+        setProducts([]);
+        setLoadingProducts(false);
+        return;
+      }
+
+      const { data } = await supabase
+        .from("products")
+        .select("id, name, slug, price, images, is_featured")
+        .eq("is_active", true)
+        .eq("gift_finder_tag_id", selectedTag.id)
+        .order("is_featured", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(8);
+
+      setProducts(data ?? []);
+      setLoadingProducts(false);
+    };
+
+    void fetchProducts();
+  }, [selected, tags]);
+
+  const selectedTagName = useMemo(() => tags.find((tag) => tag.slug === selected)?.name ?? null, [selected, tags]);
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-muted-foreground">Pick a vibe.</p>
+      <p className="text-sm text-muted-foreground">Who are you shopping for?</p>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {GIFT_CATEGORIES.map(({ value, label, icon: Icon }, index) => (
-          <motion.button
-            key={value}
-            type="button"
-            onClick={() => setSelected(value)}
-            initial={{ opacity: 0, y: 8 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: index * 0.03 }}
-            whileHover={{ y: -3, scale: 1.01 }}
-            whileTap={{ scale: 0.98 }}
-            className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all ${
-              selected === value
-                ? "border-primary bg-primary/10 text-foreground shadow-[0_0_24px_rgba(249,115,22,0.12)]"
-                : "border-border text-muted-foreground hover:border-primary/50"
-            }`}
-          >
-            <Icon className="h-6 w-6 text-primary" />
-            <span className="font-display text-sm uppercase tracking-wider">{label}</span>
-          </motion.button>
-        ))}
-      </div>
+      {loadingTags ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <div key={index} className="h-[74px] animate-pulse rounded-xl border border-border bg-muted/30" />
+          ))}
+        </div>
+      ) : tags.length === 0 ? (
+        <div className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">
+          No Gift Finder tags yet. Add them in admin first.
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {tags.map((tag, index) => {
+            const Icon = getGiftTagIcon(tag);
+
+            return (
+              <motion.button
+                key={tag.id}
+                type="button"
+                onClick={() => setSelected(tag.slug)}
+                initial={{ opacity: 0, y: 8 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.03 }}
+                whileHover={{ y: -3, scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all ${
+                  selected === tag.slug
+                    ? "border-primary bg-primary/10 text-foreground shadow-[0_0_24px_rgba(249,115,22,0.12)]"
+                    : "border-border text-muted-foreground hover:border-primary/50"
+                }`}
+              >
+                <Icon className="h-6 w-6 text-primary" />
+                <span className="font-display text-sm uppercase tracking-wider">{tag.name}</span>
+              </motion.button>
+            );
+          })}
+        </div>
+      )}
 
       {selected && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          {loading ? (
+          {loadingProducts ? (
             <div className="py-8 text-center text-muted-foreground">Searching...</div>
           ) : products.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3">
-              {products.map((p) => (
-                <Link
-                  key={p.id}
-                  to={`/products/${p.slug}`}
-                  className="group overflow-hidden rounded-xl border border-border transition-all hover:-translate-y-1 hover:border-primary"
-                >
-                  {p.images?.[0] && (
-                    <img
-                      src={p.images[0]}
-                      alt={p.name}
-                      className="aspect-square w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  )}
-                  <div className="p-3">
-                    <p className="truncate text-sm font-medium text-foreground group-hover:text-primary">{p.name}</p>
-                    <p className="text-xs font-semibold text-primary">{p.price} kr</p>
-                  </div>
-                </Link>
-              ))}
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Showing matches for <span className="font-medium text-foreground">{selectedTagName}</span>
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                {products.map((p) => (
+                  <Link
+                    key={p.id}
+                    to={`/products/${p.slug}`}
+                    className="group overflow-hidden rounded-xl border border-border transition-all hover:-translate-y-1 hover:border-primary"
+                  >
+                    {p.images?.[0] && (
+                      <img
+                        src={p.images[0]}
+                        alt={p.name}
+                        className="aspect-square w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    )}
+                    <div className="p-3">
+                      <p className="truncate text-sm font-medium text-foreground group-hover:text-primary">{p.name}</p>
+                      <p className="text-xs font-semibold text-primary">{p.price} kr</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="py-8 text-center">
-              <p className="mb-3 text-muted-foreground">No direct match yet — use the custom print tab.</p>
+              <p className="mb-3 text-muted-foreground">No specific matches yet — request a custom 3D print instead.</p>
             </div>
           )}
         </motion.div>

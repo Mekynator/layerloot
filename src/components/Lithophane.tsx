@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -6,17 +6,14 @@ import {
   Image as ImageIcon,
   Loader2,
   PackageCheck,
-  RotateCcw,
-  SlidersHorizontal,
   SunMedium,
   Upload,
-  Wand2,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
 export type LithophaneShape = "flat" | "arched" | "frame";
 export type LithophaneOrientation = "portrait" | "landscape";
-export type LithophanePreviewTab = "original" | "processed" | "heightmap" | "scene";
+export type LithophanePreviewTab = "original" | "scene";
 
 export interface LithophaneSubmitPayload {
   sourceFileName: string | null;
@@ -51,13 +48,6 @@ export interface LithophaneProps {
   initialNotes?: string;
 }
 
-type ProcessedResult = {
-  processedDataUrl: string | null;
-  heightmapDataUrl: string | null;
-  qualityLabel: "Excellent" | "Good" | "Fair" | "Low";
-  qualityMessage: string;
-};
-
 type UploadProgressState = {
   active: boolean;
   progress: number;
@@ -68,10 +58,7 @@ const DEFAULTS = {
   widthMm: 120,
   heightMm: 160,
   borderMm: 3,
-  brightness: 0,
-  contrast: 15,
-  gamma: 1,
-  blur: 0,
+  orientation: "portrait" as LithophaneOrientation,
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -95,132 +82,6 @@ function readFileAsDataUrl(file: File): Promise<string> {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
-}
-
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  });
-}
-
-async function processImage(
-  sourceDataUrl: string,
-  options: {
-    brightness: number;
-    contrast: number;
-    gamma: number;
-    blur: number;
-  },
-): Promise<ProcessedResult> {
-  const img = await loadImage(sourceDataUrl);
-  const size = 720;
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-
-  const mapCanvas = document.createElement("canvas");
-  const mapCtx = mapCanvas.getContext("2d", { willReadFrequently: true });
-
-  if (!ctx || !mapCtx) {
-    throw new Error("Canvas context not available");
-  }
-
-  canvas.width = size;
-  canvas.height = size;
-  mapCanvas.width = size;
-  mapCanvas.height = size;
-
-  const aspect = img.width / img.height;
-  let drawWidth = size;
-  let drawHeight = size;
-  let dx = 0;
-  let dy = 0;
-
-  if (aspect > 1) {
-    drawHeight = size / aspect;
-    dy = (size - drawHeight) / 2;
-  } else {
-    drawWidth = size * aspect;
-    dx = (size - drawWidth) / 2;
-  }
-
-  ctx.fillStyle = "#111827";
-  ctx.fillRect(0, 0, size, size);
-  ctx.drawImage(img, dx, dy, drawWidth, drawHeight);
-
-  if (options.blur > 0) {
-    ctx.filter = `blur(${options.blur}px)`;
-    const snapshot = canvas.toDataURL("image/png");
-    const blurred = await loadImage(snapshot);
-    ctx.clearRect(0, 0, size, size);
-    ctx.drawImage(blurred, 0, 0, size, size);
-    ctx.filter = "none";
-  }
-
-  const imageData = ctx.getImageData(0, 0, size, size);
-  const data = imageData.data;
-  const contrastFactor = (259 * (options.contrast + 255)) / (255 * (259 - options.contrast));
-  let brightnessSum = 0;
-  let varianceSeed = 0;
-
-  for (let i = 0; i < data.length; i += 4) {
-    let gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
-    gray += options.brightness;
-    gray = contrastFactor * (gray - 128) + 128;
-    gray = 255 * Math.pow(clamp(gray / 255, 0, 1), 1 / Math.max(0.2, options.gamma));
-    gray = clamp(gray, 0, 255);
-
-    data[i] = gray;
-    data[i + 1] = gray;
-    data[i + 2] = gray;
-
-    brightnessSum += gray;
-    varianceSeed += gray * gray;
-  }
-
-  ctx.putImageData(imageData, 0, 0);
-
-  mapCtx.fillStyle = "#0b0f19";
-  mapCtx.fillRect(0, 0, size, size);
-  const mapData = ctx.getImageData(0, 0, size, size);
-  const mapPixels = mapData.data;
-
-  for (let i = 0; i < mapPixels.length; i += 4) {
-    const value = mapPixels[i];
-    const shaded = clamp(35 + value * 0.9, 0, 255);
-    mapPixels[i] = shaded * 0.72;
-    mapPixels[i + 1] = shaded * 0.8;
-    mapPixels[i + 2] = shaded;
-    mapPixels[i + 3] = 255;
-  }
-
-  mapCtx.putImageData(mapData, 0, 0);
-
-  const pixelCount = data.length / 4;
-  const mean = brightnessSum / pixelCount;
-  const variance = varianceSeed / pixelCount - mean * mean;
-  let qualityLabel: ProcessedResult["qualityLabel"] = "Low";
-  let qualityMessage = "The image may print muddy. Increase contrast or use a clearer photo.";
-
-  if (variance > 3600 && mean > 80 && mean < 185) {
-    qualityLabel = "Excellent";
-    qualityMessage = "Excellent contrast and tonal spread for lithophane printing.";
-  } else if (variance > 2200) {
-    qualityLabel = "Good";
-    qualityMessage = "Good base image. Minor tuning can improve edge detail.";
-  } else if (variance > 1200) {
-    qualityLabel = "Fair";
-    qualityMessage = "Usable, but finer details may soften in the print.";
-  }
-
-  return {
-    processedDataUrl: canvas.toDataURL("image/png"),
-    heightmapDataUrl: mapCanvas.toDataURL("image/png"),
-    qualityLabel,
-    qualityMessage,
-  };
 }
 
 function Section({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
@@ -334,24 +195,15 @@ export default function Lithophane({
 }: LithophaneProps) {
   const [sourceFileName, setSourceFileName] = useState<string | null>(null);
   const [sourceDataUrl, setSourceDataUrl] = useState<string | null>(null);
-  const [processedDataUrl, setProcessedDataUrl] = useState<string | null>(null);
-  const [heightmapDataUrl, setHeightmapDataUrl] = useState<string | null>(null);
-  const [qualityLabel, setQualityLabel] = useState<ProcessedResult["qualityLabel"]>("Good");
-  const [qualityMessage, setQualityMessage] = useState("Upload a photo to begin.");
   const [shape, setShape] = useState<LithophaneShape>("frame");
-  const [orientation, setOrientation] = useState<LithophaneOrientation>("portrait");
-  const [activeTab, setActiveTab] = useState<LithophanePreviewTab>("processed");
+  const [orientation, setOrientation] = useState<LithophaneOrientation>(DEFAULTS.orientation);
+  const [activeTab, setActiveTab] = useState<LithophanePreviewTab>("scene");
   const [widthMm, setWidthMm] = useState(DEFAULTS.widthMm);
   const [heightMm, setHeightMm] = useState(DEFAULTS.heightMm);
   const [borderMm, setBorderMm] = useState(DEFAULTS.borderMm);
-  const [brightness, setBrightness] = useState(DEFAULTS.brightness);
-  const [contrast, setContrast] = useState(DEFAULTS.contrast);
-  const [gamma, setGamma] = useState(DEFAULTS.gamma);
-  const [blur, setBlur] = useState(DEFAULTS.blur);
   const [lightEnabled, setLightEnabled] = useState(true);
   const [lightTone, setLightTone] = useState<"warm" | "neutral" | "cool">("warm");
   const [notes, setNotes] = useState(initialNotes);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgressState>({
     active: false,
@@ -359,52 +211,14 @@ export default function Lithophane({
     status: "",
   });
 
-  const debounceRef = useRef<number | null>(null);
-
   const estimatedPrice = useMemo(() => estimatePrice(widthMm, heightMm, borderMm), [widthMm, heightMm, borderMm]);
   const estimatedPrintHours = useMemo(() => estimatePrintHours(widthMm, heightMm), [widthMm, heightMm]);
-
-  const processCurrentImage = useCallback(async () => {
-    if (!sourceDataUrl) return;
-
-    setIsProcessing(true);
-    try {
-      const result = await processImage(sourceDataUrl, {
-        brightness,
-        contrast,
-        gamma,
-        blur,
-      });
-      setProcessedDataUrl(result.processedDataUrl);
-      setHeightmapDataUrl(result.heightmapDataUrl);
-      setQualityLabel(result.qualityLabel);
-      setQualityMessage(result.qualityMessage);
-    } catch (error) {
-      console.error("Lithophane processing failed", error);
-      setQualityLabel("Low");
-      setQualityMessage("Image processing failed. Try another file.");
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [sourceDataUrl, brightness, contrast, gamma, blur]);
-
-  useEffect(() => {
-    if (!sourceDataUrl) return;
-    if (debounceRef.current) window.clearTimeout(debounceRef.current);
-    debounceRef.current = window.setTimeout(() => {
-      void processCurrentImage();
-    }, 220);
-
-    return () => {
-      if (debounceRef.current) window.clearTimeout(debounceRef.current);
-    };
-  }, [sourceDataUrl, brightness, contrast, gamma, blur, processCurrentImage]);
 
   useEffect(() => {
     onDraftChange?.({
       sourceFileName,
       sourceDataUrl,
-      processedDataUrl,
+      processedDataUrl: sourceDataUrl,
       shape,
       orientation,
       widthMm,
@@ -413,10 +227,10 @@ export default function Lithophane({
       maxThicknessMm: 3.2,
       borderMm,
       invert: false,
-      brightness,
-      contrast,
-      gamma,
-      blur,
+      brightness: 0,
+      contrast: 0,
+      gamma: 1,
+      blur: 0,
       lightEnabled,
       lightTone,
       notes,
@@ -426,16 +240,11 @@ export default function Lithophane({
   }, [
     sourceFileName,
     sourceDataUrl,
-    processedDataUrl,
     shape,
     orientation,
     widthMm,
     heightMm,
     borderMm,
-    brightness,
-    contrast,
-    gamma,
-    blur,
     lightEnabled,
     lightTone,
     notes,
@@ -447,18 +256,16 @@ export default function Lithophane({
   const runUploadProgress = async (selectedFile: File) => {
     setUploadProgress({ active: true, progress: 8, status: "Reading image..." });
     await sleep(140);
-    setUploadProgress({ active: true, progress: 32, status: "Checking image..." });
+    setUploadProgress({ active: true, progress: 34, status: "Checking image..." });
     await sleep(150);
-    setUploadProgress({ active: true, progress: 64, status: "Preparing preview..." });
+    setUploadProgress({ active: true, progress: 68, status: "Preparing preview..." });
 
     const dataUrl = await readFileAsDataUrl(selectedFile);
 
     setSourceFileName(selectedFile.name);
     setSourceDataUrl(dataUrl);
-    setActiveTab("processed");
+    setActiveTab("scene");
 
-    setUploadProgress({ active: true, progress: 88, status: "Generating lithophane preview..." });
-    await sleep(180);
     setUploadProgress({ active: true, progress: 100, status: "Image ready" });
     await sleep(180);
     setUploadProgress({ active: false, progress: 0, status: "" });
@@ -467,44 +274,33 @@ export default function Lithophane({
   const handleFileChange = async (file?: File | null) => {
     if (!file) return;
     const allowed = ["image/jpeg", "image/png", "image/webp"];
-    if (!allowed.includes(file.type)) {
-      setQualityLabel("Low");
-      setQualityMessage("Please upload JPG, PNG, or WEBP.");
-      return;
-    }
+    if (!allowed.includes(file.type)) return;
 
     try {
       await runUploadProgress(file);
     } catch (error) {
       console.error("Lithophane upload failed", error);
       setUploadProgress({ active: false, progress: 0, status: "" });
-      setQualityLabel("Low");
-      setQualityMessage("Image upload failed. Try another file.");
     }
   };
 
   const handleReset = () => {
-    setBrightness(DEFAULTS.brightness);
-    setContrast(DEFAULTS.contrast);
-    setGamma(DEFAULTS.gamma);
-    setBlur(DEFAULTS.blur);
     setWidthMm(DEFAULTS.widthMm);
     setHeightMm(DEFAULTS.heightMm);
     setBorderMm(DEFAULTS.borderMm);
     setLightEnabled(true);
     setLightTone("warm");
-    setOrientation("portrait");
+    setOrientation(DEFAULTS.orientation);
+    setShape("frame");
   };
 
-  const previewScreenshotDataUrl = useMemo(() => {
-    return activeTab === "heightmap" ? heightmapDataUrl : processedDataUrl;
-  }, [activeTab, heightmapDataUrl, processedDataUrl]);
+  const previewScreenshotDataUrl = sourceDataUrl;
 
   const submitPayload: LithophaneSubmitPayload = useMemo(
     () => ({
       sourceFileName,
       sourceDataUrl,
-      processedDataUrl,
+      processedDataUrl: sourceDataUrl,
       previewScreenshotDataUrl,
       shape,
       orientation,
@@ -514,17 +310,17 @@ export default function Lithophane({
       maxThicknessMm: 3.2,
       borderMm,
       invert: false,
-      brightness,
-      contrast,
-      gamma,
-      blur,
+      brightness: 0,
+      contrast: 0,
+      gamma: 1,
+      blur: 0,
       lightEnabled,
       lightTone,
       notes,
       estimatedPrice,
       estimatedPrintHours,
       designJson: {
-        version: 2,
+        version: 3,
         component: "Lithophane",
         shape,
         orientation,
@@ -534,12 +330,7 @@ export default function Lithophane({
           borderMm,
         },
         image: {
-          brightness,
-          contrast,
-          gamma,
-          blur,
-          qualityLabel,
-          qualityMessage,
+          sourceOnly: true,
         },
         scene: {
           lightEnabled,
@@ -550,29 +341,19 @@ export default function Lithophane({
     [
       sourceFileName,
       sourceDataUrl,
-      processedDataUrl,
       previewScreenshotDataUrl,
       shape,
       orientation,
       widthMm,
       heightMm,
       borderMm,
-      brightness,
-      contrast,
-      gamma,
-      blur,
       lightEnabled,
       lightTone,
       notes,
       estimatedPrice,
       estimatedPrintHours,
-      qualityLabel,
-      qualityMessage,
     ],
   );
-
-  const previewImage =
-    activeTab === "original" ? sourceDataUrl : activeTab === "heightmap" ? heightmapDataUrl : processedDataUrl;
 
   const frameOuterStyle =
     orientation === "portrait"
@@ -591,7 +372,7 @@ export default function Lithophane({
     padding: `${clamp(borderMm * 1.1, 6, 14)}px`,
   };
 
-  const uploadBusy = uploadProgress.active || isProcessing;
+  const uploadBusy = uploadProgress.active;
 
   return (
     <div className={["space-y-6", className].filter(Boolean).join(" ")}>
@@ -600,11 +381,11 @@ export default function Lithophane({
           <div>
             <h2 className="text-xl font-semibold text-white">Lithophane Preview</h2>
             <p className="text-sm text-slate-300">
-              Full-width live preview. Orientation, width, height, and border affect the visualization.
+              Clean workflow: upload image, choose product setup, preview the final framed look.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {(["original", "processed", "heightmap", "scene"] as LithophanePreviewTab[]).map((tab) => (
+            {(["original", "scene"] as LithophanePreviewTab[]).map((tab) => (
               <button
                 key={tab}
                 type="button"
@@ -624,8 +405,8 @@ export default function Lithophane({
 
         <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-950 to-slate-900">
           <div className="aspect-[16/8] min-h-[360px] w-full md:min-h-[460px] xl:min-h-[560px]">
-            {activeTab !== "scene" && previewImage ? (
-              <img src={previewImage} alt="Lithophane preview" className="h-full w-full object-contain" />
+            {activeTab === "original" && sourceDataUrl ? (
+              <img src={sourceDataUrl} alt="Lithophane original preview" className="h-full w-full object-contain" />
             ) : activeTab === "scene" ? (
               <div
                 className="relative flex h-full w-full items-center justify-center overflow-hidden"
@@ -666,19 +447,19 @@ export default function Lithophane({
                       style={innerFrameStyle}
                     >
                       <div className="h-full w-full overflow-hidden rounded-[16px] border border-white/10 bg-black">
-                        {processedDataUrl ? (
+                        {sourceDataUrl ? (
                           <img
-                            src={processedDataUrl}
+                            src={sourceDataUrl}
                             alt="Framed lithophane scene"
                             className="h-full w-full object-cover opacity-95"
                             style={{
                               filter: lightEnabled
                                 ? lightTone === "warm"
-                                  ? "sepia(0.25) brightness(1.35)"
+                                  ? "sepia(0.25) brightness(1.2) grayscale(1)"
                                   : lightTone === "cool"
-                                    ? "hue-rotate(180deg) brightness(1.22)"
-                                    : "brightness(1.2)"
-                                : "brightness(0.72)",
+                                    ? "grayscale(1) brightness(1.16) contrast(1.02)"
+                                    : "grayscale(1) brightness(1.1)"
+                                : "grayscale(1) brightness(0.72)",
                             }}
                           />
                         ) : (
@@ -694,14 +475,6 @@ export default function Lithophane({
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-slate-300">
                 Upload an image to preview the lithophane
-              </div>
-            )}
-
-            {isProcessing && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
-                <div className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-white">
-                  Processing image…
-                </div>
               </div>
             )}
           </div>
@@ -779,33 +552,6 @@ export default function Lithophane({
             </AnimatePresence>
           </Section>
 
-          <Section title="Image tuning" icon={<SlidersHorizontal className="h-4 w-4 text-amber-500" />}>
-            <div className="space-y-3">
-              <Range label="Brightness" value={brightness} min={-80} max={80} onChange={setBrightness} />
-              <Range label="Contrast" value={contrast} min={-120} max={120} onChange={setContrast} />
-              <Range label="Gamma" value={gamma} min={0.4} max={2.5} step={0.1} onChange={setGamma} />
-              <Range label="Blur cleanup" value={blur} min={0} max={4} step={0.2} onChange={setBlur} />
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              <ToggleChip active={orientation === "portrait"} onClick={() => setOrientation("portrait")}>
-                Portrait
-              </ToggleChip>
-              <ToggleChip active={orientation === "landscape"} onClick={() => setOrientation("landscape")}>
-                Landscape
-              </ToggleChip>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleReset}
-              className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900"
-            >
-              <RotateCcw className="h-4 w-4" />
-              Reset controls
-            </button>
-          </Section>
-
           <Section title="Product setup" icon={<PackageCheck className="h-4 w-4 text-amber-500" />}>
             <div className="grid grid-cols-3 gap-2">
               <ToggleChip active={shape === "flat"} onClick={() => setShape("flat")}>
@@ -819,24 +565,33 @@ export default function Lithophane({
               </ToggleChip>
             </div>
 
+            <div className="mt-4 flex flex-wrap gap-2">
+              <ToggleChip active={orientation === "portrait"} onClick={() => setOrientation("portrait")}>
+                Portrait
+              </ToggleChip>
+              <ToggleChip active={orientation === "landscape"} onClick={() => setOrientation("landscape")}>
+                Landscape
+              </ToggleChip>
+            </div>
+
             <div className="mt-4 space-y-3">
               <Range label="Width (mm)" value={widthMm} min={60} max={240} onChange={setWidthMm} />
               <Range label="Height (mm)" value={heightMm} min={80} max={300} onChange={setHeightMm} />
               <Range label="Border (mm)" value={borderMm} min={0} max={10} step={0.5} onChange={setBorderMm} />
             </div>
+
+            <button
+              type="button"
+              onClick={handleReset}
+              className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900"
+            >
+              Reset setup
+            </button>
           </Section>
         </div>
 
         <div className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-3">
-            <motion.div whileHover={{ y: -2 }} className="rounded-2xl border border-emerald-300 bg-emerald-50 p-4">
-              <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-emerald-700">
-                <Wand2 className="h-4 w-4" />
-                Quality: {qualityLabel}
-              </div>
-              <p className="text-xs leading-5 text-emerald-800">{qualityMessage}</p>
-            </motion.div>
-
+          <div className="grid gap-3 md:grid-cols-2">
             <motion.div whileHover={{ y: -2 }} className="rounded-2xl border border-slate-300 bg-white p-4">
               <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
                 <SunMedium className="h-4 w-4 text-amber-500" />

@@ -14,6 +14,8 @@ import {
   XCircle,
   MessageSquare,
   Image as ImageIcon,
+  LampDesk,
+  Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,6 +53,7 @@ interface CustomOrder {
   request_fee_status?: string;
   request_fee_amount?: number;
   metadata?: {
+    order_type?: string | null;
     reference_image_url?: string | null;
     reference_image_filename?: string | null;
     uploaded_model_url?: string | null;
@@ -68,6 +71,7 @@ interface ParsedCustomOrder extends CustomOrder {
   scale: string;
   reference_image_url: string | null;
   reference_image_filename: string | null;
+  order_type_label: "lithophane" | "custom-print";
 }
 
 interface CustomOrderMessage {
@@ -80,6 +84,9 @@ interface CustomOrderMessage {
   proposed_price: number | null;
   created_at: string;
 }
+
+type ViewGroup = "in-production" | "done";
+type ProductionTypeFilter = "all" | "lithophane" | "custom-print";
 
 const STATUSES = [
   { value: "pending", label: "Pending", color: "bg-yellow-500/10 text-yellow-600 border-yellow-500/30" },
@@ -95,6 +102,19 @@ const PAYMENT_STATUSES = ["unpaid", "awaiting_payment", "paid", "refunded", "can
 const PRODUCTION_STATUSES = ["pending", "queued", "in_production", "completed", "shipped", "cancelled"] as const;
 const FEE_STATUSES = ["unpaid", "paid"] as const;
 const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+
+function detectOrderType(order: CustomOrder): "lithophane" | "custom-print" {
+  const metadataType = order.metadata?.order_type;
+  if (metadataType === "lithophane") return "lithophane";
+  if (metadataType === "custom-print") return "custom-print";
+
+  const raw = (order.description || "").toLowerCase();
+  if (raw.includes("lithophane custom order") || raw.includes('"component": "lithophane"')) {
+    return "lithophane";
+  }
+
+  return "custom-print";
+}
 
 function parseCustomOrder(order: CustomOrder): ParsedCustomOrder {
   const raw = order.description || "";
@@ -138,6 +158,7 @@ function parseCustomOrder(order: CustomOrder): ParsedCustomOrder {
     scale: parsed.scale || "-",
     reference_image_url: order.metadata?.reference_image_url || parsed.referenceImageUrl || null,
     reference_image_filename: order.metadata?.reference_image_filename || null,
+    order_type_label: detectOrderType(order),
   };
 }
 
@@ -152,6 +173,24 @@ function stripImageUrl(message: string | null): string {
   return message.replace(/https?:\/\/\S+\.(?:png|jpg|jpeg|webp)(?:\?\S*)?/gi, "").trim() || "Image attachment";
 }
 
+function orderTypeBadge(type: ParsedCustomOrder["order_type_label"]) {
+  if (type === "lithophane") {
+    return (
+      <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-700">
+        <LampDesk className="mr-1 h-3.5 w-3.5" />
+        Lithophane
+      </Badge>
+    );
+  }
+
+  return (
+    <Badge variant="outline" className="border-sky-500/30 bg-sky-500/10 text-sky-700">
+      <Package className="mr-1 h-3.5 w-3.5" />
+      Custom 3D Print
+    </Badge>
+  );
+}
+
 const AdminCustomOrders = () => {
   const [orders, setOrders] = useState<CustomOrder[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<ParsedCustomOrder | null>(null);
@@ -159,7 +198,8 @@ const AdminCustomOrders = () => {
   const [adminNotes, setAdminNotes] = useState("");
   const [statusUpdate, setStatusUpdate] = useState("");
   const [saving, setSaving] = useState(false);
-  const [viewGroup, setViewGroup] = useState<"in-production" | "done">("in-production");
+  const [viewGroup, setViewGroup] = useState<ViewGroup>("in-production");
+  const [productionTypeFilter, setProductionTypeFilter] = useState<ProductionTypeFilter>("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [convertOpen, setConvertOpen] = useState(false);
   const [convertForm, setConvertForm] = useState({ name: "", slug: "", price: 0, stock: 1 });
@@ -211,6 +251,15 @@ const AdminCustomOrders = () => {
   }, [conversationImagePreviewUrl]);
 
   const parsedOrders = useMemo(() => orders.map(parseCustomOrder), [orders]);
+
+  const productionCounts = useMemo(() => {
+    const activeOrders = parsedOrders.filter((o) => o.status !== "completed" && o.status !== "rejected");
+    return {
+      all: activeOrders.length,
+      lithophane: activeOrders.filter((o) => o.order_type_label === "lithophane").length,
+      customPrint: activeOrders.filter((o) => o.order_type_label === "custom-print").length,
+    };
+  }, [parsedOrders]);
 
   const openDetail = async (order: ParsedCustomOrder) => {
     setSelectedOrder(order);
@@ -506,7 +555,15 @@ const AdminCustomOrders = () => {
       : o.status !== "completed" && o.status !== "rejected",
   );
 
-  const filtered = filterStatus === "all" ? groupedOrders : groupedOrders.filter((o) => o.status === filterStatus);
+  const productionFilteredOrders =
+    viewGroup === "in-production" && productionTypeFilter !== "all"
+      ? groupedOrders.filter((o) => o.order_type_label === productionTypeFilter)
+      : groupedOrders;
+
+  const filtered =
+    filterStatus === "all"
+      ? productionFilteredOrders
+      : productionFilteredOrders.filter((o) => o.status === filterStatus);
 
   return (
     <AdminLayout>
@@ -534,7 +591,13 @@ const AdminCustomOrders = () => {
           </Select>
         </div>
 
-        <Tabs value={viewGroup} onValueChange={(v) => setViewGroup(v as "in-production" | "done")}>
+        <Tabs
+          value={viewGroup}
+          onValueChange={(v) => {
+            setViewGroup(v as ViewGroup);
+            if (v === "done") setProductionTypeFilter("all");
+          }}
+        >
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="in-production" className="font-display uppercase tracking-wider">
               In Production
@@ -544,6 +607,22 @@ const AdminCustomOrders = () => {
             </TabsTrigger>
           </TabsList>
         </Tabs>
+
+        {viewGroup === "in-production" && (
+          <Tabs value={productionTypeFilter} onValueChange={(v) => setProductionTypeFilter(v as ProductionTypeFilter)}>
+            <TabsList className="grid h-auto w-full max-w-2xl grid-cols-1 gap-2 sm:grid-cols-3">
+              <TabsTrigger value="all" className="font-display uppercase tracking-wider">
+                All ({productionCounts.all})
+              </TabsTrigger>
+              <TabsTrigger value="lithophane" className="font-display uppercase tracking-wider">
+                Custom Lithophane ({productionCounts.lithophane})
+              </TabsTrigger>
+              <TabsTrigger value="custom-print" className="font-display uppercase tracking-wider">
+                Custom 3D Prints ({productionCounts.customPrint})
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
       </div>
 
       <Card>
@@ -552,6 +631,7 @@ const AdminCustomOrders = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Customer</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead>File</TableHead>
                 <TableHead>Material</TableHead>
                 <TableHead>Color</TableHead>
@@ -573,6 +653,8 @@ const AdminCustomOrders = () => {
                     <p className="text-xs text-muted-foreground">{order.email}</p>
                   </TableCell>
 
+                  <TableCell>{orderTypeBadge(order.order_type_label)}</TableCell>
+
                   <TableCell>
                     <div className="flex items-center gap-1.5">
                       <Box className="h-4 w-4 text-primary" />
@@ -588,7 +670,14 @@ const AdminCustomOrders = () => {
                   <TableCell className="text-sm">{order.quantity}</TableCell>
                   <TableCell className="text-sm">{order.scale}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={`text-xs uppercase ${(order as any).request_fee_status === "paid" ? "border-green-500/30 bg-green-500/10 text-green-600" : "border-yellow-500/30 bg-yellow-500/10 text-yellow-600"}`}>
+                    <Badge
+                      variant="outline"
+                      className={`text-xs uppercase ${
+                        (order as any).request_fee_status === "paid"
+                          ? "border-green-500/30 bg-green-500/10 text-green-600"
+                          : "border-yellow-500/30 bg-yellow-500/10 text-yellow-600"
+                      }`}
+                    >
                       {(order as any).request_fee_status === "paid" ? "Paid" : "Unpaid"}
                     </Badge>
                   </TableCell>
@@ -608,8 +697,16 @@ const AdminCustomOrders = () => {
 
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={11} className="py-8 text-center text-muted-foreground">
-                    No custom print requests found in this tab.
+                  <TableCell colSpan={12} className="py-8 text-center text-muted-foreground">
+                    No{" "}
+                    {viewGroup === "done"
+                      ? "completed"
+                      : productionTypeFilter === "lithophane"
+                        ? "lithophane"
+                        : productionTypeFilter === "custom-print"
+                          ? "custom 3D print"
+                          : "custom print"}{" "}
+                    requests found in this tab.
                   </TableCell>
                 </TableRow>
               )}
@@ -635,7 +732,7 @@ const AdminCustomOrders = () => {
               </TabsList>
 
               <TabsContent value="details" className="space-y-6">
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                   <div>
                     <Label className="text-xs text-muted-foreground">Customer</Label>
                     <p className="font-medium text-foreground">{selectedOrder.name}</p>
@@ -654,6 +751,11 @@ const AdminCustomOrders = () => {
                   <div>
                     <Label className="text-xs text-muted-foreground">File</Label>
                     <p className="text-sm text-foreground">{selectedOrder.model_filename}</p>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Order Type</Label>
+                    <div className="mt-1">{orderTypeBadge(selectedOrder.order_type_label)}</div>
                   </div>
                 </div>
 

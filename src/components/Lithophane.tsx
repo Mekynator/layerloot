@@ -23,8 +23,11 @@ export type LithophanePreviewTab = "original" | "scene";
 export interface LithophaneSubmitPayload {
   sourceFileName: string | null;
   sourceDataUrl: string | null;
+  originalSourceDataUrl: string | null;
+  croppedImageDataUrl: string | null;
   processedDataUrl: string | null;
   previewScreenshotDataUrl: string | null;
+  cropState: CropState | null;
   shape: LithophaneShape;
   orientation: LithophaneOrientation;
   widthMm: number;
@@ -38,7 +41,8 @@ export interface LithophaneSubmitPayload {
   gamma: number;
   blur: number;
   lightEnabled: boolean;
-  lightTone: "warm" | "neutral" | "cool";
+  lightTone: LithophaneLightTone;
+  sceneMode: LithophaneSceneMode;
   notes: string;
   estimatedPrice: number;
   estimatedPrintHours: number;

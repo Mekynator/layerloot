@@ -146,7 +146,7 @@ const ProductDetail = () => {
   return (
     <div className="py-8 md:py-10">
       <div className="container space-y-12">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           <Link
             to="/products"
             className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-primary"
@@ -401,8 +401,8 @@ const ProductDetail = () => {
           </div>
 
           {user ? (
-            <Card className="border-border/70 shadow-sm">
-              <CardContent className="grid gap-4 p-6 md:grid-cols-2">
+            <Card className="mx-auto w-full max-w-3xl border-border/70 bg-background/60 backdrop-blur shadow-sm">
+              <CardContent className="grid gap-4 p-6 md:grid-cols-[1fr_auto] md:items-end">
                 <div className="space-y-4">
                   <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-foreground">
                     Write a Review
@@ -429,10 +429,10 @@ const ProductDetail = () => {
                     placeholder="Your review..."
                     value={reviewForm.comment}
                     onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
-                    rows={4}
+                    rows={3}
                   />
                 </div>
-                <div className="flex items-end">
+                <div className="flex items-end justify-end">
                   <Button
                     onClick={handleSubmitReview}
                     disabled={submitting}

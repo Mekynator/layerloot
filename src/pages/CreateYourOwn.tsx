@@ -36,13 +36,13 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -139,6 +139,8 @@ type GiftFinderLink = {
   product_id: string;
   gift_finder_tag_id: string;
 };
+
+type CreateTabValue = "custom-print" | "lithophane" | "gift-finder";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -397,6 +399,31 @@ const UploadDropzone = ({
     <p className="mt-1 text-xs text-muted-foreground">{sublabel}</p>
     {children}
   </motion.div>
+);
+
+const ToolShell = ({
+  eyebrow,
+  title,
+  description,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  children: ReactNode;
+}) => (
+  <Card className="overflow-hidden border-border/80 shadow-sm">
+    <CardHeader className="border-b border-border/60 bg-muted/20">
+      <div className="space-y-2">
+        <p className="text-[11px] font-display uppercase tracking-[0.24em] text-primary">{eyebrow}</p>
+        <CardTitle className="font-display text-lg uppercase tracking-wide text-foreground sm:text-xl">
+          {title}
+        </CardTitle>
+        <CardDescription className="max-w-3xl text-sm text-muted-foreground">{description}</CardDescription>
+      </div>
+    </CardHeader>
+    <CardContent className="p-4 sm:p-6">{children}</CardContent>
+  </Card>
 );
 
 const ReviewSection = ({ title }: { toolType: "custom-print" | "lithophane"; title: string }) => {
@@ -1438,9 +1465,13 @@ const CustomPrintOrder = () => {
 
 const CreateYourOwn = () => {
   const [pageBlocks, setPageBlocks] = useState<SiteBlock[]>([]);
+  const [blocksLoading, setBlocksLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<CreateTabValue>("custom-print");
 
   useEffect(() => {
     const fetchBlocks = async () => {
+      setBlocksLoading(true);
+
       const { data } = await supabase
         .from("site_blocks")
         .select("*")
@@ -1449,94 +1480,114 @@ const CreateYourOwn = () => {
         .order("sort_order");
 
       setPageBlocks((data as SiteBlock[]) ?? []);
+      setBlocksLoading(false);
     };
 
     void fetchBlocks();
   }, []);
 
-  const topBlocks = pageBlocks.filter(
-    (block) => (block.content as Record<string, unknown> | null)?.placement !== "after_create_your_own",
-  );
-  const bottomBlocks = pageBlocks.filter(
-    (block) => (block.content as Record<string, unknown> | null)?.placement === "after_create_your_own",
-  );
+  const { topBlocks, bottomBlocks } = useMemo(() => {
+    const top: SiteBlock[] = [];
+    const bottom: SiteBlock[] = [];
+
+    for (const block of pageBlocks) {
+      const placement = (block.content as Record<string, unknown> | null)?.placement;
+      if (placement === "after_create_your_own") bottom.push(block);
+      else top.push(block);
+    }
+
+    return { topBlocks: top, bottomBlocks: bottom };
+  }, [pageBlocks]);
 
   return (
     <div>
-      {topBlocks.map((block) => (
-        <div key={block.id}>{renderBlock(block)}</div>
-      ))}
+      {!blocksLoading && topBlocks.map((block) => <div key={block.id}>{renderBlock(block)}</div>)}
 
       <section className="py-8 lg:py-12">
-        <div className="container max-w-5xl">
-          <motion.div {...fadeUp}>
+        <div className="container max-w-6xl">
+          <motion.div {...fadeUp} className="mb-8">
             <h1 className="mb-2 font-display text-3xl font-bold uppercase text-foreground lg:text-5xl">
               Create Your <span className="text-primary">Own</span>
             </h1>
 
-            <p className="mb-8 max-w-2xl text-muted-foreground">Upload, customize, submit.</p>
+            <p className="max-w-2xl text-muted-foreground">
+              Upload, customize, preview, and submit. Use custom print for 3D models, lithophane for photo lamps, or
+              gift finder for quick inspiration.
+            </p>
           </motion.div>
 
-          <Tabs defaultValue="custom-print" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-1 gap-2 bg-muted/50 sm:grid-cols-3">
-              <TabsTrigger value="custom-print" className="gap-1.5 font-display text-xs uppercase tracking-wider">
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => setActiveTab(value as CreateTabValue)}
+            className="space-y-6"
+          >
+            <TabsList className="grid h-auto w-full grid-cols-1 gap-2 rounded-2xl bg-muted/50 p-2 sm:grid-cols-3">
+              <TabsTrigger
+                value="custom-print"
+                className="gap-1.5 rounded-xl font-display text-xs uppercase tracking-wider"
+              >
                 <Box className="h-4 w-4" /> Custom 3D Print
               </TabsTrigger>
 
-              <TabsTrigger value="lithophane" className="gap-1.5 font-display text-xs uppercase tracking-wider">
+              <TabsTrigger
+                value="lithophane"
+                className="gap-1.5 rounded-xl font-display text-xs uppercase tracking-wider"
+              >
                 <Image className="h-4 w-4" /> Lithophane
               </TabsTrigger>
 
-              <TabsTrigger value="gift-finder" className="gap-1.5 font-display text-xs uppercase tracking-wider">
+              <TabsTrigger
+                value="gift-finder"
+                className="gap-1.5 rounded-xl font-display text-xs uppercase tracking-wider"
+              >
                 <Gift className="h-4 w-4" /> Gift Finder
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="custom-print">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 font-display text-lg uppercase">
-                    <Send className="h-5 w-5 text-primary" /> Custom 3D Print Order
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CustomPrintOrder />
-                </CardContent>
-              </Card>
-            </TabsContent>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.22 }}
+              >
+                {activeTab === "custom-print" && (
+                  <ToolShell
+                    eyebrow="Custom print"
+                    title="Custom 3D Print Order"
+                    description="Upload your 3D file or a reference image, choose material and print quality, then continue to the request fee checkout."
+                  >
+                    <CustomPrintOrder />
+                  </ToolShell>
+                )}
 
-            <TabsContent value="lithophane">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 font-display text-lg uppercase">
-                    <Image className="h-5 w-5 text-primary" /> Lithophane Generator
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <LithophaneOrderSection />
-                </CardContent>
-              </Card>
-            </TabsContent>
+                {activeTab === "lithophane" && (
+                  <ToolShell
+                    eyebrow="Lithophane"
+                    title="Photo to lithophane"
+                    description="Upload your image, crop it, preview the lamp style in 3D, and send the configuration directly as a custom order."
+                  >
+                    <LithophaneOrderSection />
+                  </ToolShell>
+                )}
 
-            <TabsContent value="gift-finder">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 font-display text-lg uppercase">
-                    <Gift className="h-5 w-5 text-primary" /> Gift Finder
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <GiftFinder />
-                </CardContent>
-              </Card>
-            </TabsContent>
+                {activeTab === "gift-finder" && (
+                  <ToolShell
+                    eyebrow="Gift finder"
+                    title="Find the best match"
+                    description="Choose one or more vibes and get the strongest product matches first."
+                  >
+                    <GiftFinder />
+                  </ToolShell>
+                )}
+              </motion.div>
+            </AnimatePresence>
           </Tabs>
         </div>
       </section>
 
-      {bottomBlocks.map((block) => (
-        <div key={block.id}>{renderBlock(block)}</div>
-      ))}
+      {!blocksLoading && bottomBlocks.map((block) => <div key={block.id}>{renderBlock(block)}</div>)}
     </div>
   );
 };

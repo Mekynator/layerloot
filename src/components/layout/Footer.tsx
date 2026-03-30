@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Mail, MapPin, Phone } from "lucide-react";
+import { Mail, MapPin, Phone, Instagram, Facebook } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import logoImg from "@/assets/logo.png";
@@ -11,6 +11,13 @@ type ContactSettings = {
   email?: string;
   phone?: string;
   address?: string;
+  contact_description?: string;
+  email_label?: string;
+  phone_label?: string;
+  address_label?: string;
+  instagram_url?: string;
+  facebook_url?: string;
+  social_title?: string;
 };
 
 type BrandingSettings = {
@@ -42,6 +49,13 @@ const defaultContact: ContactSettings = {
   email: "support@layerloot.lovable.app",
   phone: "+45 00 00 00 00",
   address: "Denmark",
+  contact_description: "Questions, custom requests, or order help? Reach out anytime.",
+  email_label: "Email",
+  phone_label: "Phone",
+  address_label: "Address",
+  instagram_url: "",
+  facebook_url: "",
+  social_title: "Follow us",
 };
 
 const defaultFooterSettings: FooterSettings = {
@@ -65,6 +79,16 @@ const normalizePath = (value?: string | null) => {
   if (!value) return "/";
   if (value === "/") return "/";
   return `/${value.replace(/^\/+|\/+$/g, "")}`;
+};
+
+const isValidUrl = (value?: string | null) => {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
 };
 
 const Footer = () => {
@@ -122,6 +146,9 @@ const Footer = () => {
   );
 
   const logoHeight = Math.max(20, Number(footerSettings.logo_height_px || 32));
+  const hasInstagram = isValidUrl(contact.instagram_url);
+  const hasFacebook = isValidUrl(contact.facebook_url);
+  const hasSocials = hasInstagram || hasFacebook;
 
   return (
     <>
@@ -235,22 +262,84 @@ const Footer = () => {
                   {footerSettings.contact_title || defaultFooterSettings.contact_title}
                 </h4>
 
+                {contact.contact_description && (
+                  <p className="mb-4 text-sm text-muted-foreground">{contact.contact_description}</p>
+                )}
+
                 <ul className="space-y-3 text-sm text-muted-foreground">
-                  <li className="flex items-center gap-2 transition-colors hover:text-primary">
-                    <Mail className="h-4 w-4 text-primary" />
-                    <a href={`mailto:${contact.email || defaultContact.email}`} className="hover:text-primary">
-                      {contact.email || defaultContact.email}
-                    </a>
+                  <li className="flex items-start gap-2 transition-colors hover:text-primary">
+                    <Mail className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <div className="min-w-0">
+                      <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                        {contact.email_label || defaultContact.email_label}
+                      </p>
+                      <a
+                        href={`mailto:${contact.email || defaultContact.email}`}
+                        className="hover:text-primary break-all"
+                      >
+                        {contact.email || defaultContact.email}
+                      </a>
+                    </div>
                   </li>
-                  <li className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-primary" />
-                    {contact.phone || defaultContact.phone}
+
+                  <li className="flex items-start gap-2">
+                    <Phone className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                        {contact.phone_label || defaultContact.phone_label}
+                      </p>
+                      <p>{contact.phone || defaultContact.phone}</p>
+                    </div>
                   </li>
-                  <li className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-primary" />
-                    {contact.address || defaultContact.address}
+
+                  <li className="flex items-start gap-2">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                        {contact.address_label || defaultContact.address_label}
+                      </p>
+                      <p>{contact.address || defaultContact.address}</p>
+                    </div>
                   </li>
                 </ul>
+
+                {hasSocials && (
+                  <div className="mt-5">
+                    <p className="mb-3 text-[11px] uppercase tracking-wider text-muted-foreground">
+                      {contact.social_title || defaultContact.social_title}
+                    </p>
+
+                    <div className="flex items-center gap-3">
+                      {hasInstagram && (
+                        <motion.a
+                          whileHover={{ y: -2, scale: 1.04 }}
+                          whileTap={{ scale: 0.98 }}
+                          href={contact.instagram_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background/60 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                          aria-label="Instagram"
+                        >
+                          <Instagram className="h-4 w-4" />
+                        </motion.a>
+                      )}
+
+                      {hasFacebook && (
+                        <motion.a
+                          whileHover={{ y: -2, scale: 1.04 }}
+                          whileTap={{ scale: 0.98 }}
+                          href={contact.facebook_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background/60 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                          aria-label="Facebook"
+                        >
+                          <Facebook className="h-4 w-4" />
+                        </motion.a>
+                      )}
+                    </div>
+                  </div>
+                )}
               </motion.div>
             )}
           </div>

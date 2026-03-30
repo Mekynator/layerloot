@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { motion } from "framer-motion";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -117,7 +118,11 @@ const PageTargetPicker = ({
   const active = options.find((page) => page.route === normalizePath(value));
 
   return (
-    <div className="space-y-2 rounded-md border border-border p-3">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-2 rounded-md border border-border p-3"
+    >
       <div>
         <Label>Search Internal Page</Label>
         <div className="relative">
@@ -167,7 +172,7 @@ const PageTargetPicker = ({
           Selected: <span className="font-medium text-foreground">{active.label}</span> → {active.route}
         </p>
       )}
-    </div>
+    </motion.div>
   );
 };
 
@@ -496,7 +501,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
       </div>
 
       {(form.content.buttons || []).map((btn: any, index: number) => (
-        <div key={index} className="space-y-2 rounded-md border border-border p-3">
+        <motion.div key={index} layout className="space-y-2 rounded-md border border-border p-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Button {index + 1}</p>
             <div className="flex items-center gap-1">
@@ -597,7 +602,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
           </div>
 
           {renderActionEditor("button", btn, (patch) => updateArrayItem("buttons", index, patch))}
-        </div>
+        </motion.div>
       ))}
     </div>
   );
@@ -876,7 +881,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
             </Button>
           </div>
           {(form.content.cards || []).map((card: any, index: number) => (
-            <div key={index} className="space-y-2 rounded-md border p-3">
+            <motion.div key={index} layout className="space-y-2 rounded-md border p-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">Card {index + 1}</p>
                 <div className="flex items-center gap-1">
@@ -934,7 +939,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
                 },
                 (patch) => updateArrayItem("cards", index, { ...patch, link: patch.actionTarget ?? card.link }),
               )}
-            </div>
+            </motion.div>
           ))}
         </div>
       );
@@ -955,7 +960,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
             </Button>
           </div>
           {(form.content.steps || []).map((step: any, index: number) => (
-            <div key={index} className="space-y-2 rounded-md border p-3">
+            <motion.div key={index} layout className="space-y-2 rounded-md border p-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">Step {index + 1}</p>
                 <div className="flex items-center gap-1">
@@ -1008,7 +1013,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
                 },
                 (patch) => updateArrayItem("steps", index, patch),
               )}
-            </div>
+            </motion.div>
           ))}
         </div>
       );
@@ -1029,7 +1034,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
             </Button>
           </div>
           {(form.content.items || []).map((item: any, index: number) => (
-            <div key={index} className="space-y-2 rounded-md border p-3">
+            <motion.div key={index} layout className="space-y-2 rounded-md border p-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">FAQ {index + 1}</p>
                 <div className="flex items-center gap-1">
@@ -1072,7 +1077,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
                 rows={4}
                 placeholder="Answer"
               />
-            </div>
+            </motion.div>
           ))}
         </div>
       );
@@ -1093,7 +1098,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
             </Button>
           </div>
           {(form.content.badges || []).map((badge: any, index: number) => (
-            <div key={index} className="space-y-2 rounded-md border p-3">
+            <motion.div key={index} layout className="space-y-2 rounded-md border p-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">Badge {index + 1}</p>
                 <div className="flex items-center gap-1">
@@ -1146,7 +1151,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
                 },
                 (patch) => updateArrayItem("badges", index, patch),
               )}
-            </div>
+            </motion.div>
           ))}
         </div>
       );
@@ -1575,7 +1580,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
         </SheetHeader>
 
         {block && (
-          <div className="mt-6 space-y-4">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-6 space-y-4">
             <div>
               <Label>Internal Title</Label>
               <Input value={form.title ?? ""} onChange={(e) => updateForm("title", e.target.value)} />
@@ -1669,7 +1674,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
             >
               {saving ? "Saving..." : uploading ? "Uploading..." : "Save Changes"}
             </Button>
-          </div>
+          </motion.div>
         )}
       </SheetContent>
     </Sheet>

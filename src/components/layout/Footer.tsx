@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Mail, MapPin, Phone } from "lucide-react";
+import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import logoImg from "@/assets/logo.png";
 import { useFooterNavLinks } from "@/components/admin/NavLinkEditor";
@@ -126,10 +127,16 @@ const Footer = () => {
     <>
       <GlobalSectionRenderer page="global_footer_top" />
 
-      <footer className="border-t border-border bg-secondary">
+      <motion.footer
+        initial={{ opacity: 0, y: 14 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.08 }}
+        transition={{ duration: 0.4 }}
+        className="border-t border-border bg-secondary"
+      >
         <div className="container py-12">
           <div className="grid gap-8 md:grid-cols-4">
-            <div>
+            <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
               <Link to={branding.logo_link || "/"} className="mb-4 flex items-center gap-2">
                 {branding.logo_image_url ? (
                   <img
@@ -140,7 +147,14 @@ const Footer = () => {
                   />
                 ) : (
                   <>
-                    {footerSettings.show_logo_icon && <img src={logoImg} alt="LayerLoot" style={{ height: `${logoHeight}px` }} className="w-auto object-contain" />}
+                    {footerSettings.show_logo_icon && (
+                      <img
+                        src={logoImg}
+                        alt="LayerLoot"
+                        style={{ height: `${logoHeight}px` }}
+                        className="w-auto object-contain"
+                      />
+                    )}
                     {footerSettings.show_logo_text && (
                       <span className="font-display text-xl font-bold uppercase tracking-wider text-secondary-foreground">
                         {branding.logo_text_left || "Layer"}
@@ -154,10 +168,15 @@ const Footer = () => {
               <p className="text-sm text-muted-foreground">
                 {footerSettings.description || defaultFooterSettings.description}
               </p>
-            </div>
+            </motion.div>
 
             {footerSettings.show_quick_links && (
-              <div>
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.04 }}
+              >
                 <h4 className="mb-4 font-display text-sm font-semibold uppercase tracking-widest text-secondary-foreground">
                   {footerSettings.quick_links_title || defaultFooterSettings.quick_links_title}
                 </h4>
@@ -165,49 +184,59 @@ const Footer = () => {
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   {footerLinks.map((link) => (
                     <li key={`${link.label}-${link.to}`}>
-                      <Link to={link.to} className="hover:text-primary">
+                      <Link to={link.to} className="transition-all hover:translate-x-1 hover:text-primary">
                         {link.label}
                       </Link>
                     </li>
                   ))}
                 </ul>
-              </div>
+              </motion.div>
             )}
 
             {footerSettings.show_account_links && (
-              <div>
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.08 }}
+              >
                 <h4 className="mb-4 font-display text-sm font-semibold uppercase tracking-widest text-secondary-foreground">
                   {footerSettings.account_title || defaultFooterSettings.account_title}
                 </h4>
 
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   <li>
-                    <Link to="/auth" className="hover:text-primary">
+                    <Link to="/auth" className="transition-all hover:translate-x-1 hover:text-primary">
                       {footerSettings.auth_link_label || defaultFooterSettings.auth_link_label}
                     </Link>
                   </li>
                   <li>
-                    <Link to="/account" className="hover:text-primary">
+                    <Link to="/account" className="transition-all hover:translate-x-1 hover:text-primary">
                       {footerSettings.account_link_label || defaultFooterSettings.account_link_label}
                     </Link>
                   </li>
                   <li>
-                    <Link to="/account/orders" className="hover:text-primary">
+                    <Link to="/account/orders" className="transition-all hover:translate-x-1 hover:text-primary">
                       {footerSettings.orders_link_label || defaultFooterSettings.orders_link_label}
                     </Link>
                   </li>
                 </ul>
-              </div>
+              </motion.div>
             )}
 
             {footerSettings.show_contact_block && (
-              <div>
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.12 }}
+              >
                 <h4 className="mb-4 font-display text-sm font-semibold uppercase tracking-widest text-secondary-foreground">
                   {footerSettings.contact_title || defaultFooterSettings.contact_title}
                 </h4>
 
                 <ul className="space-y-3 text-sm text-muted-foreground">
-                  <li className="flex items-center gap-2">
+                  <li className="flex items-center gap-2 transition-colors hover:text-primary">
                     <Mail className="h-4 w-4 text-primary" />
                     <a href={`mailto:${contact.email || defaultContact.email}`} className="hover:text-primary">
                       {contact.email || defaultContact.email}
@@ -222,7 +251,7 @@ const Footer = () => {
                     {contact.address || defaultContact.address}
                   </li>
                 </ul>
-              </div>
+              </motion.div>
             )}
           </div>
 
@@ -232,7 +261,7 @@ const Footer = () => {
             {footerSettings.copyright_text || defaultFooterSettings.copyright_text}
           </div>
         </div>
-      </footer>
+      </motion.footer>
 
       <GlobalSectionRenderer page="global_footer_bottom" />
     </>

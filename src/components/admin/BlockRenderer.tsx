@@ -71,30 +71,6 @@ export type BlockButton = {
   openInNewTab?: boolean;
 };
 
-export type BlockStyleSettings = {
-  bg_image?: string;
-  backgroundImage?: string;
-  bg_color?: string;
-  backgroundColor?: string;
-  text_color?: string;
-  textColor?: string;
-  className?: string;
-  customClassName?: string;
-  paddingTop?: number;
-  paddingBottom?: number;
-  marginTop?: number;
-  marginBottom?: number;
-};
-
-export type BlockLayoutSettings = {
-  alignment?: "left" | "center" | "right";
-  contentAlignment?: "left" | "center" | "right";
-  buttonAlignment?: "left" | "center" | "right";
-  verticalAlignment?: "top" | "center" | "bottom";
-  columns?: number;
-  imagePosition?: "left" | "right";
-};
-
 const ICON_MAP: Record<string, any> = {
   ShoppingBag,
   ArrowRight,
@@ -135,11 +111,7 @@ const normalizeAction = (source: any): Required<BlockAction> => {
     return { actionType: "none", actionTarget: "", openInNewTab: false };
   }
 
-  return {
-    actionType,
-    actionTarget,
-    openInNewTab,
-  };
+  return { actionType, actionTarget, openInNewTab };
 };
 
 const resolveSectionAction = (content: any): Required<BlockAction> =>
@@ -305,15 +277,14 @@ const ActionButton = ({
   );
 
   const buttonNode = (
-    <Button variant={(button.variant as any) || "default"} className={className} size="lg">
-      {content}
-    </Button>
+    <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}>
+      <Button variant={(button.variant as any) || "default"} className={className} size="lg">
+        {content}
+      </Button>
+    </motion.div>
   );
 
-  if (isEditorPreviewMode()) {
-    return <span className="inline-flex">{buttonNode}</span>;
-  }
-
+  if (isEditorPreviewMode()) return <span className="inline-flex">{buttonNode}</span>;
   if (action.actionType === "none" || !action.actionTarget) return buttonNode;
 
   if (action.actionType === "external_link") {
@@ -361,13 +332,11 @@ const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNo
 
 export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
   const c = block.content || {};
-
   if (block.is_active === false || c.visibility === false) return null;
 
   switch (block.block_type) {
     case "hero":
       return <HeroBlock block={block} />;
-
     case "shipping_banner":
       return withSection(
         block,
@@ -379,25 +348,18 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
           </span>
         </div>,
       );
-
     case "entry_cards":
       return <EntryCardsBlock block={block} disableAnimations={disableAnimations} />;
-
     case "categories":
       return <CategoriesBlock block={block} />;
-
     case "featured_products":
       return <FeaturedProductsBlock block={block} disableAnimations={disableAnimations} />;
-
     case "how_it_works":
       return <HowItWorksBlock block={block} />;
-
     case "faq":
       return <FaqBlock block={block} />;
-
     case "trust_badges":
       return <TrustBadgesBlock block={block} />;
-
     case "text":
       return withSection(
         block,
@@ -407,14 +369,14 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
           <p className="whitespace-pre-wrap text-lg text-muted-foreground">{c.body || ""}</p>
         </div>,
       );
-
     case "image":
       return withSection(
         block,
         "py-16",
         <div className="container">
           {c.image_url ? (
-            <img
+            <motion.img
+              whileHover={{ scale: 1.01 }}
               src={c.image_url}
               alt={c.alt || ""}
               className="mx-auto max-h-[600px] w-full rounded-lg object-contain"
@@ -426,13 +388,10 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
           )}
         </div>,
       );
-
     case "carousel":
       return <CarouselBlock block={block} />;
-
     case "video":
       return <VideoBlock block={block} />;
-
     case "banner":
       return withSection(
         block,
@@ -444,13 +403,10 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
           <span className="font-display text-sm uppercase tracking-widest">{c.heading || c.title || "Banner"}</span>
         </div>,
       );
-
     case "cta":
       return <CtaBlock block={block} />;
-
     case "button":
       return <SingleButtonBlock block={block} />;
-
     case "spacer":
       return (
         <div
@@ -459,14 +415,12 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
           style={{ height: `${c.height || 40}px` }}
         />
       );
-
     case "html":
       return withSection(
         block,
         "py-8",
         <div className="container" dangerouslySetInnerHTML={{ __html: c.html || "" }} />,
       );
-
     case "embed":
       return withSection(
         block,
@@ -491,13 +445,10 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
           )}
         </div>,
       );
-
     case "newsletter":
       return <NewsletterBlock block={block} />;
-
     case "instagram_auto_feed":
       return <InstagramAutoFeedBlock block={block} />;
-
     default:
       return (
         <div
@@ -526,9 +477,14 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
     "relative overflow-hidden bg-secondary py-20 lg:py-32",
     <>
       {c.bg_image && (
-        <div className="absolute inset-0">
+        <motion.div
+          initial={{ scale: 1.04, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.7 }}
+          className="absolute inset-0"
+        >
           <img src={c.bg_image} alt="" className="h-full w-full object-contain opacity-30" />
-        </div>
+        </motion.div>
       )}
 
       <div className="absolute inset-0 opacity-5">
@@ -545,27 +501,52 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
         <div
           className={`max-w-2xl ${align === "center" ? "mx-auto" : align === "right" ? "ml-auto" : ""} ${alignmentClass(align)}`}
         >
-          <div className={`mb-4 flex items-center gap-2 ${justifyClass(align)}`}>
-            {c.icon &&
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className={`mb-4 flex items-center gap-2 ${justifyClass(align)}`}
+          >
+            {c.icon ? (
               (() => {
                 const Icon = iconForName(c.icon, Printer);
                 return <Icon className="h-5 w-5 text-primary" />;
-              })()}
-            {!c.icon && <Printer className="h-5 w-5 text-primary" />}
+              })()
+            ) : (
+              <Printer className="h-5 w-5 text-primary" />
+            )}
             <span className="font-display text-sm uppercase tracking-widest text-primary">
               {c.eyebrow || c.badge || "3D Printing Essentials"}
             </span>
-          </div>
+          </motion.div>
 
-          <h1 className="mb-6 font-display text-5xl font-bold uppercase leading-tight text-secondary-foreground lg:text-7xl">
+          <motion.h1
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.04 }}
+            className="mb-6 font-display text-5xl font-bold uppercase leading-tight text-secondary-foreground lg:text-7xl"
+          >
             {c.heading || "Gear Up Your Print Lab"}
-          </h1>
-          <p className="mb-8 max-w-lg text-lg text-muted-foreground">
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.08 }}
+            className="mb-8 max-w-lg text-lg text-muted-foreground"
+          >
             {c.subheading ||
               "Premium filaments, tools, miniatures, and custom prints. Everything a maker needs, delivered to your workshop."}
-          </p>
+          </motion.p>
 
-          <div className={`flex flex-wrap gap-4 ${justifyClass(buttonAlignment)}`}>
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.12 }}
+            className={`flex flex-wrap gap-4 ${justifyClass(buttonAlignment)}`}
+          >
             {buttons.map((button, index) => (
               <ActionButton
                 key={`${button.text}-${index}`}
@@ -573,7 +554,7 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
                 className={`font-display uppercase tracking-wider ${button.variant === "outline" ? "border-muted-foreground/30 text-secondary hover:border-primary hover:text-primary" : ""}`}
               />
             ))}
-          </div>
+          </motion.div>
         </div>
       </div>
     </>,
@@ -638,8 +619,9 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
             const action = resolveItemAction(card, card.link);
             const hasImage = card.image && card.image !== "placeholder";
             const cardBody = (
-              <div
-                className={`group flex h-full flex-col rounded-lg border border-border bg-card p-8 transition-all duration-300 hover:-translate-y-1 hover:border-primary hover:shadow-xl ${alignmentClass(card.alignment || align)}`}
+              <motion.div
+                whileHover={{ y: -4 }}
+                className={`group flex h-full flex-col rounded-lg border border-border bg-card p-8 transition-all duration-300 hover:border-primary hover:shadow-xl ${alignmentClass(card.alignment || align)}`}
               >
                 <div
                   className={`mb-5 flex h-16 w-16 items-center justify-center rounded-xl ${hasImage ? "overflow-hidden" : "bg-primary/10 transition-colors group-hover:bg-primary/20"} ${card.alignment === "center" || (!card.alignment && align === "center") ? "mx-auto" : ""}`}
@@ -657,13 +639,10 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
                     {card.cta} <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
                   </span>
                 )}
-              </div>
+              </motion.div>
             );
 
-            if (isEditorPreviewMode()) {
-              return <div key={card.title || `card-${index}`}>{cardBody}</div>;
-            }
-
+            if (isEditorPreviewMode()) return <div key={card.title || `card-${index}`}>{cardBody}</div>;
             if (action.actionType === "internal_link") {
               const target = action.actionTarget.startsWith("/") ? action.actionTarget : `/${action.actionTarget}`;
               return (
@@ -672,7 +651,6 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
                 </Link>
               );
             }
-
             if (action.actionType === "external_link") {
               return (
                 <a
@@ -685,7 +663,6 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
                 </a>
               );
             }
-
             return <div key={card.title || `card-${index}`}>{cardBody}</div>;
           })}
       </div>
@@ -735,9 +712,16 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {categories.map((cat) => {
+        {categories.map((cat, index) => {
           const content = (
-            <div className="group relative flex h-40 items-end overflow-hidden rounded-lg border border-border p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.04 }}
+              whileHover={{ y: -4 }}
+              className="group relative flex h-40 items-end overflow-hidden rounded-lg border border-border p-6 transition-all duration-300 hover:border-primary"
+            >
               {cat.image_url && (
                 <img
                   src={cat.image_url}
@@ -745,19 +729,14 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
                   className="absolute inset-0 h-full w-full object-cover opacity-30 transition-all duration-500 group-hover:scale-110 group-hover:opacity-40"
                 />
               )}
-
               <div className="absolute inset-0 bg-gradient-to-t from-secondary via-secondary/60 to-transparent" />
-
               <h3 className="relative font-display text-xl font-bold uppercase text-secondary-foreground transition-colors group-hover:text-primary">
                 {cat.name}
               </h3>
-            </div>
+            </motion.div>
           );
 
-          if (isEditorPreviewMode()) {
-            return <div key={cat.id}>{content}</div>;
-          }
-
+          if (isEditorPreviewMode()) return <div key={cat.id}>{content}</div>;
           return (
             <div key={cat.id}>
               <Link to={`/products?category=${cat.slug}`} className="block">
@@ -886,8 +865,12 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
             const isClickable = action.actionType !== "none";
 
             const stepContent = (
-              <div
-                key={s.title || index}
+              <motion.div
+                initial={{ opacity: 0, y: 14 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.05 }}
+                whileHover={{ y: -3 }}
                 className={`${alignmentClass(s.alignment || align)} ${isClickable && !isEditorPreviewMode() ? "cursor-pointer" : ""}`}
               >
                 <div
@@ -901,13 +884,10 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
                 </div>
                 <h3 className="mb-1 font-display text-lg font-bold uppercase text-foreground">{s.title}</h3>
                 <p className="text-sm text-muted-foreground">{s.desc}</p>
-              </div>
+              </motion.div>
             );
 
-            if (isEditorPreviewMode()) {
-              return <div key={s.title || index}>{stepContent}</div>;
-            }
-
+            if (isEditorPreviewMode()) return <div key={s.title || index}>{stepContent}</div>;
             if (action.actionType === "internal_link" && action.actionTarget) {
               const target = action.actionTarget.startsWith("/") ? action.actionTarget : `/${action.actionTarget}`;
               return (
@@ -1017,8 +997,13 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
             const action = resolveItemAction(badge);
 
             const badgeContent = (
-              <div
-                className={`flex gap-4 rounded-md border border-border bg-card p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary hover:shadow-md ${verticalClass(c.verticalAlignment)} ${action.actionType !== "none" && !isEditorPreviewMode() ? "cursor-pointer" : ""}`}
+              <motion.div
+                initial={{ opacity: 0, y: 14 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.05 }}
+                whileHover={{ y: -3 }}
+                className={`flex gap-4 rounded-md border border-border bg-card p-6 transition-all duration-300 hover:border-primary hover:shadow-md ${verticalClass(c.verticalAlignment)} ${action.actionType !== "none" && !isEditorPreviewMode() ? "cursor-pointer" : ""}`}
               >
                 <div
                   className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${hasImage ? "overflow-hidden" : "bg-primary/10"}`}
@@ -1033,13 +1018,10 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
                   <h3 className="font-display text-sm font-semibold uppercase text-card-foreground">{badge.title}</h3>
                   <p className="text-sm text-muted-foreground">{badge.desc}</p>
                 </div>
-              </div>
+              </motion.div>
             );
 
-            if (isEditorPreviewMode()) {
-              return <div key={badge.title || index}>{badgeContent}</div>;
-            }
-
+            if (isEditorPreviewMode()) return <div key={badge.title || index}>{badgeContent}</div>;
             if (action.actionType === "internal_link" && action.actionTarget) {
               const target = action.actionTarget.startsWith("/") ? action.actionTarget : `/${action.actionTarget}`;
               return (
@@ -1072,6 +1054,12 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
   const [current, setCurrent] = useState(0);
   const images: string[] = block.content?.images || [];
   if (images.length === 0) return null;
+
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const timer = window.setInterval(() => setCurrent((p) => (p + 1) % images.length), 6500);
+    return () => window.clearInterval(timer);
+  }, [images.length]);
 
   return withSection(
     block,
@@ -1152,7 +1140,7 @@ const VideoBlock = ({ block }: { block: SiteBlock }) => {
         </h2>
       )}
 
-      <div className="overflow-hidden rounded-lg border border-border shadow-xl">
+      <motion.div whileHover={{ y: -2 }} className="overflow-hidden rounded-lg border border-border shadow-xl">
         {isYouTube ? (
           <div className="aspect-video">
             <iframe
@@ -1178,7 +1166,7 @@ const VideoBlock = ({ block }: { block: SiteBlock }) => {
             </video>
           </div>
         )}
-      </div>
+      </motion.div>
 
       {block.content?.caption && <p className="mt-4 text-center text-muted-foreground">{block.content.caption}</p>}
     </div>,
@@ -1366,11 +1354,7 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
 
   useEffect(() => {
     if (!autoplay || layout !== "slider" || items.length <= 1) return;
-
-    const timer = window.setInterval(() => {
-      setCurrent((prev) => (prev + 1) % items.length);
-    }, intervalMs);
-
+    const timer = window.setInterval(() => setCurrent((prev) => (prev + 1) % items.length), intervalMs);
     return () => window.clearInterval(timer);
   }, [autoplay, intervalMs, items.length, layout]);
 
@@ -1420,7 +1404,7 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
           <div className="text-sm text-muted-foreground">No Instagram posts found.</div>
         ) : layout === "grid" ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {items.map((item) => {
+            {items.map((item, index) => {
               const imageSrc = item.media_type === "VIDEO" ? item.thumbnail_url || item.media_url : item.media_url;
               const card = (
                 <>
@@ -1444,22 +1428,34 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
 
               if (isEditorPreviewMode()) {
                 return (
-                  <div key={item.id} className="overflow-hidden rounded-2xl border bg-background">
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 12 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.04 }}
+                    className="overflow-hidden rounded-2xl border bg-background"
+                  >
                     {card}
-                  </div>
+                  </motion.div>
                 );
               }
 
               return (
-                <a
+                <motion.a
                   key={item.id}
                   href={item.permalink || profileUrl}
                   target="_blank"
                   rel="noreferrer"
+                  initial={{ opacity: 0, y: 12 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.04 }}
+                  whileHover={{ y: -3 }}
                   className="overflow-hidden rounded-2xl border bg-background transition hover:shadow-md"
                 >
                   {card}
-                </a>
+                </motion.a>
               );
             })}
           </div>

@@ -19,6 +19,8 @@ import Lithophane3DViewer from "@/components/Lithophane3DViewer";
 export type LithophaneShape = "flat" | "arched" | "frame";
 export type LithophaneOrientation = "portrait" | "landscape";
 export type LithophanePreviewTab = "original" | "scene";
+export type LithophaneSceneMode = "desk" | "wall" | "dark";
+export type LithophaneLightTone = "warm" | "neutral" | "cool";
 
 export interface LithophaneSubmitPayload {
   sourceFileName: string | null;
@@ -214,6 +216,11 @@ export default function Lithophane({
   const [lightTone, setLightTone] = useState<"warm" | "neutral" | "cool">("warm");
   const [notes, setNotes] = useState(initialNotes);
   const [dragActive, setDragActive] = useState(false);
+  const [croppedImageDataUrl, setCroppedImageDataUrl] = useState<string | null>(null);
+  const [originalSourceDataUrl, setOriginalSourceDataUrl] = useState<string | null>(null);
+  const [lightTone, setLightTone] = useState<LithophaneLightTone>("warm");
+  const [sceneMode, setSceneMode] = useState<LithophaneSceneMode>("dark");
+  const [cropState, setCropState] = useState<CropState | null>(null);
   const [uploadProgress, setUploadProgress] = useState<UploadProgressState>({
     active: false,
     progress: 0,
@@ -308,9 +315,12 @@ export default function Lithophane({
   const submitPayload: LithophaneSubmitPayload = useMemo(
     () => ({
       sourceFileName,
-      sourceDataUrl,
-      processedDataUrl: sourceDataUrl,
-      previewScreenshotDataUrl,
+      sourceDataUrl: croppedImageDataUrl,
+      originalSourceDataUrl,
+      croppedImageDataUrl,
+      processedDataUrl: croppedImageDataUrl,
+      previewScreenshotDataUrl: croppedImageDataUrl,
+      cropState,
       shape,
       orientation,
       widthMm,
@@ -325,11 +335,12 @@ export default function Lithophane({
       blur: 0,
       lightEnabled,
       lightTone,
+      sceneMode,
       notes,
       estimatedPrice,
       estimatedPrintHours,
       designJson: {
-        version: 3,
+        version: 4,
         component: "Lithophane",
         shape,
         orientation,
@@ -338,19 +349,24 @@ export default function Lithophane({
           heightMm,
           borderMm,
         },
-        image: {
-          sourceOnly: true,
-        },
         scene: {
           lightEnabled,
           lightTone,
+          sceneMode,
+        },
+        imageEditor: cropState,
+        pricing: {
+          estimatedPrice,
+          estimatedPrintHours,
+          minimumPriceRule: "60x80 border 0 = 100 DKK",
         },
       },
     }),
     [
       sourceFileName,
-      sourceDataUrl,
-      previewScreenshotDataUrl,
+      croppedImageDataUrl,
+      originalSourceDataUrl,
+      cropState,
       shape,
       orientation,
       widthMm,
@@ -358,6 +374,7 @@ export default function Lithophane({
       borderMm,
       lightEnabled,
       lightTone,
+      sceneMode,
       notes,
       estimatedPrice,
       estimatedPrintHours,

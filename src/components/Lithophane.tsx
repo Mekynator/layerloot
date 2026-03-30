@@ -1,15 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  AlertTriangle,
+  CheckCircle2,
+  Contrast,
   Image as ImageIcon,
-  Upload,
+  Loader2,
+  PackageCheck,
+  RotateCcw,
   SlidersHorizontal,
   SunMedium,
-  Contrast,
-  RotateCcw,
+  Upload,
   Wand2,
-  PackageCheck,
-  AlertTriangle,
 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 
 export type LithophaneShape = "flat" | "arched" | "frame";
 export type LithophaneOrientation = "portrait" | "landscape";
@@ -53,6 +56,12 @@ type ProcessedResult = {
   heightmapDataUrl: string | null;
   qualityLabel: "Excellent" | "Good" | "Fair" | "Low";
   qualityMessage: string;
+};
+
+type UploadProgressState = {
+  active: boolean;
+  progress: number;
+  status: string;
 };
 
 const DEFAULTS = {
@@ -270,18 +279,49 @@ function ToggleChip({
   onClick: () => void;
 }) {
   return (
-    <button
+    <motion.button
       type="button"
       onClick={onClick}
+      whileHover={{ y: -2, scale: 1.01 }}
+      whileTap={{ scale: 0.98 }}
       className={[
         "rounded-xl border px-3 py-2 text-sm font-medium transition",
         active
-          ? "border-amber-500 bg-amber-50 text-amber-700"
+          ? "border-amber-500 bg-amber-50 text-amber-700 shadow-[0_0_20px_rgba(245,158,11,0.14)]"
           : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50",
       ].join(" ")}
     >
       {children}
-    </button>
+    </motion.button>
+  );
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function UploadOverlay({ progress, status }: { progress: number; status: string }) {
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-2xl bg-white/85 px-5 text-center backdrop-blur-sm"
+      >
+        <Loader2 className="mb-3 h-7 w-7 animate-spin text-amber-500" />
+        <p className="text-sm font-semibold text-slate-900">{status}</p>
+        <div className="mt-4 h-2 w-full max-w-xs overflow-hidden rounded-full bg-slate-200">
+          <motion.div
+            className="h-full rounded-full bg-amber-500"
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ ease: "easeOut", duration: 0.25 }}
+          />
+        </div>
+        <p className="mt-2 text-xs text-slate-600">{Math.round(progress)}%</p>
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
@@ -312,11 +352,16 @@ export default function Lithophane({
   const [lightTone, setLightTone] = useState<"warm" | "neutral" | "cool">("warm");
   const [notes, setNotes] = useState(initialNotes);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgressState>({
+    active: false,
+    progress: 0,
+    status: "",
+  });
 
   const debounceRef = useRef<number | null>(null);
 
   const estimatedPrice = useMemo(() => estimatePrice(widthMm, heightMm, borderMm), [widthMm, heightMm, borderMm]);
-
   const estimatedPrintHours = useMemo(() => estimatePrintHours(widthMm, heightMm), [widthMm, heightMm]);
 
   const processCurrentImage = useCallback(async () => {
@@ -399,6 +444,26 @@ export default function Lithophane({
     onDraftChange,
   ]);
 
+  const runUploadProgress = async (selectedFile: File) => {
+    setUploadProgress({ active: true, progress: 8, status: "Reading image..." });
+    await sleep(140);
+    setUploadProgress({ active: true, progress: 32, status: "Checking image..." });
+    await sleep(150);
+    setUploadProgress({ active: true, progress: 64, status: "Preparing preview..." });
+
+    const dataUrl = await readFileAsDataUrl(selectedFile);
+
+    setSourceFileName(selectedFile.name);
+    setSourceDataUrl(dataUrl);
+    setActiveTab("processed");
+
+    setUploadProgress({ active: true, progress: 88, status: "Generating lithophane preview..." });
+    await sleep(180);
+    setUploadProgress({ active: true, progress: 100, status: "Image ready" });
+    await sleep(180);
+    setUploadProgress({ active: false, progress: 0, status: "" });
+  };
+
   const handleFileChange = async (file?: File | null) => {
     if (!file) return;
     const allowed = ["image/jpeg", "image/png", "image/webp"];
@@ -408,10 +473,14 @@ export default function Lithophane({
       return;
     }
 
-    const dataUrl = await readFileAsDataUrl(file);
-    setSourceFileName(file.name);
-    setSourceDataUrl(dataUrl);
-    setActiveTab("processed");
+    try {
+      await runUploadProgress(file);
+    } catch (error) {
+      console.error("Lithophane upload failed", error);
+      setUploadProgress({ active: false, progress: 0, status: "" });
+      setQualityLabel("Low");
+      setQualityMessage("Image upload failed. Try another file.");
+    }
   };
 
   const handleReset = () => {
@@ -522,6 +591,8 @@ export default function Lithophane({
     padding: `${clamp(borderMm * 1.1, 6, 14)}px`,
   };
 
+  const uploadBusy = uploadProgress.active || isProcessing;
+
   return (
     <div className={["space-y-6", className].filter(Boolean).join(" ")}>
       <div className="rounded-3xl border border-slate-300 bg-[#0b1020] p-5 shadow-2xl">
@@ -529,7 +600,7 @@ export default function Lithophane({
           <div>
             <h2 className="text-xl font-semibold text-white">Lithophane Preview</h2>
             <p className="text-sm text-slate-300">
-              Full-width live preview. Orientation, width, height, and border now affect the visualization.
+              Full-width live preview. Orientation, width, height, and border affect the visualization.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -640,20 +711,72 @@ export default function Lithophane({
       <div className="grid gap-5 xl:grid-cols-2">
         <div className="space-y-4">
           <Section title="Upload image" icon={<Upload className="h-4 w-4 text-amber-500" />}>
-            <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center hover:bg-slate-100">
-              <ImageIcon className="mb-3 h-8 w-8 text-slate-500" />
-              <div className="text-sm font-semibold text-slate-900">Drop photo here or click to upload</div>
-              <div className="mt-1 text-xs text-slate-600">PNG, JPG, WEBP</div>
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="hidden"
-                onChange={(e) => void handleFileChange(e.target.files?.[0])}
-              />
-            </label>
-            <div className="mt-3 text-xs font-medium text-slate-700">
-              {sourceFileName ? `Loaded: ${sourceFileName}` : "No image loaded yet."}
+            <div
+              className="relative"
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragActive(true);
+              }}
+              onDragLeave={() => setDragActive(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragActive(false);
+                void handleFileChange(e.dataTransfer.files?.[0]);
+              }}
+            >
+              <label
+                className={[
+                  "flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-4 py-8 text-center transition-all",
+                  dragActive
+                    ? "border-amber-500 bg-amber-50 shadow-[0_0_28px_rgba(245,158,11,0.14)]"
+                    : "border-slate-300 bg-slate-50 hover:bg-slate-100",
+                ].join(" ")}
+              >
+                <motion.div
+                  animate={dragActive ? { scale: [1, 1.06, 1] } : { scale: 1 }}
+                  transition={{ duration: 1.1, repeat: dragActive ? Infinity : 0 }}
+                >
+                  <ImageIcon className="mb-3 h-8 w-8 text-slate-500" />
+                </motion.div>
+                <div className="text-sm font-semibold text-slate-900">
+                  {sourceFileName ? "Replace image" : "Drop photo here or click to upload"}
+                </div>
+                <div className="mt-1 text-xs text-slate-600">PNG, JPG, WEBP</div>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={(e) => void handleFileChange(e.target.files?.[0])}
+                />
+              </label>
+
+              {uploadProgress.active && (
+                <UploadOverlay progress={uploadProgress.progress} status={uploadProgress.status} />
+              )}
             </div>
+
+            <AnimatePresence>
+              {sourceFileName && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 6 }}
+                  className="mt-3 overflow-hidden rounded-2xl border border-slate-300 bg-white"
+                >
+                  {sourceDataUrl ? (
+                    <img src={sourceDataUrl} alt="Uploaded source" className="h-56 w-full object-cover bg-slate-100" />
+                  ) : null}
+
+                  <div className="flex items-center justify-between gap-3 border-t border-slate-200 px-4 py-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold text-slate-900">{sourceFileName}</div>
+                      <div className="text-xs text-slate-600">Ready for lithophane preview</div>
+                    </div>
+                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </Section>
 
           <Section title="Image tuning" icon={<SlidersHorizontal className="h-4 w-4 text-amber-500" />}>
@@ -706,14 +829,15 @@ export default function Lithophane({
 
         <div className="space-y-4">
           <div className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-4">
+            <motion.div whileHover={{ y: -2 }} className="rounded-2xl border border-emerald-300 bg-emerald-50 p-4">
               <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-emerald-700">
                 <Wand2 className="h-4 w-4" />
                 Quality: {qualityLabel}
               </div>
               <p className="text-xs leading-5 text-emerald-800">{qualityMessage}</p>
-            </div>
-            <div className="rounded-2xl border border-slate-300 bg-white p-4">
+            </motion.div>
+
+            <motion.div whileHover={{ y: -2 }} className="rounded-2xl border border-slate-300 bg-white p-4">
               <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
                 <SunMedium className="h-4 w-4 text-amber-500" />
                 Light preview
@@ -732,8 +856,9 @@ export default function Lithophane({
                   Cool
                 </ToggleChip>
               </div>
-            </div>
-            <div className="rounded-2xl border border-slate-300 bg-white p-4">
+            </motion.div>
+
+            <motion.div whileHover={{ y: -2 }} className="rounded-2xl border border-slate-300 bg-white p-4">
               <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-slate-900">
                 <Contrast className="h-4 w-4 text-amber-500" />
                 Print estimate
@@ -744,7 +869,7 @@ export default function Lithophane({
               <p className="mt-1 text-xs leading-5 text-slate-600">
                 Preview estimate only. Final admin quote can adjust it.
               </p>
-            </div>
+            </motion.div>
           </div>
 
           <Section title="Order summary" icon={<PackageCheck className="h-4 w-4 text-amber-500" />}>
@@ -786,7 +911,7 @@ export default function Lithophane({
           <button
             type="button"
             onClick={() => void onSubmitDesign?.(submitPayload)}
-            disabled={!sourceDataUrl}
+            disabled={!sourceDataUrl || uploadBusy}
             className="w-full rounded-2xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:text-slate-100"
           >
             {submitLabel}

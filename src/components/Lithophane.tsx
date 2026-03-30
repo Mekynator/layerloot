@@ -5,6 +5,7 @@ import {
   Image as ImageIcon,
   LampDesk,
   PackageCheck,
+  RotateCcw,
   Sparkles,
   SunMedium,
   Upload,
@@ -111,9 +112,21 @@ function detectOrientation(src: string): Promise<LithophaneOrientation> {
   });
 }
 
-function Section({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
+function Section({
+  title,
+  icon,
+  children,
+  className,
+}: {
+  title: string;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div className="rounded-2xl border border-slate-300 bg-white p-5 shadow-sm">
+    <div
+      className={["rounded-2xl border border-slate-300 bg-white p-5 shadow-sm", className].filter(Boolean).join(" ")}
+    >
       <div className="mb-4 flex items-center gap-2">
         {icon}
         <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
@@ -178,7 +191,7 @@ function ToggleChip({
         "flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition",
         active
           ? "border-amber-500 bg-amber-50 text-amber-700 ring-1 ring-amber-300 shadow-[0_0_24px_rgba(245,158,11,0.22)]"
-          : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:border-amber-300",
+          : "border-slate-300 bg-white text-slate-700 hover:border-amber-300 hover:bg-slate-50",
       ].join(" ")}
     >
       {icon}
@@ -254,6 +267,7 @@ export default function Lithophane({
   const [lightTone, setLightTone] = useState<LithophaneLightTone>("warm");
   const [notes, setNotes] = useState(initialNotes);
   const [allowRotation, setAllowRotation] = useState(false);
+  const [viewerRevision, setViewerRevision] = useState(0);
 
   const [sourceFileName, setSourceFileName] = useState<string | null>(null);
   const [originalSourceDataUrl, setOriginalSourceDataUrl] = useState<string | null>(null);
@@ -365,6 +379,7 @@ export default function Lithophane({
     setCropState(result.cropState);
     setEditorOpen(false);
     setStep(3);
+    setViewerRevision((value) => value + 1);
   };
 
   const handleReset = () => {
@@ -377,7 +392,11 @@ export default function Lithophane({
     setOrientation(autoDetectedOrientation);
     setShape(DEFAULTS.shape);
     setAllowRotation(false);
+    setViewerRevision((value) => value + 1);
   };
+
+  const dimensionLabel = `${widthMm} × ${heightMm} mm`;
+  const uploadBusy = uploadProgress.active;
 
   const submitPayload: LithophaneSubmitPayload = useMemo(
     () => ({
@@ -407,7 +426,7 @@ export default function Lithophane({
       estimatedPrice,
       estimatedPrintHours,
       designJson: {
-        version: 4,
+        version: 5,
         component: "Lithophane",
         shape,
         orientation,
@@ -422,6 +441,7 @@ export default function Lithophane({
           lightTone,
           sceneMode,
           allowRotation,
+          viewerRevision,
         },
         imageEditor: cropState,
         pricing: {
@@ -449,10 +469,9 @@ export default function Lithophane({
       estimatedPrintHours,
       autoDetectedOrientation,
       allowRotation,
+      viewerRevision,
     ],
   );
-
-  const uploadBusy = uploadProgress.active;
 
   return (
     <div className={["space-y-6", className].filter(Boolean).join(" ")}>
@@ -467,7 +486,7 @@ export default function Lithophane({
       />
 
       <div className="rounded-3xl border border-slate-300 bg-[#0b1020] p-5 shadow-2xl">
-        <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-end">
+        <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap gap-2">
             <StepPill active={step === 1} done={step > 1}>
               1 Upload
@@ -482,12 +501,29 @@ export default function Lithophane({
               4 Review
             </StepPill>
           </div>
+
+          <div className="flex flex-wrap gap-2">
+            <ToggleChip active={!allowRotation} onClick={() => setAllowRotation(false)}>
+              Front view
+            </ToggleChip>
+            <ToggleChip active={allowRotation} onClick={() => setAllowRotation(true)}>
+              Rotate preview
+            </ToggleChip>
+            <ToggleChip
+              active={false}
+              onClick={() => setViewerRevision((value) => value + 1)}
+              icon={<RotateCcw className="h-4 w-4" />}
+            >
+              Reset view
+            </ToggleChip>
+          </div>
         </div>
 
         <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-950 to-slate-900">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(245,158,11,0.12),transparent_34%)]" />
-          <div className="h-[620px] w-full">
+          <div className="h-[360px] w-full sm:h-[440px] lg:h-[560px] xl:h-[640px]">
             <Lithophane3DViewer
+              key={viewerRevision}
               imageUrl={croppedImageDataUrl}
               shape={shape}
               orientation={orientation}
@@ -515,69 +551,100 @@ export default function Lithophane({
         </div>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+      <div className="grid gap-5 xl:grid-cols-[1.05fr_1.15fr]">
         <div className="space-y-4">
-          <Section title="Step 1 · Upload image" icon={<Upload className="h-4 w-4 text-amber-500" />}>
-            <div
-              className="relative"
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragActive(true);
-              }}
-              onDragLeave={() => setDragActive(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                setDragActive(false);
-                void handleFileChange(e.dataTransfer.files?.[0]);
-              }}
+          <div className="grid gap-4 lg:grid-cols-[1fr_0.95fr] xl:grid-cols-[1fr_0.9fr]">
+            <Section
+              title="Step 1 · Upload image"
+              icon={<Upload className="h-4 w-4 text-amber-500" />}
+              className="h-full"
             >
-              <label
-                className={[
-                  "flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-4 py-8 text-center transition-all",
-                  dragActive
-                    ? "border-amber-500 bg-amber-50 shadow-[0_0_28px_rgba(245,158,11,0.14)]"
-                    : "border-slate-300 bg-slate-50 hover:bg-slate-100",
-                ].join(" ")}
+              <div
+                className="relative"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragActive(true);
+                }}
+                onDragLeave={() => setDragActive(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragActive(false);
+                  void handleFileChange(e.dataTransfer.files?.[0]);
+                }}
               >
-                <motion.div
-                  animate={dragActive ? { scale: [1, 1.06, 1] } : { scale: 1 }}
-                  transition={{ duration: 1.1, repeat: dragActive ? Infinity : 0 }}
+                <label
+                  className={[
+                    "flex min-h-[240px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-4 py-8 text-center transition-all",
+                    dragActive
+                      ? "border-amber-500 bg-amber-50 shadow-[0_0_28px_rgba(245,158,11,0.14)]"
+                      : "border-slate-300 bg-slate-50 hover:bg-slate-100",
+                  ].join(" ")}
                 >
-                  <ImageIcon className="mb-3 h-8 w-8 text-slate-500" />
-                </motion.div>
+                  <motion.div
+                    animate={dragActive ? { scale: [1, 1.06, 1] } : { scale: 1 }}
+                    transition={{ duration: 1.1, repeat: dragActive ? Infinity : 0 }}
+                  >
+                    <ImageIcon className="mb-3 h-8 w-8 text-slate-500" />
+                  </motion.div>
 
-                <div className="text-sm font-semibold text-slate-900">
-                  {sourceFileName ? "Replace image and reopen editor" : "Drop photo here or click to upload"}
-                </div>
-                <div className="mt-1 text-xs text-slate-600">PNG, JPG, WEBP</div>
+                  <div className="text-sm font-semibold text-slate-900">
+                    {sourceFileName ? "Replace image and reopen editor" : "Drop photo here or click to upload"}
+                  </div>
+                  <div className="mt-1 text-xs text-slate-600">PNG, JPG, WEBP</div>
 
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  className="hidden"
-                  onChange={(e) => void handleFileChange(e.target.files?.[0])}
-                />
-              </label>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={(e) => void handleFileChange(e.target.files?.[0])}
+                  />
+                </label>
 
-              {uploadProgress.active && (
-                <UploadOverlay progress={uploadProgress.progress} status={uploadProgress.status} />
-              )}
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              <ToggleChip
-                active={false}
-                onClick={() => originalSourceDataUrl && setEditorOpen(true)}
-                icon={<Crop className="h-4 w-4" />}
-              >
-                Reopen crop editor
-              </ToggleChip>
-
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
-                Auto orientation: <span className="font-semibold capitalize">{autoDetectedOrientation}</span>
+                {uploadProgress.active && (
+                  <UploadOverlay progress={uploadProgress.progress} status={uploadProgress.status} />
+                )}
               </div>
-            </div>
-          </Section>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <ToggleChip
+                  active={false}
+                  onClick={() => originalSourceDataUrl && setEditorOpen(true)}
+                  icon={<Crop className="h-4 w-4" />}
+                >
+                  Reopen crop editor
+                </ToggleChip>
+
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+                  Auto orientation: <span className="font-semibold capitalize">{autoDetectedOrientation}</span>
+                </div>
+              </div>
+            </Section>
+
+            <Section title="Preview status" icon={<Sparkles className="h-4 w-4 text-amber-500" />} className="h-full">
+              <div className="space-y-3 text-sm text-slate-700">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Current size</div>
+                  <div className="mt-1 text-lg font-semibold text-slate-900">{dimensionLabel}</div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                    <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Shape</div>
+                    <div className="mt-1 font-semibold capitalize text-slate-900">{shape}</div>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                    <div className="text-xs uppercase tracking-[0.18em] text-slate-500">View</div>
+                    <div className="mt-1 font-semibold text-slate-900">
+                      {allowRotation ? "Rotation enabled" : "Front only"}
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                  The preview opens in a front view by default. Turn on rotation only when you want to inspect the
+                  model.
+                </div>
+              </div>
+            </Section>
+          </div>
 
           <Section title="Step 2 · Product setup" icon={<PackageCheck className="h-4 w-4 text-amber-500" />}>
             <div className="grid grid-cols-3 gap-2">
@@ -654,8 +721,11 @@ export default function Lithophane({
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2">
-              <ToggleChip active={allowRotation} onClick={() => setAllowRotation((v) => !v)}>
-                {allowRotation ? "Rotation on" : "Rotation off"}
+              <ToggleChip active={!allowRotation} onClick={() => setAllowRotation(false)}>
+                Front only
+              </ToggleChip>
+              <ToggleChip active={allowRotation} onClick={() => setAllowRotation(true)}>
+                Free rotate
               </ToggleChip>
             </div>
 
@@ -707,27 +777,25 @@ export default function Lithophane({
             <div className="grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
               <div className="flex justify-between gap-3 border-b border-slate-200 pb-2">
                 <span>Type</span>
-                <span className="capitalize font-semibold text-slate-900">{shape}</span>
+                <span className="font-semibold capitalize text-slate-900">{shape}</span>
               </div>
               <div className="flex justify-between gap-3 border-b border-slate-200 pb-2">
                 <span>Orientation</span>
-                <span className="capitalize font-semibold text-slate-900">{orientation}</span>
+                <span className="font-semibold capitalize text-slate-900">{orientation}</span>
               </div>
               <div className="flex justify-between gap-3 border-b border-slate-200 pb-2">
                 <span>Scene</span>
-                <span className="capitalize font-semibold text-slate-900">{sceneMode}</span>
+                <span className="font-semibold capitalize text-slate-900">{sceneMode}</span>
               </div>
               <div className="flex justify-between gap-3 border-b border-slate-200 pb-2">
                 <span>Light</span>
-                <span className="capitalize font-semibold text-slate-900">
+                <span className="font-semibold capitalize text-slate-900">
                   {lightEnabled ? `${lightTone} / on` : "off"}
                 </span>
               </div>
               <div className="flex justify-between gap-3 border-b border-slate-200 pb-2">
                 <span>Size</span>
-                <span className="font-semibold text-slate-900">
-                  {widthMm} × {heightMm} mm
-                </span>
+                <span className="font-semibold text-slate-900">{dimensionLabel}</span>
               </div>
               <div className="flex justify-between gap-3 border-b border-slate-200 pb-2">
                 <span>Border</span>

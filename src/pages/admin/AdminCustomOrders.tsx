@@ -124,16 +124,14 @@ function detectOrderType(order: CustomOrder): "lithophane" | "custom-print" {
 function parseCustomOrder(order: CustomOrder): ParsedCustomOrder {
   const raw = order.description || "";
   const orderType = detectOrderType(order);
-  const marker = "
---- Options ---";
+  const marker = "\n--- Options ---";
   const parts = raw.split(marker);
 
   let customer_description = (parts[0] || "").trim();
   const optionsText = (parts[1] || "").trim();
 
   if (orderType === "lithophane") {
-    const lithoMarker = "
---- Lithophane Config JSON ---";
+    const lithoMarker = "\n--- Lithophane Config JSON ---";
     customer_description = raw.split(lithoMarker)[0].trim();
   }
 
@@ -146,8 +144,7 @@ function parseCustomOrder(order: CustomOrder): ParsedCustomOrder {
     referenceImageUrl: "",
   };
 
-  optionsText.split("
-").forEach((line) => {
+  optionsText.split("\n").forEach((line) => {
     const [key, ...rest] = line.split(":");
     if (!key || rest.length === 0) return;
 
@@ -575,7 +572,9 @@ const AdminCustomOrders = () => {
       : groupedOrders;
 
   const filtered =
-    filterStatus === "all" ? productionFilteredOrders : productionFilteredOrders.filter((o) => o.status === filterStatus);
+    filterStatus === "all"
+      ? productionFilteredOrders
+      : productionFilteredOrders.filter((o) => o.status === filterStatus);
 
   return (
     <AdminLayout>
@@ -719,7 +718,15 @@ const AdminCustomOrders = () => {
               {filtered.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={12} className="py-8 text-center text-muted-foreground">
-                    No {viewGroup === "done" ? "completed" : productionTypeFilter === "lithophane" ? "lithophane" : productionTypeFilter === "custom-print" ? "custom 3D print" : "custom print"} requests found in this tab.
+                    No{" "}
+                    {viewGroup === "done"
+                      ? "completed"
+                      : productionTypeFilter === "lithophane"
+                        ? "lithophane"
+                        : productionTypeFilter === "custom-print"
+                          ? "custom 3D print"
+                          : "custom print"}{" "}
+                    requests found in this tab.
                   </TableCell>
                 </TableRow>
               )}
@@ -830,7 +837,9 @@ const AdminCustomOrders = () => {
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
                         <Label className="text-xs text-muted-foreground">Uploaded Picture</Label>
-                        <Badge variant="outline" className="text-[10px] uppercase">Lithophane Source</Badge>
+                        <Badge variant="outline" className="text-[10px] uppercase">
+                          Lithophane Source
+                        </Badge>
                       </div>
                       <div className="overflow-hidden rounded-xl border border-border bg-card">
                         <img

@@ -20,7 +20,6 @@ import {
   MapPin,
   LampDesk,
   Box,
-  Image as ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,11 +89,6 @@ interface CustomOrder {
   request_fee_amount?: number;
   metadata?: {
     order_type?: "custom-print" | "lithophane" | null;
-    source_image_url?: string | null;
-    processed_image_url?: string | null;
-    preview_image_url?: string | null;
-    cropped_image_url?: string | null;
-    original_source_image_url?: string | null;
     [key: string]: any;
   } | null;
 }
@@ -149,11 +143,46 @@ const customStatusBadgeColors: Record<string, string> = {
 };
 
 const REWARD_CATALOG: RewardCatalogItem[] = [
-  { key: "25-discount", name: "25 KR DISCOUNT", description: "Get 25 kr off your next order", pointsCost: 200, discountType: "fixed_discount", discountValue: 25 },
-  { key: "50-discount", name: "50 KR DISCOUNT", description: "Get 50 kr off your next order", pointsCost: 400, discountType: "fixed_discount", discountValue: 50 },
-  { key: "100-discount", name: "100 KR DISCOUNT", description: "Get 100 kr off your next order", pointsCost: 800, discountType: "fixed_discount", discountValue: 100 },
-  { key: "150-discount", name: "150 KR DISCOUNT", description: "Get 150 kr off your next order", pointsCost: 1200, discountType: "fixed_discount", discountValue: 150 },
-  { key: "250-discount", name: "250 KR DISCOUNT", description: "Get 250 kr off your next order", pointsCost: 2000, discountType: "fixed_discount", discountValue: 250 },
+  {
+    key: "25-discount",
+    name: "25 KR DISCOUNT",
+    description: "Get 25 kr off your next order",
+    pointsCost: 200,
+    discountType: "fixed_discount",
+    discountValue: 25,
+  },
+  {
+    key: "50-discount",
+    name: "50 KR DISCOUNT",
+    description: "Get 50 kr off your next order",
+    pointsCost: 400,
+    discountType: "fixed_discount",
+    discountValue: 50,
+  },
+  {
+    key: "100-discount",
+    name: "100 KR DISCOUNT",
+    description: "Get 100 kr off your next order",
+    pointsCost: 800,
+    discountType: "fixed_discount",
+    discountValue: 100,
+  },
+  {
+    key: "150-discount",
+    name: "150 KR DISCOUNT",
+    description: "Get 150 kr off your next order",
+    pointsCost: 1200,
+    discountType: "fixed_discount",
+    discountValue: 150,
+  },
+  {
+    key: "250-discount",
+    name: "250 KR DISCOUNT",
+    description: "Get 250 kr off your next order",
+    pointsCost: 2000,
+    discountType: "fixed_discount",
+    discountValue: 250,
+  },
   {
     key: "500-gift-card",
     name: "500 KR GIFT CARD",
@@ -203,34 +232,12 @@ function isVoucherUsedOrArchived(voucher: UserVoucher, currentUserId: string, cu
   const recipientEmail = (voucher.recipient_email || "").trim().toLowerCase();
   const giftedAway = Boolean(recipientEmail) && voucher.user_id === currentUserId && recipientEmail !== normalizedEmail;
 
-  return (
-    voucher.is_used ||
-    !!voucher.used_at ||
-    giftedAway ||
-    (remainingBalance !== null && remainingBalance <= 0)
-  );
+  return voucher.is_used || !!voucher.used_at || giftedAway || (remainingBalance !== null && remainingBalance <= 0);
 }
 
 function parseCustomOrderDescription(description: string) {
   const raw = description || "";
-  const marker = "
---- Options ---";
-
-  if (raw.toLowerCase().includes("lithophane custom order")) {
-    const jsonMarker = "
---- Lithophane Config JSON ---";
-    const textPart = raw.split(jsonMarker)[0].trim();
-
-    return {
-      customerDescription: textPart,
-      material: "-",
-      color: "-",
-      quality: "-",
-      quantity: "-",
-      scale: "-",
-    };
-  }
-
+  const marker = "\n--- Options ---";
   const parts = raw.split(marker);
   const customerDescription = (parts[0] || "").trim();
   const optionsText = (parts[1] || "").trim();
@@ -243,8 +250,7 @@ function parseCustomOrderDescription(description: string) {
     scale: "-",
   };
 
-  optionsText.split("
-").forEach((line) => {
+  optionsText.split("\n").forEach((line) => {
     const [key, ...rest] = line.split(":");
     if (!key || rest.length === 0) return;
     const normalizedKey = key.trim().toLowerCase();
@@ -330,9 +336,7 @@ function groupVouchersByDefinition(vouchers: UserVoucher[]) {
 
   return Array.from(groups.values()).map((group) => ({
     ...group,
-    items: [...group.items].sort(
-      (a, b) => new Date(b.redeemed_at).getTime() - new Date(a.redeemed_at).getTime(),
-    ),
+    items: [...group.items].sort((a, b) => new Date(b.redeemed_at).getTime() - new Date(a.redeemed_at).getTime()),
   }));
 }
 
@@ -354,7 +358,11 @@ const Account = () => {
   const { user, isAdmin, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } = useAccountOverview(user?.id, user?.email);
+  const {
+    data: overview,
+    isLoading: overviewLoading,
+    refetch: refetchOverview,
+  } = useAccountOverview(user?.id, user?.email);
 
   const [showHistory, setShowHistory] = useState(false);
   const [tab, setTab] = useState<AccountTab>("orders");
@@ -370,7 +378,13 @@ const Account = () => {
   const [sendingReply, setSendingReply] = useState(false);
   const [processingCustomPaymentOrderId, setProcessingCustomPaymentOrderId] = useState<string | null>(null);
   const [redeemingKey, setRedeemingKey] = useState<string | null>(null);
-  const [shippingAddress, setShippingAddress] = useState({ name: "", street: "", city: "", zip: "", country: "Denmark" });
+  const [shippingAddress, setShippingAddress] = useState({
+    name: "",
+    street: "",
+    city: "",
+    zip: "",
+    country: "Denmark",
+  });
   const [savingAddress, setSavingAddress] = useState(false);
   const [seenState, setSeenState] = useState<SeenState>({
     ordersLastSeenAt: null,
@@ -384,9 +398,22 @@ const Account = () => {
   useEffect(() => {
     if (!user) return;
     setSeenState(readSeenState(user.id));
-    supabase.from("profiles").select("shipping_address").eq("user_id", user.id).maybeSingle().then(({ data }) => {
-      if (data?.shipping_address) setShippingAddress({ name: "", street: "", city: "", zip: "", country: "Denmark", ...(data.shipping_address as any) });
-    });
+    supabase
+      .from("profiles")
+      .select("shipping_address")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.shipping_address)
+          setShippingAddress({
+            name: "",
+            street: "",
+            city: "",
+            zip: "",
+            country: "Denmark",
+            ...(data.shipping_address as any),
+          });
+      });
   }, [user]);
 
   const pointsBalance = overview?.pointsBalance ?? 0;
@@ -490,18 +517,26 @@ const Account = () => {
     if (matchedVoucher) {
       voucherId = matchedVoucher.id;
     } else {
-      const { data: newVoucher, error: createError } = await supabase.from("vouchers").insert({
-        name: reward.name,
-        description: reward.description,
-        discount_type: reward.discountType,
-        discount_value: reward.discountValue,
-        points_cost: reward.pointsCost,
-        is_active: true,
-      }).select("id").single();
+      const { data: newVoucher, error: createError } = await supabase
+        .from("vouchers")
+        .insert({
+          name: reward.name,
+          description: reward.description,
+          discount_type: reward.discountType,
+          discount_value: reward.discountValue,
+          points_cost: reward.pointsCost,
+          is_active: true,
+        })
+        .select("id")
+        .single();
 
       if (createError || !newVoucher) {
         setRedeemingKey(null);
-        toast({ title: "Error", description: createError?.message || "Could not create voucher", variant: "destructive" });
+        toast({
+          title: "Error",
+          description: createError?.message || "Could not create voucher",
+          variant: "destructive",
+        });
         return;
       }
       voucherId = newVoucher.id;
@@ -689,7 +724,10 @@ const Account = () => {
   };
 
   const renderCustomOrdersList = (
-    list: (CustomOrder & { parsed: ReturnType<typeof parseCustomOrderDescription>; orderType: "custom-print" | "lithophane" })[],
+    list: (CustomOrder & {
+      parsed: ReturnType<typeof parseCustomOrderDescription>;
+      orderType: "custom-print" | "lithophane";
+    })[],
   ) => {
     if (list.length === 0) {
       return (
@@ -723,7 +761,10 @@ const Account = () => {
                       {customTypeBadge(order.orderType)}
                       {customStatusBadge(order.status)}
                       {showFeeBadge && (
-                        <Badge variant="outline" className="border-yellow-500/30 bg-yellow-500/10 text-yellow-600 text-xs uppercase">
+                        <Badge
+                          variant="outline"
+                          className="border-yellow-500/30 bg-yellow-500/10 text-yellow-600 text-xs uppercase"
+                        >
                           Fee Unpaid
                         </Badge>
                       )}
@@ -786,7 +827,11 @@ const Account = () => {
                             }
                             if (data?.url) window.location.href = data.url;
                           } catch (err: any) {
-                            toast({ title: "Error", description: err?.message || "Could not start payment", variant: "destructive" });
+                            toast({
+                              title: "Error",
+                              description: err?.message || "Could not start payment",
+                              variant: "destructive",
+                            });
                           } finally {
                             setProcessingCustomPaymentOrderId(null);
                           }
@@ -795,7 +840,9 @@ const Account = () => {
                         className="font-display uppercase tracking-wider"
                       >
                         <DollarSign className="mr-1 h-4 w-4" />
-                        {processingCustomPaymentOrderId === order.id ? "Redirecting..." : `Pay ${order.request_fee_amount ?? 100} kr Fee`}
+                        {processingCustomPaymentOrderId === order.id
+                          ? "Redirecting..."
+                          : `Pay ${order.request_fee_amount ?? 100} kr Fee`}
                       </Button>
                     ) : (
                       <Button
@@ -813,7 +860,8 @@ const Account = () => {
                   <div className="mt-4 rounded-md border border-yellow-500/20 bg-yellow-500/5 p-4">
                     <p className="text-sm font-medium text-foreground">Request Fee Required</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      A one-time request fee of {order.request_fee_amount ?? 100} kr is required before your custom order can be reviewed. This fee will be deducted from your final order total.
+                      A one-time request fee of {order.request_fee_amount ?? 100} kr is required before your custom
+                      order can be reviewed. This fee will be deducted from your final order total.
                     </p>
                   </div>
                 )}
@@ -821,40 +869,11 @@ const Account = () => {
                 {expanded && feePaid && (
                   <div className="mt-5 space-y-5 border-t border-border pt-5">
                     <div className="grid gap-4 lg:grid-cols-2">
-                      <div className="space-y-4">
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Your Original Request</Label>
-                          <pre className="mt-2 whitespace-pre-wrap rounded-md border border-border bg-muted p-3 text-sm text-foreground">
-                            {order.parsed.customerDescription || "-"}
-                          </pre>
-                        </div>
-
-                        {order.orderType === "lithophane" &&
-                        (order.metadata?.original_source_image_url ||
-                          order.metadata?.source_image_url ||
-                          order.metadata?.cropped_image_url ||
-                          order.metadata?.preview_image_url) ? (
-                          <div>
-                            <Label className="text-xs text-muted-foreground">Uploaded Picture</Label>
-                            <div className="mt-2 overflow-hidden rounded-md border border-border bg-muted/20">
-                              <img
-                                src={
-                                  order.metadata?.original_source_image_url ||
-                                  order.metadata?.source_image_url ||
-                                  order.metadata?.cropped_image_url ||
-                                  order.metadata?.preview_image_url ||
-                                  ""
-                                }
-                                alt="Lithophane uploaded source"
-                                className="h-72 w-full object-contain bg-muted/10"
-                              />
-                            </div>
-                            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                              <ImageIcon className="h-3.5 w-3.5" />
-                              Original uploaded image preview
-                            </div>
-                          </div>
-                        ) : null}
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Your Original Request</Label>
+                        <pre className="mt-2 whitespace-pre-wrap rounded-md border border-border bg-muted p-3 text-sm text-foreground">
+                          {order.parsed.customerDescription || "-"}
+                        </pre>
                       </div>
 
                       <div className="space-y-3">
@@ -1167,7 +1186,12 @@ const Account = () => {
         <div className="mb-6 flex flex-wrap gap-2">
           {[
             { key: "orders" as const, label: "Orders", icon: Package, hasDot: hasNewOrders },
-            { key: "custom-requests" as const, label: "Custom Requests", icon: MessageSquare, hasDot: hasNewCustomRequests },
+            {
+              key: "custom-requests" as const,
+              label: "Custom Requests",
+              icon: MessageSquare,
+              hasDot: hasNewCustomRequests,
+            },
             { key: "rewards" as const, label: "Rewards Store", icon: Gift, hasDot: false },
             { key: "vouchers" as const, label: "My Vouchers", icon: Star, hasDot: false },
             { key: "settings" as const, label: "Settings", icon: Settings, hasDot: false },
@@ -1224,7 +1248,9 @@ const Account = () => {
                                 <p className="font-display text-lg font-bold text-primary">
                                   {Number(order.total).toFixed(2)} kr
                                 </p>
-                                <p className={`font-display text-xs uppercase ${statusColors[order.status] || "text-muted-foreground"}`}>
+                                <p
+                                  className={`font-display text-xs uppercase ${statusColors[order.status] || "text-muted-foreground"}`}
+                                >
                                   {order.status}
                                 </p>
                               </div>
@@ -1414,7 +1440,11 @@ const Account = () => {
                             {group.label}
                             <span className="ml-2 text-xs text-muted-foreground">(x{group.items.length})</span>
                           </p>
-                          {isGiftCard ? <Badge variant="outline" className="text-xs">Gift Card</Badge> : null}
+                          {isGiftCard ? (
+                            <Badge variant="outline" className="text-xs">
+                              Gift Card
+                            </Badge>
+                          ) : null}
                         </div>
                         {isGiftCard ? (
                           <p className="mt-1 text-sm text-muted-foreground">
@@ -1426,7 +1456,11 @@ const Account = () => {
                         <Badge variant={voucherView === "active" ? "default" : "secondary"}>
                           {voucherView === "active" ? "Active" : "Used"}
                         </Badge>
-                        {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                        {isExpanded ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
                       </div>
                     </button>
 
@@ -1434,7 +1468,8 @@ const Account = () => {
                       <CardContent className="space-y-3 border-t border-border bg-background/40 p-4">
                         {group.items.map((uv) => {
                           const recipientEmail = (uv.recipient_email || "").trim().toLowerCase();
-                          const isReceived = recipientEmail !== "" && recipientEmail === (user?.email || "").trim().toLowerCase();
+                          const isReceived =
+                            recipientEmail !== "" && recipientEmail === (user?.email || "").trim().toLowerCase();
                           const isGifted = !!uv.recipient_email && !isReceived;
                           const isUsed = uv.is_used || !!uv.used_at || (uv.balance !== null && Number(uv.balance) <= 0);
 
@@ -1445,7 +1480,10 @@ const Account = () => {
                                   <p className="font-mono text-lg font-bold text-primary">{uv.code}</p>
                                   {uv.balance !== null ? (
                                     <p className="text-sm text-muted-foreground">
-                                      Balance: <span className="font-bold text-foreground">{Number(uv.balance).toFixed(2)} kr</span>
+                                      Balance:{" "}
+                                      <span className="font-bold text-foreground">
+                                        {Number(uv.balance).toFixed(2)} kr
+                                      </span>
                                     </p>
                                   ) : null}
                                   {isGifted && uv.recipient_email ? (
@@ -1453,9 +1491,17 @@ const Account = () => {
                                       Sent to: {uv.recipient_name ? `${uv.recipient_name} ` : ""}({uv.recipient_email})
                                     </p>
                                   ) : null}
-                                  {isReceived ? <p className="text-xs text-muted-foreground">Received gift card</p> : null}
-                                  <p className="text-xs text-muted-foreground">Redeemed: {new Date(uv.redeemed_at).toLocaleString()}</p>
-                                  {uv.used_at ? <p className="text-xs text-muted-foreground">Used: {new Date(uv.used_at).toLocaleString()}</p> : null}
+                                  {isReceived ? (
+                                    <p className="text-xs text-muted-foreground">Received gift card</p>
+                                  ) : null}
+                                  <p className="text-xs text-muted-foreground">
+                                    Redeemed: {new Date(uv.redeemed_at).toLocaleString()}
+                                  </p>
+                                  {uv.used_at ? (
+                                    <p className="text-xs text-muted-foreground">
+                                      Used: {new Date(uv.used_at).toLocaleString()}
+                                    </p>
+                                  ) : null}
                                 </div>
 
                                 <div className="flex flex-wrap items-center gap-2">
@@ -1535,11 +1581,45 @@ const Account = () => {
                 </h3>
                 <p className="mb-4 text-sm text-muted-foreground">This address will be auto-filled at checkout.</p>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div><Label>Full Name</Label><Input value={shippingAddress.name} onChange={(e) => setShippingAddress({ ...shippingAddress, name: e.target.value })} placeholder="John Doe" /></div>
-                  <div><Label>Street Address</Label><Input value={shippingAddress.street} onChange={(e) => setShippingAddress({ ...shippingAddress, street: e.target.value })} placeholder="123 Main St" /></div>
-                  <div><Label>City</Label><Input value={shippingAddress.city} onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })} placeholder="Copenhagen" /></div>
-                  <div><Label>Zip Code</Label><Input value={shippingAddress.zip} onChange={(e) => setShippingAddress({ ...shippingAddress, zip: e.target.value })} placeholder="2100" /></div>
-                  <div><Label>Country</Label><Input value={shippingAddress.country} onChange={(e) => setShippingAddress({ ...shippingAddress, country: e.target.value })} /></div>
+                  <div>
+                    <Label>Full Name</Label>
+                    <Input
+                      value={shippingAddress.name}
+                      onChange={(e) => setShippingAddress({ ...shippingAddress, name: e.target.value })}
+                      placeholder="John Doe"
+                    />
+                  </div>
+                  <div>
+                    <Label>Street Address</Label>
+                    <Input
+                      value={shippingAddress.street}
+                      onChange={(e) => setShippingAddress({ ...shippingAddress, street: e.target.value })}
+                      placeholder="123 Main St"
+                    />
+                  </div>
+                  <div>
+                    <Label>City</Label>
+                    <Input
+                      value={shippingAddress.city}
+                      onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
+                      placeholder="Copenhagen"
+                    />
+                  </div>
+                  <div>
+                    <Label>Zip Code</Label>
+                    <Input
+                      value={shippingAddress.zip}
+                      onChange={(e) => setShippingAddress({ ...shippingAddress, zip: e.target.value })}
+                      placeholder="2100"
+                    />
+                  </div>
+                  <div>
+                    <Label>Country</Label>
+                    <Input
+                      value={shippingAddress.country}
+                      onChange={(e) => setShippingAddress({ ...shippingAddress, country: e.target.value })}
+                    />
+                  </div>
                 </div>
                 <Button
                   className="mt-4 font-display uppercase tracking-wider"
@@ -1547,9 +1627,15 @@ const Account = () => {
                   onClick={async () => {
                     if (!user) return;
                     setSavingAddress(true);
-                    const { error } = await supabase.from("profiles").update({ shipping_address: shippingAddress as any }).eq("user_id", user.id);
+                    const { error } = await supabase
+                      .from("profiles")
+                      .update({ shipping_address: shippingAddress as any })
+                      .eq("user_id", user.id);
                     setSavingAddress(false);
-                    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+                    if (error) {
+                      toast({ title: "Error", description: error.message, variant: "destructive" });
+                      return;
+                    }
                     toast({ title: "Address saved!" });
                   }}
                 >

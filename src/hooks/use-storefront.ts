@@ -59,10 +59,15 @@ export type StorefrontCatalogData = {
 async function fetchStorefrontCatalog(page?: string): Promise<StorefrontCatalogData> {
   const productsReq = supabase
     .from("products")
-    .select("id, name, slug, description, price, compare_at_price, images, is_featured, category_id, model_url, created_at, stock")
+    .select(
+      "id, name, slug, description, price, compare_at_price, images, is_featured, category_id, model_url, created_at, stock",
+    )
     .eq("is_active", true)
     .order("created_at", { ascending: false });
-  const categoriesReq = supabase.from("categories").select("id, name, slug, parent_id").order("sort_order");
+  const categoriesReq = supabase
+    .from("categories")
+    .select("id, name, slug, parent_id")
+    .order("name", { ascending: true });
   const reviewsReq = supabase
     .from("product_reviews")
     .select("id, product_id, rating, title, comment, created_at, user_id, is_approved")
@@ -78,9 +83,7 @@ async function fetchStorefrontCatalog(page?: string): Promise<StorefrontCatalogD
   const requests: PromiseLike<any>[] = [productsReq, categoriesReq, reviewsReq, galleryReq];
 
   if (page) {
-    requests.push(
-      supabase.from("site_blocks").select("*").eq("page", page).eq("is_active", true).order("sort_order"),
-    );
+    requests.push(supabase.from("site_blocks").select("*").eq("page", page).eq("is_active", true).order("sort_order"));
   }
 
   const [productsRes, categoriesRes, reviewsRes, galleryRes, pageBlocksRes] = await Promise.all(requests);
@@ -208,7 +211,9 @@ async function fetchProductDetail(slug: string): Promise<ProductDetailData | nul
       .order("created_at", { ascending: false }),
     supabase
       .from("products")
-      .select("id, name, slug, description, price, compare_at_price, images, is_featured, category_id, model_url, created_at, stock")
+      .select(
+        "id, name, slug, description, price, compare_at_price, images, is_featured, category_id, model_url, created_at, stock",
+      )
       .eq("is_active", true)
       .neq("id", product.id)
       .limit(4),

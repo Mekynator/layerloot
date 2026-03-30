@@ -330,7 +330,7 @@ const AdminCustomOrders = () => {
         admin_notes: adminNotes || null,
         payment_status: paymentStatusUpdate,
         production_status: productionStatusUpdate,
-        request_fee_status: feeStatusUpdate,
+        ...(selectedOrder.order_type_label === "custom-print" ? { request_fee_status: feeStatusUpdate } : {}),
       })
       .eq("id", selectedOrder.id);
 
@@ -670,16 +670,25 @@ const AdminCustomOrders = () => {
                   <TableCell className="text-sm">{order.quantity}</TableCell>
                   <TableCell className="text-sm">{order.scale}</TableCell>
                   <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={`text-xs uppercase ${
-                        (order as any).request_fee_status === "paid"
-                          ? "border-green-500/30 bg-green-500/10 text-green-600"
-                          : "border-yellow-500/30 bg-yellow-500/10 text-yellow-600"
-                      }`}
-                    >
-                      {(order as any).request_fee_status === "paid" ? "Paid" : "Unpaid"}
-                    </Badge>
+                    {order.order_type_label === "lithophane" ? (
+                      <Badge
+                        variant="outline"
+                        className="text-xs uppercase border-slate-300 bg-slate-100 text-slate-700"
+                      >
+                        No fee
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className={`text-xs uppercase ${
+                          (order as any).request_fee_status === "paid"
+                            ? "border-green-500/30 bg-green-500/10 text-green-600"
+                            : "border-yellow-500/30 bg-yellow-500/10 text-yellow-600"
+                        }`}
+                      >
+                        {(order as any).request_fee_status === "paid" ? "Paid" : "Unpaid"}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>{getStatusBadge(order.status)}</TableCell>
 
@@ -887,21 +896,30 @@ const AdminCustomOrders = () => {
                       </Select>
                     </div>
 
-                    <div>
-                      <Label>Request Fee Status</Label>
-                      <Select value={feeStatusUpdate} onValueChange={setFeeStatusUpdate}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {FEE_STATUSES.map((s) => (
-                            <SelectItem key={s} value={s}>
-                              {s.replace(/_/g, " ")}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {selectedOrder.order_type_label === "custom-print" ? (
+                      <div>
+                        <Label>Request Fee Status</Label>
+                        <Select value={feeStatusUpdate} onValueChange={setFeeStatusUpdate}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {FEE_STATUSES.map((s) => (
+                              <SelectItem key={s} value={s}>
+                                {s.replace(/_/g, " ")}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : (
+                      <div>
+                        <Label>Request Fee</Label>
+                        <div className="mt-2 rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
+                          Lithophane orders do not require a request fee.
+                        </div>
+                      </div>
+                    )}
 
                     <div>
                       <Textarea

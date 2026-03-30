@@ -10,8 +10,11 @@ import {
   Upload,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import LithophaneImageEditorModal from "@/components/lithophane/LithophaneImageEditorModal";
-import Lithophane3DViewer from "@/components/lithophane/Lithophane3DViewer";
+import LithophaneImageEditorModal, {
+  type CropState,
+  type SavedLithophaneImage,
+} from "@/components/LithophaneImageEditorModal";
+import Lithophane3DViewer from "@/components/Lithophane3DViewer";
 
 export type LithophaneShape = "flat" | "arched" | "frame";
 export type LithophaneOrientation = "portrait" | "landscape";

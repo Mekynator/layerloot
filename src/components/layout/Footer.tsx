@@ -246,7 +246,7 @@ const Footer = () => {
                   </li>
                   <li>
                     <Link to="/account/orders" className="transition-all hover:translate-x-1 hover:text-primary">
-                      {footerSettings.orders_link_label || defaultFooterSettings.orders_link_label}
+                      {footerSettings.orders_link_label || t("footer.orderHistory")}
                     </Link>
                   </li>
                 </ul>

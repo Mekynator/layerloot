@@ -261,7 +261,7 @@ const Footer = () => {
                 transition={{ delay: 0.12 }}
               >
                 <h4 className="mb-4 font-display text-sm font-semibold uppercase tracking-widest text-secondary-foreground">
-                  {footerSettings.contact_title || defaultFooterSettings.contact_title}
+                  {footerSettings.contact_title || t("footer.contact")}
                 </h4>
 
                 {contact.contact_description && (

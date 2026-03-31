@@ -81,12 +81,6 @@ const ImageCollectionBlock = ({ content, className }: { content?: ImageCollectio
     </>
   );
 
-  const normalizeFaqItem = (item: any) => ({
-    ...item,
-    q: item?.q ?? item?.question ?? "",
-    a: item?.a ?? item?.answer ?? "",
-  });
-
   const renderCard = (item: ImageItem, index: number) => {
     const card = (
       <div
@@ -223,6 +217,12 @@ const normalizeAction = (source: any): Required<BlockAction> => {
 
   return { actionType, actionTarget, openInNewTab };
 };
+
+const normalizeFaqItem = (item: any) => ({
+  ...item,
+  q: item?.q ?? item?.question ?? "",
+  a: item?.a ?? item?.answer ?? "",
+});
 
 const resolveSectionAction = (content: any): Required<BlockAction> =>
   normalizeAction({

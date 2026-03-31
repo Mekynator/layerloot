@@ -10,6 +10,7 @@ import { useNavLinks } from "@/components/admin/NavLinkEditor";
 import { supabase } from "@/integrations/supabase/client";
 import GlobalSectionRenderer from "@/components/layout/GlobalSectionRenderer";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useTranslation } from "react-i18next";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -169,6 +170,7 @@ const Header = () => {
   const { totalItems } = useCart();
   const { user, isAdmin, signOut } = useAuth();
   const navLinks = useNavLinks();
+  const { t } = useTranslation();
   const cartButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
@@ -510,21 +512,21 @@ const Header = () => {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem asChild>
                         <Link to="/account" className="cursor-pointer">
-                          {headerSettings.account_label || defaultHeaderSettings.account_label}
+                          {headerSettings.account_label || t("nav.account")}
                         </Link>
                       </DropdownMenuItem>
                       {isAdmin && (
                         <DropdownMenuItem asChild>
                           <Link to="/admin" className="cursor-pointer">
                             <Shield className="mr-2 h-4 w-4" />{" "}
-                            {headerSettings.admin_label || defaultHeaderSettings.admin_label}
+                            {headerSettings.admin_label || t("nav.admin")}
                           </Link>
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={signOut} className="cursor-pointer">
                         <LogOut className="mr-2 h-4 w-4" />{" "}
-                        {headerSettings.sign_out_label || defaultHeaderSettings.sign_out_label}
+                        {headerSettings.sign_out_label || t("nav.signOut")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -573,7 +575,7 @@ const Header = () => {
                 >
                   {headerSettings.mobile_account_label ||
                     headerSettings.account_label ||
-                    defaultHeaderSettings.mobile_account_label}
+                    t("nav.account")}
                 </Link>
 
                 {isAdmin && (
@@ -583,7 +585,7 @@ const Header = () => {
                   >
                     {headerSettings.mobile_admin_label ||
                       headerSettings.admin_label ||
-                      defaultHeaderSettings.mobile_admin_label}
+                      t("nav.admin")}
                   </Link>
                 )}
               </>
@@ -592,7 +594,7 @@ const Header = () => {
                 to="/auth"
                 className="block py-3 font-display text-sm uppercase tracking-widest text-secondary-foreground hover:text-primary"
               >
-                {headerSettings.auth_label || defaultHeaderSettings.auth_label}
+                {headerSettings.auth_label || t("nav.login")}
               </Link>
             )}
           </nav>

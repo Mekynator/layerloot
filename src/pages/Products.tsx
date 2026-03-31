@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import ProductCard from "@/components/ProductCard";
 import { renderBlock } from "@/components/admin/BlockRenderer";
@@ -10,6 +11,7 @@ import { useStorefrontCatalog } from "@/hooks/use-storefront";
 import { fadeUp } from "@/lib/motion";
 
 const Products = () => {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeCategory = searchParams.get("category") || "all";
   const [search, setSearch] = useState("");
@@ -49,10 +51,9 @@ const Products = () => {
         <div className="container space-y-8">
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-3">
             <div className="space-y-2">
-              <h1 className="font-display text-4xl font-bold uppercase text-foreground">Products</h1>
+              <h1 className="font-display text-4xl font-bold uppercase text-foreground">{t("products.title")}</h1>
               <p className="max-w-2xl text-balance text-muted-foreground">
-                Print-ready models, accessories, and premium maker gear, now with clearer trust signals and smoother
-                browsing.
+                {t("products.subtitle")}
               </p>
             </div>
           </motion.div>
@@ -81,7 +82,7 @@ const Products = () => {
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     }`}
                   >
-                    All Products
+                    {t("products.allCategories")}
                   </motion.button>
 
                   {parentCategories.map((category) => {
@@ -132,7 +133,7 @@ const Products = () => {
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
-                      placeholder="Search products..."
+                      placeholder={t("products.searchPlaceholder")}
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       className="h-11 rounded-xl border-border/70 bg-background/80 pl-10"
@@ -174,9 +175,9 @@ const Products = () => {
                   animate={{ opacity: 1, y: 0 }}
                   className="section-surface px-6 py-12 text-center"
                 >
-                  <h2 className="font-display text-2xl font-bold uppercase text-foreground">No products found</h2>
+                  <h2 className="font-display text-2xl font-bold uppercase text-foreground">{t("products.noProducts")}</h2>
                   <p className="mt-2 text-muted-foreground">
-                    Try another category or broaden your search to discover more prints.
+                    {t("products.noProductsHint")}
                   </p>
                 </motion.div>
               ) : null}

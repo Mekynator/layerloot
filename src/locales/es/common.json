@@ -15,6 +15,73 @@
     "label": "Idioma",
     "select": "Seleccionar idioma"
   },
+  "auth": {
+    "welcomeBack": "Bienvenido de nuevo",
+    "createAccount": "Crear cuenta",
+    "signInSubtitle": "Inicia sesión en tu cuenta de LayerLoot",
+    "signUpSubtitle": "Únete a la comunidad maker",
+    "fullName": "Nombre completo",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "pleaseWait": "Por favor espera...",
+    "signIn": "Iniciar sesión",
+    "signUp": "Registrarse",
+    "noAccount": "¿No tienes cuenta?",
+    "haveAccount": "¿Ya tienes cuenta?",
+    "welcomeBackToast": "¡Bienvenido de nuevo!",
+    "accountCreated": "¡Cuenta creada!",
+    "checkEmail": "Por favor revisa tu correo para verificar tu cuenta."
+  },
+  "contact": {
+    "title": "Contáctanos",
+    "subtitle": "¿Tienes una pregunta o un pedido personalizado? Escríbenos.",
+    "yourName": "Tu nombre",
+    "yourEmail": "Tu correo",
+    "subject": "Asunto",
+    "yourMessage": "Tu mensaje...",
+    "sending": "Enviando...",
+    "sendMessage": "Enviar mensaje",
+    "getInTouch": "Ponte en contacto",
+    "emailLabel": "Correo",
+    "locationLabel": "Ubicación",
+    "followUs": "Síguenos",
+    "messageSent": "¡Mensaje enviado!",
+    "messageSentDesc": "Te responderemos pronto.",
+    "messageFailed": "No se pudo enviar el mensaje. Inténtalo de nuevo."
+  },
+  "products": {
+    "title": "Productos",
+    "subtitle": "Modelos listos para imprimir, accesorios y equipo maker premium con señales de confianza más claras y navegación más fluida.",
+    "searchPlaceholder": "Buscar productos...",
+    "allCategories": "Todos",
+    "noProducts": "No se encontraron productos.",
+    "noProductsHint": "Intenta ajustar tu búsqueda o filtro de categoría."
+  },
+  "cart": {
+    "title": "Tu carrito",
+    "empty": "Tu carrito está vacío",
+    "emptyHint": "¡Descubre nuestra colección y empieza a añadir artículos!",
+    "browseProducts": "Ver productos",
+    "continueShopping": "Seguir comprando",
+    "checkout": "Pagar",
+    "subtotal": "Subtotal",
+    "shipping": "Envío",
+    "freeShipping": "GRATIS",
+    "total": "Total",
+    "remove": "Eliminar",
+    "savedForLater": "Guardado para después",
+    "moveToCart": "Mover al carrito",
+    "qty": "Cant."
+  },
+  "footer": {
+    "quickLinks": "Enlaces rápidos",
+    "account": "Cuenta",
+    "contact": "Contacto",
+    "allRightsReserved": "Todos los derechos reservados.",
+    "loginRegister": "Iniciar sesión / Registrarse",
+    "myAccount": "Mi cuenta",
+    "orderHistory": "Historial de pedidos"
+  },
   "account": {
     "settings": "Configuración",
     "shippingAddress": "Dirección de envío predeterminada",
@@ -29,7 +96,11 @@
     "addressSaved": "¡Dirección guardada!",
     "languagePreference": "Preferencia de idioma",
     "languageHint": "Elige tu idioma preferido para el sitio web.",
-    "languageSaved": "¡Idioma guardado!"
+    "languageSaved": "¡Idioma guardado!",
+    "orders": "Pedidos",
+    "customRequests": "Solicitudes personalizadas",
+    "rewards": "Recompensas",
+    "vouchers": "Vales"
   },
   "common": {
     "loading": "Cargando...",

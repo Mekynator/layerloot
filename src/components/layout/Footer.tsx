@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Mail, MapPin, Phone, Instagram, Facebook } from "lucide-react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import logoImg from "@/assets/logo.png";
 import { useFooterNavLinks } from "@/components/admin/NavLinkEditor";
@@ -92,6 +93,7 @@ const isValidUrl = (value?: string | null) => {
 };
 
 const Footer = () => {
+  const { t } = useTranslation();
   const [contact, setContact] = useState<ContactSettings>(defaultContact);
   const [branding, setBranding] = useState<BrandingSettings>({
     logo_text_left: "Layer",
@@ -205,7 +207,7 @@ const Footer = () => {
                 transition={{ delay: 0.04 }}
               >
                 <h4 className="mb-4 font-display text-sm font-semibold uppercase tracking-widest text-secondary-foreground">
-                  {footerSettings.quick_links_title || defaultFooterSettings.quick_links_title}
+                  {footerSettings.quick_links_title || t("footer.quickLinks")}
                 </h4>
 
                 <ul className="space-y-2 text-sm text-muted-foreground">
@@ -228,23 +230,23 @@ const Footer = () => {
                 transition={{ delay: 0.08 }}
               >
                 <h4 className="mb-4 font-display text-sm font-semibold uppercase tracking-widest text-secondary-foreground">
-                  {footerSettings.account_title || defaultFooterSettings.account_title}
+                  {footerSettings.account_title || t("footer.account")}
                 </h4>
 
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   <li>
                     <Link to="/auth" className="transition-all hover:translate-x-1 hover:text-primary">
-                      {footerSettings.auth_link_label || defaultFooterSettings.auth_link_label}
+                      {footerSettings.auth_link_label || t("footer.loginRegister")}
                     </Link>
                   </li>
                   <li>
                     <Link to="/account" className="transition-all hover:translate-x-1 hover:text-primary">
-                      {footerSettings.account_link_label || defaultFooterSettings.account_link_label}
+                      {footerSettings.account_link_label || t("footer.myAccount")}
                     </Link>
                   </li>
                   <li>
                     <Link to="/account/orders" className="transition-all hover:translate-x-1 hover:text-primary">
-                      {footerSettings.orders_link_label || defaultFooterSettings.orders_link_label}
+                      {footerSettings.orders_link_label || t("footer.orderHistory")}
                     </Link>
                   </li>
                 </ul>
@@ -259,7 +261,7 @@ const Footer = () => {
                 transition={{ delay: 0.12 }}
               >
                 <h4 className="mb-4 font-display text-sm font-semibold uppercase tracking-widest text-secondary-foreground">
-                  {footerSettings.contact_title || defaultFooterSettings.contact_title}
+                  {footerSettings.contact_title || t("footer.contact")}
                 </h4>
 
                 {contact.contact_description && (
@@ -347,7 +349,7 @@ const Footer = () => {
           <div className="mt-8 border-t border-border pt-6 text-center text-xs text-muted-foreground">
             © {new Date().getFullYear()} {branding.logo_text_left || "Layer"}
             {branding.logo_text_right || "Loot"}.{" "}
-            {footerSettings.copyright_text || defaultFooterSettings.copyright_text}
+            {footerSettings.copyright_text || t("footer.allRightsReserved")}
           </div>
         </div>
       </motion.footer>

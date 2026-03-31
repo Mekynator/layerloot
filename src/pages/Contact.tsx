@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Mail, MapPin, Send } from "lucide-react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,6 +29,7 @@ const defaultContact: ContactSettings = {
 
 const Contact = () => {
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
@@ -71,21 +73,14 @@ const Contact = () => {
 
     try {
       const { error } = await supabase.functions.invoke("contact-send", {
-        body: {
-          name,
-          email,
-          subject,
-          message,
-        },
+        body: { name, email, subject, message },
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       toast({
-        title: "Message sent!",
-        description: "We'll get back to you soon.",
+        title: t("contact.messageSent"),
+        description: t("contact.messageSentDesc"),
       });
 
       setName("");
@@ -95,8 +90,8 @@ const Contact = () => {
     } catch (err) {
       console.error("Contact form error:", err);
       toast({
-        title: "Error",
-        description: "Failed to send message. Try again.",
+        title: t("common.error"),
+        description: t("contact.messageFailed"),
         variant: "destructive",
       });
     } finally {
@@ -124,8 +119,8 @@ const Contact = () => {
       <section className="py-16">
         <div className="container max-w-4xl">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <h1 className="mb-2 font-display text-4xl font-bold uppercase text-foreground">Contact Us</h1>
-            <p className="mb-12 text-muted-foreground">Have a question or custom order request? Drop us a line.</p>
+            <h1 className="mb-2 font-display text-4xl font-bold uppercase text-foreground">{t("contact.title")}</h1>
+            <p className="mb-12 text-muted-foreground">{t("contact.subtitle")}</p>
           </motion.div>
 
           <div className="grid gap-12 md:grid-cols-2">
@@ -135,36 +130,24 @@ const Contact = () => {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
             >
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your Name" required />
-              <Input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                type="email"
-                placeholder="Your Email"
-                required
-              />
-              <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject" required />
-              <Textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Your Message..."
-                rows={5}
-                required
-              />
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("contact.yourName")} required />
+              <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder={t("contact.yourEmail")} required />
+              <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t("contact.subject")} required />
+              <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder={t("contact.yourMessage")} rows={5} required />
 
               <Button type="submit" disabled={loading} className="w-full font-display uppercase tracking-wider">
                 <Send className="mr-2 h-4 w-4" />
-                {loading ? "Sending..." : "Send Message"}
+                {loading ? t("contact.sending") : t("contact.sendMessage")}
               </Button>
             </motion.form>
 
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
-              <h2 className="font-display text-xl font-semibold uppercase text-foreground">Get in Touch</h2>
+              <h2 className="font-display text-xl font-semibold uppercase text-foreground">{t("contact.getInTouch")}</h2>
 
               <div className="space-y-4">
-              {[
-                  { icon: Mail, label: "Email", value: contact.email },
-                  { icon: MapPin, label: "Location", value: contact.address },
+                {[
+                  { icon: Mail, label: t("contact.emailLabel"), value: contact.email },
+                  { icon: MapPin, label: t("contact.locationLabel"), value: contact.address },
                 ].map(({ icon: Icon, label, value }) => (
                   <div key={label} className="flex items-start gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
@@ -180,35 +163,20 @@ const Contact = () => {
 
               {(contact.social?.instagram || contact.social?.facebook || contact.social?.youtube) && (
                 <div className="space-y-2 pt-4">
-                  <h3 className="font-display text-sm font-semibold uppercase text-foreground">Follow Us</h3>
+                  <h3 className="font-display text-sm font-semibold uppercase text-foreground">{t("contact.followUs")}</h3>
                   <div className="flex gap-3">
                     {contact.social?.instagram && (
-                      <a
-                        href={contact.social.instagram}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-muted-foreground hover:text-primary"
-                      >
+                      <a href={contact.social.instagram} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary">
                         Instagram
                       </a>
                     )}
                     {contact.social?.facebook && (
-                      <a
-                        href={contact.social.facebook}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-muted-foreground hover:text-primary"
-                      >
+                      <a href={contact.social.facebook} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary">
                         Facebook
                       </a>
                     )}
                     {contact.social?.youtube && (
-                      <a
-                        href={contact.social.youtube}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-muted-foreground hover:text-primary"
-                      >
+                      <a href={contact.social.youtube} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary">
                         YouTube
                       </a>
                     )}

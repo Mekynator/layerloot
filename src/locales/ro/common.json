@@ -15,6 +15,73 @@
     "label": "Limbă",
     "select": "Selectează limba"
   },
+  "auth": {
+    "welcomeBack": "Bine ai revenit",
+    "createAccount": "Creează cont",
+    "signInSubtitle": "Conectează-te la contul tău LayerLoot",
+    "signUpSubtitle": "Alătură-te comunității maker",
+    "fullName": "Nume complet",
+    "email": "E-mail",
+    "password": "Parolă",
+    "pleaseWait": "Te rugăm să aștepți...",
+    "signIn": "Conectare",
+    "signUp": "Înregistrare",
+    "noAccount": "Nu ai cont?",
+    "haveAccount": "Ai deja cont?",
+    "welcomeBackToast": "Bine ai revenit!",
+    "accountCreated": "Cont creat!",
+    "checkEmail": "Te rugăm să verifici e-mailul pentru a confirma contul."
+  },
+  "contact": {
+    "title": "Contactează-ne",
+    "subtitle": "Ai o întrebare sau o comandă personalizată? Scrie-ne.",
+    "yourName": "Numele tău",
+    "yourEmail": "E-mailul tău",
+    "subject": "Subiect",
+    "yourMessage": "Mesajul tău...",
+    "sending": "Se trimite...",
+    "sendMessage": "Trimite mesaj",
+    "getInTouch": "Ia legătura",
+    "emailLabel": "E-mail",
+    "locationLabel": "Locație",
+    "followUs": "Urmărește-ne",
+    "messageSent": "Mesaj trimis!",
+    "messageSentDesc": "Vom reveni la tine în curând.",
+    "messageFailed": "Nu s-a putut trimite mesajul. Încearcă din nou."
+  },
+  "products": {
+    "title": "Produse",
+    "subtitle": "Modele gata de imprimat, accesorii și echipament maker premium cu semnale de încredere mai clare și navigare mai fluidă.",
+    "searchPlaceholder": "Caută produse...",
+    "allCategories": "Toate",
+    "noProducts": "Nu s-au găsit produse.",
+    "noProductsHint": "Încearcă să ajustezi căutarea sau filtrul de categorie."
+  },
+  "cart": {
+    "title": "Coșul tău",
+    "empty": "Coșul tău este gol",
+    "emptyHint": "Descoperă colecția noastră și începe să adaugi articole!",
+    "browseProducts": "Vezi produse",
+    "continueShopping": "Continuă cumpărăturile",
+    "checkout": "Finalizare comandă",
+    "subtotal": "Subtotal",
+    "shipping": "Livrare",
+    "freeShipping": "GRATUIT",
+    "total": "Total",
+    "remove": "Elimină",
+    "savedForLater": "Salvat pentru mai târziu",
+    "moveToCart": "Mută în coș",
+    "qty": "Cant."
+  },
+  "footer": {
+    "quickLinks": "Link-uri rapide",
+    "account": "Cont",
+    "contact": "Contact",
+    "allRightsReserved": "Toate drepturile rezervate.",
+    "loginRegister": "Autentificare / Înregistrare",
+    "myAccount": "Contul meu",
+    "orderHistory": "Istoric comenzi"
+  },
   "account": {
     "settings": "Setări",
     "shippingAddress": "Adresă de livrare implicită",
@@ -29,7 +96,11 @@
     "addressSaved": "Adresa a fost salvată!",
     "languagePreference": "Preferință de limbă",
     "languageHint": "Alege limba preferată pentru site.",
-    "languageSaved": "Limba a fost salvată!"
+    "languageSaved": "Limba a fost salvată!",
+    "orders": "Comenzi",
+    "customRequests": "Cereri personalizate",
+    "rewards": "Recompense",
+    "vouchers": "Vouchere"
   },
   "common": {
     "loading": "Se încarcă...",

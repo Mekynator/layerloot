@@ -526,7 +526,7 @@ const Header = () => {
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={signOut} className="cursor-pointer">
                         <LogOut className="mr-2 h-4 w-4" />{" "}
-                        {headerSettings.sign_out_label || defaultHeaderSettings.sign_out_label}
+                        {headerSettings.sign_out_label || t("nav.signOut")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

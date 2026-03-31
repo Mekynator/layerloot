@@ -34,6 +34,7 @@ import { useFeaturedProducts } from "@/hooks/use-storefront";
 import { ProductGridSkeleton } from "@/components/shared/loading-states";
 import { fadeUp } from "@/lib/motion";
 import { cn } from "@/lib/utils";
+import i18n from "@/lib/i18n";
 
 type ActionType = "none" | "internal_link" | "external_link";
 
@@ -57,25 +58,38 @@ type ImageCollectionContent = {
   items?: ImageItem[];
 };
 
+const tr = (key: string, fallback: string) => i18n.t(key, { defaultValue: fallback });
+
+const getLocalizedValue = (value: any, fallback = "") => {
+  if (typeof value === "string") return value;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return fallback;
+
+  const resolved = (i18n.resolvedLanguage || i18n.language || "en").toLowerCase().split("-")[0];
+  return value[resolved] || value.en || fallback;
+};
+
 const ImageCollectionBlock = ({ content, className }: { content?: ImageCollectionContent; className?: string }) => {
   const items = (content?.items ?? [])
     .filter((item) => item?.visible !== false && item?.image)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   const columns = Math.min(Math.max(content?.columns ?? 3, 1), 4);
+  const heading = getLocalizedValue(content?.heading, "");
 
   const renderImage = (item: ImageItem) => (
     <>
       <img
         src={item.image}
-        alt={item.title || "Gallery image"}
+        alt={getLocalizedValue(item.title, tr("blocks.imageCollection.alt", "Gallery image"))}
         className="h-full w-full rounded-2xl transition-transform duration-300 group-hover:scale-[1.02]"
         style={{ objectFit: item.objectFit || "cover" }}
       />
       {(item.title || item.subtitle) && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-2xl bg-gradient-to-t from-black/70 to-transparent p-4 text-white">
-          {item.title && <p className="text-sm font-semibold uppercase tracking-wide">{item.title}</p>}
-          {item.subtitle && <p className="mt-1 text-xs text-white/80">{item.subtitle}</p>}
+          {item.title && (
+            <p className="text-sm font-semibold uppercase tracking-wide">{getLocalizedValue(item.title)}</p>
+          )}
+          {item.subtitle && <p className="mt-1 text-xs text-white/80">{getLocalizedValue(item.subtitle)}</p>}
         </div>
       )}
     </>
@@ -125,9 +139,7 @@ const ImageCollectionBlock = ({ content, className }: { content?: ImageCollectio
 
   return (
     <section className={cn("mx-auto w-full max-w-7xl px-4 py-10 md:px-6", className)}>
-      {content?.heading && (
-        <h2 className="mb-6 text-center text-3xl font-black uppercase tracking-wide">{content.heading}</h2>
-      )}
+      {heading && <h2 className="mb-6 text-center text-3xl font-black uppercase tracking-wide">{heading}</h2>}
       <div
         className="grid gap-4"
         style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, gridAutoRows: "220px" }}
@@ -250,7 +262,7 @@ const resolveButtons = (
 ) => {
   if (Array.isArray(content?.buttons) && content.buttons.length > 0) {
     return content.buttons.map((button: any) => ({
-      text: button?.text || "",
+      text: getLocalizedValue(button?.text || "", ""),
       icon: button?.icon || "",
       iconPosition: button?.iconPosition || "left",
       variant: button?.variant || "default",
@@ -454,7 +466,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
         <div className="container flex items-center justify-center gap-2 text-primary-foreground">
           <Truck className="h-5 w-5" />
           <span className="font-display text-sm uppercase tracking-widest">
-            {c.text || "Free shipping on orders over 500 kr"}
+            {getLocalizedValue(c.text, tr("blocks.shippingBanner.text", "Free shipping on orders over 500 kr"))}
           </span>
         </div>,
       );
@@ -475,8 +487,12 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
         block,
         "py-16",
         <div className="container">
-          {c.heading && <h2 className="mb-4 font-display text-3xl font-bold uppercase text-foreground">{c.heading}</h2>}
-          <p className="whitespace-pre-wrap text-lg text-muted-foreground">{c.body || ""}</p>
+          {c.heading && (
+            <h2 className="mb-4 font-display text-3xl font-bold uppercase text-foreground">
+              {getLocalizedValue(c.heading)}
+            </h2>
+          )}
+          <p className="whitespace-pre-wrap text-lg text-muted-foreground">{getLocalizedValue(c.body, "")}</p>
         </div>,
       );
     case "image":
@@ -492,12 +508,12 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
             <motion.img
               whileHover={{ scale: 1.01 }}
               src={c.image_url}
-              alt={c.alt || ""}
+              alt={getLocalizedValue(c.alt, "")}
               className="mx-auto max-h-[600px] w-full rounded-lg object-contain"
             />
           ) : (
             <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted text-muted-foreground">
-              No image set
+              {tr("blocks.image.noImage", "No image set")}
             </div>
           )}
         </div>,
@@ -512,9 +528,13 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
         "bg-accent py-3",
         <div className="container flex items-center justify-center gap-2 text-accent-foreground">
           {c.badge && (
-            <span className="rounded bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider">{c.badge}</span>
+            <span className="rounded bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider">
+              {getLocalizedValue(c.badge)}
+            </span>
           )}
-          <span className="font-display text-sm uppercase tracking-widest">{c.heading || c.title || "Banner"}</span>
+          <span className="font-display text-sm uppercase tracking-widest">
+            {getLocalizedValue(c.heading || c.title, tr("blocks.banner.title", "Banner"))}
+          </span>
         </div>,
       );
     case "cta":
@@ -541,7 +561,9 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
         "py-8",
         <div className="container">
           {c.heading && (
-            <h2 className="mb-4 text-center font-display text-2xl font-bold uppercase text-foreground">{c.heading}</h2>
+            <h2 className="mb-4 text-center font-display text-2xl font-bold uppercase text-foreground">
+              {getLocalizedValue(c.heading)}
+            </h2>
           )}
           {c.embed_url ? (
             <div className="overflow-hidden rounded-lg border border-border" style={{ height: `${c.height || 400}px` }}>
@@ -554,7 +576,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
             </div>
           ) : (
             <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted text-muted-foreground">
-              No embed URL set
+              {tr("blocks.embed.noUrl", "No embed URL set")}
             </div>
           )}
         </div>,
@@ -570,7 +592,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
           data-editor-block-type={block.title || block.block_type}
           className="py-8 text-center text-muted-foreground"
         >
-          Unknown block: {block.block_type}
+          {tr("blocks.unknown", "Unknown block")}: {block.block_type}
         </div>
       );
   }
@@ -579,8 +601,17 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
 const HeroBlock = ({ block }: { block: SiteBlock }) => {
   const c = block.content || {};
   const buttons = resolveButtons(c, [
-    { text: c.button_text || "Shop Now", link: c.button_link || "/products", icon: "ArrowRight", variant: "default" },
-    { text: c.secondary_button_text || "Custom Order", link: c.secondary_button_link || "/create", variant: "outline" },
+    {
+      text: getLocalizedValue(c.button_text, tr("blocks.hero.buttonPrimary", "Shop Now")),
+      link: c.button_link || "/products",
+      icon: "ArrowRight",
+      variant: "default",
+    },
+    {
+      text: getLocalizedValue(c.secondary_button_text, tr("blocks.hero.buttonSecondary", "Custom Order")),
+      link: c.secondary_button_link || "/create",
+      variant: "outline",
+    },
   ]);
 
   const align = c.alignment || c.contentAlignment || "left";
@@ -630,7 +661,7 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
               <Printer className="h-5 w-5 text-primary" />
             )}
             <span className="font-display text-sm uppercase tracking-widest text-primary">
-              {c.eyebrow || c.badge || "3D Printing Essentials"}
+              {getLocalizedValue(c.eyebrow || c.badge, tr("blocks.hero.eyebrow", "3D Printing Essentials"))}
             </span>
           </motion.div>
 
@@ -641,7 +672,7 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
             transition={{ delay: 0.04 }}
             className="mb-6 font-display text-5xl font-bold uppercase leading-tight text-secondary-foreground lg:text-7xl"
           >
-            {c.heading || "Gear Up Your Print Lab"}
+            {getLocalizedValue(c.heading, tr("blocks.hero.heading", "Gear Up Your Print Lab"))}
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 18 }}
@@ -650,8 +681,13 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
             transition={{ delay: 0.08 }}
             className="mb-8 max-w-lg text-lg text-muted-foreground"
           >
-            {c.subheading ||
-              "Premium filaments, tools, miniatures, and custom prints. Everything a maker needs, delivered to your workshop."}
+            {getLocalizedValue(
+              c.subheading,
+              tr(
+                "blocks.hero.subheading",
+                "Premium filaments, tools, miniatures, and custom prints. Everything a maker needs, delivered to your workshop.",
+              ),
+            )}
           </motion.p>
 
           <motion.div
@@ -680,24 +716,33 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
   const cards = c.cards || [
     {
       icon: "ShoppingBag",
-      title: "Shop Products",
-      desc: "Browse our curated collection of 3D printed items, filaments, and accessories.",
+      title: tr("blocks.entryCards.default.shop.title", "Shop Products"),
+      desc: tr(
+        "blocks.entryCards.default.shop.desc",
+        "Browse our curated collection of 3D printed items, filaments, and accessories.",
+      ),
       link: "/products",
-      cta: "Browse Shop",
+      cta: tr("blocks.entryCards.default.shop.cta", "Browse Shop"),
     },
     {
       icon: "Palette",
-      title: "Customize",
-      desc: "Choose your material, color, and finish. Make any product truly yours.",
+      title: tr("blocks.entryCards.default.customize.title", "Customize"),
+      desc: tr(
+        "blocks.entryCards.default.customize.desc",
+        "Choose your material, color, and finish. Make any product truly yours.",
+      ),
       link: "/products",
-      cta: "Start Customizing",
+      cta: tr("blocks.entryCards.default.customize.cta", "Start Customizing"),
     },
     {
       icon: "Upload",
-      title: "Upload Your Idea",
-      desc: "Got a 3D model? Upload it and we'll print it for you with professional quality.",
+      title: tr("blocks.entryCards.default.upload.title", "Upload Your Idea"),
+      desc: tr(
+        "blocks.entryCards.default.upload.desc",
+        "Got a 3D model? Upload it and we'll print it for you with professional quality.",
+      ),
       link: "/create",
-      cta: "Upload Model",
+      cta: tr("blocks.entryCards.default.upload.cta", "Upload Model"),
     },
   ];
 
@@ -719,9 +764,11 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
       {(c.heading || c.subheading) && (
         <div className={`mb-10 ${alignmentClass(align)}`}>
           {c.heading && (
-            <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{c.heading}</h2>
+            <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
+              {getLocalizedValue(c.heading)}
+            </h2>
           )}
-          {c.subheading && <p className="mt-2 text-muted-foreground">{c.subheading}</p>}
+          {c.subheading && <p className="mt-2 text-muted-foreground">{getLocalizedValue(c.subheading)}</p>}
         </div>
       )}
 
@@ -732,6 +779,9 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
             const Icon = iconForName(card.icon, ShoppingBag);
             const action = resolveItemAction(card, card.link);
             const hasImage = card.image && card.image !== "placeholder";
+            const title = getLocalizedValue(card.title, "");
+            const desc = getLocalizedValue(card.desc, "");
+            const cta = getLocalizedValue(card.cta, "");
             const cardBody = (
               <motion.div
                 whileHover={{ y: -4 }}
@@ -741,26 +791,26 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
                   className={`mb-5 flex h-16 w-16 items-center justify-center rounded-xl ${hasImage ? "overflow-hidden" : "bg-primary/10 transition-colors group-hover:bg-primary/20"} ${card.alignment === "center" || (!card.alignment && align === "center") ? "mx-auto" : ""}`}
                 >
                   {hasImage ? (
-                    <img src={card.image} alt={card.title || ""} className="h-full w-full object-cover" />
+                    <img src={card.image} alt={title || ""} className="h-full w-full object-cover" />
                   ) : (
                     <Icon className="h-8 w-8 text-primary" />
                   )}
                 </div>
-                <h3 className="mb-2 font-display text-lg font-bold uppercase text-card-foreground">{card.title}</h3>
-                <p className="mb-4 text-sm text-muted-foreground">{card.desc}</p>
-                {card.cta && (
+                <h3 className="mb-2 font-display text-lg font-bold uppercase text-card-foreground">{title}</h3>
+                <p className="mb-4 text-sm text-muted-foreground">{desc}</p>
+                {cta && (
                   <span className="font-display text-sm uppercase tracking-wider text-primary transition-all group-hover:tracking-[0.2em]">
-                    {card.cta} <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
+                    {cta} <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
                   </span>
                 )}
               </motion.div>
             );
 
-            if (isEditorPreviewMode()) return <div key={card.title || `card-${index}`}>{cardBody}</div>;
+            if (isEditorPreviewMode()) return <div key={title || `card-${index}`}>{cardBody}</div>;
             if (action.actionType === "internal_link") {
               const target = action.actionTarget.startsWith("/") ? action.actionTarget : `/${action.actionTarget}`;
               return (
-                <Link key={card.title || `card-${index}`} to={target} target={action.openInNewTab ? "_blank" : "_self"}>
+                <Link key={title || `card-${index}`} to={target} target={action.openInNewTab ? "_blank" : "_self"}>
                   {cardBody}
                 </Link>
               );
@@ -768,7 +818,7 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
             if (action.actionType === "external_link") {
               return (
                 <a
-                  key={card.title || `card-${index}`}
+                  key={title || `card-${index}`}
                   href={action.actionTarget}
                   target={action.openInNewTab ? "_blank" : "_self"}
                   rel={action.openInNewTab ? "noopener noreferrer" : undefined}
@@ -777,7 +827,7 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
                 </a>
               );
             }
-            return <div key={card.title || `card-${index}`}>{cardBody}</div>;
+            return <div key={title || `card-${index}`}>{cardBody}</div>;
           })}
       </div>
     </div>,
@@ -799,17 +849,19 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
   }, [c.limit]);
 
   const align = c.alignment || "center";
+  const heading = getLocalizedValue(c.heading, tr("blocks.categories.heading", "Shop by Category"));
+  const subheading = getLocalizedValue(c.subheading, tr("blocks.categories.subheading", "Find exactly what you need"));
 
   if (categories.length === 0) {
     return withSection(
       block,
       "bg-secondary py-16 lg:py-24",
       <div className="container text-center">
-        <h2 className="font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">
-          {c.heading || "Shop by Category"}
-        </h2>
-        <p className="mt-2 text-muted-foreground">{c.subheading || "Find exactly what you need"}</p>
-        <p className="mt-8 text-sm italic text-muted-foreground">No categories available.</p>
+        <h2 className="font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">{heading}</h2>
+        <p className="mt-2 text-muted-foreground">{subheading}</p>
+        <p className="mt-8 text-sm italic text-muted-foreground">
+          {tr("blocks.categories.empty", "No categories available.")}
+        </p>
       </div>,
     );
   }
@@ -819,14 +871,13 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
     "bg-secondary py-16 lg:py-24",
     <div className="container">
       <div className={`mb-12 ${alignmentClass(align)}`}>
-        <h2 className="font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">
-          {c.heading || "Shop by Category"}
-        </h2>
-        <p className="mt-2 text-muted-foreground">{c.subheading || "Find exactly what you need"}</p>
+        <h2 className="font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">{heading}</h2>
+        <p className="mt-2 text-muted-foreground">{subheading}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {categories.map((cat, index) => {
+          const catName = getLocalizedValue(cat.name, cat.name || "");
           const content = (
             <motion.div
               initial={{ opacity: 0, y: 16 }}
@@ -839,13 +890,13 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
               {cat.image_url && (
                 <img
                   src={cat.image_url}
-                  alt={cat.name}
+                  alt={catName}
                   className="absolute inset-0 h-full w-full object-cover opacity-30 transition-all duration-500 group-hover:scale-110 group-hover:opacity-40"
                 />
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-secondary via-secondary/60 to-transparent" />
               <h3 className="relative font-display text-xl font-bold uppercase text-secondary-foreground transition-colors group-hover:text-primary">
-                {cat.name}
+                {catName}
               </h3>
             </motion.div>
           );
@@ -876,17 +927,22 @@ const FeaturedProductsBlock = ({
   const align = c.alignment || "left";
   const headingAlignClass = alignmentClass(align);
   const viewAllAction = resolveItemAction(c.view_all_button || {}, c.view_all_link || "/products");
+  const heading = getLocalizedValue(c.heading, tr("blocks.featuredProducts.heading", "Best Sellers"));
+  const subheading = getLocalizedValue(
+    c.subheading,
+    tr("blocks.featuredProducts.subheading", "Our most popular 3D printed items"),
+  );
 
   if (!isLoading && products.length === 0) {
     return withSection(
       block,
       "py-16 lg:py-24",
       <div className="container text-center">
-        <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
-          {c.heading || "Best Sellers"}
-        </h2>
-        <p className="mt-2 text-muted-foreground">{c.subheading || "Our most popular 3D printed items"}</p>
-        <p className="mt-8 text-sm italic text-muted-foreground">No featured products available.</p>
+        <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{heading}</h2>
+        <p className="mt-2 text-muted-foreground">{subheading}</p>
+        <p className="mt-8 text-sm italic text-muted-foreground">
+          {tr("blocks.featuredProducts.empty", "No featured products available.")}
+        </p>
       </div>,
     );
   }
@@ -897,15 +953,13 @@ const FeaturedProductsBlock = ({
     <div className="container">
       <div className={`mb-12 flex flex-wrap items-end justify-between gap-4 ${headingAlignClass}`}>
         <div>
-          <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
-            {c.heading || "Best Sellers"}
-          </h2>
-          <p className="mt-2 text-muted-foreground">{c.subheading || "Our most popular 3D printed items"}</p>
+          <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{heading}</h2>
+          <p className="mt-2 text-muted-foreground">{subheading}</p>
         </div>
 
         <ActionButton
           button={{
-            text: c.view_all_text || "View All",
+            text: getLocalizedValue(c.view_all_text, tr("blocks.featuredProducts.viewAll", "View All")),
             icon: "ArrowRight",
             iconPosition: "right",
             variant: "ghost",
@@ -941,10 +995,26 @@ const FeaturedProductsBlock = ({
 const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) => {
   const c = block.content || {};
   const steps = c.steps || [
-    { icon: "ShoppingBag", title: "Choose", desc: "Browse products or upload your own 3D model" },
-    { icon: "Palette", title: "Customize", desc: "Select material, color, size, and finish" },
-    { icon: "Printer", title: "We Print", desc: "Your item is 3D printed with precision" },
-    { icon: "Package", title: "Delivered", desc: "Packed safely and shipped to your door" },
+    {
+      icon: "ShoppingBag",
+      title: tr("blocks.howItWorks.step1.title", "Choose"),
+      desc: tr("blocks.howItWorks.step1.desc", "Browse products or upload your own 3D model"),
+    },
+    {
+      icon: "Palette",
+      title: tr("blocks.howItWorks.step2.title", "Customize"),
+      desc: tr("blocks.howItWorks.step2.desc", "Select material, color, size, and finish"),
+    },
+    {
+      icon: "Printer",
+      title: tr("blocks.howItWorks.step3.title", "We Print"),
+      desc: tr("blocks.howItWorks.step3.desc", "Your item is 3D printed with precision"),
+    },
+    {
+      icon: "Package",
+      title: tr("blocks.howItWorks.step4.title", "Delivered"),
+      desc: tr("blocks.howItWorks.step4.desc", "Packed safely and shipped to your door"),
+    },
   ];
 
   const columns = Math.max(1, Math.min(4, Number(c.columns) || 4));
@@ -964,9 +1034,14 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
     <div className="container">
       <div className={`mb-12 ${alignmentClass(align)}`}>
         <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
-          {c.heading || "How It Works"}
+          {getLocalizedValue(c.heading, tr("blocks.howItWorks.heading", "How It Works"))}
         </h2>
-        <p className="mt-2 text-muted-foreground">{c.subheading || "From idea to your doorstep in 4 simple steps"}</p>
+        <p className="mt-2 text-muted-foreground">
+          {getLocalizedValue(
+            c.subheading,
+            tr("blocks.howItWorks.subheading", "From idea to your doorstep in 4 simple steps"),
+          )}
+        </p>
       </div>
 
       <div className={`grid gap-8 ${columnClass}`}>
@@ -977,6 +1052,8 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
             const hasImage = s.image && s.image !== "placeholder";
             const action = resolveItemAction(s);
             const isClickable = action.actionType !== "none";
+            const title = getLocalizedValue(s.title, "");
+            const desc = getLocalizedValue(s.desc, "");
 
             const stepContent = (
               <motion.div
@@ -991,21 +1068,21 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
                   className={`mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full border-2 border-primary/20 bg-card transition-all hover:border-primary hover:shadow-lg ${hasImage ? "overflow-hidden" : ""}`}
                 >
                   {hasImage ? (
-                    <img src={s.image} alt={s.title || ""} className="h-full w-full object-cover" />
+                    <img src={s.image} alt={title || ""} className="h-full w-full object-cover" />
                   ) : (
                     <Icon className="h-7 w-7 text-primary" />
                   )}
                 </div>
-                <h3 className="mb-1 font-display text-lg font-bold uppercase text-foreground">{s.title}</h3>
-                <p className="text-sm text-muted-foreground">{s.desc}</p>
+                <h3 className="mb-1 font-display text-lg font-bold uppercase text-foreground">{title}</h3>
+                <p className="text-sm text-muted-foreground">{desc}</p>
               </motion.div>
             );
 
-            if (isEditorPreviewMode()) return <div key={s.title || index}>{stepContent}</div>;
+            if (isEditorPreviewMode()) return <div key={title || index}>{stepContent}</div>;
             if (action.actionType === "internal_link" && action.actionTarget) {
               const target = action.actionTarget.startsWith("/") ? action.actionTarget : `/${action.actionTarget}`;
               return (
-                <Link key={s.title || index} to={target} target={action.openInNewTab ? "_blank" : "_self"}>
+                <Link key={title || index} to={target} target={action.openInNewTab ? "_blank" : "_self"}>
                   {stepContent}
                 </Link>
               );
@@ -1013,7 +1090,7 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
             if (action.actionType === "external_link" && action.actionTarget) {
               return (
                 <a
-                  key={s.title || index}
+                  key={title || index}
                   href={action.actionTarget}
                   target={action.openInNewTab ? "_blank" : "_self"}
                   rel={action.openInNewTab ? "noopener noreferrer" : undefined}
@@ -1023,7 +1100,7 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
               );
             }
 
-            return <div key={s.title || index}>{stepContent}</div>;
+            return <div key={title || index}>{stepContent}</div>;
           })}
       </div>
     </div>,
@@ -1035,12 +1112,18 @@ const FaqBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) 
   const items = (
     c.items || [
       {
-        q: "What materials do you offer?",
-        a: "We offer PLA, PLA Silk, PETG, and Resin. Each material has unique properties suited for different applications — from decorative items to functional parts.",
+        q: tr("blocks.faq.default1.q", "What materials do you offer?"),
+        a: tr(
+          "blocks.faq.default1.a",
+          "We offer PLA, PLA Silk, PETG, and Resin. Each material has unique properties suited for different applications — from decorative items to functional parts.",
+        ),
       },
       {
-        q: "How long does printing take?",
-        a: "Depending on size and complexity, prints typically take 2-24 hours. Custom orders usually ship within 3-5 business days.",
+        q: tr("blocks.faq.default2.q", "How long does printing take?"),
+        a: tr(
+          "blocks.faq.default2.a",
+          "Depending on size and complexity, prints typically take 2-24 hours. Custom orders usually ship within 3-5 business days.",
+        ),
       },
     ]
   ).map(normalizeFaqItem);
@@ -1053,9 +1136,9 @@ const FaqBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) 
     <div className="container max-w-3xl">
       <div className={`mb-12 ${alignmentClass(align)}`}>
         <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
-          {c.heading || "Frequently Asked Questions"}
+          {getLocalizedValue(c.heading, tr("blocks.faq.heading", "Frequently Asked Questions"))}
         </h2>
-        {c.subheading && <p className="mt-2 text-muted-foreground">{c.subheading}</p>}
+        {c.subheading && <p className="mt-2 text-muted-foreground">{getLocalizedValue(c.subheading)}</p>}
       </div>
 
       <Accordion type="single" collapsible className="space-y-2">
@@ -1064,9 +1147,9 @@ const FaqBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) 
           .map((item: any, i: number) => (
             <AccordionItem key={i} value={`faq-${i}`} className="rounded-lg border border-border bg-card px-6">
               <AccordionTrigger className="font-display text-sm uppercase tracking-wider text-card-foreground hover:text-primary hover:no-underline">
-                {item.q}
+                {getLocalizedValue(item.q)}
               </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">{item.a}</AccordionContent>
+              <AccordionContent className="text-muted-foreground">{getLocalizedValue(item.a)}</AccordionContent>
             </AccordionItem>
           ))}
       </Accordion>
@@ -1077,9 +1160,21 @@ const FaqBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) 
 const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) => {
   const c = block.content || {};
   const badges = c.badges || [
-    { icon: "Truck", title: "Free Shipping", desc: "On orders over 500 kr" },
-    { icon: "Shield", title: "Secure Checkout", desc: "Stripe & PayPal protected" },
-    { icon: "Star", title: "Loyalty Rewards", desc: "Earn points on every purchase" },
+    {
+      icon: "Truck",
+      title: tr("blocks.trustBadges.default1.title", "Free Shipping"),
+      desc: tr("blocks.trustBadges.default1.desc", "On orders over 500 kr"),
+    },
+    {
+      icon: "Shield",
+      title: tr("blocks.trustBadges.default2.title", "Secure Checkout"),
+      desc: tr("blocks.trustBadges.default2.desc", "Stripe & PayPal protected"),
+    },
+    {
+      icon: "Star",
+      title: tr("blocks.trustBadges.default3.title", "Loyalty Rewards"),
+      desc: tr("blocks.trustBadges.default3.desc", "Earn points on every purchase"),
+    },
   ];
 
   const columns = Math.max(1, Math.min(4, Number(c.columns) || 3));
@@ -1099,9 +1194,11 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
       {(c.heading || c.subheading) && (
         <div className={`mb-8 ${alignmentClass(c.alignment || "center")}`}>
           {c.heading && (
-            <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{c.heading}</h2>
+            <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
+              {getLocalizedValue(c.heading)}
+            </h2>
           )}
-          {c.subheading && <p className="mt-2 text-muted-foreground">{c.subheading}</p>}
+          {c.subheading && <p className="mt-2 text-muted-foreground">{getLocalizedValue(c.subheading)}</p>}
         </div>
       )}
 
@@ -1112,6 +1209,8 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
             const Icon = iconForName(badge.icon, Shield);
             const hasImage = badge.image && badge.image !== "placeholder";
             const action = resolveItemAction(badge);
+            const title = getLocalizedValue(badge.title, "");
+            const desc = getLocalizedValue(badge.desc, "");
 
             const badgeContent = (
               <motion.div
@@ -1126,23 +1225,23 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
                   className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${hasImage ? "overflow-hidden" : "bg-primary/10"}`}
                 >
                   {hasImage ? (
-                    <img src={badge.image} alt={badge.title || ""} className="h-full w-full object-cover" />
+                    <img src={badge.image} alt={title || ""} className="h-full w-full object-cover" />
                   ) : (
                     <Icon className="h-6 w-6 text-primary" />
                   )}
                 </div>
                 <div>
-                  <h3 className="font-display text-sm font-semibold uppercase text-card-foreground">{badge.title}</h3>
-                  <p className="text-sm text-muted-foreground">{badge.desc}</p>
+                  <h3 className="font-display text-sm font-semibold uppercase text-card-foreground">{title}</h3>
+                  <p className="text-sm text-muted-foreground">{desc}</p>
                 </div>
               </motion.div>
             );
 
-            if (isEditorPreviewMode()) return <div key={badge.title || index}>{badgeContent}</div>;
+            if (isEditorPreviewMode()) return <div key={title || index}>{badgeContent}</div>;
             if (action.actionType === "internal_link" && action.actionTarget) {
               const target = action.actionTarget.startsWith("/") ? action.actionTarget : `/${action.actionTarget}`;
               return (
-                <Link key={badge.title || index} to={target} target={action.openInNewTab ? "_blank" : "_self"}>
+                <Link key={title || index} to={target} target={action.openInNewTab ? "_blank" : "_self"}>
                   {badgeContent}
                 </Link>
               );
@@ -1150,7 +1249,7 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
             if (action.actionType === "external_link" && action.actionTarget) {
               return (
                 <a
-                  key={badge.title || index}
+                  key={title || index}
                   href={action.actionTarget}
                   target={action.openInNewTab ? "_blank" : "_self"}
                   rel={action.openInNewTab ? "noopener noreferrer" : undefined}
@@ -1160,7 +1259,7 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
               );
             }
 
-            return <div key={badge.title || index}>{badgeContent}</div>;
+            return <div key={title || index}>{badgeContent}</div>;
           })}
       </div>
     </div>,
@@ -1192,7 +1291,7 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
     <motion.img
       key={`${current}-${currentImage}`}
       src={currentImage}
-      alt={currentSlide?.title || ""}
+      alt={getLocalizedValue(currentSlide?.title, "")}
       className="h-full w-full object-contain"
       initial={{ opacity: 0, x: 50 }}
       animate={{ opacity: 1, x: 0 }}
@@ -1237,7 +1336,7 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
     <div className="container">
       {(block.title || block.content?.heading) && (
         <h2 className="mb-8 text-center font-display text-3xl font-bold uppercase text-foreground">
-          {block.content?.heading || block.title}
+          {getLocalizedValue(block.content?.heading || block.title, "")}
         </h2>
       )}
 
@@ -1248,8 +1347,12 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
 
         {currentSlide && (currentSlide.title || currentSlide.subtitle) && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-5 text-white">
-            {currentSlide.title && <h3 className="font-display text-lg font-bold uppercase">{currentSlide.title}</h3>}
-            {currentSlide.subtitle && <p className="mt-1 text-sm text-white/80">{currentSlide.subtitle}</p>}
+            {currentSlide.title && (
+              <h3 className="font-display text-lg font-bold uppercase">{getLocalizedValue(currentSlide.title)}</h3>
+            )}
+            {currentSlide.subtitle && (
+              <p className="mt-1 text-sm text-white/80">{getLocalizedValue(currentSlide.subtitle)}</p>
+            )}
           </div>
         )}
 
@@ -1304,7 +1407,7 @@ const VideoBlock = ({ block }: { block: SiteBlock }) => {
     <div className="container max-w-4xl">
       {block.title && (
         <h2 className="mb-8 text-center font-display text-3xl font-bold uppercase text-secondary-foreground">
-          {block.title}
+          {getLocalizedValue(block.title)}
         </h2>
       )}
 
@@ -1336,7 +1439,9 @@ const VideoBlock = ({ block }: { block: SiteBlock }) => {
         )}
       </motion.div>
 
-      {block.content?.caption && <p className="mt-4 text-center text-muted-foreground">{block.content.caption}</p>}
+      {block.content?.caption && (
+        <p className="mt-4 text-center text-muted-foreground">{getLocalizedValue(block.content.caption)}</p>
+      )}
     </div>,
   );
 };
@@ -1346,7 +1451,7 @@ const CtaBlock = ({ block }: { block: SiteBlock }) => {
   const align = c.alignment || "center";
   const buttons = resolveButtons(c, [
     {
-      text: c.button_text || "Learn more",
+      text: getLocalizedValue(c.button_text, tr("blocks.cta.button", "Learn more")),
       link: c.button_link || "/products",
       icon: "ArrowRight",
       variant: c.button_variant || "default",
@@ -1358,9 +1463,9 @@ const CtaBlock = ({ block }: { block: SiteBlock }) => {
     "bg-secondary py-16 lg:py-24",
     <div className={`container ${alignmentClass(align)}`}>
       <h2 className="mb-4 font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">
-        {c.heading || "Ready to get started?"}
+        {getLocalizedValue(c.heading, tr("blocks.cta.heading", "Ready to get started?"))}
       </h2>
-      {c.subheading && <p className="mb-8 text-lg text-muted-foreground">{c.subheading}</p>}
+      {c.subheading && <p className="mb-8 text-lg text-muted-foreground">{getLocalizedValue(c.subheading)}</p>}
       <div className={`flex flex-wrap gap-4 ${justifyClass(c.buttonAlignment || align)}`}>
         {buttons.map((button, index) => (
           <ActionButton
@@ -1378,7 +1483,7 @@ const SingleButtonBlock = ({ block }: { block: SiteBlock }) => {
   const c = block.content || {};
   const buttons = resolveButtons(c, [
     {
-      text: c.button_text || "Click Me",
+      text: getLocalizedValue(c.button_text, tr("blocks.button.default", "Click Me")),
       link: c.button_link || "#",
       variant: c.style === "outline" ? "outline" : c.style === "ghost" ? "ghost" : "default",
       icon: c.button_icon || "",
@@ -1421,14 +1526,17 @@ const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
     "bg-secondary py-16",
     <div className={`container max-w-xl ${alignmentClass(align)}`}>
       <h2 className="mb-2 font-display text-2xl font-bold uppercase text-secondary-foreground">
-        {c.heading || "Stay Updated"}
+        {getLocalizedValue(c.heading, tr("blocks.newsletter.heading", "Stay Updated"))}
       </h2>
       <p className="mb-6 text-muted-foreground">
-        {c.subheading || "Subscribe to our newsletter for the latest updates."}
+        {getLocalizedValue(
+          c.subheading,
+          tr("blocks.newsletter.subheading", "Subscribe to our newsletter for the latest updates."),
+        )}
       </p>
 
       {status === "success" ? (
-        <p className="font-display text-primary">Thanks for subscribing!</p>
+        <p className="font-display text-primary">{tr("blocks.newsletter.success", "Thanks for subscribing!")}</p>
       ) : (
         <form onSubmit={handleSubmit} className="flex gap-2">
           <input
@@ -1436,19 +1544,23 @@ const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="your@email.com"
+            placeholder={tr("blocks.newsletter.placeholder", "your@email.com")}
             className="flex-1 rounded-md border border-border bg-background px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           />
           <button
             type="submit"
             className="rounded-md bg-primary px-6 py-2 font-display text-sm uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
           >
-            {c.submit_text || "Subscribe"}
+            {getLocalizedValue(c.submit_text, tr("blocks.newsletter.submit", "Subscribe"))}
           </button>
         </form>
       )}
 
-      {status === "error" && <p className="mt-2 text-sm text-destructive">Already subscribed or error occurred.</p>}
+      {status === "error" && (
+        <p className="mt-2 text-sm text-destructive">
+          {tr("blocks.newsletter.error", "Already subscribed or error occurred.")}
+        </p>
+      )}
     </div>,
   );
 };
@@ -1532,7 +1644,7 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
       "py-16 lg:py-24",
       <div className="container">
         <div className="rounded-3xl border border-dashed border-border bg-card/50 p-8 text-center text-muted-foreground">
-          Add an Instagram username to show the auto feed.
+          {tr("blocks.instagram.usernameMissing", "Add an Instagram username to show the auto feed.")}
         </div>
       </div>,
     );
@@ -1547,8 +1659,12 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
       <div className="rounded-3xl border bg-card/70 p-5 shadow-sm backdrop-blur md:p-6">
         <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-2xl font-bold">{c.title || "Follow us on Instagram"}</h2>
-            <p className="text-sm text-muted-foreground">{c.subtitle || "Latest posts and reels"}</p>
+            <h2 className="text-2xl font-bold">
+              {getLocalizedValue(c.title, tr("blocks.instagram.title", "Follow us on Instagram"))}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {getLocalizedValue(c.subtitle, tr("blocks.instagram.subtitle", "Latest posts and reels"))}
+            </p>
           </div>
 
           {showProfileButton && (
@@ -1567,9 +1683,13 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
         </div>
 
         {loading ? (
-          <div className="text-sm text-muted-foreground">Loading Instagram feed...</div>
+          <div className="text-sm text-muted-foreground">
+            {tr("blocks.instagram.loading", "Loading Instagram feed...")}
+          </div>
         ) : items.length === 0 ? (
-          <div className="text-sm text-muted-foreground">No Instagram posts found.</div>
+          <div className="text-sm text-muted-foreground">
+            {tr("blocks.instagram.empty", "No Instagram posts found.")}
+          </div>
         ) : layout === "grid" ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {items.map((item, index) => {
@@ -1579,13 +1699,13 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
                   {imageSrc ? (
                     <img
                       src={imageSrc}
-                      alt={item.caption || "Instagram post"}
+                      alt={item.caption || tr("blocks.instagram.postAlt", "Instagram post")}
                       className="aspect-square w-full object-cover"
                       loading="lazy"
                     />
                   ) : (
                     <div className="flex aspect-square items-center justify-center bg-muted text-sm text-muted-foreground">
-                      No image
+                      {tr("blocks.instagram.noImage", "No image")}
                     </div>
                   )}
                   {showCaptions && item.caption && (
@@ -1640,12 +1760,12 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
                     return activeSrc ? (
                       <img
                         src={activeSrc}
-                        alt={activeItem.caption || "Instagram post"}
+                        alt={activeItem.caption || tr("blocks.instagram.postAlt", "Instagram post")}
                         className="aspect-square w-full object-cover"
                       />
                     ) : (
                       <div className="flex aspect-square items-center justify-center bg-muted text-sm text-muted-foreground">
-                        No image
+                        {tr("blocks.instagram.noImage", "No image")}
                       </div>
                     );
                   })()
@@ -1659,12 +1779,12 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
                       return activeSrc ? (
                         <img
                           src={activeSrc}
-                          alt={activeItem.caption || "Instagram post"}
+                          alt={activeItem.caption || tr("blocks.instagram.postAlt", "Instagram post")}
                           className="aspect-square w-full object-cover"
                         />
                       ) : (
                         <div className="flex aspect-square items-center justify-center bg-muted text-sm text-muted-foreground">
-                          No image
+                          {tr("blocks.instagram.noImage", "No image")}
                         </div>
                       );
                     })()}
@@ -1684,7 +1804,7 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
                     key={item.id}
                     onClick={() => setCurrent(index)}
                     className={`h-2.5 w-2.5 rounded-full ${index === current ? "bg-primary" : "bg-muted"}`}
-                    aria-label={`Go to Instagram item ${index + 1}`}
+                    aria-label={`${tr("blocks.instagram.goToItem", "Go to Instagram item")} ${index + 1}`}
                   />
                 ))}
               </div>

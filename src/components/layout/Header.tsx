@@ -594,7 +594,7 @@ const Header = () => {
                 to="/auth"
                 className="block py-3 font-display text-sm uppercase tracking-widest text-secondary-foreground hover:text-primary"
               >
-                {headerSettings.auth_label || defaultHeaderSettings.auth_label}
+                {headerSettings.auth_label || t("nav.login")}
               </Link>
             )}
           </nav>

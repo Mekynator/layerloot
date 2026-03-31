@@ -476,6 +476,8 @@ const Header = () => {
               </div>
             )}
 
+            <LanguageSwitcher />
+
             {isAdmin && headerSettings.show_admin_icon && (
               <Link to="/admin">
                 <Button

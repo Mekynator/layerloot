@@ -207,7 +207,7 @@ const Footer = () => {
                 transition={{ delay: 0.04 }}
               >
                 <h4 className="mb-4 font-display text-sm font-semibold uppercase tracking-widest text-secondary-foreground">
-                  {footerSettings.quick_links_title || defaultFooterSettings.quick_links_title}
+                  {footerSettings.quick_links_title || t("footer.quickLinks")}
                 </h4>
 
                 <ul className="space-y-2 text-sm text-muted-foreground">

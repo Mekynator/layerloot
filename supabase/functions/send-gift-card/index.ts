@@ -59,39 +59,36 @@ async function resolveUserFromToken(token: string | null) {
 }
 
 async function getSenderDisplayName(userId: string, fallbackEmail?: string | null) {
-  const { data } = await serviceSupabase
-    .from("profiles")
-    .select("full_name")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const { data } = await serviceSupabase.from("profiles").select("full_name").eq("user_id", userId).maybeSingle();
 
-  return (
-    data?.full_name ||
-    (typeof fallbackEmail === "string" ? fallbackEmail.split("@")[0] : null) ||
-    "Someone"
-  );
+  return data?.full_name || (typeof fallbackEmail === "string" ? fallbackEmail.split("@")[0] : null) || "Someone";
 }
 
 async function getVoucherWithDefinition(userVoucherId: string, userId: string) {
   const { data, error } = await serviceSupabase
     .from("user_vouchers")
-    .select(`
-      id,
-      code,
-      is_used,
-      balance,
-      recipient_email,
-      recipient_name,
-      redeemed_at,
-      used_at,
-      voucher_id,
-      vouchers (
-        id,
-        name,
-        discount_type,
-        discount_value
-      )
-    `)
+    .select(
+      `
+  id,
+  code,
+  is_used,
+  balance,
+  recipient_email,
+  recipient_name,
+  gift_message,
+  gifted_at,
+  gift_status,
+  redeemed_at,
+  used_at,
+  voucher_id,
+  vouchers (
+    id,
+    name,
+    discount_type,
+    discount_value
+  )
+`,
+    )
     .eq("id", userVoucherId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -264,15 +261,17 @@ serve(async (req) => {
 
     const senderName = await getSenderDisplayName(user.id, user.email);
 
+    const updatePayload = {
+      recipient_email: recipientEmail,
+      recipient_name: recipientName || null,
+      gift_message: giftMessage || null,
+      gifted_at: new Date().toISOString(),
+      gift_status: "gifted",
+    };
+
     const { error: updateError } = await serviceSupabase
       .from("user_vouchers")
-      .update({
-        recipient_email: recipientEmail,
-        recipient_name: recipientName || null,
-        gift_message: giftMessage || null,
-        gifted_at: new Date().toISOString(),
-        gift_status: "gifted",
-      })
+      .update(updatePayload)
       .eq("id", userVoucher.id)
       .eq("user_id", user.id);
 

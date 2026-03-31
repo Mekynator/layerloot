@@ -3,47 +3,50 @@ import { Link } from "react-router-dom";
 import { Mail, MapPin, Phone, Instagram, Facebook } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import i18n from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import logoImg from "@/assets/logo.png";
 import { useFooterNavLinks } from "@/components/admin/NavLinkEditor";
 import GlobalSectionRenderer from "@/components/layout/GlobalSectionRenderer";
 
+type LocalizedText = string | Record<string, string>;
+
 type ContactSettings = {
   email?: string;
   phone?: string;
-  address?: string;
-  contact_description?: string;
-  email_label?: string;
-  phone_label?: string;
-  address_label?: string;
+  address?: LocalizedText;
+  contact_description?: LocalizedText;
+  email_label?: LocalizedText;
+  phone_label?: LocalizedText;
+  address_label?: LocalizedText;
   instagram_url?: string;
   facebook_url?: string;
-  social_title?: string;
+  social_title?: LocalizedText;
 };
 
 type BrandingSettings = {
-  logo_text_left?: string;
-  logo_text_right?: string;
+  logo_text_left?: LocalizedText;
+  logo_text_right?: LocalizedText;
   logo_image_url?: string;
   logo_link?: string;
-  logo_alt?: string;
+  logo_alt?: LocalizedText;
 };
 
 type FooterSettings = {
-  description?: string;
-  quick_links_title?: string;
-  account_title?: string;
-  contact_title?: string;
-  copyright_text?: string;
+  description?: LocalizedText;
+  quick_links_title?: LocalizedText;
+  account_title?: LocalizedText;
+  contact_title?: LocalizedText;
+  copyright_text?: LocalizedText;
   show_quick_links?: boolean;
   show_account_links?: boolean;
   show_contact_block?: boolean;
   show_logo_icon?: boolean;
   show_logo_text?: boolean;
   logo_height_px?: number;
-  auth_link_label?: string;
-  account_link_label?: string;
-  orders_link_label?: string;
+  auth_link_label?: LocalizedText;
+  account_link_label?: LocalizedText;
+  orders_link_label?: LocalizedText;
 };
 
 const defaultContact: ContactSettings = {
@@ -90,6 +93,16 @@ const isValidUrl = (value?: string | null) => {
   } catch {
     return false;
   }
+};
+
+const getLocalizedValue = (value: unknown, fallback = ""): string => {
+  if (typeof value === "string") return value;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return fallback;
+
+  const lang = (i18n.resolvedLanguage || i18n.language || "en").toLowerCase().split("-")[0];
+  const map = value as Record<string, string>;
+
+  return map[lang] || map.en || fallback;
 };
 
 const Footer = () => {
@@ -143,14 +156,50 @@ const Footer = () => {
         .map((link) => ({
           ...link,
           to: normalizePath(link.to),
+          localizedLabel: getLocalizedValue(link.label, typeof link.label === "string" ? link.label : ""),
         })),
-    [footerNavLinks],
+    [footerNavLinks, i18n.resolvedLanguage, i18n.language],
   );
 
   const logoHeight = Math.max(20, Number(footerSettings.logo_height_px || 32));
   const hasInstagram = isValidUrl(contact.instagram_url);
   const hasFacebook = isValidUrl(contact.facebook_url);
   const hasSocials = hasInstagram || hasFacebook;
+
+  const logoAlt = getLocalizedValue(branding.logo_alt, "LayerLoot");
+  const logoLeft = getLocalizedValue(branding.logo_text_left, "Layer");
+  const logoRight = getLocalizedValue(branding.logo_text_right, "Loot");
+
+  const description = getLocalizedValue(
+    footerSettings.description,
+    t("footer.description", "Premium 3D printing supplies and custom prints for makers, hobbyists, and professionals."),
+  );
+
+  const quickLinksTitle = getLocalizedValue(footerSettings.quick_links_title, t("footer.quickLinks", "Quick Links"));
+  const accountTitle = getLocalizedValue(footerSettings.account_title, t("footer.account", "Account"));
+  const contactTitle = getLocalizedValue(footerSettings.contact_title, t("footer.contact", "Contact"));
+  const authLinkLabel = getLocalizedValue(
+    footerSettings.auth_link_label,
+    t("footer.loginRegister", "Login / Register"),
+  );
+  const accountLinkLabel = getLocalizedValue(footerSettings.account_link_label, t("footer.myAccount", "My Account"));
+  const ordersLinkLabel = getLocalizedValue(
+    footerSettings.orders_link_label,
+    t("footer.orderHistory", "Order History"),
+  );
+  const contactDescription = getLocalizedValue(
+    contact.contact_description,
+    t("footer.contactDescription", "Questions, custom requests, or order help? Reach out anytime."),
+  );
+  const emailLabel = getLocalizedValue(contact.email_label, t("footer.email", "Email"));
+  const phoneLabel = getLocalizedValue(contact.phone_label, t("footer.phone", "Phone"));
+  const addressLabel = getLocalizedValue(contact.address_label, t("footer.address", "Address"));
+  const socialTitle = getLocalizedValue(contact.social_title, t("footer.followUs", "Follow us"));
+  const addressText = getLocalizedValue(contact.address, "Denmark");
+  const copyrightText = getLocalizedValue(
+    footerSettings.copyright_text,
+    t("footer.allRightsReserved", "All rights reserved."),
+  );
 
   return (
     <>
@@ -170,7 +219,7 @@ const Footer = () => {
                 {branding.logo_image_url ? (
                   <img
                     src={branding.logo_image_url}
-                    alt={branding.logo_alt || "LayerLoot"}
+                    alt={logoAlt}
                     style={{ height: `${logoHeight}px` }}
                     className="w-auto object-contain"
                   />
@@ -179,24 +228,22 @@ const Footer = () => {
                     {footerSettings.show_logo_icon && (
                       <img
                         src={logoImg}
-                        alt="LayerLoot"
+                        alt={logoAlt}
                         style={{ height: `${logoHeight}px` }}
                         className="w-auto object-contain"
                       />
                     )}
                     {footerSettings.show_logo_text && (
                       <span className="font-display text-xl font-bold uppercase tracking-wider text-secondary-foreground">
-                        {branding.logo_text_left || "Layer"}
-                        <span className="text-primary">{branding.logo_text_right || "Loot"}</span>
+                        {logoLeft}
+                        <span className="text-primary">{logoRight}</span>
                       </span>
                     )}
                   </>
                 )}
               </Link>
 
-              <p className="text-sm text-muted-foreground">
-                {footerSettings.description || defaultFooterSettings.description}
-              </p>
+              <p className="text-sm text-muted-foreground">{description}</p>
             </motion.div>
 
             {footerSettings.show_quick_links && (
@@ -207,14 +254,14 @@ const Footer = () => {
                 transition={{ delay: 0.04 }}
               >
                 <h4 className="mb-4 font-display text-sm font-semibold uppercase tracking-widest text-secondary-foreground">
-                  {footerSettings.quick_links_title || t("footer.quickLinks")}
+                  {quickLinksTitle}
                 </h4>
 
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   {footerLinks.map((link) => (
-                    <li key={`${link.label}-${link.to}`}>
+                    <li key={`${link.to}-${link.localizedLabel}`}>
                       <Link to={link.to} className="transition-all hover:translate-x-1 hover:text-primary">
-                        {link.label}
+                        {link.localizedLabel}
                       </Link>
                     </li>
                   ))}
@@ -230,23 +277,23 @@ const Footer = () => {
                 transition={{ delay: 0.08 }}
               >
                 <h4 className="mb-4 font-display text-sm font-semibold uppercase tracking-widest text-secondary-foreground">
-                  {footerSettings.account_title || t("footer.account")}
+                  {accountTitle}
                 </h4>
 
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   <li>
                     <Link to="/auth" className="transition-all hover:translate-x-1 hover:text-primary">
-                      {footerSettings.auth_link_label || t("footer.loginRegister")}
+                      {authLinkLabel}
                     </Link>
                   </li>
                   <li>
                     <Link to="/account" className="transition-all hover:translate-x-1 hover:text-primary">
-                      {footerSettings.account_link_label || t("footer.myAccount")}
+                      {accountLinkLabel}
                     </Link>
                   </li>
                   <li>
                     <Link to="/account/orders" className="transition-all hover:translate-x-1 hover:text-primary">
-                      {footerSettings.orders_link_label || t("footer.orderHistory")}
+                      {ordersLinkLabel}
                     </Link>
                   </li>
                 </ul>
@@ -261,20 +308,16 @@ const Footer = () => {
                 transition={{ delay: 0.12 }}
               >
                 <h4 className="mb-4 font-display text-sm font-semibold uppercase tracking-widest text-secondary-foreground">
-                  {footerSettings.contact_title || t("footer.contact")}
+                  {contactTitle}
                 </h4>
 
-                {contact.contact_description && (
-                  <p className="mb-4 text-sm text-muted-foreground">{contact.contact_description}</p>
-                )}
+                {contactDescription && <p className="mb-4 text-sm text-muted-foreground">{contactDescription}</p>}
 
                 <ul className="space-y-3 text-sm text-muted-foreground">
                   <li className="flex items-start gap-2 transition-colors hover:text-primary">
                     <Mail className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                     <div className="min-w-0">
-                      <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                        {contact.email_label || defaultContact.email_label}
-                      </p>
+                      <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{emailLabel}</p>
                       <a
                         href={`mailto:${contact.email || defaultContact.email}`}
                         className="hover:text-primary break-all"
@@ -287,9 +330,7 @@ const Footer = () => {
                   <li className="flex items-start gap-2">
                     <Phone className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                     <div>
-                      <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                        {contact.phone_label || defaultContact.phone_label}
-                      </p>
+                      <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{phoneLabel}</p>
                       <p>{contact.phone || defaultContact.phone}</p>
                     </div>
                   </li>
@@ -297,19 +338,15 @@ const Footer = () => {
                   <li className="flex items-start gap-2">
                     <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                     <div>
-                      <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                        {contact.address_label || defaultContact.address_label}
-                      </p>
-                      <p>{contact.address || defaultContact.address}</p>
+                      <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{addressLabel}</p>
+                      <p>{addressText}</p>
                     </div>
                   </li>
                 </ul>
 
                 {hasSocials && (
                   <div className="mt-5">
-                    <p className="mb-3 text-[11px] uppercase tracking-wider text-muted-foreground">
-                      {contact.social_title || defaultContact.social_title}
-                    </p>
+                    <p className="mb-3 text-[11px] uppercase tracking-wider text-muted-foreground">{socialTitle}</p>
 
                     <div className="flex items-center gap-3">
                       {hasInstagram && (
@@ -320,7 +357,7 @@ const Footer = () => {
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background/60 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-                          aria-label="Instagram"
+                          aria-label={t("footer.instagram", "Instagram")}
                         >
                           <Instagram className="h-4 w-4" />
                         </motion.a>
@@ -334,7 +371,7 @@ const Footer = () => {
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background/60 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-                          aria-label="Facebook"
+                          aria-label={t("footer.facebook", "Facebook")}
                         >
                           <Facebook className="h-4 w-4" />
                         </motion.a>
@@ -347,9 +384,8 @@ const Footer = () => {
           </div>
 
           <div className="mt-8 border-t border-border pt-6 text-center text-xs text-muted-foreground">
-            © {new Date().getFullYear()} {branding.logo_text_left || "Layer"}
-            {branding.logo_text_right || "Loot"}.{" "}
-            {footerSettings.copyright_text || t("footer.allRightsReserved")}
+            © {new Date().getFullYear()} {logoLeft}
+            {logoRight}. {copyrightText}
           </div>
         </div>
       </motion.footer>

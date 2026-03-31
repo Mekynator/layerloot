@@ -36,6 +36,19 @@ import ToolReviewForm from "@/components/reviews/ToolReviewForm";
 import { payCustomOrder } from "@/lib/payCustomOrder";
 import { useAccountOverview } from "@/hooks/use-account-overview";
 import { AccountOverviewSkeleton, RewardsGridSkeleton, SectionCardSkeleton } from "@/components/shared/loading-states";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  SUPPORTED_LANGUAGES,
+  LANGUAGE_LABELS,
+  LANGUAGE_STORAGE_KEY,
+  type SupportedLanguage,
+} from "@/lib/i18n";
 
 interface Order {
   id: string;

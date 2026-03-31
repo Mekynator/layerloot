@@ -56,6 +56,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         setTimeout(() => checkAdminRole(session.user), 0);
+        syncLanguage(session.user.id);
       } else {
         setIsAdmin(false);
       }

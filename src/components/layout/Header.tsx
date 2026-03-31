@@ -10,6 +10,7 @@ import { useNavLinks } from "@/components/admin/NavLinkEditor";
 import { supabase } from "@/integrations/supabase/client";
 import GlobalSectionRenderer from "@/components/layout/GlobalSectionRenderer";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useTranslation } from "react-i18next";
 import {
   DropdownMenu,
   DropdownMenuContent,

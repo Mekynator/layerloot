@@ -230,7 +230,7 @@ const Footer = () => {
                 transition={{ delay: 0.08 }}
               >
                 <h4 className="mb-4 font-display text-sm font-semibold uppercase tracking-widest text-secondary-foreground">
-                  {footerSettings.account_title || defaultFooterSettings.account_title}
+                  {footerSettings.account_title || t("footer.account")}
                 </h4>
 
                 <ul className="space-y-2 text-sm text-muted-foreground">

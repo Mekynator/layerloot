@@ -7,11 +7,14 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, type SupportedLanguage } from "@/lib/i18n";
+import i18n from "@/lib/i18n";
 
 type NavSource = "manual" | "site_page";
+type LocalizedText = string | Partial<Record<SupportedLanguage, string>>;
 
 export interface NavItem {
-  label: string;
+  label: LocalizedText;
   to: string;
   source?: NavSource;
   pageId?: string;
@@ -19,7 +22,9 @@ export interface NavItem {
   visible?: boolean;
 }
 
-type NavEditorItem = NavItem & {
+type NavEditorItem = {
+  label: Partial<Record<SupportedLanguage, string>>;
+  to: string;
   source: NavSource;
   pageId?: string;
   openInNewTab?: boolean;
@@ -39,11 +44,41 @@ type SitePageOption = {
   is_published: boolean;
 };
 
+const currentLang = () => (i18n.resolvedLanguage || i18n.language || "en").split("-")[0] as SupportedLanguage;
+
+const getLocalizedValue = (value: unknown, fallback = ""): string => {
+  if (typeof value === "string") return value;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return fallback;
+
+  const lang = currentLang();
+  const map = value as Partial<Record<SupportedLanguage, string>>;
+  return map[lang] || map.en || fallback;
+};
+
+const sanitizeLocalizedLabel = (value: unknown): Partial<Record<SupportedLanguage, string>> => {
+  if (typeof value === "string") {
+    return { en: value };
+  }
+
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { en: "" };
+  }
+
+  const next: Partial<Record<SupportedLanguage, string>> = {};
+  for (const lang of SUPPORTED_LANGUAGES) {
+    const raw = (value as Record<string, unknown>)[lang];
+    if (typeof raw === "string") next[lang] = raw;
+  }
+
+  if (!next.en) next.en = "";
+  return next;
+};
+
 const isNavItem = (value: unknown): value is NavItem => {
   if (!value || typeof value !== "object") return false;
 
   const item = value as Record<string, unknown>;
-  return typeof item.label === "string" && typeof item.to === "string";
+  return "label" in item && typeof item.to === "string";
 };
 
 const normalizePath = (value?: string | null) => {
@@ -56,7 +91,7 @@ const asNavItems = (value: unknown): NavItem[] => {
   if (!Array.isArray(value)) return [];
 
   return value.filter(isNavItem).map((item) => ({
-    label: item.label,
+    label: typeof item.label === "string" || (item.label && typeof item.label === "object") ? item.label : "",
     to: normalizePath(item.to),
     source: item.source === "site_page" ? "site_page" : "manual",
     pageId: item.pageId,
@@ -65,22 +100,78 @@ const asNavItems = (value: unknown): NavItem[] => {
   }));
 };
 
+const makeLabel = (en: string, da = en, de = en, es = en, ro = en): Partial<Record<SupportedLanguage, string>> => ({
+  en,
+  da,
+  de,
+  es,
+  ro,
+});
+
 const defaultHeaderNav: NavEditorItem[] = [
-  { label: "Home", to: "/", source: "manual", openInNewTab: false, visible: true },
-  { label: "Products", to: "/products", source: "manual", openInNewTab: false, visible: true },
-  { label: "Create Your Own", to: "/create", source: "manual", openInNewTab: false, visible: true },
-  { label: "About", to: "/about", source: "manual", openInNewTab: false, visible: true },
+  {
+    label: makeLabel("Home", "Hjem", "Startseite", "Inicio", "Acasă"),
+    to: "/",
+    source: "manual",
+    openInNewTab: false,
+    visible: true,
+  },
+  {
+    label: makeLabel("Products", "Produkter", "Produkte", "Productos", "Produse"),
+    to: "/products",
+    source: "manual",
+    openInNewTab: false,
+    visible: true,
+  },
+  {
+    label: makeLabel("Create Your Own", "Skab Din Egen", "Erstelle Dein Eigenes", "Crea el Tuyo", "Creează Al Tău"),
+    to: "/create",
+    source: "manual",
+    openInNewTab: false,
+    visible: true,
+  },
+  {
+    label: makeLabel("About", "Om Os", "Über Uns", "Acerca de", "Despre"),
+    to: "/about",
+    source: "manual",
+    openInNewTab: false,
+    visible: true,
+  },
 ];
 
 const defaultFooterNav: NavEditorItem[] = [
-  { label: "Home", to: "/", source: "manual", openInNewTab: false, visible: true },
-  { label: "Products", to: "/products", source: "manual", openInNewTab: false, visible: true },
-  { label: "About", to: "/about", source: "manual", openInNewTab: false, visible: true },
-  { label: "Contact", to: "/contact", source: "manual", openInNewTab: false, visible: true },
+  {
+    label: makeLabel("Home", "Hjem", "Startseite", "Inicio", "Acasă"),
+    to: "/",
+    source: "manual",
+    openInNewTab: false,
+    visible: true,
+  },
+  {
+    label: makeLabel("Products", "Produkter", "Produkte", "Productos", "Produse"),
+    to: "/products",
+    source: "manual",
+    openInNewTab: false,
+    visible: true,
+  },
+  {
+    label: makeLabel("About", "Om Os", "Über Uns", "Acerca de", "Despre"),
+    to: "/about",
+    source: "manual",
+    openInNewTab: false,
+    visible: true,
+  },
+  {
+    label: makeLabel("Contact", "Kontakt", "Kontakt", "Contacto", "Contact"),
+    to: "/contact",
+    source: "manual",
+    openInNewTab: false,
+    visible: true,
+  },
 ];
 
 const toEditorItem = (item: NavItem): NavEditorItem => ({
-  label: item.label || "Untitled",
+  label: sanitizeLocalizedLabel(item.label),
   to: normalizePath(item.to || "/"),
   source: item.source === "site_page" ? "site_page" : "manual",
   pageId: item.pageId,
@@ -88,15 +179,18 @@ const toEditorItem = (item: NavItem): NavEditorItem => ({
   visible: item.visible !== false,
 });
 
-const buildPageLabel = (page: SitePageOption, allPages: SitePageOption[]) => {
+const buildPageLabelMap = (
+  page: SitePageOption,
+  allPages: SitePageOption[],
+): Partial<Record<SupportedLanguage, string>> => {
   const own = page.title || page.name || page.slug;
-  if (!page.parent_id) return own;
+  if (!page.parent_id) return { en: own };
 
   const parent = allPages.find((item) => item.id === page.parent_id);
-  if (!parent) return own;
+  if (!parent) return { en: own };
 
   const parentLabel = parent.title || parent.name || parent.slug;
-  return `${parentLabel} / ${own}`;
+  return { en: `${parentLabel} / ${own}` };
 };
 
 function useStoredNavLinks(key: "nav_links" | "footer_nav_links", fallback: NavEditorItem[]) {
@@ -136,6 +230,7 @@ const NavLinkEditor = () => {
   const [links, setLinks] = useState<NavEditorItem[]>(defaultHeaderNav);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [sitePages, setSitePages] = useState<SitePageOption[]>([]);
+  const [editingLanguage, setEditingLanguage] = useState<SupportedLanguage>(currentLang());
   const { toast } = useToast();
 
   const storageKey = mode === "header" ? "nav_links" : "footer_nav_links";
@@ -171,15 +266,16 @@ const NavLinkEditor = () => {
         .filter((page) => page.page_type !== "global" && page.is_published)
         .map((page) => ({
           ...page,
-          displayLabel: buildPageLabel(page, sitePages),
+          displayLabelMap: buildPageLabelMap(page, sitePages),
+          displayLabel: getLocalizedValue(buildPageLabelMap(page, sitePages), page.title || page.name || page.slug),
           path: normalizePath(page.full_path),
         })),
-    [sitePages],
+    [sitePages, editingLanguage],
   );
 
   const save = async () => {
     const payload: NavItem[] = links.map((item) => ({
-      label: item.label.trim() || "Untitled",
+      label: sanitizeLocalizedLabel(item.label),
       to: normalizePath(item.to),
       source: item.source,
       pageId: item.pageId,
@@ -203,7 +299,7 @@ const NavLinkEditor = () => {
     setLinks((prev) => [
       ...prev,
       {
-        label: "New Page",
+        label: { en: "New Page" },
         to: "/new-page",
         source: "manual",
         openInNewTab: false,
@@ -224,7 +320,7 @@ const NavLinkEditor = () => {
     setLinks((prev) => [
       ...prev,
       {
-        label: firstAvailable.displayLabel,
+        label: firstAvailable.displayLabelMap,
         to: firstAvailable.path,
         source: "site_page",
         pageId: firstAvailable.id,
@@ -239,7 +335,18 @@ const NavLinkEditor = () => {
   const updateLink = (i: number, field: keyof NavEditorItem, value: string | boolean) => {
     setLinks((prev) => {
       const updated = [...prev];
-      updated[i] = { ...updated[i], [field]: value };
+      if (field === "label" && typeof value === "string") {
+        updated[i] = {
+          ...updated[i],
+          label: {
+            ...updated[i].label,
+            [editingLanguage]: value,
+            ...(editingLanguage !== "en" && !updated[i].label.en ? { en: value } : {}),
+          },
+        };
+      } else {
+        updated[i] = { ...updated[i], [field]: value };
+      }
       return updated;
     });
   };
@@ -254,7 +361,7 @@ const NavLinkEditor = () => {
         ...updated[i],
         source: "site_page",
         pageId: page.id,
-        label: page.displayLabel,
+        label: page.displayLabelMap,
         to: page.path,
       };
       return updated;
@@ -305,9 +412,25 @@ const NavLinkEditor = () => {
             </Select>
           </div>
 
+          <div>
+            <Label className="text-xs">Editing label language</Label>
+            <Select value={editingLanguage} onValueChange={(value: SupportedLanguage) => setEditingLanguage(value)}>
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <SelectItem key={lang} value={lang}>
+                    {lang.toUpperCase()} — {LANGUAGE_LABELS[lang]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
-            This editor is the source of truth for visible navigation order. Pages from Page Settings can be added
-            manually below, but they will not appear automatically.
+            This editor is the source of truth for visible navigation order. Labels are now stored per language. If a
+            translation is missing, English is used as fallback.
           </div>
 
           {links.map((link, i) => (
@@ -355,9 +478,9 @@ const NavLinkEditor = () => {
                   )}
 
                   <Input
-                    value={link.label}
+                    value={link.label[editingLanguage] || (editingLanguage !== "en" ? link.label.en || "" : "")}
                     onChange={(e) => updateLink(i, "label", e.target.value)}
-                    placeholder="Label"
+                    placeholder={`Label (${editingLanguage.toUpperCase()})`}
                     className="h-8 text-xs"
                   />
 
@@ -368,6 +491,10 @@ const NavLinkEditor = () => {
                     className="h-8 text-xs"
                     disabled={link.source === "site_page"}
                   />
+
+                  <div className="rounded-md border border-border bg-muted/20 px-2 py-1 text-[11px] text-muted-foreground">
+                    Preview: {getLocalizedValue(link.label, "Untitled")}
+                  </div>
 
                   <div className="flex items-center justify-between gap-2">
                     <label className="flex items-center gap-2 text-xs">

@@ -51,10 +51,9 @@ const Products = () => {
         <div className="container space-y-8">
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-3">
             <div className="space-y-2">
-              <h1 className="font-display text-4xl font-bold uppercase text-foreground">Products</h1>
+              <h1 className="font-display text-4xl font-bold uppercase text-foreground">{t("products.title")}</h1>
               <p className="max-w-2xl text-balance text-muted-foreground">
-                Print-ready models, accessories, and premium maker gear, now with clearer trust signals and smoother
-                browsing.
+                {t("products.subtitle")}
               </p>
             </div>
           </motion.div>

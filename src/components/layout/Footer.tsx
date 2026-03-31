@@ -93,6 +93,7 @@ const isValidUrl = (value?: string | null) => {
 };
 
 const Footer = () => {
+  const { t } = useTranslation();
   const [contact, setContact] = useState<ContactSettings>(defaultContact);
   const [branding, setBranding] = useState<BrandingSettings>({
     logo_text_left: "Layer",

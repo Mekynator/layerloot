@@ -349,7 +349,7 @@ const Footer = () => {
           <div className="mt-8 border-t border-border pt-6 text-center text-xs text-muted-foreground">
             © {new Date().getFullYear()} {branding.logo_text_left || "Layer"}
             {branding.logo_text_right || "Loot"}.{" "}
-            {footerSettings.copyright_text || defaultFooterSettings.copyright_text}
+            {footerSettings.copyright_text || t("footer.allRightsReserved")}
           </div>
         </div>
       </motion.footer>

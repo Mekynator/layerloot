@@ -1,0 +1,40 @@
+{
+  "nav": {
+    "home": "Hjem",
+    "products": "Produkter",
+    "about": "Om os",
+    "contact": "Kontakt",
+    "gallery": "Galleri",
+    "cart": "Kurv",
+    "account": "Min konto",
+    "login": "Log ind / Registrer",
+    "admin": "Admin panel",
+    "signOut": "Log ud"
+  },
+  "language": {
+    "label": "Sprog",
+    "select": "Vælg sprog"
+  },
+  "account": {
+    "settings": "Indstillinger",
+    "shippingAddress": "Standard leveringsadresse",
+    "shippingHint": "Denne adresse udfyldes automatisk ved betaling.",
+    "fullName": "Fulde navn",
+    "street": "Gadenavn",
+    "city": "By",
+    "zip": "Postnummer",
+    "country": "Land",
+    "saveAddress": "Gem adresse",
+    "saving": "Gemmer...",
+    "addressSaved": "Adresse gemt!",
+    "languagePreference": "Sprogpræference",
+    "languageHint": "Vælg dit foretrukne sprog til hjemmesiden.",
+    "languageSaved": "Sprog gemt!"
+  },
+  "common": {
+    "loading": "Indlæser...",
+    "error": "Fejl",
+    "save": "Gem",
+    "cancel": "Annuller"
+  }
+}

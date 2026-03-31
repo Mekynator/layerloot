@@ -1,0 +1,40 @@
+{
+  "nav": {
+    "home": "Home",
+    "products": "Products",
+    "about": "About",
+    "contact": "Contact",
+    "gallery": "Gallery",
+    "cart": "Cart",
+    "account": "My Account",
+    "login": "Login / Register",
+    "admin": "Admin Dashboard",
+    "signOut": "Sign Out"
+  },
+  "language": {
+    "label": "Language",
+    "select": "Select language"
+  },
+  "account": {
+    "settings": "Settings",
+    "shippingAddress": "Default Shipping Address",
+    "shippingHint": "This address will be auto-filled at checkout.",
+    "fullName": "Full Name",
+    "street": "Street Address",
+    "city": "City",
+    "zip": "Zip Code",
+    "country": "Country",
+    "saveAddress": "Save Address",
+    "saving": "Saving...",
+    "addressSaved": "Address saved!",
+    "languagePreference": "Language Preference",
+    "languageHint": "Choose your preferred language for the website.",
+    "languageSaved": "Language saved!"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "save": "Save",
+    "cancel": "Cancel"
+  }
+}

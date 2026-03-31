@@ -80,14 +80,14 @@ const ImageCollectionBlock = ({ content, className }: { content?: ImageCollectio
     <>
       <img
         src={item.image}
-        alt={getLocalizedValue(item.title, tr("blocks.imageCollection.alt", "Gallery image"))}
+        alt={getLocalizedValue(tr(item.title), tr("blocks.imageCollection.alt", "Gallery image"))}
         className="h-full w-full rounded-2xl transition-transform duration-300 group-hover:scale-[1.02]"
         style={{ objectFit: item.objectFit || "cover" }}
       />
-      {(item.title || item.subtitle) && (
+      {(tr(item.title) || item.subtitle) && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-2xl bg-gradient-to-t from-black/70 to-transparent p-4 text-white">
-          {item.title && (
-            <p className="text-sm font-semibold uppercase tracking-wide">{getLocalizedValue(item.title)}</p>
+          {tr(item.title) && (
+            <p className="text-sm font-semibold uppercase tracking-wide">{getLocalizedValue(tr(item.title))}</p>
           )}
           {item.subtitle && <p className="mt-1 text-xs text-white/80">{getLocalizedValue(item.subtitle)}</p>}
         </div>
@@ -335,7 +335,7 @@ const sectionStyle = (content: any): CSSProperties => ({
 });
 
 const sectionProps = (block: SiteBlock, defaults: string) => {
-  const c = block.content || {};
+  const c = tr(block.content) || {};
   return {
     className: `${defaults} ${c?.customClassName || c?.className || ""}`.trim(),
     style: sectionStyle(c),
@@ -430,7 +430,7 @@ const ActionButton = ({
 };
 
 const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNode) => {
-  const c = block.content || {};
+  const c = tr(block.content) || {};
   const props = sectionProps(block, defaultClasses);
   const action = resolveSectionAction(c);
   const clickable = applySectionAction(action);
@@ -445,7 +445,7 @@ const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNo
       className={`${props.className} ${clickable.className}`.trim()}
       onClick={clickable.onClick}
       data-editor-block-id={block.id}
-      data-editor-block-type={block.title || block.block_type}
+      data-editor-block-type={tr(block.title) || block.block_type}
     >
       {children}
     </motion.section>
@@ -453,7 +453,7 @@ const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNo
 };
 
 export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
-  const c = block.content || {};
+  const c = tr(block.content) || {};
   if (block.is_active === false || c.visibility === false) return null;
 
   switch (block.block_type) {
@@ -545,7 +545,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
       return (
         <div
           data-editor-block-id={block.id}
-          data-editor-block-type={block.title || block.block_type}
+          data-editor-block-type={tr(block.title) || block.block_type}
           style={{ height: `${c.height || 40}px` }}
         />
       );
@@ -589,7 +589,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
       return (
         <div
           data-editor-block-id={block.id}
-          data-editor-block-type={block.title || block.block_type}
+          data-editor-block-type={tr(block.title) || block.block_type}
           className="py-8 text-center text-muted-foreground"
         >
           {tr("blocks.unknown", "Unknown block")}: {block.block_type}
@@ -599,7 +599,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
 };
 
 const HeroBlock = ({ block }: { block: SiteBlock }) => {
-  const c = block.content || {};
+  const c = tr(block.content) || {};
   const buttons = resolveButtons(c, [
     {
       text: getLocalizedValue(c.button_text, tr("blocks.hero.buttonPrimary", "Shop Now")),
@@ -712,7 +712,7 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
 };
 
 const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boolean }) => {
-  const c = block.content || {};
+  const c = tr(block.content) || {};
   const cards = c.cards || [
     {
       icon: "ShoppingBag",
@@ -836,7 +836,7 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
 
 const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) => {
   const [categories, setCategories] = useState<any[]>([]);
-  const c = block.content || {};
+  const c = tr(block.content) || {};
 
   useEffect(() => {
     supabase
@@ -922,7 +922,7 @@ const FeaturedProductsBlock = ({
   block: SiteBlock;
   disableAnimations?: boolean;
 }) => {
-  const c = block.content || {};
+  const c = tr(block.content) || {};
   const { data: products = [], isLoading } = useFeaturedProducts(c.limit || 8);
   const align = c.alignment || "left";
   const headingAlignClass = alignmentClass(align);
@@ -993,7 +993,7 @@ const FeaturedProductsBlock = ({
 };
 
 const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) => {
-  const c = block.content || {};
+  const c = tr(block.content) || {};
   const steps = c.steps || [
     {
       icon: "ShoppingBag",
@@ -1108,7 +1108,7 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
 };
 
 const FaqBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) => {
-  const c = block.content || {};
+  const c = tr(block.content) || {};
   const items = (
     c.items || [
       {
@@ -1158,7 +1158,7 @@ const FaqBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) 
 };
 
 const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) => {
-  const c = block.content || {};
+  const c = tr(block.content) || {};
   const badges = c.badges || [
     {
       icon: "Truck",
@@ -1268,10 +1268,10 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
 
 const CarouselBlock = ({ block }: { block: SiteBlock }) => {
   const [current, setCurrent] = useState(0);
-  const slides = Array.isArray(block.content?.slides)
-    ? block.content.slides.filter((slide: any) => slide?.visible !== false && slide?.image)
+  const slides = Array.isArray(tr(block.content)t?.slides)
+    ? tr(block.content).slides.filter((slide: any) => slide?.visible !== false && slide?.image)
     : [];
-  const legacyImages: string[] = Array.isArray(block.content?.images) ? block.content.images : [];
+  const legacyImages: string[] = Array.isArray(tr(block.content)?.images) ? tr(block.content).images : [];
   const hasSlides = slides.length > 0;
   const imageCount = hasSlides ? slides.length : legacyImages.length;
 
@@ -1334,9 +1334,9 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
     block,
     "py-16",
     <div className="container">
-      {(block.title || block.content?.heading) && (
+      {(tr(block.title) || tr(block.content)?.heading) && (
         <h2 className="mb-8 text-center font-display text-3xl font-bold uppercase text-foreground">
-          {getLocalizedValue(block.content?.heading || block.title, "")}
+          {getLocalizedValue(tr(block.content)?.heading || tr(block.title), "")}
         </h2>
       )}
 
@@ -1393,7 +1393,7 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
 };
 
 const VideoBlock = ({ block }: { block: SiteBlock }) => {
-  const url = block.content?.video_url;
+  const url = tr(block.content)?.video_url;
   if (!url) return null;
 
   const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
@@ -1405,9 +1405,9 @@ const VideoBlock = ({ block }: { block: SiteBlock }) => {
     block,
     "bg-secondary py-16 lg:py-24",
     <div className="container max-w-4xl">
-      {block.title && (
+      {tr(block.title) && (
         <h2 className="mb-8 text-center font-display text-3xl font-bold uppercase text-secondary-foreground">
-          {getLocalizedValue(block.title)}
+          {getLocalizedValue(tr(block.title))}
         </h2>
       )}
 
@@ -1439,15 +1439,15 @@ const VideoBlock = ({ block }: { block: SiteBlock }) => {
         )}
       </motion.div>
 
-      {block.content?.caption && (
-        <p className="mt-4 text-center text-muted-foreground">{getLocalizedValue(block.content.caption)}</p>
+      {tr(block.content)?.caption && (
+        <p className="mt-4 text-center text-muted-foreground">{getLocalizedValue(tr(block.content).caption)}</p>
       )}
     </div>,
   );
 };
 
 const CtaBlock = ({ block }: { block: SiteBlock }) => {
-  const c = block.content || {};
+  const c = tr(block.content) || {};
   const align = c.alignment || "center";
   const buttons = resolveButtons(c, [
     {
@@ -1480,7 +1480,7 @@ const CtaBlock = ({ block }: { block: SiteBlock }) => {
 };
 
 const SingleButtonBlock = ({ block }: { block: SiteBlock }) => {
-  const c = block.content || {};
+  const c = tr(block.content) || {};
   const buttons = resolveButtons(c, [
     {
       text: getLocalizedValue(c.button_text, tr("blocks.button.default", "Click Me")),
@@ -1508,7 +1508,7 @@ const SingleButtonBlock = ({ block }: { block: SiteBlock }) => {
 const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
-  const c = block.content || {};
+  const c = tr(block.content) || {};
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -1566,7 +1566,7 @@ const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
 };
 
 const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
-  const c = block.content || {};
+  const c = tr(block.content) || {};
   const [items, setItems] = useState<InstagramMediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState(0);

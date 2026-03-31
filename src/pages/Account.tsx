@@ -1657,6 +1657,39 @@ const Account = () => {
                   {savingAddress ? "Saving..." : "Save Address"}
                 </Button>
               </div>
+
+              <div className="border-t border-border pt-6">
+                <h3 className="mb-4 font-display text-lg font-bold uppercase text-foreground">
+                  <Globe className="mr-2 inline h-5 w-5" />
+                  {t("account.languagePreference")}
+                </h3>
+                <p className="mb-4 text-sm text-muted-foreground">{t("account.languageHint")}</p>
+                <Select
+                  value={(i18n.language?.split("-")[0] || "en") as SupportedLanguage}
+                  onValueChange={async (lang: SupportedLanguage) => {
+                    await i18n.changeLanguage(lang);
+                    localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
+                    if (user) {
+                      await supabase
+                        .from("profiles")
+                        .update({ language: lang } as any)
+                        .eq("user_id", user.id);
+                    }
+                    toast({ title: t("account.languageSaved") });
+                  }}
+                >
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SUPPORTED_LANGUAGES.map((lang) => (
+                      <SelectItem key={lang} value={lang}>
+                        {lang.toUpperCase()} — {LANGUAGE_LABELS[lang]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </CardContent>
           </Card>
         )}

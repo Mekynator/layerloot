@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import GlobalSectionRenderer from "@/components/layout/GlobalSectionRenderer";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useTranslation } from "react-i18next";
+import i18n from "@/lib/i18n";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,11 +23,11 @@ import {
 type BrandingSettings = {
   brand_name?: string;
   brand_accent?: string;
-  logo_text_left?: string;
-  logo_text_right?: string;
+  logo_text_left?: string | Record<string, string>;
+  logo_text_right?: string | Record<string, string>;
   logo_image_url?: string;
   logo_link?: string;
-  logo_alt?: string;
+  logo_alt?: string | Record<string, string>;
 };
 
 type HeaderSettings = {
@@ -40,12 +41,12 @@ type HeaderSettings = {
   mobile_nav_enabled?: boolean;
   logo_height_px?: number;
   logo_text_class?: string;
-  account_label?: string;
-  auth_label?: string;
-  admin_label?: string;
-  sign_out_label?: string;
-  mobile_account_label?: string;
-  mobile_admin_label?: string;
+  account_label?: string | Record<string, string>;
+  auth_label?: string | Record<string, string>;
+  admin_label?: string | Record<string, string>;
+  sign_out_label?: string | Record<string, string>;
+  mobile_account_label?: string | Record<string, string>;
+  mobile_admin_label?: string | Record<string, string>;
 };
 
 type SeenState = {
@@ -92,6 +93,16 @@ const defaultHeaderSettings: HeaderSettings = {
 };
 
 const getNotificationsStorageKey = (userId: string) => `layerloot_account_notifications_${userId}`;
+
+const getLocalizedValue = (value: unknown, fallback = ""): string => {
+  if (typeof value === "string") return value;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return fallback;
+
+  const lang = (i18n.resolvedLanguage || i18n.language || "en").toLowerCase().split("-")[0];
+  const map = value as Record<string, string>;
+
+  return map[lang] || map.en || fallback;
+};
 
 const readSeenState = (userId: string): SeenState => {
   try {
@@ -292,7 +303,9 @@ const Header = () => {
       setCartGlow(true);
       setCartToast({
         visible: true,
-        text: detail?.name ? `${detail.name} added to cart` : "Added to cart",
+        text: detail?.name
+          ? t("header.addedToCartNamed", { name: detail.name, defaultValue: `${detail.name} added to cart` })
+          : t("header.addedToCart", "Added to cart"),
       });
 
       window.setTimeout(() => setCartPulse(false), 550);
@@ -322,12 +335,12 @@ const Header = () => {
     return () => {
       window.removeEventListener("layerloot:add-to-cart", handleAddToCartEvent as EventListener);
     };
-  }, []);
+  }, [t]);
 
-  const logoLeft = branding.logo_text_left || "Layer";
-  const logoRight = branding.logo_text_right || branding.brand_accent || "Loot";
+  const logoLeft = getLocalizedValue(branding.logo_text_left, "Layer");
+  const logoRight = getLocalizedValue(branding.logo_text_right, branding.brand_accent || "Loot");
   const logoLink = branding.logo_link || "/";
-  const logoAlt = branding.logo_alt || branding.brand_name || "Logo";
+  const logoAlt = getLocalizedValue(branding.logo_alt, branding.brand_name || "Logo");
   const logoHeight = Math.max(20, Number(headerSettings.logo_height_px || 36));
 
   const desktopLinks = useMemo(
@@ -337,8 +350,9 @@ const Header = () => {
         .map((link) => ({
           ...link,
           to: normalizePath(link.to),
+          localizedLabel: getLocalizedValue(link.label, typeof link.label === "string" ? link.label : ""),
         })),
-    [navLinks],
+    [navLinks, i18n.resolvedLanguage, i18n.language],
   );
 
   const cartDestinationRect = cartButtonRef.current?.getBoundingClientRect();
@@ -410,13 +424,13 @@ const Header = () => {
             <nav className="hidden items-center gap-8 md:flex">
               {desktopLinks.map((link) => (
                 <Link
-                  key={`${link.label}-${link.to}`}
+                  key={`${link.to}-${link.localizedLabel}`}
                   to={link.to}
                   className={`font-display text-sm uppercase tracking-widest transition-colors hover:text-primary ${
                     isActiveLink(location.pathname, link.to) ? "text-primary" : "text-secondary-foreground"
                   }`}
                 >
-                  {link.label}
+                  {link.localizedLabel}
                 </Link>
               ))}
             </nav>
@@ -447,6 +461,7 @@ const Header = () => {
                       className={`relative text-secondary-foreground transition-all hover:text-foreground ${
                         cartGlow ? "shadow-[0_0_28px_hsl(var(--primary)/0.35)]" : ""
                       }`}
+                      aria-label={t("nav.cart", "Cart")}
                     >
                       <ShoppingCart className="h-5 w-5" />
                       {totalItems > 0 && (
@@ -486,6 +501,7 @@ const Header = () => {
                   variant="ghost"
                   size="icon"
                   className="relative text-secondary-foreground hover:text-foreground"
+                  aria-label={getLocalizedValue(headerSettings.admin_label, t("nav.admin", "Admin"))}
                 >
                   <Shield className="h-5 w-5" />
                   {adminAlerts > 0 && <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500" />}
@@ -502,6 +518,7 @@ const Header = () => {
                         variant="ghost"
                         size="icon"
                         className="relative text-secondary-foreground hover:text-primary"
+                        aria-label={getLocalizedValue(headerSettings.account_label, t("nav.account", "My Account"))}
                       >
                         <User className="h-5 w-5" />
                         {hasAccountNotifications && (
@@ -512,27 +529,32 @@ const Header = () => {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem asChild>
                         <Link to="/account" className="cursor-pointer">
-                          {headerSettings.account_label || t("nav.account")}
+                          {getLocalizedValue(headerSettings.account_label, t("nav.account", "My Account"))}
                         </Link>
                       </DropdownMenuItem>
                       {isAdmin && (
                         <DropdownMenuItem asChild>
                           <Link to="/admin" className="cursor-pointer">
                             <Shield className="mr-2 h-4 w-4" />{" "}
-                            {headerSettings.admin_label || t("nav.admin")}
+                            {getLocalizedValue(headerSettings.admin_label, t("nav.admin", "Admin"))}
                           </Link>
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={signOut} className="cursor-pointer">
                         <LogOut className="mr-2 h-4 w-4" />{" "}
-                        {headerSettings.sign_out_label || t("nav.signOut")}
+                        {getLocalizedValue(headerSettings.sign_out_label, t("nav.signOut", "Sign Out"))}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : (
                   <Link to="/auth">
-                    <Button variant="ghost" size="icon" className="text-secondary-foreground hover:text-primary">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-secondary-foreground hover:text-primary"
+                      aria-label={getLocalizedValue(headerSettings.auth_label, t("nav.login", "Login / Register"))}
+                    >
                       <User className="h-5 w-5" />
                     </Button>
                   </Link>
@@ -546,6 +568,7 @@ const Header = () => {
                 size="icon"
                 className="text-secondary-foreground hover:text-primary md:hidden"
                 onClick={() => setMobileOpen((v) => !v)}
+                aria-label={mobileOpen ? t("nav.closeMenu", "Close menu") : t("nav.openMenu", "Open menu")}
               >
                 {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </Button>
@@ -557,13 +580,13 @@ const Header = () => {
           <nav className="border-t border-border bg-secondary px-4 pb-4 md:hidden">
             {desktopLinks.map((link) => (
               <Link
-                key={`${link.label}-${link.to}`}
+                key={`${link.to}-${link.localizedLabel}-mobile`}
                 to={link.to}
                 className={`block py-3 font-display text-sm uppercase tracking-widest transition-colors hover:text-primary ${
                   isActiveLink(location.pathname, link.to) ? "text-primary" : "text-secondary-foreground"
                 }`}
               >
-                {link.label}
+                {link.localizedLabel}
               </Link>
             ))}
 
@@ -573,9 +596,10 @@ const Header = () => {
                   to="/account"
                   className="block py-3 font-display text-sm uppercase tracking-widest text-secondary-foreground hover:text-primary"
                 >
-                  {headerSettings.mobile_account_label ||
-                    headerSettings.account_label ||
-                    t("nav.account")}
+                  {getLocalizedValue(
+                    headerSettings.mobile_account_label,
+                    getLocalizedValue(headerSettings.account_label, t("nav.account", "My Account")),
+                  )}
                 </Link>
 
                 {isAdmin && (
@@ -583,9 +607,10 @@ const Header = () => {
                     to="/admin"
                     className="block py-3 font-display text-sm uppercase tracking-widest text-secondary-foreground hover:text-primary"
                   >
-                    {headerSettings.mobile_admin_label ||
-                      headerSettings.admin_label ||
-                      t("nav.admin")}
+                    {getLocalizedValue(
+                      headerSettings.mobile_admin_label,
+                      getLocalizedValue(headerSettings.admin_label, t("nav.admin", "Admin")),
+                    )}
                   </Link>
                 )}
               </>
@@ -594,7 +619,7 @@ const Header = () => {
                 to="/auth"
                 className="block py-3 font-display text-sm uppercase tracking-widest text-secondary-foreground hover:text-primary"
               >
-                {headerSettings.auth_label || t("nav.login")}
+                {getLocalizedValue(headerSettings.auth_label, t("nav.login", "Login / Register"))}
               </Link>
             )}
           </nav>

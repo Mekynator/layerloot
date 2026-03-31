@@ -13,7 +13,6 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUP
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const FROM_EMAIL = Deno.env.get("GIFT_FROM_EMAIL") || Deno.env.get("FROM_EMAIL") || "LayerLoot <onboarding@resend.dev>";
 const SITE_URL = Deno.env.get("SITE_URL") || "http://localhost:5173";
-const recipientUserId = recipientLookup.user?.id ?? null;
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -55,7 +54,10 @@ async function resolveUserFromToken(token: string | null) {
 
     return { user: data.user, authError: null };
   } catch (error) {
-    return { user: null, authError: error instanceof Error ? error.message : "Unknown auth crash" };
+    return {
+      user: null,
+      authError: error instanceof Error ? error.message : "Unknown auth crash",
+    };
   }
 }
 
@@ -70,25 +72,31 @@ async function getVoucherWithDefinition(userVoucherId: string, userId: string) {
     .from("user_vouchers")
     .select(
       `
-  id,
-  code,
-  is_used,
-  balance,
-  recipient_email,
-  recipient_name,
-  gift_message,
-  gifted_at,
-  gift_status,
-  redeemed_at,
-  used_at,
-  voucher_id,
-  vouchers (
-    id,
-    name,
-    discount_type,
-    discount_value
-  )
-`,
+      id,
+      user_id,
+      code,
+      is_used,
+      balance,
+      recipient_email,
+      recipient_name,
+      recipient_user_id,
+      sender_user_id,
+      sender_name,
+      sender_email,
+      gift_message,
+      gifted_at,
+      claimed_at,
+      gift_status,
+      redeemed_at,
+      used_at,
+      voucher_id,
+      vouchers (
+        id,
+        name,
+        discount_type,
+        discount_value
+      )
+    `,
     )
     .eq("id", userVoucherId)
     .eq("user_id", userId)
@@ -133,8 +141,10 @@ async function createRecipientNotification(args: {
   senderName: string;
   voucherName: string;
   giftValue: number;
+  giftMessage?: string | null;
 }) {
-  const message = `${args.senderName} gifted you ${args.voucherName}${args.giftValue ? ` (${Number(args.giftValue).toFixed(0)} kr)` : ""}.`;
+  const valueText = args.giftValue ? ` (${Number(args.giftValue).toFixed(0)} kr)` : "";
+  const message = `${args.senderName} gifted you ${args.voucherName}${valueText}.`;
 
   const { error } = await serviceSupabase.from("user_gift_notifications").insert({
     user_id: args.recipientUserId,
@@ -144,6 +154,7 @@ async function createRecipientNotification(args: {
     user_voucher_id: args.userVoucherId,
     title: "You received a gift card",
     message,
+    gift_message: args.giftMessage || null,
     is_read: false,
     gift_status: "pending",
   });
@@ -179,7 +190,7 @@ async function sendResendEmail(args: {
           ? `<p><strong>Message:</strong><br/>${args.giftMessage.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`
           : ""
       }
-      <p>You can sign in to your account to view the voucher, or use the gift code at checkout if supported.</p>
+      <p>You can sign in to your account to view the voucher, or claim it inside the app.</p>
       <p><a href="${accountUrl}">Open my vouchers</a></p>
       <p>Enjoy,<br/>LayerLoot</p>
     </div>
@@ -249,6 +260,10 @@ serve(async (req) => {
       return jsonResponse({ error: "recipientEmail is invalid" }, 400);
     }
 
+    if ((user.email || "").trim().toLowerCase() === recipientEmail.trim().toLowerCase()) {
+      return jsonResponse({ error: "You cannot gift a voucher to yourself" }, 400);
+    }
+
     const { data: userVoucher, error: voucherError } = await getVoucherWithDefinition(userVoucherId, user.id);
 
     if (voucherError || !userVoucher) {
@@ -265,7 +280,13 @@ serve(async (req) => {
       return jsonResponse({ error: "This gift card is already used or has no balance left" }, 400);
     }
 
+    if (userVoucher.gift_status === "pending_claim") {
+      return jsonResponse({ error: "This gift card is already pending claim" }, 400);
+    }
+
     const senderName = await getSenderDisplayName(user.id, user.email);
+    const recipientLookup = await findUserByEmail(recipientEmail);
+    const recipientUserId = recipientLookup.user?.id ?? null;
 
     const updatePayload = {
       sender_user_id: user.id,
@@ -276,6 +297,7 @@ serve(async (req) => {
       recipient_user_id: recipientUserId,
       gift_message: giftMessage || null,
       gifted_at: new Date().toISOString(),
+      claimed_at: null,
       gift_status: "pending_claim",
     };
 
@@ -289,17 +311,17 @@ serve(async (req) => {
       return jsonResponse({ error: updateError.message }, 500);
     }
 
-    const recipientLookup = await findUserByEmail(recipientEmail);
     let notificationCreated = false;
 
-    if (recipientLookup.user?.id) {
+    if (recipientUserId) {
       const notificationError = await createRecipientNotification({
-        recipientUserId: recipientLookup.user.id,
+        recipientUserId,
         senderUserId: user.id,
         userVoucherId: userVoucher.id,
         senderName,
         voucherName: voucherDef.name,
         giftValue: Number(userVoucher.balance ?? voucherDef.discount_value ?? 0),
+        giftMessage,
       });
 
       if (!notificationError) {
@@ -323,8 +345,9 @@ serve(async (req) => {
       emailSent: emailResult.ok,
       emailSkipped: emailResult.skipped,
       emailError: emailResult.ok ? null : emailResult.error,
-      matchedExistingUser: !!recipientLookup.user?.id,
+      matchedExistingUser: !!recipientUserId,
       notificationCreated,
+      giftStatus: "pending_claim",
     });
   } catch (error) {
     console.error("send-gift-card crash:", error);

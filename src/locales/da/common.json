@@ -15,6 +15,73 @@
     "label": "Sprog",
     "select": "Vælg sprog"
   },
+  "auth": {
+    "welcomeBack": "Velkommen tilbage",
+    "createAccount": "Opret konto",
+    "signInSubtitle": "Log ind på din LayerLoot-konto",
+    "signUpSubtitle": "Bliv en del af maker-fællesskabet",
+    "fullName": "Fulde navn",
+    "email": "E-mail",
+    "password": "Adgangskode",
+    "pleaseWait": "Vent venligst...",
+    "signIn": "Log ind",
+    "signUp": "Registrer",
+    "noAccount": "Har du ikke en konto?",
+    "haveAccount": "Har du allerede en konto?",
+    "welcomeBackToast": "Velkommen tilbage!",
+    "accountCreated": "Konto oprettet!",
+    "checkEmail": "Tjek venligst din e-mail for at bekræfte din konto."
+  },
+  "contact": {
+    "title": "Kontakt os",
+    "subtitle": "Har du et spørgsmål eller en specialbestilling? Skriv til os.",
+    "yourName": "Dit navn",
+    "yourEmail": "Din e-mail",
+    "subject": "Emne",
+    "yourMessage": "Din besked...",
+    "sending": "Sender...",
+    "sendMessage": "Send besked",
+    "getInTouch": "Kom i kontakt",
+    "emailLabel": "E-mail",
+    "locationLabel": "Placering",
+    "followUs": "Følg os",
+    "messageSent": "Besked sendt!",
+    "messageSentDesc": "Vi vender tilbage til dig snart.",
+    "messageFailed": "Kunne ikke sende besked. Prøv igen."
+  },
+  "products": {
+    "title": "Produkter",
+    "subtitle": "Print-klare modeller, tilbehør og premium maker-udstyr med klarere tillidsignaler og glattere browsing.",
+    "searchPlaceholder": "Søg produkter...",
+    "allCategories": "Alle",
+    "noProducts": "Ingen produkter fundet.",
+    "noProductsHint": "Prøv at justere din søgning eller kategorifilter."
+  },
+  "cart": {
+    "title": "Din kurv",
+    "empty": "Din kurv er tom",
+    "emptyHint": "Udforsk vores kollektion og begynd at tilføje varer!",
+    "browseProducts": "Se produkter",
+    "continueShopping": "Fortsæt med at handle",
+    "checkout": "Gå til betaling",
+    "subtotal": "Subtotal",
+    "shipping": "Levering",
+    "freeShipping": "GRATIS",
+    "total": "I alt",
+    "remove": "Fjern",
+    "savedForLater": "Gemt til senere",
+    "moveToCart": "Flyt til kurv",
+    "qty": "Antal"
+  },
+  "footer": {
+    "quickLinks": "Hurtige links",
+    "account": "Konto",
+    "contact": "Kontakt",
+    "allRightsReserved": "Alle rettigheder forbeholdes.",
+    "loginRegister": "Log ind / Registrer",
+    "myAccount": "Min konto",
+    "orderHistory": "Ordrehistorik"
+  },
   "account": {
     "settings": "Indstillinger",
     "shippingAddress": "Standard leveringsadresse",
@@ -29,7 +96,11 @@
     "addressSaved": "Adresse gemt!",
     "languagePreference": "Sprogpræference",
     "languageHint": "Vælg dit foretrukne sprog til hjemmesiden.",
-    "languageSaved": "Sprog gemt!"
+    "languageSaved": "Sprog gemt!",
+    "orders": "Ordrer",
+    "customRequests": "Specialbestillinger",
+    "rewards": "Belønninger",
+    "vouchers": "Kuponer"
   },
   "common": {
     "loading": "Indlæser...",

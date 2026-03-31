@@ -15,6 +15,73 @@
     "label": "Language",
     "select": "Select language"
   },
+  "auth": {
+    "welcomeBack": "Welcome Back",
+    "createAccount": "Create Account",
+    "signInSubtitle": "Sign in to your LayerLoot account",
+    "signUpSubtitle": "Join the maker community",
+    "fullName": "Full Name",
+    "email": "Email",
+    "password": "Password",
+    "pleaseWait": "Please wait...",
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "noAccount": "Don't have an account?",
+    "haveAccount": "Already have an account?",
+    "welcomeBackToast": "Welcome back!",
+    "accountCreated": "Account created!",
+    "checkEmail": "Please check your email to verify your account."
+  },
+  "contact": {
+    "title": "Contact Us",
+    "subtitle": "Have a question or custom order request? Drop us a line.",
+    "yourName": "Your Name",
+    "yourEmail": "Your Email",
+    "subject": "Subject",
+    "yourMessage": "Your Message...",
+    "sending": "Sending...",
+    "sendMessage": "Send Message",
+    "getInTouch": "Get in Touch",
+    "emailLabel": "Email",
+    "locationLabel": "Location",
+    "followUs": "Follow Us",
+    "messageSent": "Message sent!",
+    "messageSentDesc": "We'll get back to you soon.",
+    "messageFailed": "Failed to send message. Try again."
+  },
+  "products": {
+    "title": "Products",
+    "subtitle": "Print-ready models, accessories, and premium maker gear, now with clearer trust signals and smoother browsing.",
+    "searchPlaceholder": "Search products...",
+    "allCategories": "All",
+    "noProducts": "No products found.",
+    "noProductsHint": "Try adjusting your search or category filter."
+  },
+  "cart": {
+    "title": "Your Cart",
+    "empty": "Your cart is empty",
+    "emptyHint": "Discover our collection and start adding items!",
+    "browseProducts": "Browse Products",
+    "continueShopping": "Continue Shopping",
+    "checkout": "Checkout",
+    "subtotal": "Subtotal",
+    "shipping": "Shipping",
+    "freeShipping": "FREE",
+    "total": "Total",
+    "remove": "Remove",
+    "savedForLater": "Saved for Later",
+    "moveToCart": "Move to Cart",
+    "qty": "Qty"
+  },
+  "footer": {
+    "quickLinks": "Quick Links",
+    "account": "Account",
+    "contact": "Contact",
+    "allRightsReserved": "All rights reserved.",
+    "loginRegister": "Login / Register",
+    "myAccount": "My Account",
+    "orderHistory": "Order History"
+  },
   "account": {
     "settings": "Settings",
     "shippingAddress": "Default Shipping Address",
@@ -29,7 +96,11 @@
     "addressSaved": "Address saved!",
     "languagePreference": "Language Preference",
     "languageHint": "Choose your preferred language for the website.",
-    "languageSaved": "Language saved!"
+    "languageSaved": "Language saved!",
+    "orders": "Orders",
+    "customRequests": "Custom Requests",
+    "rewards": "Rewards",
+    "vouchers": "Vouchers"
   },
   "common": {
     "loading": "Loading...",

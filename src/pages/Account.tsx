@@ -372,6 +372,7 @@ const Account = () => {
   const { user, isAdmin, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t, i18n } = useTranslation();
   const {
     data: overview,
     isLoading: overviewLoading,

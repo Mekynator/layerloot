@@ -519,7 +519,7 @@ const Header = () => {
                         <DropdownMenuItem asChild>
                           <Link to="/admin" className="cursor-pointer">
                             <Shield className="mr-2 h-4 w-4" />{" "}
-                            {headerSettings.admin_label || defaultHeaderSettings.admin_label}
+                            {headerSettings.admin_label || t("nav.admin")}
                           </Link>
                         </DropdownMenuItem>
                       )}

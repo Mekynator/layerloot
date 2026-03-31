@@ -21,6 +21,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const syncLanguage = async (userId: string) => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("language")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const profileLang = (data as any)?.language ?? null;
+    const localLang = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    const resolved = resolveLanguage(profileLang, localLang, navigator.language);
+    if (i18n.language !== resolved) {
+      await i18n.changeLanguage(resolved);
+    }
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, resolved);
+  };
+
   const checkAdminRole = async (authUser: User) => {
     const roleFromMetadata = authUser.app_metadata?.role;
     const rolesFromMetadata = authUser.app_metadata?.roles;

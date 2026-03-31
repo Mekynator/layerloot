@@ -13,6 +13,7 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUP
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const FROM_EMAIL = Deno.env.get("GIFT_FROM_EMAIL") || Deno.env.get("FROM_EMAIL") || "LayerLoot <onboarding@resend.dev>";
 const SITE_URL = Deno.env.get("SITE_URL") || "http://localhost:5173";
+const recipientUserId = recipientLookup.user?.id ?? null;
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -127,6 +128,7 @@ async function findUserByEmail(email: string) {
 
 async function createRecipientNotification(args: {
   recipientUserId: string;
+  senderUserId: string;
   userVoucherId: string;
   senderName: string;
   voucherName: string;
@@ -136,10 +138,14 @@ async function createRecipientNotification(args: {
 
   const { error } = await serviceSupabase.from("user_gift_notifications").insert({
     user_id: args.recipientUserId,
+    recipient_user_id: args.recipientUserId,
+    sender_user_id: args.senderUserId,
+    sender_name: args.senderName,
     user_voucher_id: args.userVoucherId,
     title: "You received a gift card",
     message,
     is_read: false,
+    gift_status: "pending",
   });
 
   return error;
@@ -262,11 +268,15 @@ serve(async (req) => {
     const senderName = await getSenderDisplayName(user.id, user.email);
 
     const updatePayload = {
+      sender_user_id: user.id,
+      sender_name: senderName,
+      sender_email: user.email ?? null,
       recipient_email: recipientEmail,
       recipient_name: recipientName || null,
+      recipient_user_id: recipientUserId,
       gift_message: giftMessage || null,
       gifted_at: new Date().toISOString(),
-      gift_status: "gifted",
+      gift_status: "pending_claim",
     };
 
     const { error: updateError } = await serviceSupabase
@@ -285,6 +295,7 @@ serve(async (req) => {
     if (recipientLookup.user?.id) {
       const notificationError = await createRecipientNotification({
         recipientUserId: recipientLookup.user.id,
+        senderUserId: user.id,
         userVoucherId: userVoucher.id,
         senderName,
         voucherName: voucherDef.name,

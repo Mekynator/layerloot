@@ -1,0 +1,40 @@
+{
+  "nav": {
+    "home": "Acasă",
+    "products": "Produse",
+    "about": "Despre noi",
+    "contact": "Contact",
+    "gallery": "Galerie",
+    "cart": "Coș",
+    "account": "Contul meu",
+    "login": "Autentificare / Înregistrare",
+    "admin": "Panou de administrare",
+    "signOut": "Deconectare"
+  },
+  "language": {
+    "label": "Limbă",
+    "select": "Selectează limba"
+  },
+  "account": {
+    "settings": "Setări",
+    "shippingAddress": "Adresă de livrare implicită",
+    "shippingHint": "Această adresă va fi completată automat la checkout.",
+    "fullName": "Nume complet",
+    "street": "Adresă stradă",
+    "city": "Oraș",
+    "zip": "Cod poștal",
+    "country": "Țară",
+    "saveAddress": "Salvează adresa",
+    "saving": "Se salvează...",
+    "addressSaved": "Adresa a fost salvată!",
+    "languagePreference": "Preferință de limbă",
+    "languageHint": "Alege limba preferată pentru site.",
+    "languageSaved": "Limba a fost salvată!"
+  },
+  "common": {
+    "loading": "Se încarcă...",
+    "error": "Eroare",
+    "save": "Salvează",
+    "cancel": "Anulează"
+  }
+}

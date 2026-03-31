@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavLinks } from "@/components/admin/NavLinkEditor";
 import { supabase } from "@/integrations/supabase/client";
 import GlobalSectionRenderer from "@/components/layout/GlobalSectionRenderer";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -474,6 +475,8 @@ const Header = () => {
                 </AnimatePresence>
               </div>
             )}
+
+            <LanguageSwitcher />
 
             {isAdmin && headerSettings.show_admin_icon && (
               <Link to="/admin">

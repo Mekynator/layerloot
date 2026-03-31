@@ -1,0 +1,40 @@
+{
+  "nav": {
+    "home": "Inicio",
+    "products": "Productos",
+    "about": "Acerca de",
+    "contact": "Contacto",
+    "gallery": "Galería",
+    "cart": "Carrito",
+    "account": "Mi cuenta",
+    "login": "Iniciar sesión / Registrarse",
+    "admin": "Panel de administración",
+    "signOut": "Cerrar sesión"
+  },
+  "language": {
+    "label": "Idioma",
+    "select": "Seleccionar idioma"
+  },
+  "account": {
+    "settings": "Configuración",
+    "shippingAddress": "Dirección de envío predeterminada",
+    "shippingHint": "Esta dirección se completará automáticamente en el pago.",
+    "fullName": "Nombre completo",
+    "street": "Dirección",
+    "city": "Ciudad",
+    "zip": "Código postal",
+    "country": "País",
+    "saveAddress": "Guardar dirección",
+    "saving": "Guardando...",
+    "addressSaved": "¡Dirección guardada!",
+    "languagePreference": "Preferencia de idioma",
+    "languageHint": "Elige tu idioma preferido para el sitio web.",
+    "languageSaved": "¡Idioma guardado!"
+  },
+  "common": {
+    "loading": "Cargando...",
+    "error": "Error",
+    "save": "Guardar",
+    "cancel": "Cancelar"
+  }
+}

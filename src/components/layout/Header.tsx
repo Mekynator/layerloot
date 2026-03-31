@@ -575,7 +575,7 @@ const Header = () => {
                 >
                   {headerSettings.mobile_account_label ||
                     headerSettings.account_label ||
-                    defaultHeaderSettings.mobile_account_label}
+                    t("nav.account")}
                 </Link>
 
                 {isAdmin && (

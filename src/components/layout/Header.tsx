@@ -170,6 +170,7 @@ const Header = () => {
   const { totalItems } = useCart();
   const { user, isAdmin, signOut } = useAuth();
   const navLinks = useNavLinks();
+  const { t } = useTranslation();
   const cartButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import ProductCard from "@/components/ProductCard";
 import { renderBlock } from "@/components/admin/BlockRenderer";
@@ -10,6 +11,7 @@ import { useStorefrontCatalog } from "@/hooks/use-storefront";
 import { fadeUp } from "@/lib/motion";
 
 const Products = () => {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeCategory = searchParams.get("category") || "all";
   const [search, setSearch] = useState("");

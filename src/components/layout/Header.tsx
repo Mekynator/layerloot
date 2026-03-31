@@ -512,7 +512,7 @@ const Header = () => {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem asChild>
                         <Link to="/account" className="cursor-pointer">
-                          {headerSettings.account_label || defaultHeaderSettings.account_label}
+                          {headerSettings.account_label || t("nav.account")}
                         </Link>
                       </DropdownMenuItem>
                       {isAdmin && (

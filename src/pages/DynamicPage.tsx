@@ -1,5 +1,6 @@
 import { useMemo, useEffect } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { renderBlock } from "@/components/admin/BlockRenderer";
 import { PageSkeleton } from "@/components/shared/loading-states";
 import NotFound from "./NotFound";
@@ -24,11 +25,8 @@ const getBlockLabel = (blockType: string, title?: string | null) => {
     .replace(/\b\w/g, (m) => m.toUpperCase());
 };
 
-const DynamicPage = ({
-  slug: slugProp,
-  emptyTitle = "Coming soon",
-  emptyDescription = "Content coming soon.",
-}: DynamicPageProps) => {
+const DynamicPage = ({ slug: slugProp, emptyTitle, emptyDescription }: DynamicPageProps) => {
+  const { t } = useTranslation("common");
   const params = useParams();
   const [searchParams] = useSearchParams();
   const slug = normalizePageSlug(slugProp ?? params.slug ?? "");
@@ -36,6 +34,9 @@ const DynamicPage = ({
   const { data: pageMeta, isLoading: pageLoading } = useSitePage(slug, Boolean(slug));
   const { data: blocks = [], isLoading: blocksLoading } = usePageBlocks(slug, Boolean(slug), isEditorPreview);
   const visibleBlocks = useMemo(() => blocks.filter((block) => block.is_active !== false), [blocks]);
+
+  const resolvedEmptyTitle = emptyTitle ?? t("dynamicPage.emptyTitle", "Coming soon");
+  const resolvedEmptyDescription = emptyDescription ?? t("dynamicPage.emptyDescription", "Content coming soon.");
 
   useEffect(() => {
     if (!isEditorPreview) return;
@@ -64,9 +65,9 @@ const DynamicPage = ({
     return (
       <div className="container py-20 text-center">
         <h1 className="font-display text-3xl font-bold uppercase text-foreground">
-          {pageMeta.title || pageMeta.name || emptyTitle}
+          {pageMeta.title || pageMeta.name || resolvedEmptyTitle}
         </h1>
-        <p className="mt-3 text-muted-foreground">{pageMeta.seo_description || emptyDescription}</p>
+        <p className="mt-3 text-muted-foreground">{pageMeta.seo_description || resolvedEmptyDescription}</p>
       </div>
     );
   }

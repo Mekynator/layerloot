@@ -37,19 +37,8 @@ import ToolReviewForm from "@/components/reviews/ToolReviewForm";
 import { payCustomOrder } from "@/lib/payCustomOrder";
 import { useAccountOverview } from "@/hooks/use-account-overview";
 import { AccountOverviewSkeleton, RewardsGridSkeleton, SectionCardSkeleton } from "@/components/shared/loading-states";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  SUPPORTED_LANGUAGES,
-  LANGUAGE_LABELS,
-  LANGUAGE_STORAGE_KEY,
-  type SupportedLanguage,
-} from "@/lib/i18n";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, LANGUAGE_STORAGE_KEY, type SupportedLanguage } from "@/lib/i18n";
 
 interface Order {
   id: string;
@@ -355,16 +344,16 @@ function groupVouchersByDefinition(vouchers: UserVoucher[]) {
   }));
 }
 
-function customTypeBadge(orderType: "custom-print" | "lithophane") {
+function customTypeBadge(orderType: "custom-print" | "lithophane", label: string, altLabel: string) {
   return orderType === "lithophane" ? (
     <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-700 text-xs uppercase">
       <LampDesk className="mr-1 h-3 w-3" />
-      Lithophane
+      {label}
     </Badge>
   ) : (
     <Badge variant="outline" className="border-sky-500/30 bg-sky-500/10 text-sky-700 text-xs uppercase">
       <Box className="mr-1 h-3 w-3" />
-      Custom 3D Print
+      {altLabel}
     </Badge>
   );
 }
@@ -374,6 +363,7 @@ const Account = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
+  const tt = (key: string, fallback: string) => t(key, { defaultValue: fallback });
   const {
     data: overview,
     isLoading: overviewLoading,
@@ -521,7 +511,7 @@ const Account = () => {
     if (!user) return;
 
     if (pointsBalance < reward.pointsCost) {
-      toast({ title: "Not enough points", variant: "destructive" });
+      toast({ title: tt("account.rewards.notEnoughPoints", "Not enough points"), variant: "destructive" });
       return;
     }
 
@@ -549,8 +539,8 @@ const Account = () => {
       if (createError || !newVoucher) {
         setRedeemingKey(null);
         toast({
-          title: "Error",
-          description: createError?.message || "Could not create voucher",
+          title: tt("common.error", "Error"),
+          description: createError?.message || tt("account.rewards.createVoucherError", "Could not create voucher"),
           variant: "destructive",
         });
         return;
@@ -569,7 +559,7 @@ const Account = () => {
 
     if (pointsError) {
       setRedeemingKey(null);
-      toast({ title: "Error", description: pointsError.message, variant: "destructive" });
+      toast({ title: tt("common.error", "Error"), description: pointsError.message, variant: "destructive" });
       return;
     }
 
@@ -582,18 +572,21 @@ const Account = () => {
 
     if (voucherError) {
       setRedeemingKey(null);
-      toast({ title: "Error", description: voucherError.message, variant: "destructive" });
+      toast({ title: tt("common.error", "Error"), description: voucherError.message, variant: "destructive" });
       return;
     }
 
     setRedeemingKey(null);
-    toast({ title: "Voucher redeemed", description: `Your code: ${code}` });
+    toast({
+      title: tt("account.vouchers.redeemed", "Voucher redeemed"),
+      description: `${tt("account.vouchers.code", "Your code")}: ${code}`,
+    });
     await refetchOverview();
   };
 
   const sendGiftCard = async (uvId: string) => {
     if (!giftEmail) {
-      toast({ title: "Enter recipient email", variant: "destructive" });
+      toast({ title: tt("account.vouchers.enterRecipientEmail", "Enter recipient email"), variant: "destructive" });
       return;
     }
 
@@ -616,20 +609,20 @@ const Account = () => {
     });
 
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: tt("common.error", "Error"), description: error.message, variant: "destructive" });
       return;
     }
 
     if (data?.error) {
-      toast({ title: "Error", description: data.error, variant: "destructive" });
+      toast({ title: tt("common.error", "Error"), description: data.error, variant: "destructive" });
       return;
     }
 
     toast({
-      title: "Gift card sent",
+      title: tt("account.vouchers.giftCardSent", "Gift card sent"),
       description: data?.matchedExistingUser
-        ? `Gift card sent to ${giftEmail}. The recipient also has an account notification.`
-        : `Gift card sent to ${giftEmail}.`,
+        ? `${tt("account.vouchers.giftCardSentTo", "Gift card sent to")} ${giftEmail}. ${tt("account.vouchers.recipientNotified", "The recipient also has an account notification.")}`
+        : `${tt("account.vouchers.giftCardSentTo", "Gift card sent to")} ${giftEmail}.`,
     });
 
     setGiftingVoucherId(null);
@@ -656,12 +649,12 @@ const Account = () => {
     setSendingReply(false);
 
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: tt("common.error", "Error"), description: error.message, variant: "destructive" });
       return;
     }
 
     setReplyMessage((prev) => ({ ...prev, [customOrderId]: "" }));
-    toast({ title: "Reply sent" });
+    toast({ title: tt("account.customRequests.replySent", "Reply sent") });
     await refetchOverview();
   };
 
@@ -683,7 +676,7 @@ const Account = () => {
       .eq("id", order.id);
 
     if (updateError) {
-      toast({ title: "Error", description: updateError.message, variant: "destructive" });
+      toast({ title: tt("common.error", "Error"), description: updateError.message, variant: "destructive" });
       return;
     }
 
@@ -692,8 +685,8 @@ const Account = () => {
       sender_role: "user",
       sender_user_id: user.id,
       message: accepted
-        ? `Customer accepted the quoted price of ${(order.quoted_price ?? 0).toFixed(2)} kr.`
-        : "Customer declined the current quote.",
+        ? `${tt("account.customRequests.customerAcceptedQuote", "Customer accepted the quoted price of")} ${(order.quoted_price ?? 0).toFixed(2)} kr.`
+        : tt("account.customRequests.customerDeclinedQuote", "Customer declined the current quote."),
       message_type: "status_update",
       proposed_price: accepted ? order.quoted_price : null,
     });
@@ -704,8 +697,10 @@ const Account = () => {
         await payCustomOrder(order.id);
       } catch (paymentError: any) {
         toast({
-          title: "Quote accepted, payment not started",
-          description: paymentError?.message || "Please click Pay Now to complete payment.",
+          title: tt("account.customRequests.quoteAcceptedPaymentNotStarted", "Quote accepted, payment not started"),
+          description:
+            paymentError?.message ||
+            tt("account.customRequests.clickPayNow", "Please click Pay Now to complete payment."),
           variant: "destructive",
         });
         await refetchOverview();
@@ -716,8 +711,8 @@ const Account = () => {
     }
 
     toast({
-      title: "Quote declined",
-      description: "The request has been marked as declined.",
+      title: tt("account.customRequests.quoteDeclined", "Quote declined"),
+      description: tt("account.customRequests.requestMarkedDeclined", "The request has been marked as declined."),
     });
 
     await refetchOverview();
@@ -748,7 +743,9 @@ const Account = () => {
     if (list.length === 0) {
       return (
         <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">No requests in this section.</CardContent>
+          <CardContent className="p-8 text-center text-muted-foreground">
+            {tt("account.customRequests.noneInSection", "No requests in this section.")}
+          </CardContent>
         </Card>
       );
     }
@@ -771,49 +768,68 @@ const Account = () => {
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-display text-lg font-semibold uppercase text-card-foreground">
-                        Custom Request #{order.id.slice(0, 8)}
+                        {tt("account.customRequests.request", "Custom Request")} #{order.id.slice(0, 8)}
                       </p>
                       {hasUnreadForThisOrder && <span className="h-2.5 w-2.5 rounded-full bg-destructive" />}
-                      {customTypeBadge(order.orderType)}
+                      {customTypeBadge(
+                        order.orderType,
+                        tt("account.customRequests.typeLithophane", "Lithophane"),
+                        tt("account.customRequests.typeCustomPrint", "Custom 3D Print"),
+                      )}
                       {customStatusBadge(order.status)}
                       {showFeeBadge && (
                         <Badge
                           variant="outline"
                           className="border-yellow-500/30 bg-yellow-500/10 text-yellow-600 text-xs uppercase"
                         >
-                          Fee Unpaid
+                          {tt("account.customRequests.feeUnpaid", "Fee Unpaid")}
                         </Badge>
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Submitted on {new Date(order.created_at).toLocaleString()}
+                      {tt("account.customRequests.submittedOn", "Submitted on")}{" "}
+                      {new Date(order.created_at).toLocaleString()}
                     </p>
 
                     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
                       <div className="text-sm">
-                        <span className="text-muted-foreground">Material:</span> {order.parsed.material}
+                        <span className="text-muted-foreground">
+                          {tt("account.customRequests.material", "Material")}:
+                        </span>{" "}
+                        {order.parsed.material}
                       </div>
                       <div className="text-sm">
-                        <span className="text-muted-foreground">Color:</span> {order.parsed.color}
+                        <span className="text-muted-foreground">{tt("account.customRequests.color", "Color")}:</span>{" "}
+                        {order.parsed.color}
                       </div>
                       <div className="text-sm">
-                        <span className="text-muted-foreground">Quality:</span> {order.parsed.quality}
+                        <span className="text-muted-foreground">
+                          {tt("account.customRequests.quality", "Quality")}:
+                        </span>{" "}
+                        {order.parsed.quality}
                       </div>
                       <div className="text-sm">
-                        <span className="text-muted-foreground">Qty:</span> {order.parsed.quantity}
+                        <span className="text-muted-foreground">{tt("account.customRequests.quantity", "Qty")}:</span>{" "}
+                        {order.parsed.quantity}
                       </div>
                       <div className="text-sm">
-                        <span className="text-muted-foreground">Scale:</span> {order.parsed.scale}
+                        <span className="text-muted-foreground">{tt("account.customRequests.scale", "Scale")}:</span>{" "}
+                        {order.parsed.scale}
                       </div>
                     </div>
 
                     {feePaid && (
                       <div className="flex flex-wrap gap-2">
-                        <Badge variant="outline">Payment: {order.payment_status.replace(/_/g, " ")}</Badge>
-                        <Badge variant="outline">Production: {order.production_status.replace(/_/g, " ")}</Badge>
+                        <Badge variant="outline">
+                          {tt("account.customRequests.payment", "Payment")}: {order.payment_status.replace(/_/g, " ")}
+                        </Badge>
+                        <Badge variant="outline">
+                          {tt("account.customRequests.production", "Production")}:{" "}
+                          {order.production_status.replace(/_/g, " ")}
+                        </Badge>
                         {currentQuote !== null && (
                           <Badge variant="outline" className="border-primary text-primary">
-                            Quote: {Number(currentQuote).toFixed(2)} kr
+                            {tt("account.customRequests.quote", "Quote")}: {Number(currentQuote).toFixed(2)} kr
                           </Badge>
                         )}
                       </div>
@@ -828,7 +844,7 @@ const Account = () => {
                             setProcessingCustomPaymentOrderId(order.id);
                             const { data: sessionData } = await supabase.auth.getSession();
                             const token = sessionData.session?.access_token;
-                            if (!token) throw new Error("Please sign in again");
+                            if (!token) throw new Error(tt("auth.signInAgain", "Please sign in again"));
 
                             const { data, error } = await supabase.functions.invoke("create-request-fee-checkout", {
                               body: { orderId: order.id },
@@ -837,15 +853,17 @@ const Account = () => {
 
                             if (error) throw error;
                             if (data?.alreadyPaid) {
-                              toast({ title: "Fee already paid" });
+                              toast({ title: tt("account.customRequests.feeAlreadyPaid", "Fee already paid") });
                               await refetchOverview();
                               return;
                             }
                             if (data?.url) window.location.href = data.url;
                           } catch (err: any) {
                             toast({
-                              title: "Error",
-                              description: err?.message || "Could not start payment",
+                              title: tt("common.error", "Error"),
+                              description:
+                                err?.message ||
+                                tt("account.customRequests.couldNotStartPayment", "Could not start payment"),
                               variant: "destructive",
                             });
                           } finally {
@@ -857,8 +875,8 @@ const Account = () => {
                       >
                         <DollarSign className="mr-1 h-4 w-4" />
                         {processingCustomPaymentOrderId === order.id
-                          ? "Redirecting..."
-                          : `Pay ${order.request_fee_amount ?? 100} kr Fee`}
+                          ? tt("common.redirecting", "Redirecting...")
+                          : `${tt("account.customRequests.payFee", "Pay")} ${order.request_fee_amount ?? 100} kr ${tt("account.customRequests.fee", "Fee")}`}
                       </Button>
                     ) : (
                       <Button
@@ -866,7 +884,9 @@ const Account = () => {
                         onClick={() => setExpandedCustomOrderId(expanded ? null : order.id)}
                         className="font-display uppercase tracking-wider"
                       >
-                        {expanded ? "Hide Details" : "View Details"}
+                        {expanded
+                          ? tt("account.customRequests.hideDetails", "Hide Details")
+                          : tt("account.customRequests.viewDetails", "View Details")}
                       </Button>
                     )}
                   </div>
@@ -874,10 +894,16 @@ const Account = () => {
 
                 {showFeeGate && (
                   <div className="mt-4 rounded-md border border-yellow-500/20 bg-yellow-500/5 p-4">
-                    <p className="text-sm font-medium text-foreground">Request Fee Required</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {tt("account.customRequests.requestFeeRequired", "Request Fee Required")}
+                    </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      A one-time request fee of {order.request_fee_amount ?? 100} kr is required before your custom
-                      order can be reviewed. This fee will be deducted from your final order total.
+                      {tt("account.customRequests.requestFeeDescription", "A one-time request fee of")}{" "}
+                      {order.request_fee_amount ?? 100} kr{" "}
+                      {tt(
+                        "account.customRequests.requestFeeDescriptionEnd",
+                        "is required before your custom order can be reviewed. This fee will be deducted from your final order total.",
+                      )}
                     </p>
                   </div>
                 )}
@@ -886,7 +912,9 @@ const Account = () => {
                   <div className="mt-5 space-y-5 border-t border-border pt-5">
                     <div className="grid gap-4 lg:grid-cols-2">
                       <div>
-                        <Label className="text-xs text-muted-foreground">Your Original Request</Label>
+                        <Label className="text-xs text-muted-foreground">
+                          {tt("account.customRequests.originalRequest", "Your Original Request")}
+                        </Label>
                         <pre className="mt-2 whitespace-pre-wrap rounded-md border border-border bg-muted p-3 text-sm text-foreground">
                           {order.parsed.customerDescription || "-"}
                         </pre>
@@ -894,26 +922,36 @@ const Account = () => {
 
                       <div className="space-y-3">
                         <div className="rounded-md border border-border bg-muted/40 p-3">
-                          <Label className="text-xs text-muted-foreground">Admin Notes</Label>
+                          <Label className="text-xs text-muted-foreground">
+                            {tt("account.customRequests.adminNotes", "Admin Notes")}
+                          </Label>
                           <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
-                            {order.admin_notes || "No admin notes yet."}
+                            {order.admin_notes || tt("account.customRequests.noAdminNotes", "No admin notes yet.")}
                           </p>
                         </div>
                         <div className="rounded-md border border-border bg-muted/40 p-3">
-                          <Label className="text-xs text-muted-foreground">Current Negotiation State</Label>
+                          <Label className="text-xs text-muted-foreground">
+                            {tt("account.customRequests.negotiationState", "Current Negotiation State")}
+                          </Label>
                           <div className="mt-2 space-y-1 text-sm">
                             <p>
-                              <span className="text-muted-foreground">Quoted Price:</span>{" "}
+                              <span className="text-muted-foreground">
+                                {tt("account.customRequests.quotedPrice", "Quoted Price")}:
+                              </span>{" "}
                               {order.quoted_price !== null ? `${Number(order.quoted_price).toFixed(2)} kr` : "-"}
                             </p>
                             <p>
-                              <span className="text-muted-foreground">Final Agreed:</span>{" "}
+                              <span className="text-muted-foreground">
+                                {tt("account.customRequests.finalAgreed", "Final Agreed")}:
+                              </span>{" "}
                               {order.final_agreed_price !== null
                                 ? `${Number(order.final_agreed_price).toFixed(2)} kr`
                                 : "-"}
                             </p>
                             <p>
-                              <span className="text-muted-foreground">Your Response:</span>{" "}
+                              <span className="text-muted-foreground">
+                                {tt("account.customRequests.yourResponse", "Your Response")}:
+                              </span>{" "}
                               {order.customer_response_status.replace(/_/g, " ")}
                             </p>
                           </div>
@@ -922,10 +960,14 @@ const Account = () => {
                     </div>
 
                     <div>
-                      <Label className="text-xs text-muted-foreground">Conversation History</Label>
+                      <Label className="text-xs text-muted-foreground">
+                        {tt("account.customRequests.conversationHistory", "Conversation History")}
+                      </Label>
                       <div className="mt-2 space-y-3 rounded-md border border-border bg-muted/20 p-3">
                         {messages.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">No conversation yet.</p>
+                          <p className="text-sm text-muted-foreground">
+                            {tt("account.customRequests.noConversation", "No conversation yet.")}
+                          </p>
                         ) : (
                           messages.map((msg) => {
                             const isUnreadMessage =
@@ -980,15 +1022,15 @@ const Account = () => {
                           <div className="mb-3 flex items-center gap-2">
                             <DollarSign className="h-4 w-4 text-primary" />
                             <p className="font-display text-sm font-semibold uppercase text-foreground">
-                              Quote Action Required
+                              {tt("account.customRequests.quoteActionRequired", "Quote Action Required")}
                             </p>
                           </div>
                           <p className="mb-4 text-sm text-muted-foreground">
-                            Admin has quoted this request at{" "}
+                            {tt("account.customRequests.quoteActionText", "Admin has quoted this request at")}{" "}
                             <span className="font-semibold text-foreground">
                               {Number(order.quoted_price).toFixed(2)} kr
                             </span>
-                            . Please accept or decline the quote.
+                            . {tt("account.customRequests.quoteActionTextEnd", "Please accept or decline the quote.")}
                           </p>
                           <div className="flex flex-wrap gap-2">
                             <Button
@@ -997,7 +1039,9 @@ const Account = () => {
                               className="font-display uppercase tracking-wider"
                             >
                               <CheckCircle2 className="mr-1 h-4 w-4" />
-                              {processingCustomPaymentOrderId === order.id ? "Redirecting..." : "Accept Quote"}
+                              {processingCustomPaymentOrderId === order.id
+                                ? tt("common.redirecting", "Redirecting...")
+                                : tt("account.customRequests.acceptQuote", "Accept Quote")}
                             </Button>
                             <Button
                               variant="outline"
@@ -1005,7 +1049,7 @@ const Account = () => {
                               className="font-display uppercase tracking-wider"
                             >
                               <XCircle className="mr-1 h-4 w-4" />
-                              Decline Quote
+                              {tt("account.customRequests.declineQuote", "Decline Quote")}
                             </Button>
                           </div>
                         </div>
@@ -1013,11 +1057,11 @@ const Account = () => {
 
                     <div className="rounded-md border border-border bg-muted/30 p-4">
                       <div className="space-y-3">
-                        <Label>Reply to Admin</Label>
+                        <Label>{tt("account.customRequests.replyToAdmin", "Reply to Admin")}</Label>
                         <Textarea
                           value={replyMessage[order.id] || ""}
                           onChange={(e) => setReplyMessage((prev) => ({ ...prev, [order.id]: e.target.value }))}
-                          placeholder="Write a message to admin..."
+                          placeholder={tt("account.customRequests.replyPlaceholder", "Write a message to admin...")}
                           rows={4}
                         />
                         <Button
@@ -1026,7 +1070,7 @@ const Account = () => {
                           className="font-display uppercase tracking-wider"
                         >
                           <Send className="mr-1 h-4 w-4" />
-                          Send Reply
+                          {tt("account.customRequests.sendReply", "Send Reply")}
                         </Button>
                       </div>
                     </div>
@@ -1036,21 +1080,27 @@ const Account = () => {
                       order.final_agreed_price !== null && (
                         <div className="rounded-md border border-green-500/20 bg-green-500/5 p-4">
                           <p className="font-display text-sm font-semibold uppercase text-foreground">
-                            Payment Pending
+                            {tt("account.customRequests.paymentPending", "Payment Pending")}
                           </p>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            Final agreed amount:{" "}
+                            {tt("account.customRequests.finalAgreedAmount", "Final agreed amount")}:{" "}
                             <span className="font-semibold text-foreground">
                               {Number(order.final_agreed_price).toFixed(2)} kr
                             </span>
                           </p>
                           {order.orderType === "custom-print" ? (
                             <p className="mt-2 text-xs text-muted-foreground">
-                              The 100 kr custom request fee should be deducted from the final order total at checkout.
+                              {tt(
+                                "account.customRequests.customPrintFeeNote",
+                                "The 100 kr custom request fee should be deducted from the final order total at checkout.",
+                              )}
                             </p>
                           ) : (
                             <p className="mt-2 text-xs text-muted-foreground">
-                              Lithophane orders do not include a request fee.
+                              {tt(
+                                "account.customRequests.lithophaneFeeNote",
+                                "Lithophane orders do not include a request fee.",
+                              )}
                             </p>
                           )}
                           <Button
@@ -1060,8 +1110,10 @@ const Account = () => {
                                 await payCustomOrder(order.id);
                               } catch (paymentError: any) {
                                 toast({
-                                  title: "Payment error",
-                                  description: paymentError?.message || "Could not open checkout.",
+                                  title: tt("account.customRequests.paymentError", "Payment error"),
+                                  description:
+                                    paymentError?.message ||
+                                    tt("account.customRequests.couldNotOpenCheckout", "Could not open checkout."),
                                   variant: "destructive",
                                 });
                               } finally {
@@ -1071,7 +1123,9 @@ const Account = () => {
                             disabled={processingCustomPaymentOrderId === order.id}
                             className="mt-3 font-display uppercase tracking-wider"
                           >
-                            {processingCustomPaymentOrderId === order.id ? "Redirecting..." : "Pay Now"}
+                            {processingCustomPaymentOrderId === order.id
+                              ? tt("common.redirecting", "Redirecting...")
+                              : tt("account.customRequests.payNow", "Pay Now")}
                           </Button>
                         </div>
                       )}
@@ -1102,7 +1156,9 @@ const Account = () => {
       <div className="container max-w-5xl">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="font-display text-3xl font-bold uppercase text-foreground">My Account</h1>
+            <h1 className="font-display text-3xl font-bold uppercase text-foreground">
+              {tt("account.title", "My Account")}
+            </h1>
             <p className="text-sm text-muted-foreground">{user.email}</p>
           </div>
 
@@ -1110,12 +1166,12 @@ const Account = () => {
             {isAdmin && (
               <Link to="/admin">
                 <Button variant="outline" size="sm" className="font-display uppercase tracking-wider">
-                  <Shield className="mr-1 h-4 w-4" /> Admin
+                  <Shield className="mr-1 h-4 w-4" /> {tt("nav.admin", "Admin")}
                 </Button>
               </Link>
             )}
             <Button variant="outline" size="sm" onClick={signOut} className="font-display uppercase tracking-wider">
-              <LogOut className="mr-1 h-4 w-4" /> Sign Out
+              <LogOut className="mr-1 h-4 w-4" /> {tt("nav.signOut", "Sign Out")}
             </Button>
           </div>
         </div>
@@ -1129,18 +1185,22 @@ const Account = () => {
                 </div>
 
                 <div>
-                  <p className="text-sm text-muted-foreground">Loyalty Points Balance</p>
+                  <p className="text-sm text-muted-foreground">
+                    {tt("account.points.balance", "Loyalty Points Balance")}
+                  </p>
                   <p className="font-display text-3xl font-bold text-primary">{pointsBalance}</p>
-                  <p className="text-xs text-muted-foreground">1 point is earned for every 4 kr spent</p>
+                  <p className="text-xs text-muted-foreground">
+                    {tt("account.points.rate", "1 point is earned for every 4 kr spent")}
+                  </p>
                 </div>
 
                 <div className="ml-auto grid min-w-[220px] gap-2 sm:grid-cols-2">
                   <div className="rounded-xl border border-primary/20 bg-background/70 p-3">
-                    <p className="text-xs text-muted-foreground">Earned total</p>
+                    <p className="text-xs text-muted-foreground">{tt("account.points.earnedTotal", "Earned total")}</p>
                     <p className="font-display text-xl font-bold text-foreground">{pointsEarned}</p>
                   </div>
                   <div className="rounded-xl border border-primary/20 bg-background/70 p-3">
-                    <p className="text-xs text-muted-foreground">Spent total</p>
+                    <p className="text-xs text-muted-foreground">{tt("account.points.spentTotal", "Spent total")}</p>
                     <p className="font-display text-xl font-bold text-foreground">{pointsSpent}</p>
                   </div>
                 </div>
@@ -1155,9 +1215,11 @@ const Account = () => {
                   <div className="flex items-center gap-2">
                     <History className="h-4 w-4 text-primary" />
                     <div>
-                      <p className="text-sm font-medium text-foreground">Recent points activity</p>
+                      <p className="text-sm font-medium text-foreground">
+                        {tt("account.points.recentActivity", "Recent points activity")}
+                      </p>
                       <p className="text-xs text-muted-foreground">
-                        Press to show redeemed discounts and earned points
+                        {tt("account.points.recentActivityHint", "Press to show redeemed discounts and earned points")}
                       </p>
                     </div>
                   </div>
@@ -1172,7 +1234,7 @@ const Account = () => {
                   <div className="mt-3 space-y-2">
                     {loyaltyHistory.length === 0 ? (
                       <div className="rounded-xl border border-border bg-background/60 px-4 py-3 text-sm text-muted-foreground">
-                        No loyalty activity yet.
+                        {tt("account.points.noActivity", "No loyalty activity yet.")}
                       </div>
                     ) : (
                       loyaltyHistory.slice(0, 8).map((row) => (
@@ -1181,7 +1243,9 @@ const Account = () => {
                           className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3"
                         >
                           <div className="min-w-0">
-                            <p className="truncate text-sm text-foreground">{row.reason || "Points update"}</p>
+                            <p className="truncate text-sm text-foreground">
+                              {row.reason || tt("account.points.pointsUpdate", "Points update")}
+                            </p>
                             <p className="text-xs text-muted-foreground">{new Date(row.created_at).toLocaleString()}</p>
                           </div>
                           <div
@@ -1201,16 +1265,16 @@ const Account = () => {
 
         <div className="mb-6 flex flex-wrap gap-2">
           {[
-            { key: "orders" as const, label: "Orders", icon: Package, hasDot: hasNewOrders },
+            { key: "orders" as const, label: tt("account.tabs.orders", "Orders"), icon: Package, hasDot: hasNewOrders },
             {
               key: "custom-requests" as const,
-              label: "Custom Requests",
+              label: tt("account.tabs.customRequests", "Custom Requests"),
               icon: MessageSquare,
               hasDot: hasNewCustomRequests,
             },
-            { key: "rewards" as const, label: "Rewards Store", icon: Gift, hasDot: false },
-            { key: "vouchers" as const, label: "My Vouchers", icon: Star, hasDot: false },
-            { key: "settings" as const, label: "Settings", icon: Settings, hasDot: false },
+            { key: "rewards" as const, label: tt("account.tabs.rewards", "Rewards Store"), icon: Gift, hasDot: false },
+            { key: "vouchers" as const, label: tt("account.tabs.vouchers", "My Vouchers"), icon: Star, hasDot: false },
+            { key: "settings" as const, label: tt("account.tabs.settings", "Settings"), icon: Settings, hasDot: false },
           ].map(({ key, label, icon: Icon, hasDot }) => (
             <Button
               key={key}
@@ -1231,9 +1295,9 @@ const Account = () => {
             {orders.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center text-muted-foreground">
-                  No orders yet.{" "}
+                  {tt("account.orders.empty", "No orders yet.")}{" "}
                   <Link to="/products" className="text-primary hover:underline">
-                    Start shopping!
+                    {tt("account.orders.startShopping", "Start shopping!")}
                   </Link>
                 </CardContent>
               </Card>
@@ -1250,7 +1314,7 @@ const Account = () => {
                               <div>
                                 <div className="flex items-center gap-2">
                                   <p className="font-display text-sm font-semibold uppercase text-card-foreground">
-                                    Order #{order.id.slice(0, 8)}
+                                    {tt("account.orders.order", "Order")} #{order.id.slice(0, 8)}
                                   </p>
                                   {isNewOrder && <span className="h-2.5 w-2.5 rounded-full bg-red-500" />}
                                 </div>
@@ -1284,7 +1348,9 @@ const Account = () => {
                                 onClick={() => setReviewingOrderId(reviewingOrderId === order.id ? null : order.id)}
                                 className="font-display uppercase tracking-wider"
                               >
-                                {reviewingOrderId === order.id ? "Close Review" : "Leave Review"}
+                                {reviewingOrderId === order.id
+                                  ? tt("account.orders.closeReview", "Close Review")
+                                  : tt("account.orders.leaveReview", "Leave Review")}
                               </Button>
                               {reviewingOrderId === order.id && (
                                 <ToolReviewForm
@@ -1309,9 +1375,9 @@ const Account = () => {
             {parsedCustomOrders.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center text-muted-foreground">
-                  No custom requests yet.{" "}
+                  {tt("account.customRequests.empty", "No custom requests yet.")}{" "}
                   <Link to="/create" className="text-primary hover:underline">
-                    Submit your first custom 3D print request.
+                    {tt("account.customRequests.submitFirst", "Submit your first custom 3D print request.")}
                   </Link>
                 </CardContent>
               </Card>
@@ -1324,7 +1390,7 @@ const Account = () => {
                     onClick={() => setCustomRequestsView("ongoing")}
                     className="font-display uppercase tracking-wider"
                   >
-                    Ongoing ({ongoingCustomOrders.length})
+                    {tt("account.customRequests.ongoing", "Ongoing")} ({ongoingCustomOrders.length})
                   </Button>
                   <Button
                     size="sm"
@@ -1332,7 +1398,7 @@ const Account = () => {
                     onClick={() => setCustomRequestsView("done")}
                     className="font-display uppercase tracking-wider"
                   >
-                    Done ({doneCustomOrders.length})
+                    {tt("account.customRequests.done", "Done")} ({doneCustomOrders.length})
                   </Button>
                 </div>
 
@@ -1350,6 +1416,11 @@ const Account = () => {
             <div className="grid gap-4 sm:grid-cols-2">
               {REWARD_CATALOG.map((reward) => {
                 const canRedeem = pointsBalance >= reward.pointsCost;
+                const rewardName = tt(`account.rewards.catalog.${reward.key}.name`, reward.name);
+                const rewardDescription = tt(`account.rewards.catalog.${reward.key}.description`, reward.description);
+                const rewardBadge = reward.badge
+                  ? tt(`account.rewards.catalog.${reward.key}.badge`, reward.badge)
+                  : null;
 
                 return (
                   <motion.div
@@ -1361,22 +1432,28 @@ const Account = () => {
                     <Card className="h-full">
                       <CardContent className="space-y-4 p-6">
                         <div className="flex items-center gap-2">
-                          <div className="font-display text-lg uppercase">{reward.name}</div>
-                          {reward.badge && (
+                          <div className="font-display text-lg uppercase">{rewardName}</div>
+                          {rewardBadge && (
                             <Badge variant="outline" className="font-display text-xs">
-                              {reward.badge === "Shipping" ? <Truck className="mr-1 h-3 w-3" /> : null}
-                              {reward.badge}
+                              {rewardBadge === tt("account.rewards.shippingBadge", "Shipping") ? (
+                                <Truck className="mr-1 h-3 w-3" />
+                              ) : null}
+                              {rewardBadge}
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground">{reward.description}</p>
+                        <p className="text-sm text-muted-foreground">{rewardDescription}</p>
 
                         <div className="flex items-end justify-between gap-4">
                           <div>
                             {reward.discountType === "free_shipping" ? (
                               <>
-                                <span className="font-display text-2xl font-bold text-primary">Free delivery</span>
-                                <span className="ml-1 text-sm text-muted-foreground">discount</span>
+                                <span className="font-display text-2xl font-bold text-primary">
+                                  {tt("account.rewards.freeDelivery", "Free delivery")}
+                                </span>
+                                <span className="ml-1 text-sm text-muted-foreground">
+                                  {tt("account.rewards.discount", "discount")}
+                                </span>
                               </>
                             ) : (
                               <>
@@ -1384,7 +1461,9 @@ const Account = () => {
                                   {reward.discountValue} kr
                                 </span>
                                 <span className="ml-1 text-sm text-muted-foreground">
-                                  {reward.discountType === "gift_card" ? "gift card" : "discount"}
+                                  {reward.discountType === "gift_card"
+                                    ? tt("account.rewards.giftCard", "gift card")
+                                    : tt("account.rewards.discount", "discount")}
                                 </span>
                               </>
                             )}
@@ -1397,7 +1476,9 @@ const Account = () => {
                             className="font-display uppercase tracking-wider"
                           >
                             <Star className="mr-1 h-3 w-3" />
-                            {redeemingKey === reward.key ? "Redeeming..." : `${reward.pointsCost} pts`}
+                            {redeemingKey === reward.key
+                              ? tt("account.rewards.redeeming", "Redeeming...")
+                              : `${reward.pointsCost} ${tt("account.rewards.pointsShort", "pts")}`}
                           </Button>
                         </div>
                       </CardContent>
@@ -1419,7 +1500,7 @@ const Account = () => {
                 onClick={() => setVoucherView("active")}
                 className="font-display uppercase tracking-wider"
               >
-                Active ({activeVouchers.length})
+                {tt("account.vouchers.active", "Active")} ({activeVouchers.length})
               </Button>
               <Button
                 size="sm"
@@ -1427,14 +1508,16 @@ const Account = () => {
                 onClick={() => setVoucherView("used")}
                 className="font-display uppercase tracking-wider"
               >
-                Used ({usedVouchers.length})
+                {tt("account.vouchers.used", "Used")} ({usedVouchers.length})
               </Button>
             </div>
 
             {(voucherView === "active" ? activeVoucherGroups : usedVoucherGroups).length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center text-muted-foreground">
-                  {voucherView === "active" ? "No active vouchers available." : "No used vouchers yet."}
+                  {voucherView === "active"
+                    ? tt("account.vouchers.noneActive", "No active vouchers available.")
+                    : tt("account.vouchers.noneUsed", "No used vouchers yet.")}
                 </CardContent>
               </Card>
             ) : (
@@ -1458,19 +1541,22 @@ const Account = () => {
                           </p>
                           {isGiftCard ? (
                             <Badge variant="outline" className="text-xs">
-                              Gift Card
+                              {tt("account.rewards.giftCard", "Gift Card")}
                             </Badge>
                           ) : null}
                         </div>
                         {isGiftCard ? (
                           <p className="mt-1 text-sm text-muted-foreground">
-                            Balance: <span className="font-bold text-foreground">{giftCardBalance.toFixed(2)} kr</span>
+                            {tt("account.vouchers.balance", "Balance")}:{" "}
+                            <span className="font-bold text-foreground">{giftCardBalance.toFixed(2)} kr</span>
                           </p>
                         ) : null}
                       </div>
                       <div className="flex items-center gap-3">
                         <Badge variant={voucherView === "active" ? "default" : "secondary"}>
-                          {voucherView === "active" ? "Active" : "Used"}
+                          {voucherView === "active"
+                            ? tt("account.vouchers.active", "Active")
+                            : tt("account.vouchers.used", "Used")}
                         </Badge>
                         {isExpanded ? (
                           <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -1496,7 +1582,7 @@ const Account = () => {
                                   <p className="font-mono text-lg font-bold text-primary">{uv.code}</p>
                                   {uv.balance !== null ? (
                                     <p className="text-sm text-muted-foreground">
-                                      Balance:{" "}
+                                      {tt("account.vouchers.balance", "Balance")}:{" "}
                                       <span className="font-bold text-foreground">
                                         {Number(uv.balance).toFixed(2)} kr
                                       </span>
@@ -1504,18 +1590,22 @@ const Account = () => {
                                   ) : null}
                                   {isGifted && uv.recipient_email ? (
                                     <p className="text-xs text-muted-foreground">
-                                      Sent to: {uv.recipient_name ? `${uv.recipient_name} ` : ""}({uv.recipient_email})
+                                      {tt("account.vouchers.sentTo", "Sent to")}:{" "}
+                                      {uv.recipient_name ? `${uv.recipient_name} ` : ""}({uv.recipient_email})
                                     </p>
                                   ) : null}
                                   {isReceived ? (
-                                    <p className="text-xs text-muted-foreground">Received gift card</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {tt("account.vouchers.receivedGiftCard", "Received gift card")}
+                                    </p>
                                   ) : null}
                                   <p className="text-xs text-muted-foreground">
-                                    Redeemed: {new Date(uv.redeemed_at).toLocaleString()}
+                                    {tt("account.vouchers.redeemedAt", "Redeemed")}:{" "}
+                                    {new Date(uv.redeemed_at).toLocaleString()}
                                   </p>
                                   {uv.used_at ? (
                                     <p className="text-xs text-muted-foreground">
-                                      Used: {new Date(uv.used_at).toLocaleString()}
+                                      {tt("account.vouchers.usedAt", "Used")}: {new Date(uv.used_at).toLocaleString()}
                                     </p>
                                   ) : null}
                                 </div>
@@ -1532,18 +1622,18 @@ const Account = () => {
                                       onClick={() => setGiftingVoucherId(giftingVoucherId === uv.id ? null : uv.id)}
                                       className="font-display text-xs uppercase tracking-wider"
                                     >
-                                      <Send className="mr-1 h-3 w-3" /> Gift
+                                      <Send className="mr-1 h-3 w-3" /> {tt("account.vouchers.gift", "Gift")}
                                     </Button>
                                   ) : null}
 
                                   {isUsed ? (
-                                    <Badge variant="secondary">Used</Badge>
+                                    <Badge variant="secondary">{tt("account.vouchers.used", "Used")}</Badge>
                                   ) : isGifted ? (
-                                    <Badge variant="secondary">Gifted</Badge>
+                                    <Badge variant="secondary">{tt("account.vouchers.gifted", "Gifted")}</Badge>
                                   ) : isReceived ? (
-                                    <Badge variant="secondary">Received</Badge>
+                                    <Badge variant="secondary">{tt("account.vouchers.received", "Received")}</Badge>
                                   ) : (
-                                    <Badge variant="default">Active</Badge>
+                                    <Badge variant="default">{tt("account.vouchers.active", "Active")}</Badge>
                                   )}
                                 </div>
                               </div>
@@ -1555,13 +1645,16 @@ const Account = () => {
                                   className="mt-4 space-y-3 border-t border-border pt-4"
                                 >
                                   <input
-                                    placeholder="Recipient email"
+                                    placeholder={tt("account.vouchers.recipientEmail", "Recipient email")}
                                     value={giftEmail}
                                     onChange={(e) => setGiftEmail(e.target.value)}
                                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
                                   />
                                   <input
-                                    placeholder="Recipient name (optional)"
+                                    placeholder={tt(
+                                      "account.vouchers.recipientNameOptional",
+                                      "Recipient name (optional)",
+                                    )}
                                     value={giftName}
                                     onChange={(e) => setGiftName(e.target.value)}
                                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
@@ -1571,7 +1664,8 @@ const Account = () => {
                                     onClick={() => sendGiftCard(uv.id)}
                                     className="font-display uppercase tracking-wider"
                                   >
-                                    <Send className="mr-1 h-3 w-3" /> Send Gift Card
+                                    <Send className="mr-1 h-3 w-3" />{" "}
+                                    {tt("account.vouchers.sendGiftCard", "Send Gift Card")}
                                   </Button>
                                 </motion.div>
                               ) : null}
@@ -1593,44 +1687,46 @@ const Account = () => {
               <div>
                 <h3 className="mb-4 font-display text-lg font-bold uppercase text-foreground">
                   <MapPin className="mr-2 inline h-5 w-5" />
-                  Default Shipping Address
+                  {tt("account.settings.defaultShippingAddress", "Default Shipping Address")}
                 </h3>
-                <p className="mb-4 text-sm text-muted-foreground">This address will be auto-filled at checkout.</p>
+                <p className="mb-4 text-sm text-muted-foreground">
+                  {tt("account.settings.addressHint", "This address will be auto-filled at checkout.")}
+                </p>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <Label>Full Name</Label>
+                    <Label>{tt("account.settings.fullName", "Full Name")}</Label>
                     <Input
                       value={shippingAddress.name}
                       onChange={(e) => setShippingAddress({ ...shippingAddress, name: e.target.value })}
-                      placeholder="John Doe"
+                      placeholder={tt("account.settings.fullNamePlaceholder", "John Doe")}
                     />
                   </div>
                   <div>
-                    <Label>Street Address</Label>
+                    <Label>{tt("account.settings.streetAddress", "Street Address")}</Label>
                     <Input
                       value={shippingAddress.street}
                       onChange={(e) => setShippingAddress({ ...shippingAddress, street: e.target.value })}
-                      placeholder="123 Main St"
+                      placeholder={tt("account.settings.streetPlaceholder", "123 Main St")}
                     />
                   </div>
                   <div>
-                    <Label>City</Label>
+                    <Label>{tt("account.settings.city", "City")}</Label>
                     <Input
                       value={shippingAddress.city}
                       onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
-                      placeholder="Copenhagen"
+                      placeholder={tt("account.settings.cityPlaceholder", "Copenhagen")}
                     />
                   </div>
                   <div>
-                    <Label>Zip Code</Label>
+                    <Label>{tt("account.settings.zipCode", "Zip Code")}</Label>
                     <Input
                       value={shippingAddress.zip}
                       onChange={(e) => setShippingAddress({ ...shippingAddress, zip: e.target.value })}
-                      placeholder="2100"
+                      placeholder={tt("account.settings.zipPlaceholder", "2100")}
                     />
                   </div>
                   <div>
-                    <Label>Country</Label>
+                    <Label>{tt("account.settings.country", "Country")}</Label>
                     <Input
                       value={shippingAddress.country}
                       onChange={(e) => setShippingAddress({ ...shippingAddress, country: e.target.value })}
@@ -1649,13 +1745,15 @@ const Account = () => {
                       .eq("user_id", user.id);
                     setSavingAddress(false);
                     if (error) {
-                      toast({ title: "Error", description: error.message, variant: "destructive" });
+                      toast({ title: tt("common.error", "Error"), description: error.message, variant: "destructive" });
                       return;
                     }
-                    toast({ title: "Address saved!" });
+                    toast({ title: tt("account.settings.addressSaved", "Address saved!") });
                   }}
                 >
-                  {savingAddress ? "Saving..." : "Save Address"}
+                  {savingAddress
+                    ? tt("common.saving", "Saving...")
+                    : tt("account.settings.saveAddress", "Save Address")}
                 </Button>
               </div>
 

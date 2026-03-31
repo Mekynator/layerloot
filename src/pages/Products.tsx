@@ -82,7 +82,7 @@ const Products = () => {
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     }`}
                   >
-                    All Products
+                    {t("products.allCategories")}
                   </motion.button>
 
                   {parentCategories.map((category) => {

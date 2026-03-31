@@ -241,7 +241,7 @@ const Footer = () => {
                   </li>
                   <li>
                     <Link to="/account" className="transition-all hover:translate-x-1 hover:text-primary">
-                      {footerSettings.account_link_label || defaultFooterSettings.account_link_label}
+                      {footerSettings.account_link_label || t("footer.myAccount")}
                     </Link>
                   </li>
                   <li>

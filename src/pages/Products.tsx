@@ -175,9 +175,9 @@ const Products = () => {
                   animate={{ opacity: 1, y: 0 }}
                   className="section-surface px-6 py-12 text-center"
                 >
-                  <h2 className="font-display text-2xl font-bold uppercase text-foreground">No products found</h2>
+                  <h2 className="font-display text-2xl font-bold uppercase text-foreground">{t("products.noProducts")}</h2>
                   <p className="mt-2 text-muted-foreground">
-                    Try another category or broaden your search to discover more prints.
+                    {t("products.noProductsHint")}
                   </p>
                 </motion.div>
               ) : null}

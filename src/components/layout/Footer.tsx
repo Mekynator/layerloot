@@ -236,7 +236,7 @@ const Footer = () => {
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   <li>
                     <Link to="/auth" className="transition-all hover:translate-x-1 hover:text-primary">
-                      {footerSettings.auth_link_label || defaultFooterSettings.auth_link_label}
+                      {footerSettings.auth_link_label || t("footer.loginRegister")}
                     </Link>
                   </li>
                   <li>

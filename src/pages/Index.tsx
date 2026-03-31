@@ -4,14 +4,8 @@ import HomeSocialProof from "@/components/social/HomeSocialProof";
 const Index = () => {
   return (
     <>
-      <DynamicPage
-        slug="home"
-        emptyTitle="Home"
-        emptyDescription="New arrivals and featured pieces are on the way."
-      />
+      <DynamicPage slug="home" emptyTitle="Home" emptyDescription="New arrivals and featured pieces are on the way." />
       <HomeSocialProof />
     </>
   );
 };
-
-export default Index;

@@ -585,7 +585,7 @@ const Header = () => {
                   >
                     {headerSettings.mobile_admin_label ||
                       headerSettings.admin_label ||
-                      defaultHeaderSettings.mobile_admin_label}
+                      t("nav.admin")}
                   </Link>
                 )}
               </>

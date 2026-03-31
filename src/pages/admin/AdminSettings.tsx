@@ -39,6 +39,27 @@ interface FooterConfig {
   orders_link_label: string;
 }
 
+interface FooterContactConfig {
+  email: string;
+  phone: string;
+  address: string;
+  contact_description: string;
+  email_label: string;
+  phone_label: string;
+  address_label: string;
+  instagram_url: string;
+  facebook_url: string;
+  social_title: string;
+}
+
+interface BrandingConfig {
+  logo_text_left: string;
+  logo_text_right: string;
+  logo_image_url: string;
+  logo_link: string;
+  logo_alt: string;
+}
+
 export interface ThemeGalleryImage {
   id: string;
   label: string;
@@ -96,6 +117,27 @@ const defaultFooter: FooterConfig = {
   auth_link_label: "Login / Register",
   account_link_label: "My Account",
   orders_link_label: "Order History",
+};
+
+const defaultFooterContact: FooterContactConfig = {
+  email: "support@layerloot.lovable.app",
+  phone: "+45 00 00 00 00",
+  address: "Denmark",
+  contact_description: "Questions, custom requests, or order help? Reach out anytime.",
+  email_label: "Email",
+  phone_label: "Phone",
+  address_label: "Address",
+  instagram_url: "",
+  facebook_url: "",
+  social_title: "Follow us",
+};
+
+const defaultBranding: BrandingConfig = {
+  logo_text_left: "Layer",
+  logo_text_right: "Loot",
+  logo_image_url: "",
+  logo_link: "/",
+  logo_alt: "LayerLoot",
 };
 
 const DEFAULT_BACKGROUND_LIBRARY: ThemeGalleryImage[] = [
@@ -360,12 +402,10 @@ function hslToHex(hsl: string): string {
     b = hue2rgb(p, q, h - 1 / 3);
   }
 
-  const toHex = (x: number) => {
-    const hex = Math.round(x * 255)
+  const toHex = (x: number) =>
+    Math.round(x * 255)
       .toString(16)
       .padStart(2, "0");
-    return hex;
-  };
 
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
@@ -687,9 +727,92 @@ const ThemeLivePreview = ({ theme }: { theme: ThemeConfig }) => {
   );
 };
 
+const FooterPreview = ({
+  branding,
+  footer,
+  footerContact,
+}: {
+  branding: BrandingConfig;
+  footer: FooterConfig;
+  footerContact: FooterContactConfig;
+}) => {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border bg-card">
+      <div className="grid gap-6 bg-secondary p-5 md:grid-cols-4">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            {footer.show_logo_icon && (
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">✦</div>
+            )}
+            {footer.show_logo_text && (
+              <div className="font-display text-lg font-bold uppercase tracking-wider text-secondary-foreground">
+                {branding.logo_text_left || "Layer"}
+                <span className="text-primary">{branding.logo_text_right || "Loot"}</span>
+              </div>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground">{footer.description}</p>
+        </div>
+
+        {footer.show_quick_links && (
+          <div>
+            <p className="mb-3 font-display text-sm font-semibold uppercase tracking-widest text-secondary-foreground">
+              {footer.quick_links_title}
+            </p>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>Products</p>
+              <p>Gallery</p>
+              <p>Create Your Own</p>
+            </div>
+          </div>
+        )}
+
+        {footer.show_account_links && (
+          <div>
+            <p className="mb-3 font-display text-sm font-semibold uppercase tracking-widest text-secondary-foreground">
+              {footer.account_title}
+            </p>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>{footer.auth_link_label}</p>
+              <p>{footer.account_link_label}</p>
+              <p>{footer.orders_link_label}</p>
+            </div>
+          </div>
+        )}
+
+        {footer.show_contact_block && (
+          <div>
+            <p className="mb-3 font-display text-sm font-semibold uppercase tracking-widest text-secondary-foreground">
+              {footer.contact_title}
+            </p>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>{footerContact.contact_description}</p>
+              <p>
+                {footerContact.email_label}: {footerContact.email}
+              </p>
+              <p>
+                {footerContact.phone_label}: {footerContact.phone}
+              </p>
+              <p>
+                {footerContact.address_label}: {footerContact.address}
+              </p>
+              <p className="pt-1 text-[11px] uppercase tracking-wider">{footerContact.social_title}</p>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="border-t border-border bg-secondary px-5 py-3 text-center text-xs text-muted-foreground">
+        © {new Date().getFullYear()} {branding.logo_text_left || "Layer"}
+        {branding.logo_text_right || "Loot"}. {footer.copyright_text}
+      </div>
+    </div>
+  );
+};
+
 const AdminSettings = () => {
   const { toast } = useToast();
   const uploadRef = useRef<HTMLInputElement | null>(null);
+
   const [contact, setContact] = useState({
     email: "",
     phone: "",
@@ -699,8 +822,11 @@ const AdminSettings = () => {
   const [store, setStore] = useState({ name: "LayerLoot", currency: "DKK", currency_symbol: "kr" });
   const [promo, setPromo] = useState<PromoConfig>(defaultPromo);
   const [footer, setFooter] = useState<FooterConfig>(defaultFooter);
+  const [footerContact, setFooterContact] = useState<FooterContactConfig>(defaultFooterContact);
+  const [branding, setBranding] = useState<BrandingConfig>(defaultBranding);
   const [theme, setTheme] = useState<ThemeConfig>(defaultTheme);
   const [saving, setSaving] = useState(false);
+
   const galleryImages = useMemo(
     () => (theme.available_backgrounds?.length ? theme.available_backgrounds : DEFAULT_BACKGROUND_LIBRARY),
     [theme.available_backgrounds],
@@ -711,10 +837,14 @@ const AdminSettings = () => {
       const { data } = await supabase.from("site_settings").select("*");
       if (data) {
         data.forEach((s: any) => {
-          if (s.key === "contact") setContact(s.value as any);
+          if (s.key === "contact") {
+            setContact((prev) => ({ ...prev, ...(s.value as any) }));
+            setFooterContact((prev) => ({ ...prev, ...(s.value as any) }));
+          }
           if (s.key === "store") setStore(s.value as any);
           if (s.key === "promotion_popup") setPromo({ ...defaultPromo, ...(s.value as any) });
           if (s.key === "footer_settings") setFooter({ ...defaultFooter, ...(s.value as any) });
+          if (s.key === "branding") setBranding({ ...defaultBranding, ...(s.value as any) });
           if (s.key === "theme") setTheme(normalizeTheme(s.value as any));
         });
       }
@@ -736,11 +866,32 @@ const AdminSettings = () => {
 
   const save = async () => {
     setSaving(true);
+
+    const mergedContact = {
+      ...contact,
+      email: footerContact.email,
+      phone: footerContact.phone,
+      address: footerContact.address,
+      contact_description: footerContact.contact_description,
+      email_label: footerContact.email_label,
+      phone_label: footerContact.phone_label,
+      address_label: footerContact.address_label,
+      instagram_url: footerContact.instagram_url,
+      facebook_url: footerContact.facebook_url,
+      social_title: footerContact.social_title,
+      social: {
+        ...(contact as any).social,
+        instagram: footerContact.instagram_url,
+        facebook: footerContact.facebook_url,
+      },
+    };
+
     await Promise.all([
-      upsertSetting("contact", contact),
+      upsertSetting("contact", mergedContact),
       upsertSetting("store", store),
       upsertSetting("promotion_popup", promo),
       upsertSetting("footer_settings", footer),
+      upsertSetting("branding", branding),
       upsertSetting("theme", theme),
     ]);
     setSaving(false);
@@ -832,7 +983,7 @@ const AdminSettings = () => {
         <div>
           <h1 className="font-display text-3xl font-bold uppercase text-foreground">Settings</h1>
           <p className="text-sm text-muted-foreground">
-            Friendlier theme editing with live preview, presets and color pickers.
+            Friendlier theme editing with live preview, presets, color pickers, and full footer controls.
           </p>
         </div>
         <Button onClick={save} disabled={saving} className="font-display uppercase tracking-wider">
@@ -987,6 +1138,15 @@ const AdminSettings = () => {
         </TabsContent>
 
         <TabsContent value="footer" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-display uppercase">Footer Live Preview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FooterPreview branding={branding} footer={footer} footerContact={footerContact} />
+            </CardContent>
+          </Card>
+
           <div className="grid gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
@@ -999,6 +1159,29 @@ const AdminSettings = () => {
                     value={footer.description}
                     onChange={(e) => setFooter({ ...footer, description: e.target.value })}
                     rows={3}
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label>Quick Links Title</Label>
+                    <Input
+                      value={footer.quick_links_title}
+                      onChange={(e) => setFooter({ ...footer, quick_links_title: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Account Title</Label>
+                    <Input
+                      value={footer.account_title}
+                      onChange={(e) => setFooter({ ...footer, account_title: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label>Contact Title</Label>
+                  <Input
+                    value={footer.contact_title}
+                    onChange={(e) => setFooter({ ...footer, contact_title: e.target.value })}
                   />
                 </div>
                 <div>
@@ -1015,6 +1198,171 @@ const AdminSettings = () => {
                     value={footer.logo_height_px}
                     onChange={(e) => setFooter({ ...footer, logo_height_px: parseInt(e.target.value, 10) || 32 })}
                   />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-display uppercase">Logo & Branding</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label>Logo Text Left</Label>
+                    <Input
+                      value={branding.logo_text_left}
+                      onChange={(e) => setBranding({ ...branding, logo_text_left: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Logo Text Right</Label>
+                    <Input
+                      value={branding.logo_text_right}
+                      onChange={(e) => setBranding({ ...branding, logo_text_right: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label>Logo Image URL</Label>
+                  <Input
+                    value={branding.logo_image_url}
+                    onChange={(e) => setBranding({ ...branding, logo_image_url: e.target.value })}
+                    placeholder="https://..."
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label>Logo Link</Label>
+                    <Input
+                      value={branding.logo_link}
+                      onChange={(e) => setBranding({ ...branding, logo_link: e.target.value })}
+                      placeholder="/"
+                    />
+                  </div>
+                  <div>
+                    <Label>Logo Alt</Label>
+                    <Input
+                      value={branding.logo_alt}
+                      onChange={(e) => setBranding({ ...branding, logo_alt: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-display uppercase">Footer Links & Labels</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Login / Register Label</Label>
+                  <Input
+                    value={footer.auth_link_label}
+                    onChange={(e) => setFooter({ ...footer, auth_link_label: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>My Account Label</Label>
+                  <Input
+                    value={footer.account_link_label}
+                    onChange={(e) => setFooter({ ...footer, account_link_label: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Order History Label</Label>
+                  <Input
+                    value={footer.orders_link_label}
+                    onChange={(e) => setFooter({ ...footer, orders_link_label: e.target.value })}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-display uppercase">Contact Block</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Contact Description</Label>
+                  <Textarea
+                    value={footerContact.contact_description}
+                    onChange={(e) => setFooterContact({ ...footerContact, contact_description: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label>Email Label</Label>
+                    <Input
+                      value={footerContact.email_label}
+                      onChange={(e) => setFooterContact({ ...footerContact, email_label: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Email</Label>
+                    <Input
+                      value={footerContact.email}
+                      onChange={(e) => setFooterContact({ ...footerContact, email: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label>Phone Label</Label>
+                    <Input
+                      value={footerContact.phone_label}
+                      onChange={(e) => setFooterContact({ ...footerContact, phone_label: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Phone</Label>
+                    <Input
+                      value={footerContact.phone}
+                      onChange={(e) => setFooterContact({ ...footerContact, phone: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label>Address Label</Label>
+                    <Input
+                      value={footerContact.address_label}
+                      onChange={(e) => setFooterContact({ ...footerContact, address_label: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Address</Label>
+                    <Input
+                      value={footerContact.address}
+                      onChange={(e) => setFooterContact({ ...footerContact, address: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label>Social Title</Label>
+                  <Input
+                    value={footerContact.social_title}
+                    onChange={(e) => setFooterContact({ ...footerContact, social_title: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label>Instagram URL</Label>
+                    <Input
+                      value={footerContact.instagram_url}
+                      onChange={(e) => setFooterContact({ ...footerContact, instagram_url: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Facebook URL</Label>
+                    <Input
+                      value={footerContact.facebook_url}
+                      onChange={(e) => setFooterContact({ ...footerContact, facebook_url: e.target.value })}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>

@@ -81,6 +81,12 @@ const ImageCollectionBlock = ({ content, className }: { content?: ImageCollectio
     </>
   );
 
+  const normalizeFaqItem = (item: any) => ({
+    ...item,
+    q: item?.q ?? item?.question ?? "",
+    a: item?.a ?? item?.answer ?? "",
+  });
+
   const renderCard = (item: ImageItem, index: number) => {
     const card = (
       <div
@@ -1026,16 +1032,18 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
 
 const FaqBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) => {
   const c = block.content || {};
-  const items = c.items || [
-    {
-      q: "What materials do you offer?",
-      a: "We offer PLA, PLA Silk, PETG, and Resin. Each material has unique properties suited for different applications — from decorative items to functional parts.",
-    },
-    {
-      q: "How long does printing take?",
-      a: "Depending on size and complexity, prints typically take 2-24 hours. Custom orders usually ship within 3-5 business days.",
-    },
-  ];
+  const items = (
+    c.items || [
+      {
+        q: "What materials do you offer?",
+        a: "We offer PLA, PLA Silk, PETG, and Resin. Each material has unique properties suited for different applications — from decorative items to functional parts.",
+      },
+      {
+        q: "How long does printing take?",
+        a: "Depending on size and complexity, prints typically take 2-24 hours. Custom orders usually ship within 3-5 business days.",
+      },
+    ]
+  ).map(normalizeFaqItem);
 
   const align = c.alignment || "center";
 
@@ -1047,6 +1055,7 @@ const FaqBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) 
         <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
           {c.heading || "Frequently Asked Questions"}
         </h2>
+        {c.subheading && <p className="mt-2 text-muted-foreground">{c.subheading}</p>}
       </div>
 
       <Accordion type="single" collapsible className="space-y-2">

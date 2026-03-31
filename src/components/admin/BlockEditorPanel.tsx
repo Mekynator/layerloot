@@ -36,12 +36,27 @@ const ICON_OPTIONS = [
   "Heart",
   "Sparkles",
   "BadgeCheck",
+  "Printer",
+  "Box",
+  "Mail",
+  "ExternalLink",
+  "CheckCircle2",
+  "Gem",
+  "Wrench",
+  "Home",
+  "Instagram",
 ];
 
 const DEFAULT_ITEMS: Record<string, RepeaterItem[]> = {
   faq: [
     { question: "What materials do you offer?", answer: "We offer PLA, PETG, resin, and more.", visible: true },
     { question: "How long does printing take?", answer: "Most orders are printed within 2-5 days.", visible: true },
+  ],
+  how_it_works: [
+    { icon: "ShoppingBag", title: "Choose", desc: "Browse products or upload your own 3D model", visible: true },
+    { icon: "Palette", title: "Customize", desc: "Select material, color, size, and finish", visible: true },
+    { icon: "Printer", title: "We Print", desc: "Your item is 3D printed with precision", visible: true },
+    { icon: "Package", title: "Delivered", desc: "Packed safely and shipped to your door", visible: true },
   ],
   trust_badges: [
     { icon: "Truck", title: "Free Shipping", desc: "On orders over 500 kr", visible: true },
@@ -92,6 +107,8 @@ const getRepeaterKey = (blockType?: string | null) => {
   switch (blockType) {
     case "faq":
       return "items";
+    case "how_it_works":
+      return "steps";
     case "trust_badges":
       return "badges";
     case "entry_cards":
@@ -105,13 +122,26 @@ const getRepeaterKey = (blockType?: string | null) => {
   }
 };
 
+const normalizeFaqItems = (items: RepeaterItem[]) =>
+  items.map((item) => ({
+    ...item,
+    question: item.question ?? item.q ?? "",
+    answer: item.answer ?? item.a ?? "",
+  }));
+
 const normalizeContent = (block: SiteBlock | null) => {
   if (!block) return {};
   const base = typeof block.content === "object" && block.content ? { ...(block.content as Record<string, any>) } : {};
   const repeaterKey = getRepeaterKey(block.block_type);
   if (!repeaterKey) return base;
-  const existing = base[repeaterKey];
-  if (Array.isArray(existing) && existing.length > 0) return base;
+
+  const existing = Array.isArray(base[repeaterKey]) ? [...base[repeaterKey]] : [];
+  if (block.block_type === "faq") {
+    if (existing.length > 0) return { ...base, [repeaterKey]: normalizeFaqItems(existing) };
+    return { ...base, [repeaterKey]: DEFAULT_ITEMS.faq };
+  }
+
+  if (existing.length > 0) return base;
   return { ...base, [repeaterKey]: DEFAULT_ITEMS[block.block_type] ?? [] };
 };
 
@@ -183,9 +213,19 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
   const handleSave = async () => {
     if (!block) return;
     setSaving(true);
+
+    const payloadContent = { ...content };
+    if (block.block_type === "faq" && repeaterKey === "items") {
+      payloadContent.items = repeaterItems.map((item) => ({
+        ...item,
+        q: item.question ?? "",
+        a: item.answer ?? "",
+      }));
+    }
+
     const { error } = await supabase
       .from("site_blocks")
-      .update({ title: title.trim() || block.title, content, is_active: isActive })
+      .update({ title: title.trim() || block.title, content: payloadContent, is_active: isActive })
       .eq("id", block.id);
     setSaving(false);
 
@@ -265,25 +305,56 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
     );
   };
 
+  const renderMoveDeleteRow = (index: number) => (
+    <div className="flex gap-2">
+      <Button type="button" variant="outline" size="sm" onClick={() => moveItem(index, -1)} disabled={index === 0}>
+        <ArrowUp className="mr-1 h-4 w-4" /> Up
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => moveItem(index, 1)}
+        disabled={index === repeaterItems.length - 1}
+      >
+        <ArrowDown className="mr-1 h-4 w-4" /> Down
+      </Button>
+      <Button type="button" variant="destructive" size="sm" onClick={() => removeItem(index)} className="ml-auto">
+        <Trash2 className="mr-1 h-4 w-4" /> Delete
+      </Button>
+    </div>
+  );
+
+  const renderSectionTop = (withSubtitle = true, extraRight?: React.ReactNode) => (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <div>
+        <Label>Section heading</Label>
+        <Input value={content.heading || ""} onChange={(e) => patchContent("heading", e.target.value)} />
+      </div>
+      {withSubtitle ? (
+        <div>
+          <Label>Section subtitle</Label>
+          <Input value={content.subheading || ""} onChange={(e) => patchContent("subheading", e.target.value)} />
+        </div>
+      ) : (
+        extraRight
+      )}
+    </div>
+  );
+
   const renderFaqEditor = () => (
     <div className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-2">
+      {renderSectionTop(true)}
+      <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
         <div>
-          <Label>Section heading</Label>
-          <Input value={content.heading || ""} onChange={(e) => patchContent("heading", e.target.value)} />
+          <p className="text-sm font-medium">Visible</p>
+          <p className="text-xs text-muted-foreground">Show this section on page</p>
         </div>
-        <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
-          <div>
-            <p className="text-sm font-medium">Visible</p>
-            <p className="text-xs text-muted-foreground">Show this section on page</p>
-          </div>
-          <Switch
-            checked={content.visibility ?? true}
-            onCheckedChange={(checked) => patchContent("visibility", checked)}
-          />
-        </div>
+        <Switch
+          checked={content.visibility ?? true}
+          onCheckedChange={(checked) => patchContent("visibility", checked)}
+        />
       </div>
-
       <div className="flex items-center justify-between">
         <Label>FAQ items</Label>
         <Button type="button" size="sm" variant="outline" onClick={addItem}>
@@ -320,35 +391,124 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
                   onCheckedChange={(checked) => patchItem(index, { visible: checked })}
                 />
               </div>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => moveItem(index, -1)}
-                  disabled={index === 0}
-                >
-                  <ArrowUp className="mr-1 h-4 w-4" /> Up
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => moveItem(index, 1)}
-                  disabled={index === repeaterItems.length - 1}
-                >
-                  <ArrowDown className="mr-1 h-4 w-4" /> Down
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => removeItem(index)}
-                  className="ml-auto"
-                >
-                  <Trash2 className="mr-1 h-4 w-4" /> Delete
-                </Button>
+              {renderMoveDeleteRow(index)}
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </div>
+  );
+
+  const renderHowItWorksEditor = () => (
+    <div className="space-y-3">
+      {renderSectionTop(true)}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <Label>Columns</Label>
+          <Select
+            value={String(content.columns || 4)}
+            onValueChange={(value) => patchContent("columns", Number(value))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">1</SelectItem>
+              <SelectItem value="2">2</SelectItem>
+              <SelectItem value="3">3</SelectItem>
+              <SelectItem value="4">4</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Alignment</Label>
+          <Select
+            value={String(content.alignment || "center")}
+            onValueChange={(value) => patchContent("alignment", value)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="left">Left</SelectItem>
+              <SelectItem value="center">Center</SelectItem>
+              <SelectItem value="right">Right</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+        <div>
+          <p className="text-sm font-medium">Visible</p>
+          <p className="text-xs text-muted-foreground">Show this section on page</p>
+        </div>
+        <Switch
+          checked={content.visibility ?? true}
+          onCheckedChange={(checked) => patchContent("visibility", checked)}
+        />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <Label>Steps</Label>
+        <Button type="button" size="sm" variant="outline" onClick={addItem}>
+          <Plus className="mr-1 h-4 w-4" /> Add step
+        </Button>
+      </div>
+
+      <Accordion type="multiple" className="space-y-2">
+        {repeaterItems.map((item, index) => (
+          <AccordionItem key={`step-${index}`} value={`step-${index}`} className="rounded-md border border-border px-3">
+            <AccordionTrigger className="py-3 text-left text-sm">{item.title || `Step ${index + 1}`}</AccordionTrigger>
+            <AccordionContent className="space-y-3 pb-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label>Title</Label>
+                  <Input value={item.title || ""} onChange={(e) => patchItem(index, { title: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Icon</Label>
+                  <Select
+                    value={item.icon || "ShoppingBag"}
+                    onValueChange={(value) => patchItem(index, { icon: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ICON_OPTIONS.map((icon) => (
+                        <SelectItem key={icon} value={icon}>
+                          {icon}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+
+              <div>
+                <Label>Description</Label>
+                <Textarea
+                  value={item.desc || ""}
+                  onChange={(e) => patchItem(index, { desc: e.target.value })}
+                  rows={3}
+                />
+              </div>
+
+              {renderActionEditor(item, index)}
+
+              <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium">Visible</p>
+                  <p className="text-xs text-muted-foreground">Hide without deleting</p>
+                </div>
+                <Switch
+                  checked={item.visible ?? true}
+                  onCheckedChange={(checked) => patchItem(index, { visible: checked })}
+                />
+              </div>
+
+              {renderMoveDeleteRow(index)}
             </AccordionContent>
           </AccordionItem>
         ))}
@@ -358,6 +518,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
 
   const renderTrustBadgesEditor = () => (
     <div className="space-y-3">
+      {renderSectionTop(true)}
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <Label>Columns</Label>
@@ -375,15 +536,21 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
-          <div>
-            <p className="text-sm font-medium">Visible</p>
-            <p className="text-xs text-muted-foreground">Show this section on page</p>
-          </div>
-          <Switch
-            checked={content.visibility ?? true}
-            onCheckedChange={(checked) => patchContent("visibility", checked)}
-          />
+        <div>
+          <Label>Vertical alignment</Label>
+          <Select
+            value={String(content.verticalAlignment || "center")}
+            onValueChange={(value) => patchContent("verticalAlignment", value)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="top">Top</SelectItem>
+              <SelectItem value="center">Center</SelectItem>
+              <SelectItem value="bottom">Bottom</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -428,6 +595,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
                 <Label>Description</Label>
                 <Input value={item.desc || ""} onChange={(e) => patchItem(index, { desc: e.target.value })} />
               </div>
+              {renderActionEditor(item, index)}
               <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
                 <div>
                   <p className="text-sm font-medium">Visible</p>
@@ -438,35 +606,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
                   onCheckedChange={(checked) => patchItem(index, { visible: checked })}
                 />
               </div>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => moveItem(index, -1)}
-                  disabled={index === 0}
-                >
-                  <ArrowUp className="mr-1 h-4 w-4" /> Up
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => moveItem(index, 1)}
-                  disabled={index === repeaterItems.length - 1}
-                >
-                  <ArrowDown className="mr-1 h-4 w-4" /> Down
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => removeItem(index)}
-                  className="ml-auto"
-                >
-                  <Trash2 className="mr-1 h-4 w-4" /> Delete
-                </Button>
-              </div>
+              {renderMoveDeleteRow(index)}
             </AccordionContent>
           </AccordionItem>
         ))}
@@ -476,6 +616,43 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
 
   const renderEntryCardsEditor = () => (
     <div className="space-y-3">
+      {renderSectionTop(true)}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <Label>Columns</Label>
+          <Select
+            value={String(content.columns || 3)}
+            onValueChange={(value) => patchContent("columns", Number(value))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">1</SelectItem>
+              <SelectItem value="2">2</SelectItem>
+              <SelectItem value="3">3</SelectItem>
+              <SelectItem value="4">4</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Alignment</Label>
+          <Select
+            value={String(content.alignment || "center")}
+            onValueChange={(value) => patchContent("alignment", value)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="left">Left</SelectItem>
+              <SelectItem value="center">Center</SelectItem>
+              <SelectItem value="right">Right</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between">
         <Label>Cards</Label>
         <Button type="button" size="sm" variant="outline" onClick={addItem}>
@@ -535,35 +712,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
                   onCheckedChange={(checked) => patchItem(index, { visible: checked })}
                 />
               </div>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => moveItem(index, -1)}
-                  disabled={index === 0}
-                >
-                  <ArrowUp className="mr-1 h-4 w-4" /> Up
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => moveItem(index, 1)}
-                  disabled={index === repeaterItems.length - 1}
-                >
-                  <ArrowDown className="mr-1 h-4 w-4" /> Down
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => removeItem(index)}
-                  className="ml-auto"
-                >
-                  <Trash2 className="mr-1 h-4 w-4" /> Delete
-                </Button>
-              </div>
+              {renderMoveDeleteRow(index)}
             </AccordionContent>
           </AccordionItem>
         ))}
@@ -573,15 +722,8 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
 
   const renderImageCollectionEditor = (mode: "image" | "carousel") => (
     <div className="space-y-3">
+      {renderSectionTop(true)}
       <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <Label>Section heading</Label>
-          <Input
-            value={content.heading || ""}
-            onChange={(e) => patchContent("heading", e.target.value)}
-            placeholder="Optional heading"
-          />
-        </div>
         {mode === "image" ? (
           <div>
             <Label>Columns</Label>
@@ -612,6 +754,17 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
             />
           </div>
         )}
+
+        <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+          <div>
+            <p className="text-sm font-medium">Visible</p>
+            <p className="text-xs text-muted-foreground">Show this section on page</p>
+          </div>
+          <Switch
+            checked={content.visibility ?? true}
+            onCheckedChange={(checked) => patchContent("visibility", checked)}
+          />
+        </div>
       </div>
 
       <div className="flex items-center justify-between">
@@ -703,35 +856,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
                 />
               </div>
 
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => moveItem(index, -1)}
-                  disabled={index === 0}
-                >
-                  <ArrowUp className="mr-1 h-4 w-4" /> Up
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => moveItem(index, 1)}
-                  disabled={index === repeaterItems.length - 1}
-                >
-                  <ArrowDown className="mr-1 h-4 w-4" /> Down
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => removeItem(index)}
-                  className="ml-auto"
-                >
-                  <Trash2 className="mr-1 h-4 w-4" /> Delete
-                </Button>
-              </div>
+              {renderMoveDeleteRow(index)}
             </AccordionContent>
           </AccordionItem>
         ))}
@@ -798,11 +923,12 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
           </div>
 
           {block.block_type === "faq" && renderFaqEditor()}
+          {block.block_type === "how_it_works" && renderHowItWorksEditor()}
           {block.block_type === "trust_badges" && renderTrustBadgesEditor()}
           {block.block_type === "entry_cards" && renderEntryCardsEditor()}
           {block.block_type === "image" && renderImageCollectionEditor("image")}
           {block.block_type === "carousel" && renderImageCollectionEditor("carousel")}
-          {!["faq", "trust_badges", "entry_cards", "image", "carousel"].includes(block.block_type) &&
+          {!["faq", "how_it_works", "trust_badges", "entry_cards", "image", "carousel"].includes(block.block_type) &&
             renderGenericEditor()}
 
           <div className="flex gap-2 pt-2">

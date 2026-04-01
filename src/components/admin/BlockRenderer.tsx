@@ -1275,6 +1275,7 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
 };
 
 const CarouselBlock = ({ block }: { block: SiteBlock }) => {
+  useTranslation();
   const [current, setCurrent] = useState(0);
   const slides = Array.isArray(block.content?.slides)
     ? block.content.slides.filter((slide: any) => slide?.visible !== false && slide?.image)

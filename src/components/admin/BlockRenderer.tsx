@@ -1737,7 +1737,7 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: index * 0.04 }}
-                    className="overflow-hidden rounded-2xl border bg-background"
+                    className="overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md" style={{ boxShadow: '0 4px 24px -4px hsl(225 44% 4% / 0.4)' }}
                   >
                     {card}
                   </motion.div>

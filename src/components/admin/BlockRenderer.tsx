@@ -577,7 +577,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
               />
             </div>
           ) : (
-            <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted text-muted-foreground">
+            <div className="flex h-64 items-center justify-center rounded-2xl border-2 border-dashed border-muted-foreground/20 bg-muted/10 text-muted-foreground">
               {tr("blocks.embed.noUrl", "No embed URL set")}
             </div>
           )}

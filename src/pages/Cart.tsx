@@ -113,6 +113,13 @@ export default function CartPage() {
   const remainingForFreeShipping = Math.max(FREE_SHIPPING_THRESHOLD - totalPrice, 0);
 
   const shippingCost = totalPrice >= FREE_SHIPPING_THRESHOLD || totalPrice === 0 ? 0 : BASE_SHIPPING_PRICE;
+
+  const GIFT_FEE_PER_ITEM = 10;
+  const GIFT_WRAP_FEE = 25;
+  const totalItemCount = cartItems.reduce((sum, i) => sum + i.quantity, 0);
+  const giftFee = giftSettings.enabled ? GIFT_FEE_PER_ITEM * totalItemCount : 0;
+  const giftWrapFee = giftSettings.enabled && giftSettings.giftWrap ? GIFT_WRAP_FEE : 0;
+
   const pointsToEarn = Math.floor(totalPrice / 4);
 
   const discountAmount = useMemo(() => {
@@ -125,7 +132,7 @@ export default function CartPage() {
     return Math.min(selectedDiscount.value, totalPrice + shippingCost);
   }, [selectedDiscount, totalPrice, shippingCost]);
 
-  const finalTotal = Math.max(totalPrice + shippingCost - discountAmount, 0);
+  const finalTotal = Math.max(totalPrice + shippingCost + giftFee + giftWrapFee - discountAmount, 0);
 
   const recommendedProducts = useMemo(() => {
     const map = new Map<string, RecommendedProduct>();
@@ -574,6 +581,20 @@ export default function CartPage() {
                     {shippingCost === 0 ? t("cart.free") : formatPrice(shippingCost)}
                   </span>
                 </div>
+
+                {giftFee > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">🎁 Gift packaging ({totalItemCount} {totalItemCount === 1 ? "item" : "items"})</span>
+                    <span className="font-display font-bold text-foreground">{formatPrice(giftFee)}</span>
+                  </div>
+                )}
+
+                {giftWrapFee > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">✨ Gift wrapping</span>
+                    <span className="font-display font-bold text-foreground">{formatPrice(giftWrapFee)}</span>
+                  </div>
+                )}
 
                 <div className="rounded-xl border border-border bg-background/50 p-3">
                   <label className="mb-2 block text-sm font-medium text-foreground">{t("cart.discount")}</label>

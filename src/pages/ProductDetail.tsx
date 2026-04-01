@@ -287,7 +287,6 @@ const ProductDetail = () => {
               <h1 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{product.name}</h1>
               <RatingStars rating={socialProof?.averageRating} count={socialProof?.reviewCount} />
               <ProductTrustBadges badges={trustBadges} />
-              <SocialProofBadges productId={product.id} variant="full" />
               <ProductFOMOBar productId={product.id} stock={activeStock} />
             </div>
 

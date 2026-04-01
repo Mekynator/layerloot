@@ -193,6 +193,7 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
             </h3>
             <RatingStars rating={socialProof?.averageRating} count={socialProof?.reviewCount} className="min-h-5" />
             <ProductTrustBadges badges={trustBadges} />
+            <SocialProofBadges productId={product.id} variant="compact" />
           </div>
 
           <div className="mt-auto space-y-3">

@@ -374,38 +374,37 @@ const AdminClients = () => {
         vouchers: userVouchers,
       });
 
+      const lastActivityAt = activity[0]?.created_at ?? authUser.last_sign_in_at ?? authUser.created_at;
+      const daysSince = lastActivityAt ? Math.floor((Date.now() - new Date(lastActivityAt).getTime()) / 86400000) : null;
+      const orderCount = userOrders.length;
+      const activeVouchers = userVouchers.filter((voucher) => !voucher.is_used).length;
+      const customOrderCount = userCustomOrders.length;
+      const tier = classifyTier(orderCount, totalSpent, daysSince);
+
       return {
         id: authUser.id,
         email: authUser.email,
         full_name: profile?.full_name || authUser.user_metadata?.full_name || authUser.email?.split("@")[0] || "Unnamed user",
         joined_at: authUser.created_at,
         last_sign_in_at: authUser.last_sign_in_at,
-        last_activity_at: activity[0]?.created_at ?? authUser.last_sign_in_at ?? authUser.created_at,
+        last_activity_at: lastActivityAt,
         role: roleMap.get(authUser.id) === "admin" || authUser.role === "admin" ? "admin" : "user",
         profile,
         points_balance: pointsBalance,
-        order_count: userOrders.length,
+        order_count: orderCount,
         total_spent: totalSpent,
-        active_vouchers: userVouchers.filter((voucher) => !voucher.is_used).length,
+        active_vouchers: activeVouchers,
         used_vouchers: userVouchers.filter((voucher) => voucher.is_used).length,
-        custom_order_count: userCustomOrders.length,
+        custom_order_count: customOrderCount,
         orders: userOrders,
         customOrders: userCustomOrders,
         loyaltyHistory: userLoyalty,
         vouchers: userVouchers,
         activity,
-        tier: "new" as AdminUser["tier"],
-        daysSinceLastActivity: null as number | null,
-        recommendedAction: null as string | null,
-      };
-
-      const lastAct = built.last_activity_at;
-      const daysSince = lastAct ? Math.floor((Date.now() - new Date(lastAct).getTime()) / 86400000) : null;
-      built.daysSinceLastActivity = daysSince;
-      built.tier = classifyTier(built.order_count, built.total_spent, daysSince);
-      built.recommendedAction = getRecommendedAction({ tier: built.tier, unusedVouchers: built.active_vouchers, customOrderCount: built.custom_order_count, pointsBalance: built.points_balance });
-
-      return built satisfies AdminUser;
+        tier,
+        daysSinceLastActivity: daysSince,
+        recommendedAction: getRecommendedAction({ tier, unusedVouchers: activeVouchers, customOrderCount, pointsBalance }),
+      } satisfies AdminUser;
     });
 
     setUsers(

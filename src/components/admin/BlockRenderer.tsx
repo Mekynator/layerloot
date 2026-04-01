@@ -1284,13 +1284,13 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
   const hasSlides = slides.length > 0;
   const imageCount = hasSlides ? slides.length : legacyImages.length;
 
-  if (imageCount === 0) return null;
-
   useEffect(() => {
     if (imageCount <= 1) return;
     const timer = window.setInterval(() => setCurrent((p) => (p + 1) % imageCount), 6500);
     return () => window.clearInterval(timer);
   }, [imageCount]);
+
+  if (imageCount === 0) return null;
 
   const currentSlide = hasSlides ? slides[current] : null;
   const currentImage = hasSlides ? currentSlide?.image : legacyImages[current];

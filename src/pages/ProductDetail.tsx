@@ -408,7 +408,7 @@ const ProductDetail = () => {
               <CardContent className="grid gap-4 p-6 md:grid-cols-[1fr_auto] md:items-end">
                 <div className="space-y-4">
                   <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-foreground">
-                    Write a Review
+                    {t("products.writeReview")}
                   </h3>
                   <div className="flex items-center gap-1">
                     {[1, 2, 3, 4, 5].map((s) => (

@@ -1422,7 +1422,7 @@ const VideoBlock = ({ block }: { block: SiteBlock }) => {
         </h2>
       )}
 
-      <motion.div whileHover={{ y: -2 }} className="overflow-hidden rounded-lg border border-border shadow-xl">
+      <motion.div whileHover={{ y: -4 }} className="overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md" style={{ boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)' }}>
         {isYouTube ? (
           <div className="aspect-video">
             <iframe

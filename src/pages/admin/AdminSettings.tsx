@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
+import { POLICY_KEYS } from "@/pages/Policies";
 
 interface PromoConfig {
   enabled: boolean;
@@ -176,11 +177,13 @@ const AdminSettings = () => {
   const [footerContact, setFooterContact] = useState<FooterContactConfig>(defaultFooterContact);
   const [branding, setBranding] = useState<BrandingConfig>(defaultBranding);
   const [saving, setSaving] = useState(false);
+  const [policies, setPolicies] = useState<Record<string, { title: string; body: string }>>({});
 
   useEffect(() => {
     const load = async () => {
       const { data } = await supabase.from("site_settings").select("*");
       if (data) {
+        const policyData: Record<string, { title: string; body: string }> = {};
         data.forEach((s: any) => {
           if (s.key === "contact") {
             setContact((prev) => ({ ...prev, ...(s.value as any) }));
@@ -190,7 +193,11 @@ const AdminSettings = () => {
           if (s.key === "promotion_popup") setPromo({ ...defaultPromo, ...(s.value as any) });
           if (s.key === "footer_settings") setFooter({ ...defaultFooter, ...(s.value as any) });
           if (s.key === "branding") setBranding({ ...defaultBranding, ...(s.value as any) });
+          if (s.key.startsWith("policy_") && s.value) {
+            policyData[s.key] = s.value as { title: string; body: string };
+          }
         });
+        setPolicies(policyData);
       }
     };
     load();
@@ -225,12 +232,16 @@ const AdminSettings = () => {
         facebook: footerContact.facebook_url,
       },
     };
+    const policyUpserts = Object.entries(policies).map(([key, val]) =>
+      upsertSetting(key, val)
+    );
     await Promise.all([
       upsertSetting("contact", mergedContact),
       upsertSetting("store", store),
       upsertSetting("promotion_popup", promo),
       upsertSetting("footer_settings", footer),
       upsertSetting("branding", branding),
+      ...policyUpserts,
     ]);
     setSaving(false);
     toast({ title: "Settings saved!" });
@@ -252,6 +263,7 @@ const AdminSettings = () => {
         <TabsList>
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="footer">Footer</TabsTrigger>
+          <TabsTrigger value="policies">Policies</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-6">
@@ -381,6 +393,53 @@ const AdminSettings = () => {
                 <div className="flex items-center gap-2"><Switch checked={footer.show_contact_block} onCheckedChange={(v) => setFooter({ ...footer, show_contact_block: v })} /><Label className="text-xs">Show Contact Block</Label></div>
               </CardContent>
             </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="policies" className="space-y-6">
+          <p className="text-sm text-muted-foreground">Edit your store policies below. Content supports Markdown formatting. Changes apply after saving.</p>
+          <div className="grid gap-4">
+            {POLICY_KEYS.map((policy) => {
+              const current = policies[policy.settingKey] || { title: policy.title, body: "" };
+              return (
+                <Card key={policy.settingKey}>
+                  <CardHeader>
+                    <CardTitle className="font-display text-sm uppercase">{policy.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <Label className="text-xs">Page Title</Label>
+                      <Input
+                        value={current.title}
+                        onChange={(e) =>
+                          setPolicies((prev) => ({
+                            ...prev,
+                            [policy.settingKey]: { ...current, title: e.target.value },
+                          }))
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Content (Markdown)</Label>
+                      <Textarea
+                        value={current.body}
+                        onChange={(e) =>
+                          setPolicies((prev) => ({
+                            ...prev,
+                            [policy.settingKey]: { ...current, body: e.target.value },
+                          }))
+                        }
+                        rows={10}
+                        className="font-mono text-xs"
+                      />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      Live at: <span className="font-mono text-primary">/policies/{policy.slug}</span>
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </TabsContent>
       </Tabs>

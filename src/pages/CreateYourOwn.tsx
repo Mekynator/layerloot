@@ -1394,7 +1394,9 @@ const CustomPrintOrder = () => {
 
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
             <Trans i18nKey="create.requestFeeNote">
-              After successful payment, your custom request is created and sent to the admin team for review. This amount will later be <span className="font-semibold">deducted from the final quoted price</span>.
+              After successful payment, your custom request is created and sent to our team for review. This amount will be <span className="font-semibold">deducted from your final quoted price</span>.
+              <br />
+              <span className="mt-1 block">Please note that the custom request fee is non-refundable if you choose not to proceed with the order.</span>
             </Trans>
           </div>
 

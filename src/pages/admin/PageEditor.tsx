@@ -753,7 +753,7 @@ const PageEditor = () => {
                 variant="ghost"
                 size="sm"
                 onClick={openEditPageDialog}
-                className="text-background/70 hover:bg-background/10 hover:text-background"
+                className="text-muted-foreground hover:bg-accent/10 hover:text-foreground"
               >
                 <Settings2 className="mr-1 h-3.5 w-3.5" /> Page Settings
               </Button>

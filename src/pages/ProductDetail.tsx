@@ -487,9 +487,9 @@ const ProductDetail = () => {
                 variant="outline"
                 className="rounded-full border-primary/20 bg-primary/5 uppercase tracking-[0.2em] text-primary"
               >
-                You may also like
+                {t("products.youMayAlsoLike")}
               </Badge>
-              <h2 className="font-display text-2xl font-bold uppercase text-foreground">Keep the build going</h2>
+              <h2 className="font-display text-2xl font-bold uppercase text-foreground">{t("products.keepBuilding")}</h2>
             </div>
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
               {relatedProducts.map((related, index) => (

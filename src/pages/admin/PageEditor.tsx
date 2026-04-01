@@ -742,7 +742,7 @@ const PageEditor = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate(pageToRealPath(selectedPage))}
-                className="text-background/70 hover:bg-background/10 hover:text-background"
+                className="text-muted-foreground hover:bg-accent/10 hover:text-foreground"
               >
                 Open real page
               </Button>

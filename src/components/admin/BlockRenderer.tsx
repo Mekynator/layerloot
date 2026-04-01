@@ -514,7 +514,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
               className="mx-auto max-h-[600px] w-full rounded-lg object-contain"
             />
           ) : (
-            <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted text-muted-foreground">
+            <div className="flex h-64 items-center justify-center rounded-2xl border-2 border-dashed border-muted-foreground/20 bg-muted/10 text-muted-foreground">
               {tr("blocks.image.noImage", "No image set")}
             </div>
           )}

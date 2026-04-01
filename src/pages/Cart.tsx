@@ -638,7 +638,7 @@ export default function CartPage() {
                 <div className="space-y-2 pt-2 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="h-4 w-4 text-primary" />
-                    <span>Secure checkout</span>
+                    <span>{t("cart.secureCheckout")}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Truck className="h-4 w-4 text-primary" />

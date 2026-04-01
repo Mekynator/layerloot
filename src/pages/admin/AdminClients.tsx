@@ -718,7 +718,94 @@ const AdminClients = () => {
                 </div>
               </TabsContent>
 
-              <TabsContent value="orders" className="space-y-4">
+              <TabsContent value="crm" className="space-y-4">
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="font-display uppercase">Customer Intelligence</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center gap-3 rounded-lg border border-border p-4">
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${TIER_STYLES[selectedUser.tier]}`}>
+                          {selectedUser.tier === "vip" ? <Crown className="h-5 w-5" /> :
+                           selectedUser.tier === "at_risk" ? <AlertTriangle className="h-5 w-5" /> :
+                           selectedUser.tier === "dormant" ? <UserMinus className="h-5 w-5" /> :
+                           <Users className="h-5 w-5" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">Customer Tier</p>
+                          <Badge variant="outline" className={`mt-1 ${TIER_STYLES[selectedUser.tier]}`}>
+                            {TIER_LABELS[selectedUser.tier]}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="rounded-lg border border-border bg-muted/30 p-4">
+                          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Avg Order Value</p>
+                          <p className="mt-2 font-display text-xl font-bold">
+                            {selectedUser.order_count > 0 ? currency.format(selectedUser.total_spent / selectedUser.order_count) : "—"}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-muted/30 p-4">
+                          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Days Since Activity</p>
+                          <p className="mt-2 font-display text-xl font-bold">
+                            {selectedUser.daysSinceLastActivity !== null ? `${selectedUser.daysSinceLastActivity}d` : "—"}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-muted/30 p-4">
+                          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Lifetime Value</p>
+                          <p className="mt-2 font-display text-xl font-bold">{currency.format(selectedUser.total_spent)}</p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-muted/30 p-4">
+                          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Unused Vouchers</p>
+                          <p className="mt-2 font-display text-xl font-bold">{selectedUser.active_vouchers}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="font-display uppercase">Recommended Actions</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {selectedUser.recommendedAction ? (
+                        <div className="flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
+                          <Zap className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{selectedUser.recommendedAction}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Based on {TIER_LABELS[selectedUser.tier]} tier classification and activity patterns.
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4 text-sm text-foreground">
+                          No specific action needed — customer is engaged.
+                        </div>
+                      )}
+
+                      <div className="space-y-2 pt-2">
+                        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Quick Actions</p>
+                        <div className="flex flex-wrap gap-2">
+                          <Button size="sm" variant="outline" className="h-7 text-xs" asChild>
+                            <Link to="/admin/discounts">Create Offer</Link>
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-7 text-xs" asChild>
+                            <Link to="/admin/campaigns">Start Campaign</Link>
+                          </Button>
+                          {selectedUser.custom_order_count > 0 && (
+                            <Button size="sm" variant="outline" className="h-7 text-xs" asChild>
+                              <Link to="/admin/custom-orders">View Custom Orders</Link>
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
                 <div className="grid gap-4 lg:grid-cols-2">
                   <Card>
                     <CardHeader>

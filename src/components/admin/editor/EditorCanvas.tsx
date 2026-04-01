@@ -304,13 +304,24 @@ function InlineEditableBlock({
   onCancel: () => void;
   content: Record<string, any>;
 }) {
-  const editRef = useRef<HTMLDivElement>(null);
   const currentValue = typeof content[editingKey] === "string" ? content[editingKey] : "";
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+  const editCallbackRef = useCallback((el: HTMLDivElement | null) => {
+    if (el) {
+      el.focus();
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    }
+  }, []);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      const text = editRef.current?.textContent || "";
+      const text = (e.target as HTMLDivElement).textContent || "";
       onSave(editingKey, text);
     }
     if (e.key === "Escape") {
@@ -318,8 +329,8 @@ function InlineEditableBlock({
     }
   }, [editingKey, onSave, onCancel]);
 
-  const handleBlur = useCallback(() => {
-    const text = editRef.current?.textContent || "";
+  const handleBlur = useCallback((e: React.FocusEvent<HTMLDivElement>) => {
+    const text = e.currentTarget.textContent || "";
     onSave(editingKey, text);
   }, [editingKey, onSave]);
 
@@ -329,27 +340,14 @@ function InlineEditableBlock({
       {/* Overlay editable field */}
       <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
         <div
-          ref={editRef}
+          ref={editCallbackRef}
           contentEditable
           suppressContentEditableWarning
-          className="pointer-events-auto min-w-[100px] rounded border-2 border-primary bg-background/90 px-3 py-2 text-foreground shadow-lg outline-none backdrop-blur-xl"
+          className="pointer-events-auto min-w-[100px] max-w-[80%] rounded border-2 border-primary bg-background/90 px-3 py-2 text-foreground shadow-lg outline-none backdrop-blur-xl"
           style={{ fontSize: "inherit" }}
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
           dangerouslySetInnerHTML={{ __html: currentValue }}
-          // Auto-focus
-          ref2={useCallback((el: HTMLDivElement | null) => {
-            if (el) {
-              el.focus();
-              // Move cursor to end
-              const range = document.createRange();
-              range.selectNodeContents(el);
-              range.collapse(false);
-              const sel = window.getSelection();
-              sel?.removeAllRanges();
-              sel?.addRange(range);
-            }
-          }, [])}
         />
       </div>
     </div>

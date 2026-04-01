@@ -483,6 +483,9 @@ const ProductDetail = () => {
           </div>
         </motion.section>
 
+        {/* Product Q&A */}
+        <ProductQA productId={product.id} />
+
         {relatedProducts.length > 0 ? (
           <section className="space-y-6">
             <div className="space-y-2">

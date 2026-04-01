@@ -19,7 +19,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,6 +29,7 @@ import LoyaltyProgressCard from "@/components/social/LoyaltyProgressCard";
 import { CartSummarySkeleton } from "@/components/shared/loading-states";
 import { formatPrice } from "@/lib/currency";
 import GiftMode, { type GiftSettings } from "@/components/cart/GiftMode";
+import FreeShippingBar from "@/components/cart/FreeShippingBar";
 
 const FREE_SHIPPING_THRESHOLD = 500;
 const BASE_SHIPPING_PRICE = 5.99;
@@ -319,15 +319,7 @@ export default function CartPage() {
         <div className="grid gap-8 lg:grid-cols-[1.4fr_0.8fr]">
           <div className="space-y-6">
             <motion.div layout className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-              <div className="mb-3 flex items-center gap-2">
-                <Truck className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium text-card-foreground">
-                {remainingForFreeShipping > 0
-                    ? t("cart.freeShippingRemaining", { amount: formatPrice(remainingForFreeShipping) })
-                    : t("cart.freeShippingQualified")}
-                </span>
-              </div>
-              <Progress value={shippingProgress} className="h-2" />
+              <FreeShippingBar subtotal={totalPrice} threshold={FREE_SHIPPING_THRESHOLD} />
             </motion.div>
 
             {/* Gift Mode */}

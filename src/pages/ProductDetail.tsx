@@ -25,6 +25,9 @@ import ReviewCard from "@/components/social/ReviewCard";
 import ProductCard from "@/components/ProductCard";
 import SocialProofBadges from "@/components/social/SocialProofBadges";
 import ProductQA from "@/components/product/ProductQA";
+import StickyAddToCart from "@/components/product/StickyAddToCart";
+import RecentlyViewedSection from "@/components/product/RecentlyViewedSection";
+import { useRecentlyViewedProducts } from "@/hooks/use-recently-viewed";
 import { useProductDetailQuery } from "@/hooks/use-storefront";
 
 const AUTO_GALLERY_MS = 6500;
@@ -45,6 +48,8 @@ const ProductDetail = () => {
   const [justAdded, setJustAdded] = useState(false);
 
   const heroImageRef = useRef<HTMLImageElement | null>(null);
+  const addToCartSectionRef = useRef<HTMLDivElement | null>(null);
+  const { recentProducts, trackProduct } = useRecentlyViewedProducts();
 
   const product = data?.product ?? null;
   const variants = data?.variants ?? [];
@@ -77,6 +82,18 @@ const ProductDetail = () => {
     const timer = window.setTimeout(() => setJustAdded(false), 1500);
     return () => window.clearTimeout(timer);
   }, [justAdded]);
+
+  // Track recently viewed product
+  useEffect(() => {
+    if (!product) return;
+    trackProduct({
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      image: product.images?.[0] || "/placeholder.svg",
+      price: Number(product.price),
+    });
+  }, [product?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAddToCart = () => {
     if (!product) return;
@@ -353,7 +370,7 @@ const ProductDetail = () => {
               {socialProof?.reviewCount ? <span className="text-muted-foreground">{t("products.lovedByBuyers")}</span> : null}
             </div>
 
-            <div className="relative">
+            <div className="relative" ref={addToCartSectionRef}>
               <Button
                 size="lg"
                 className={`w-full font-display uppercase tracking-wider transition-all duration-300 ${justAdded ? "shadow-[0_0_28px_hsl(var(--primary)/0.35)]" : ""}`}
@@ -504,7 +521,25 @@ const ProductDetail = () => {
             </div>
           </section>
         ) : null}
+
+        {/* Recently Viewed */}
+        <RecentlyViewedSection
+          products={recentProducts.filter((p) => p.id !== product.id)}
+          maxItems={6}
+        />
       </div>
+
+      {/* Sticky Add-to-Cart bar */}
+      <StickyAddToCart
+        product={product}
+        price={activePrice}
+        stock={activeStock}
+        disabled={activeStock <= 0 || (variants.length > 0 && !selectedVariant && !hasConfiguratorAttrs)}
+        onAddToCart={handleAddToCart}
+        justAdded={justAdded}
+        observeRef={addToCartSectionRef}
+        variantLabel={selectedVariant?.name}
+      />
     </div>
   );
 };

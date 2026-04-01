@@ -35,6 +35,7 @@ import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import ToolReviewForm from "@/components/reviews/ToolReviewForm";
 import OrderTimeline from "@/components/orders/OrderTimeline";
+import { useReorder } from "@/hooks/use-reorder";
 import { payCustomOrder } from "@/lib/payCustomOrder";
 import { useAccountOverview } from "@/hooks/use-account-overview";
 import { computeLoyaltyProgress } from "@/hooks/use-loyalty-progress";
@@ -216,6 +217,15 @@ const REWARD_CATALOG: RewardCatalogItem[] = [
     discountValue: 0,
     badge: "Shipping",
   },
+  {
+    key: "free-gift-wrap",
+    name: "FREE GIFT WRAPPING + CARD",
+    description: "Free gift wrapping and a personalised card with your message",
+    pointsCost: 350,
+    discountType: "gift_wrap",
+    discountValue: 0,
+    badge: "Gift",
+  },
 ];
 
 const DONE_CUSTOM_STATUSES = new Set(["rejected", "completed"]);
@@ -379,6 +389,7 @@ const Account = () => {
     refetch: refetchOverview,
   } = useAccountOverview(user?.id);
 
+  const { reorder, reorderingId } = useReorder();
   const [showHistory, setShowHistory] = useState(false);
   const [tab, setTab] = useState<AccountTab>("orders");
   const [customRequestsView, setCustomRequestsView] = useState<CustomRequestsView>("ongoing");
@@ -1348,9 +1359,25 @@ const Account = () => {
                           </Link>
                         </div>
 
-                        {/* Order Timeline */}
-                        <div className="mt-4 border-t border-border pt-4">
-                          <OrderTimeline status={order.status} />
+                        {/* Reorder + Order Timeline */}
+                        <div className="mt-4 flex items-center gap-3 border-t border-border pt-4">
+                          <div className="flex-1">
+                            <OrderTimeline status={order.status} />
+                          </div>
+                          {(order.status === "delivered" || order.status === "completed" || order.status === "shipped") && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => reorder(order.id)}
+                              disabled={reorderingId === order.id}
+                              className="shrink-0 font-display uppercase tracking-wider"
+                            >
+                              <Package className="mr-1 h-4 w-4" />
+                              {reorderingId === order.id
+                                ? tt("account.orders.reordering", "Reordering...")
+                                : tt("account.orders.reorder", "Reorder")}
+                            </Button>
+                          )}
                         </div>
 
                         {order.status === "delivered" &&

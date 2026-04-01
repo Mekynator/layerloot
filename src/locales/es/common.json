@@ -199,6 +199,37 @@
     "qualifies": "Calificas para envío gratis.",
     "addMore": "Añade {{amount}} más para envío gratis."
   },
+  "notFound": {
+    "title": "¡Ups! Página no encontrada",
+    "backHome": "Volver al Inicio"
+  },
+  "orderTracking": {
+    "notFound": "Pedido No Encontrado",
+    "backToAccount": "Volver a la Cuenta",
+    "orderNumber": "Pedido #{{id}}",
+    "trackingNumber": "Número de Seguimiento",
+    "trackPackage": "Rastrear Paquete",
+    "items": "Artículos",
+    "qty": "Cant.",
+    "statusHistory": "Historial de Estado",
+    "status": {
+      "pending": "Pendiente",
+      "processing": "Procesando",
+      "shipped": "Enviado",
+      "completed": "Completado",
+      "cancelled": "Cancelado"
+    }
+  },
+  "dynamicPage": {
+    "emptyTitle": "Próximamente",
+    "emptyDescription": "Contenido próximamente."
+  },
+  "pages": {
+    "home": {
+      "emptyTitle": "Inicio",
+      "emptyDescription": "Nuevas llegadas y piezas destacadas en camino."
+    }
+  },
   "common": {
     "loading": "Cargando...",
     "error": "Error",

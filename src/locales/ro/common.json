@@ -199,6 +199,37 @@
     "qualifies": "Te califici pentru livrare gratuită.",
     "addMore": "Adaugă încă {{amount}} pentru livrare gratuită."
   },
+  "notFound": {
+    "title": "Ups! Pagina nu a fost găsită",
+    "backHome": "Înapoi la pagina principală"
+  },
+  "orderTracking": {
+    "notFound": "Comandă Negăsită",
+    "backToAccount": "Înapoi la Cont",
+    "orderNumber": "Comandă #{{id}}",
+    "trackingNumber": "Număr de Urmărire",
+    "trackPackage": "Urmărește Coletul",
+    "items": "Articole",
+    "qty": "Cant.",
+    "statusHistory": "Istoric Status",
+    "status": {
+      "pending": "În așteptare",
+      "processing": "Se procesează",
+      "shipped": "Expediat",
+      "completed": "Finalizat",
+      "cancelled": "Anulat"
+    }
+  },
+  "dynamicPage": {
+    "emptyTitle": "În curând",
+    "emptyDescription": "Conținut în curând."
+  },
+  "pages": {
+    "home": {
+      "emptyTitle": "Acasă",
+      "emptyDescription": "Noutăți și piese selectate sunt pe drum."
+    }
+  },
   "common": {
     "loading": "Se încarcă...",
     "error": "Eroare",

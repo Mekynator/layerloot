@@ -367,7 +367,7 @@ export default function CartPage() {
                                 {item.materialGrams && (
                                   <div className="flex items-center gap-2">
                                     <Package className="h-4 w-4 text-primary" />
-                                    <span>Material: {item.materialGrams}g</span>
+                                    <span>{t("cart.material")} {item.materialGrams}g</span>
                                   </div>
                                 )}
 

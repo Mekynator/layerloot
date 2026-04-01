@@ -217,6 +217,15 @@ const REWARD_CATALOG: RewardCatalogItem[] = [
     discountValue: 0,
     badge: "Shipping",
   },
+  {
+    key: "free-gift-wrap",
+    name: "FREE GIFT WRAPPING + CARD",
+    description: "Free gift wrapping and a personalised card with your message",
+    pointsCost: 350,
+    discountType: "gift_wrap",
+    discountValue: 0,
+    badge: "Gift",
+  },
 ];
 
 const DONE_CUSTOM_STATUSES = new Set(["rejected", "completed"]);

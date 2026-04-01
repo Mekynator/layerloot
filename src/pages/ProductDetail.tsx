@@ -335,10 +335,10 @@ const ProductDetail = () => {
                         whileTap={{ scale: 0.98 }}
                         key={variant.id}
                         onClick={() => setSelectedVariantId(selectedVariant?.id === variant.id ? null : variant.id)}
-                        className={`rounded-xl border px-4 py-2 font-display text-sm uppercase transition-all duration-200 ${
+                        className={`rounded-xl px-4 py-2 font-display text-sm uppercase transition-all duration-200 ${
                           selectedVariant?.id === variant.id
-                            ? "border-primary bg-primary text-primary-foreground shadow-md"
-                            : "border-border text-foreground hover:border-primary/50"
+                            ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                            : "bg-muted/30 text-foreground hover:bg-primary/10"
                         } ${variant.stock <= 0 ? "cursor-not-allowed opacity-40" : ""}`}
                         disabled={variant.stock <= 0}
                       >

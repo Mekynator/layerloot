@@ -859,7 +859,7 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
       block,
       "py-16 lg:py-24",
       <div className="container text-center">
-        <h2 className="font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">{heading}</h2>
+        <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{heading}</h2>
         <p className="mt-2 text-muted-foreground">{subheading}</p>
         <p className="mt-8 text-sm italic text-muted-foreground">
           {tr("blocks.categories.empty", "No categories available.")}

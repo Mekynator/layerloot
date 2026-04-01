@@ -76,10 +76,10 @@ async function fetchAccountOverview(userId: string): Promise<AccountOverviewData
   };
 }
 
-export function useAccountOverview(userId?: string, userEmail?: string) {
+export function useAccountOverview(userId?: string) {
   return useQuery({
-    queryKey: ["account-overview", userId, userEmail ?? ""],
-    queryFn: () => fetchAccountOverview(userId as string, userEmail),
+    queryKey: ["account-overview", userId],
+    queryFn: () => fetchAccountOverview(userId as string),
     enabled: Boolean(userId),
     staleTime: 1000 * 30,
   });

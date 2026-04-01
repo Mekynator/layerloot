@@ -86,7 +86,7 @@ export default function ShowcaseCard({ item, onQuickView }: ShowcaseCardProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="absolute right-2.5 top-2.5 z-10 h-9 w-9 rounded-full bg-background/70 backdrop-blur-md border border-border/40 shadow-sm hover:bg-background/90 transition-all"
+          className="absolute right-2.5 top-2.5 z-10 h-9 w-9 rounded-full bg-background/70 backdrop-blur-md shadow-lg hover:bg-background/90 transition-all"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();

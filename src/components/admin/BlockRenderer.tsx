@@ -1227,8 +1227,8 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.05 }}
                 whileHover={{ y: -3 }}
-                className={`flex gap-4 rounded-2xl bg-card/60 p-6 backdrop-blur-md transition-all duration-500 hover:shadow-[0_24px_80px_-12px_hsl(217_91%_60%/0.18)] ${verticalClass(c.verticalAlignment)} ${action.actionType !== "none" && !isEditorPreviewMode() ? "cursor-pointer" : ""}`}
-                style={{ boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)' }}
+                className={`flex gap-4 rounded-2xl border border-border/30 bg-card/70 p-6 backdrop-blur-xl transition-all duration-500 hover:border-primary/20 hover:shadow-[0_24px_80px_-12px_hsl(217_91%_60%/0.15)] ${verticalClass(c.verticalAlignment)} ${action.actionType !== "none" && !isEditorPreviewMode() ? "cursor-pointer" : ""}`}
+                style={{ boxShadow: '0 8px 40px -8px hsl(228 33% 2% / 0.5), inset 0 1px 0 0 hsl(215 25% 95% / 0.04)' }}
               >
                 <div
                   className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${hasImage ? "overflow-hidden" : "bg-primary/10"}`}

@@ -120,7 +120,7 @@ const ProductDetail = () => {
     if (error) {
       toast({ title: t("common.error"), description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Review submitted!", description: "It will appear after admin approval." });
+      toast({ title: t("products.reviewSubmitted"), description: t("products.reviewApproval") });
       setReviewForm({ rating: 5, title: "", comment: "" });
       queryClient.invalidateQueries({ queryKey: ["product-detail", slug] });
       queryClient.invalidateQueries({ queryKey: ["storefront-catalog"] });

@@ -30,6 +30,9 @@ const Layout = ({ children }: { children: ReactNode }) => {
         <div className="ambient-blob ambient-blob--3" />
       </div>
 
+      {/* Page background slideshow (behind all content, not header/footer/tiles) */}
+      <PageBackgroundSlideshow />
+
       {/* Subtle grid */}
       <div className="bg-grid-overlay" aria-hidden="true" />
 

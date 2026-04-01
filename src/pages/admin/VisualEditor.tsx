@@ -34,7 +34,7 @@ function EditorInner() {
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  const { save, undo, redo, isDirty: editorDirty } = useVisualEditor();
+  
 
   // Keyboard shortcuts
   useEffect(() => {

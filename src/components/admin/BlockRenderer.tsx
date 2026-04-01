@@ -1537,9 +1537,9 @@ const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
 
   return withSection(
     block,
-    "bg-secondary py-16",
+    "py-16",
     <div className={`container max-w-xl ${alignmentClass(align)}`}>
-      <h2 className="mb-2 font-display text-2xl font-bold uppercase text-secondary-foreground">
+      <h2 className="mb-2 font-display text-2xl font-bold uppercase text-foreground">
         {getLocalizedValue(c.heading, tr("blocks.newsletter.heading", "Stay Updated"))}
       </h2>
       <p className="mb-6 text-muted-foreground">

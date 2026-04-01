@@ -886,8 +886,8 @@ const PageEditor = () => {
                       }}
                       onDragEnd={handleStructureDragEnd}
                       onClick={() => setSelectedBlockId(isSelected ? null : block.id)}
-                      className={`group cursor-pointer rounded-md border-l-[3px] px-2 py-2 text-sm transition-all ${colorClass} ${
-                        isSelected ? "ring-2 ring-primary ring-offset-1 ring-offset-card" : "hover:bg-accent/50"
+                      className={`group cursor-pointer rounded-lg border-l-[3px] px-2 py-2 text-sm transition-all duration-200 ${colorClass} ${
+                        isSelected ? "ring-2 ring-primary/60 ring-offset-1 ring-offset-card shadow-[0_0_16px_hsl(217_91%_60%/0.1)]" : "hover:bg-accent/30 hover:shadow-[0_2px_12px_-2px_hsl(228_33%_2%/0.3)]"
                       } ${!block.is_active ? "opacity-50" : ""}`}
                     >
                       <div className="flex items-start gap-2">

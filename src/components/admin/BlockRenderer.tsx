@@ -1070,8 +1070,8 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
                 className={`${alignmentClass(s.alignment || align)} ${isClickable && !isEditorPreviewMode() ? "cursor-pointer" : ""}`}
               >
                 <div
-                  className={`mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-card/60 backdrop-blur-md transition-all hover:shadow-[0_0_24px_hsl(217_91%_60%/0.2)] ${hasImage ? "overflow-hidden" : ""}`}
-                  style={{ boxShadow: '0 4px 24px -4px hsl(225 44% 4% / 0.4)' }}
+                  className={`mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl border border-border/30 bg-card/70 backdrop-blur-xl transition-all hover:border-primary/20 hover:shadow-[0_0_24px_hsl(217_91%_60%/0.15)] ${hasImage ? "overflow-hidden" : ""}`}
+                  style={{ boxShadow: '0 4px 24px -4px hsl(228 33% 2% / 0.4)' }}
                 >
                   {hasImage ? (
                     <img src={s.image} alt={title || ""} className="h-full w-full object-cover" />

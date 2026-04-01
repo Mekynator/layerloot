@@ -91,6 +91,8 @@ const AppShell = () => {
           <Route path="/admin/showcases" element={<AdminShowcases />} />
           <Route path="/admin/pricing" element={<AdminPricing />} />
           <Route path="/admin/growth" element={<AdminGrowth />} />
+          <Route path="/admin/campaigns" element={<AdminCampaigns />} />
+          <Route path="/admin/reports" element={<AdminReports />} />
           <Route path="/admin/content" element={<AdminContent />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
           <Route path="/admin/editor" element={<PageEditor />} />

@@ -186,6 +186,116 @@ export type Database = {
           },
         ]
       }
+      custom_order_showcases: {
+        Row: {
+          admin_notes_for_reproduction: string | null
+          approved_by_admin: boolean
+          category: string | null
+          colors: string | null
+          created_at: string
+          currency: string
+          custom_order_id: string | null
+          description: string | null
+          dimensions: string | null
+          featured: boolean
+          final_price: number | null
+          finished_image_urls: string[] | null
+          id: string
+          materials: string | null
+          owner_user_id: string
+          preview_image_urls: string[] | null
+          production_settings_json: Json | null
+          quoted_price: number | null
+          rating_avg: number | null
+          rating_count: number
+          reorder_count: number
+          reorder_enabled: boolean
+          size_notes: string | null
+          slug: string
+          source_model_filename: string | null
+          source_model_url: string | null
+          tags: string[] | null
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          visibility_status: string
+        }
+        Insert: {
+          admin_notes_for_reproduction?: string | null
+          approved_by_admin?: boolean
+          category?: string | null
+          colors?: string | null
+          created_at?: string
+          currency?: string
+          custom_order_id?: string | null
+          description?: string | null
+          dimensions?: string | null
+          featured?: boolean
+          final_price?: number | null
+          finished_image_urls?: string[] | null
+          id?: string
+          materials?: string | null
+          owner_user_id: string
+          preview_image_urls?: string[] | null
+          production_settings_json?: Json | null
+          quoted_price?: number | null
+          rating_avg?: number | null
+          rating_count?: number
+          reorder_count?: number
+          reorder_enabled?: boolean
+          size_notes?: string | null
+          slug: string
+          source_model_filename?: string | null
+          source_model_url?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          visibility_status?: string
+        }
+        Update: {
+          admin_notes_for_reproduction?: string | null
+          approved_by_admin?: boolean
+          category?: string | null
+          colors?: string | null
+          created_at?: string
+          currency?: string
+          custom_order_id?: string | null
+          description?: string | null
+          dimensions?: string | null
+          featured?: boolean
+          final_price?: number | null
+          finished_image_urls?: string[] | null
+          id?: string
+          materials?: string | null
+          owner_user_id?: string
+          preview_image_urls?: string[] | null
+          production_settings_json?: Json | null
+          quoted_price?: number | null
+          rating_avg?: number | null
+          rating_count?: number
+          reorder_count?: number
+          reorder_enabled?: boolean
+          size_notes?: string | null
+          slug?: string
+          source_model_filename?: string | null
+          source_model_url?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          visibility_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_order_showcases_custom_order_id_fkey"
+            columns: ["custom_order_id"]
+            isOneToOne: false
+            referencedRelation: "custom_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custom_orders: {
         Row: {
           admin_notes: string | null
@@ -1126,6 +1236,70 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      showcase_favorites: {
+        Row: {
+          created_at: string
+          id: string
+          showcase_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          showcase_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          showcase_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "showcase_favorites_showcase_id_fkey"
+            columns: ["showcase_id"]
+            isOneToOne: false
+            referencedRelation: "custom_order_showcases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      showcase_reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          rating: number
+          showcase_id: string
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating: number
+          showcase_id: string
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating?: number
+          showcase_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "showcase_reviews_showcase_id_fkey"
+            columns: ["showcase_id"]
+            isOneToOne: false
+            referencedRelation: "custom_order_showcases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       site_blocks: {
         Row: {

@@ -507,7 +507,7 @@ export default function CartPage() {
             )}
 
             {recommendedProducts.length > 0 && (
-              <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <div className="glass-card p-5">
                 <h2 className="mb-4 font-display text-xl font-bold uppercase text-foreground">{t("cart.youMayAlsoLike")}</h2>
 
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

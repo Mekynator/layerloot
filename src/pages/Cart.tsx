@@ -222,8 +222,8 @@ export default function CartPage() {
     } catch (error: any) {
       console.error("Checkout error:", error);
       toast({
-        title: "Checkout error",
-        description: error?.message || "Unable to start Stripe checkout.",
+        title: t("cart.checkoutError"),
+        description: error?.message || t("cart.checkoutErrorDesc"),
         variant: "destructive",
       });
     } finally {

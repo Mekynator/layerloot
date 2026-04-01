@@ -1671,7 +1671,7 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
     block,
     "py-16 lg:py-24",
     <div className="container">
-      <div className="rounded-3xl border bg-card/70 p-5 shadow-sm backdrop-blur md:p-6">
+      <div className="rounded-3xl bg-card/60 p-5 backdrop-blur-md md:p-6" style={{ boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)' }}>
         <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-2xl font-bold">

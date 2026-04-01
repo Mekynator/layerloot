@@ -30,6 +30,8 @@ import { CartSummarySkeleton } from "@/components/shared/loading-states";
 import { formatPrice } from "@/lib/currency";
 import GiftMode, { type GiftSettings } from "@/components/cart/GiftMode";
 import FreeShippingBar from "@/components/cart/FreeShippingBar";
+import CartUpsellSection from "@/components/smart/CartUpsellSection";
+import { useStorefrontCatalog } from "@/hooks/use-storefront";
 
 const FREE_SHIPPING_THRESHOLD = 500;
 const BASE_SHIPPING_PRICE = 5.99;

@@ -1,100 +1,82 @@
 
 
-# Implementation Plan
+# Visual Editor Controls UX Overhaul
 
-This plan covers four areas: (1) adding missing DB columns for the custom order request-fee flow, (2) fixing custom order visibility so orders appear only after the 100 kr fee is paid, (3) ensuring the quote-accept-pay flow works end-to-end, and (4) converting the chat bot from a regex-based rule engine to an AI-powered conversational assistant using Lovable AI.
+## Summary
+Replace all technical inputs (raw hex, raw URLs, icon name strings, bare number fields) with visual controls: color pickers, sliders, image upload zones, and a searchable icon grid picker. Create 4 reusable control components in a new `controls/` directory, then rewire `SettingsPanel.tsx` to use them everywhere.
 
----
+## New Files
 
-## 1. Database Migration: Add Missing Custom Order Columns
+### 1. `src/components/admin/editor/controls/SliderField.tsx`
+- Labeled slider with value display (e.g. "24px", "50%")
+- Props: `label`, `value`, `onChange`, `min`, `max`, `step`, `unit` (px/%)
+- Shows current value badge next to label
+- Optional small numeric input for precision typing
 
-The `custom_orders` table is missing columns referenced by edge functions and frontend code.
+### 2. `src/components/admin/editor/controls/ColorPickerField.tsx`
+- Popover trigger showing a color swatch + hex text
+- Inside popover: native `<input type="color">` picker, hex text input, opacity slider (optional)
+- Row of 8 theme swatches (brand colors from tailwind config + common: white, black, transparent)
+- Recently used colors stored in localStorage (last 6)
+- Instant `onChange` on every interaction
 
-**Add columns via migration:**
-- `request_fee_amount` (numeric, default 100)
-- `request_fee_status` (text, default `'unpaid'`)
-- `stripe_checkout_session_id` (text, nullable)
-- `metadata` (jsonb, default `'{}'`)
+### 3. `src/components/admin/editor/controls/ImageUploadField.tsx`
+- Default state: dashed-border drop zone with upload icon + "Click or drag to upload"
+- Uploads to Supabase storage bucket `editor-images` (public)
+- After upload: shows thumbnail preview with Replace and Remove buttons
+- Falls back to URL input in a collapsible "Advanced" section
+- Props: `value` (URL string), `onChange`, `label`
 
-This unblocks `create-request-fee-checkout` and `create-custom-order-checkout` which query these columns.
+### 4. `src/components/admin/editor/controls/IconPickerField.tsx`
+- Button trigger showing current icon preview + name
+- Opens a Popover with:
+  - Search input at top
+  - Grid of ~80+ icons from lucide-react rendered as actual icons
+  - Click to select, closes popover
+  - Categories: Shopping, Delivery, Security, Social, 3D/Printing, Navigation, Communication, Media, Status, UI
+- Expanded icon list (from current 21 to ~80+): add `Clock, CreditCard, DollarSign, MapPin, Phone, Globe, Camera, Image, Video, Play, Pause, Download, Share2, ThumbsUp, Award, Zap, Flame, Lock, Unlock, Eye, EyeOff, Bell, MessageCircle, Send, Search, Filter, Settings, Sliders, BarChart3, PieChart, TrendingUp, Users, UserPlus, User, LogIn, LogOut, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ChevronRight, ChevronDown, ExternalLink, Link, Layers, Grid, List, LayoutGrid, Bookmark, Tag, Calendar, FileText, Folder, Printer, Cpu, Box, Boxes, Cuboid, Cog, Paintbrush, Brush, Palette, Sun, Moon, Cloud, Wifi, Database, Server, Terminal, Code, Rocket, Target, Flag, Trophy, Medal, Crown, Gem, Diamond, Scissors, Ruler, Pencil, Edit, Copy, Clipboard, RefreshCw, RotateCcw, Maximize, Minimize, Move, Grip, Menu, MoreHorizontal, MoreVertical, Info, AlertCircle, AlertTriangle, XCircle, CheckCircle, HelpCircle, CircleDot`
 
----
+### 5. Storage migration
+- Create `editor-images` public bucket via SQL migration
+- RLS: authenticated users can upload to their own folder, public read access
 
-## 2. Custom Order Visibility: Only Show After Fee Paid
+## Changes to `SettingsPanel.tsx`
 
-**Frontend (`use-account-overview.ts`):**
-- The query already fetches all custom orders for the user. Add a filter in the Account page to split orders into two groups:
-  - **Pending fee**: status = `awaiting_request_fee` or `payment_pending` with `request_fee_status != 'paid'` — show a "Pay Request Fee" prompt
-  - **Active orders**: `request_fee_status = 'paid'` — show full details, messaging, quote actions
+### Content tab replacements
+- **Hero `bg_image`**: raw URL input → `ImageUploadField`
+- **Hero overlay**: already a slider (keep, but wrap in `SliderField` for consistency)
+- **Hero button icons**: `Select` dropdown → `IconPickerField`
+- **CTA `bg_image`**: raw URL input → `ImageUploadField`
+- **Entry cards icon**: `Select` → `IconPickerField`
+- **Entry cards image**: raw URL → `ImageUploadField`
+- **Trust badges icon**: `Select` → `IconPickerField`
+- **How it works icon**: `Select` → `IconPickerField`
+- **Image/carousel items image**: raw URL → `ImageUploadField`
+- **Banner background image**: raw URL → `ImageUploadField`
+- **Number inputs** (limit, itemsToShow): → `SliderField` with appropriate ranges
 
-**Admin side:** Admins already see all orders via RLS `has_role(admin)`. Add a visual indicator showing whether the request fee has been paid so admins know which orders to quote.
+### Style tab replacements
+- **Background color**: raw input + native color → `ColorPickerField`
+- **Text color**: raw input + native color → `ColorPickerField`
+- **Background image**: raw URL → `ImageUploadField`
+- **All padding/margin sliders**: wrap in `SliderField` for consistent label+value display
+- **Border radius**: wrap in `SliderField`
+- **Opacity**: wrap in `SliderField` with `%` unit
 
-**Edge function fixes:**
-- `create-request-fee-checkout`: Currency should be `dkk` (currently `sek`)
-- `stripe-webhook`: Handle `request_fee` metadata type — update `request_fee_status` to `'paid'` and `status` to `'pending'` (ready for admin review)
+### Responsive tab
+- **Font scale slider**: wrap in `SliderField`
+- **Padding override**: wrap in `SliderField`
 
----
+## Implementation Order
+1. Create `editor-images` storage bucket (migration)
+2. Build the 4 control components in parallel
+3. Rewire SettingsPanel to use new controls throughout
+4. Remove `ICON_OPTIONS` constant, replace with expanded list in IconPickerField
 
-## 3. Quote Accept → Payment Flow
-
-The existing flow mostly works but needs these fixes:
-
-**`respondToQuote` in Account.tsx** (accept path):
-- Currently calls `payCustomOrder()` which invokes `create-custom-order-checkout`
-- The checkout function correctly reads `final_agreed_price ?? quoted_price`, deducts the request fee, and creates a Stripe session
-- Fix: When user accepts, update `customer_response_status` to `'accepted'` AND set `final_agreed_price = quoted_price` (if not already set), then redirect to payment
-
-**`stripe-webhook`**: Handle `custom_order_final` payment type:
-- Set `payment_status = 'paid'`, `status = 'paid'`, `production_status = 'queued'`
-
----
-
-## 4. AI Chat Bot: Convert to Lovable AI Powered
-
-Currently the chat function uses regex matching (`/points|loyalty/i.test(...)`) and returns hardcoded responses. This will be replaced with an AI-powered conversation that has full context.
-
-**Backend (`supabase/functions/chat/index.ts`):**
-- Keep all existing data-fetching functions (`tryProfile`, `tryPoints`, `tryOrders`, `tryProductViews`, `tryRecommendedProducts`)
-- Gather additional context: categories list, shipping config, site navigation links, custom orders summary
-- Build a rich system prompt containing:
-  - User account info (name, email, points, orders, custom orders)
-  - Cart state and free shipping progress
-  - Product catalog summary and categories
-  - Site navigation map (pages and their URLs)
-  - Store policies (shipping, returns, custom print process)
-  - Instructions to provide links when users ask "where is X"
-- Send full conversation history + system prompt to Lovable AI Gateway (`https://ai.gateway.lovable.dev/v1/chat/completions`) using `LOVABLE_API_KEY`
-- Use `google/gemini-3-flash-preview` model for fast responses
-- Stream the response back to the frontend
-- Parse AI response to extract structured data (links, product recommendations) when relevant
-
-**Frontend (`ChatWidget.tsx`):**
-- Update to handle streaming SSE responses from the new AI-powered chat
-- Add markdown rendering for AI responses using `react-markdown`
-- Keep all existing UI: suggestion chips, product cards, order cards, points display
-- The AI will return structured JSON with `text` + optional `links`, `products`, `suggestions` fields
-- Keep the existing `AssistantExtras` component for rich cards
-
-**System prompt will include:**
-- Full site map: Home (`/`), Products (`/products`), Create Your Own (`/create`), Gallery (`/gallery`), Contact (`/contact`), Account (`/account`), Cart (`/cart`), Auth (`/auth`)
-- User's current page for contextual help
-- Instructions to always provide clickable links when users ask navigation questions
-- Knowledge about materials (PLA, PETG, Resin, etc.), print qualities, custom order process
-- Tone: friendly, helpful, concise
-
----
-
-## Technical Details
-
-**Files to modify:**
-1. **Database migration** — Add 4 columns to `custom_orders`
-2. **`supabase/functions/chat/index.ts`** — Rewrite to use Lovable AI with context injection, streaming
-3. **`supabase/functions/stripe-webhook/index.ts`** — Handle `request_fee` and `custom_order_final` payment types
-4. **`supabase/functions/create-request-fee-checkout/index.ts`** — Fix currency to DKK
-5. **`src/components/ChatWidget.tsx`** — Add SSE streaming, markdown rendering, keep existing rich UI cards
-6. **`src/pages/Account.tsx`** — Filter custom orders by fee payment status, show "Pay Fee" for unpaid ones
-7. **`src/hooks/use-account-overview.ts`** — No changes needed (already fetches `*`)
-8. **`src/pages/admin/AdminCustomOrders.tsx`** — Add request fee status indicator
-
-**Dependencies to add:** `react-markdown` for chat message rendering
+## Technical Notes
+- All controls are small, self-contained components with no external dependencies beyond existing UI primitives (Popover, Slider, Input, ScrollArea)
+- ColorPickerField uses native `<input type="color">` for the gradient picker (no heavy library needed)
+- ImageUploadField uses existing `supabase` client for storage uploads
+- IconPickerField imports `icons` object from `lucide-react` for dynamic rendering
+- No breaking changes to block content schema -- same keys, just better UI to edit them
 

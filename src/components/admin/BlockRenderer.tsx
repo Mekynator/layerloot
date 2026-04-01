@@ -870,7 +870,7 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
 
   return withSection(
     block,
-    "bg-secondary py-16 lg:py-24",
+    "py-16 lg:py-24",
     <div className="container">
       <div className={`mb-12 ${alignmentClass(align)}`}>
         <h2 className="font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">{heading}</h2>

@@ -424,7 +424,7 @@ const ProductDetail = () => {
                     ))}
                   </div>
                   <Input
-                    placeholder="Review title (optional)"
+                    placeholder={t("products.reviewTitle")}
                     value={reviewForm.title}
                     onChange={(e) => setReviewForm({ ...reviewForm, title: e.target.value })}
                   />

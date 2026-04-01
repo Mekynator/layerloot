@@ -99,9 +99,9 @@ const ImageCollectionBlock = ({ content, className }: { content?: ImageCollectio
   const renderCard = (item: ImageItem, index: number) => {
     const card = (
       <div
-        className="group relative overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md"
+        className="group relative overflow-hidden rounded-2xl border border-border/30 bg-card/70 backdrop-blur-xl"
         style={{
-          boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)',
+          boxShadow: '0 8px 40px -8px hsl(228 33% 2% / 0.5), inset 0 1px 0 0 hsl(215 25% 95% / 0.04)',
           gridColumn: `span ${Math.min(Math.max(item.colSpan ?? 1, 1), columns)}`,
           gridRow: `span ${Math.min(Math.max(item.rowSpan ?? 1, 1), 4)}`,
           minHeight: 220,

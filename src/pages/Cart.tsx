@@ -70,6 +70,14 @@ export default function CartPage() {
   const [recentlyChanged, setRecentlyChanged] = useState<Record<string, "inc" | "dec" | "added">>({});
   const [removingIds, setRemovingIds] = useState<string[]>([]);
   const [savedToast, setSavedToast] = useState<string>("");
+  const [giftSettings, setGiftSettings] = useState<GiftSettings>({
+    enabled: false,
+    personalMessage: "",
+    giftWrap: false,
+    recipientAgeGroup: "",
+    recipientInterests: [],
+    occasion: "",
+  });
 
   const checkoutButtonRef = useRef<HTMLButtonElement | null>(null);
 

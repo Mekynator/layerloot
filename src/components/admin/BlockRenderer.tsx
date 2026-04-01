@@ -897,7 +897,7 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
                   className="absolute inset-0 h-full w-full object-cover opacity-30 transition-all duration-500 group-hover:scale-110 group-hover:opacity-40"
                 />
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-secondary via-secondary/60 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent" />
               <h3 className="relative font-display text-xl font-bold uppercase text-secondary-foreground transition-colors group-hover:text-primary">
                 {catName}
               </h3>

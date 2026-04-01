@@ -337,7 +337,7 @@ export default function ModelViewer({
 
   const viewer = (full = false) => (
     <div
-      className={`relative h-full w-full overflow-hidden bg-gradient-to-b from-zinc-100 to-zinc-200 dark:from-zinc-900 dark:to-zinc-950 ${
+      className={`relative h-full w-full overflow-hidden bg-gradient-to-b from-white to-zinc-100 ${
         full ? "rounded-none" : "min-h-[320px] rounded-2xl sm:min-h-[420px]"
       } ${className}`}
     >

@@ -99,9 +99,9 @@ const ImageCollectionBlock = ({ content, className }: { content?: ImageCollectio
   const renderCard = (item: ImageItem, index: number) => {
     const card = (
       <div
-        className="group relative overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md"
+        className="group relative overflow-hidden rounded-2xl border border-border/30 bg-card/70 backdrop-blur-xl"
         style={{
-          boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)',
+          boxShadow: '0 8px 40px -8px hsl(228 33% 2% / 0.5), inset 0 1px 0 0 hsl(215 25% 95% / 0.04)',
           gridColumn: `span ${Math.min(Math.max(item.colSpan ?? 1, 1), columns)}`,
           gridRow: `span ${Math.min(Math.max(item.rowSpan ?? 1, 1), 4)}`,
           minHeight: 220,
@@ -785,8 +785,8 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
             const cardBody = (
               <motion.div
                 whileHover={{ y: -4 }}
-                className={`group flex h-full flex-col rounded-2xl bg-card/60 p-8 backdrop-blur-md transition-all duration-500 hover:shadow-[0_24px_80px_-12px_hsl(217_91%_60%/0.18)] ${alignmentClass(card.alignment || align)}`}
-                style={{ boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)' }}
+                className={`group flex h-full flex-col rounded-2xl border border-border/30 bg-card/70 p-8 backdrop-blur-xl transition-all duration-500 hover:border-primary/20 hover:shadow-[0_24px_80px_-12px_hsl(217_91%_60%/0.15)] ${alignmentClass(card.alignment || align)}`}
+                style={{ boxShadow: '0 8px 40px -8px hsl(228 33% 2% / 0.5), inset 0 1px 0 0 hsl(215 25% 95% / 0.04)' }}
               >
                 <div
                   className={`mb-5 flex h-16 w-16 items-center justify-center rounded-xl ${hasImage ? "overflow-hidden" : "bg-primary/10 transition-colors group-hover:bg-primary/20"} ${card.alignment === "center" || (!card.alignment && align === "center") ? "mx-auto" : ""}`}
@@ -887,8 +887,8 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.04 }}
                 whileHover={{ y: -6 }}
-                className="group relative flex h-40 items-end overflow-hidden rounded-2xl bg-card/60 p-6 backdrop-blur-md transition-all duration-500"
-                style={{ boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)' }}
+                className="group relative flex h-40 items-end overflow-hidden rounded-2xl border border-border/30 bg-card/70 p-6 backdrop-blur-xl transition-all duration-500 hover:border-primary/20"
+                style={{ boxShadow: '0 8px 40px -8px hsl(228 33% 2% / 0.5), inset 0 1px 0 0 hsl(215 25% 95% / 0.04)' }}
             >
               {cat.image_url && (
                 <img
@@ -1070,8 +1070,8 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
                 className={`${alignmentClass(s.alignment || align)} ${isClickable && !isEditorPreviewMode() ? "cursor-pointer" : ""}`}
               >
                 <div
-                  className={`mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-card/60 backdrop-blur-md transition-all hover:shadow-[0_0_24px_hsl(217_91%_60%/0.2)] ${hasImage ? "overflow-hidden" : ""}`}
-                  style={{ boxShadow: '0 4px 24px -4px hsl(225 44% 4% / 0.4)' }}
+                  className={`mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl border border-border/30 bg-card/70 backdrop-blur-xl transition-all hover:border-primary/20 hover:shadow-[0_0_24px_hsl(217_91%_60%/0.15)] ${hasImage ? "overflow-hidden" : ""}`}
+                  style={{ boxShadow: '0 4px 24px -4px hsl(228 33% 2% / 0.4)' }}
                 >
                   {hasImage ? (
                     <img src={s.image} alt={title || ""} className="h-full w-full object-cover" />
@@ -1152,7 +1152,7 @@ const FaqBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) 
         {items
           .filter((item: any) => item?.visible !== false)
           .map((item: any, i: number) => (
-            <AccordionItem key={i} value={`faq-${i}`} className="rounded-2xl bg-card/60 px-6 backdrop-blur-md" style={{ boxShadow: '0 4px 24px -4px hsl(225 44% 4% / 0.3)' }}>
+            <AccordionItem key={i} value={`faq-${i}`} className="rounded-2xl border border-border/30 bg-card/70 px-6 backdrop-blur-xl" style={{ boxShadow: '0 4px 24px -4px hsl(228 33% 2% / 0.4)' }}>
               <AccordionTrigger className="font-display text-sm uppercase tracking-wider text-card-foreground hover:text-primary hover:no-underline">
                 {getLocalizedValue(item.q)}
               </AccordionTrigger>
@@ -1227,8 +1227,8 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.05 }}
                 whileHover={{ y: -3 }}
-                className={`flex gap-4 rounded-2xl bg-card/60 p-6 backdrop-blur-md transition-all duration-500 hover:shadow-[0_24px_80px_-12px_hsl(217_91%_60%/0.18)] ${verticalClass(c.verticalAlignment)} ${action.actionType !== "none" && !isEditorPreviewMode() ? "cursor-pointer" : ""}`}
-                style={{ boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)' }}
+                className={`flex gap-4 rounded-2xl border border-border/30 bg-card/70 p-6 backdrop-blur-xl transition-all duration-500 hover:border-primary/20 hover:shadow-[0_24px_80px_-12px_hsl(217_91%_60%/0.15)] ${verticalClass(c.verticalAlignment)} ${action.actionType !== "none" && !isEditorPreviewMode() ? "cursor-pointer" : ""}`}
+                style={{ boxShadow: '0 8px 40px -8px hsl(228 33% 2% / 0.5), inset 0 1px 0 0 hsl(215 25% 95% / 0.04)' }}
               >
                 <div
                   className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${hasImage ? "overflow-hidden" : "bg-primary/10"}`}

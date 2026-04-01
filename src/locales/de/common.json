@@ -199,6 +199,37 @@
     "qualifies": "Du qualifizierst dich für kostenlosen Versand.",
     "addMore": "Füge {{amount}} mehr hinzu für kostenlosen Versand."
   },
+  "notFound": {
+    "title": "Hoppla! Seite nicht gefunden",
+    "backHome": "Zur Startseite"
+  },
+  "orderTracking": {
+    "notFound": "Bestellung Nicht Gefunden",
+    "backToAccount": "Zurück zum Konto",
+    "orderNumber": "Bestellung #{{id}}",
+    "trackingNumber": "Sendungsnummer",
+    "trackPackage": "Paket Verfolgen",
+    "items": "Artikel",
+    "qty": "Menge",
+    "statusHistory": "Statusverlauf",
+    "status": {
+      "pending": "Ausstehend",
+      "processing": "In Bearbeitung",
+      "shipped": "Versendet",
+      "completed": "Abgeschlossen",
+      "cancelled": "Storniert"
+    }
+  },
+  "dynamicPage": {
+    "emptyTitle": "Demnächst",
+    "emptyDescription": "Inhalt kommt bald."
+  },
+  "pages": {
+    "home": {
+      "emptyTitle": "Startseite",
+      "emptyDescription": "Neuheiten und ausgewählte Stücke sind unterwegs."
+    }
+  },
   "common": {
     "loading": "Laden...",
     "error": "Fehler",

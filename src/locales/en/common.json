@@ -153,7 +153,15 @@
     "allRightsReserved": "All rights reserved.",
     "loginRegister": "Login / Register",
     "myAccount": "My Account",
-    "orderHistory": "Order History"
+    "orderHistory": "Order History",
+    "description": "Premium 3D printing supplies and custom prints for makers, hobbyists, and professionals.",
+    "contactDescription": "Questions, custom requests, or order help? Reach out anytime.",
+    "email": "Email",
+    "phone": "Phone",
+    "address": "Address",
+    "followUs": "Follow us",
+    "instagram": "Instagram",
+    "facebook": "Facebook"
   },
   "account": {
     "settings": "Settings",
@@ -198,6 +206,37 @@
   "shipping": {
     "qualifies": "You qualify for free shipping.",
     "addMore": "Add {{amount}} more for free shipping."
+  },
+  "notFound": {
+    "title": "Oops! Page not found",
+    "backHome": "Return to Home"
+  },
+  "orderTracking": {
+    "notFound": "Order Not Found",
+    "backToAccount": "Back to Account",
+    "orderNumber": "Order #{{id}}",
+    "trackingNumber": "Tracking Number",
+    "trackPackage": "Track Package",
+    "items": "Items",
+    "qty": "Qty",
+    "statusHistory": "Status History",
+    "status": {
+      "pending": "Pending",
+      "processing": "Processing",
+      "shipped": "Shipped",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    }
+  },
+  "dynamicPage": {
+    "emptyTitle": "Coming soon",
+    "emptyDescription": "Content coming soon."
+  },
+  "pages": {
+    "home": {
+      "emptyTitle": "Home",
+      "emptyDescription": "New arrivals and featured pieces are on the way."
+    }
   },
   "common": {
     "loading": "Loading...",

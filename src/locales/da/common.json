@@ -199,6 +199,37 @@
     "qualifies": "Du er kvalificeret til gratis forsendelse.",
     "addMore": "Tilføj {{amount}} mere for gratis forsendelse."
   },
+  "notFound": {
+    "title": "Ups! Siden blev ikke fundet",
+    "backHome": "Tilbage til forsiden"
+  },
+  "orderTracking": {
+    "notFound": "Ordre Ikke Fundet",
+    "backToAccount": "Tilbage til Konto",
+    "orderNumber": "Ordre #{{id}}",
+    "trackingNumber": "Sporingsnummer",
+    "trackPackage": "Spor Pakke",
+    "items": "Varer",
+    "qty": "Antal",
+    "statusHistory": "Statushistorik",
+    "status": {
+      "pending": "Afventer",
+      "processing": "Behandles",
+      "shipped": "Afsendt",
+      "completed": "Gennemført",
+      "cancelled": "Annulleret"
+    }
+  },
+  "dynamicPage": {
+    "emptyTitle": "Kommer snart",
+    "emptyDescription": "Indhold kommer snart."
+  },
+  "pages": {
+    "home": {
+      "emptyTitle": "Hjem",
+      "emptyDescription": "Nye ankomster og udvalgte stykker er på vej."
+    }
+  },
   "common": {
     "loading": "Indlæser...",
     "error": "Fejl",

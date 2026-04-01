@@ -142,8 +142,56 @@ const defaultBranding: BrandingConfig = {
 
 const DEFAULT_BACKGROUND_LIBRARY: ThemeGalleryImage[] = [
   {
-    id: "default-dark-grid",
-    label: "Dark Forge",
+    id: "midnight-blue",
+    label: "Midnight Blue",
+    category: "Core",
+    url:
+      "data:image/svg+xml;utf8," +
+      encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">
+        <defs>
+          <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#0a0f1a"/>
+            <stop offset="50%" stop-color="#111b2e"/>
+            <stop offset="100%" stop-color="#0d1929"/>
+          </linearGradient>
+          <radialGradient id="glow" cx="50%" cy="0%" r="70%">
+            <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.3"/>
+            <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <rect width="1600" height="900" fill="url(#bg)"/>
+        <rect width="1600" height="900" fill="url(#glow)"/>
+      </svg>
+    `),
+  },
+  {
+    id: "deep-ocean",
+    label: "Deep Ocean",
+    category: "Core",
+    url:
+      "data:image/svg+xml;utf8," +
+      encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">
+        <defs>
+          <linearGradient id="bg" x1="0" y1="0" x2="0.5" y2="1">
+            <stop offset="0%" stop-color="#020617"/>
+            <stop offset="50%" stop-color="#0f172a"/>
+            <stop offset="100%" stop-color="#1e1b4b"/>
+          </linearGradient>
+          <radialGradient id="glow" cx="70%" cy="30%" r="50%">
+            <stop offset="0%" stop-color="#6366f1" stop-opacity="0.2"/>
+            <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <rect width="1600" height="900" fill="url(#bg)"/>
+        <rect width="1600" height="900" fill="url(#glow)"/>
+      </svg>
+    `),
+  },
+  {
+    id: "classic-forge",
+    label: "Classic Forge",
     category: "Core",
     url:
       "data:image/svg+xml;utf8," +
@@ -166,33 +214,31 @@ const DEFAULT_BACKGROUND_LIBRARY: ThemeGalleryImage[] = [
     `),
   },
   {
-    id: "easter-soft",
-    label: "Easter Pastels",
-    category: "Festive",
+    id: "aurora-night",
+    label: "Aurora Night",
+    category: "Premium",
     url:
       "data:image/svg+xml;utf8," +
       encodeURIComponent(`
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">
-        <rect width="1600" height="900" fill="#fffaf2"/>
-        <ellipse cx="300" cy="560" rx="85" ry="120" fill="#ffd1dc"/>
-        <ellipse cx="520" cy="520" rx="85" ry="120" fill="#d1f7ff"/>
-        <ellipse cx="740" cy="570" rx="85" ry="120" fill="#fff1a8"/>
-        <ellipse cx="960" cy="530" rx="85" ry="120" fill="#d9ffd1"/>
-        <ellipse cx="1180" cy="565" rx="85" ry="120" fill="#efd9ff"/>
+        <rect width="1600" height="900" fill="#020617"/>
+        <ellipse cx="400" cy="200" rx="600" ry="200" fill="#22d3ee" opacity="0.08"/>
+        <ellipse cx="900" cy="300" rx="500" ry="180" fill="#818cf8" opacity="0.1"/>
+        <ellipse cx="1200" cy="150" rx="400" ry="150" fill="#34d399" opacity="0.06"/>
       </svg>
     `),
   },
   {
-    id: "halloween-moon",
-    label: "Halloween Moon",
-    category: "Festive",
+    id: "ember-glow",
+    label: "Ember Glow",
+    category: "Premium",
     url:
       "data:image/svg+xml;utf8," +
       encodeURIComponent(`
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">
-        <rect width="1600" height="900" fill="#100615"/>
-        <circle cx="1200" cy="190" r="100" fill="#ffb703" opacity="0.9"/>
-        <path d="M0 760 C220 620 380 840 620 720 S1030 840 1280 730 S1500 700 1600 760V900H0Z" fill="#1a0f24"/>
+        <rect width="1600" height="900" fill="#1a0a00"/>
+        <ellipse cx="800" cy="700" rx="800" ry="400" fill="#f97316" opacity="0.08"/>
+        <ellipse cx="600" cy="400" rx="300" ry="200" fill="#ef4444" opacity="0.05"/>
       </svg>
     `),
   },
@@ -215,19 +261,33 @@ const DEFAULT_BACKGROUND_LIBRARY: ThemeGalleryImage[] = [
       </svg>
     `),
   },
+  {
+    id: "halloween-moon",
+    label: "Halloween Moon",
+    category: "Festive",
+    url:
+      "data:image/svg+xml;utf8," +
+      encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">
+        <rect width="1600" height="900" fill="#100615"/>
+        <circle cx="1200" cy="190" r="100" fill="#ffb703" opacity="0.9"/>
+        <path d="M0 760 C220 620 380 840 620 720 S1030 840 1280 730 S1500 700 1600 760V900H0Z" fill="#1a0f24"/>
+      </svg>
+    `),
+  },
 ];
 
 const defaultTheme: ThemeConfig = {
   preset: "default",
-  primary: "24 95% 53%",
-  secondary: "220 15% 16%",
-  accent: "24 95% 53%",
-  background: "220 20% 10%",
-  foreground: "0 0% 95%",
-  muted: "220 15% 20%",
-  border: "220 15% 22%",
-  card: "220 15% 14%",
-  card_foreground: "0 0% 95%",
+  primary: "217 91% 60%",
+  secondary: "222 40% 14%",
+  accent: "217 91% 60%",
+  background: "222 47% 6%",
+  foreground: "215 20% 93%",
+  muted: "222 30% 15%",
+  border: "222 30% 18%",
+  card: "222 40% 10%",
+  card_foreground: "215 20% 93%",
   background_image_url: DEFAULT_BACKGROUND_LIBRARY[0].url,
   background_pattern: "grid",
   background_effect: "none",
@@ -237,14 +297,48 @@ const defaultTheme: ThemeConfig = {
   pattern_opacity: 0.28,
   effect_opacity: 0.7,
   effect_speed: "normal",
-  overlay_tint: "220 20% 10%",
+  overlay_tint: "222 47% 6%",
   overlay_strength: 0.35,
   available_backgrounds: DEFAULT_BACKGROUND_LIBRARY,
 };
 
 const SEASONAL_PRESETS: Record<string, Partial<ThemeConfig> & { label: string; imageId?: string }> = {
   default: {
-    label: "Default",
+    label: "Midnight Blue",
+    primary: "217 91% 60%",
+    secondary: "222 40% 14%",
+    accent: "217 91% 60%",
+    background: "222 47% 6%",
+    foreground: "215 20% 93%",
+    muted: "222 30% 15%",
+    border: "222 30% 18%",
+    card: "222 40% 10%",
+    card_foreground: "215 20% 93%",
+    background_pattern: "grid",
+    background_effect: "none",
+    overlay_tint: "222 47% 6%",
+    overlay_strength: 0.35,
+    imageId: "midnight-blue",
+  },
+  "deep-ocean": {
+    label: "Deep Ocean",
+    primary: "239 84% 67%",
+    secondary: "222 47% 11%",
+    accent: "199 89% 48%",
+    background: "222 47% 4%",
+    foreground: "210 40% 96%",
+    muted: "217 33% 17%",
+    border: "215 20% 20%",
+    card: "224 71% 8%",
+    card_foreground: "210 40% 96%",
+    background_pattern: "waves",
+    background_effect: "particles",
+    overlay_tint: "222 47% 4%",
+    overlay_strength: 0.3,
+    imageId: "deep-ocean",
+  },
+  "classic-orange": {
+    label: "Classic Orange",
     primary: "24 95% 53%",
     secondary: "220 15% 16%",
     accent: "24 95% 53%",
@@ -256,24 +350,59 @@ const SEASONAL_PRESETS: Record<string, Partial<ThemeConfig> & { label: string; i
     card_foreground: "0 0% 95%",
     background_pattern: "grid",
     background_effect: "none",
-    imageId: "default-dark-grid",
+    overlay_tint: "220 20% 10%",
+    overlay_strength: 0.35,
+    imageId: "classic-forge",
   },
-  easter: {
-    label: "Easter",
-    primary: "334 78% 68%",
-    secondary: "84 62% 92%",
-    accent: "48 95% 62%",
-    background: "42 100% 97%",
-    foreground: "315 25% 20%",
-    muted: "330 40% 94%",
-    border: "42 55% 86%",
-    card: "0 0% 100%",
-    card_foreground: "315 25% 20%",
-    background_pattern: "confetti",
-    background_effect: "petals",
-    overlay_tint: "42 100% 97%",
-    overlay_strength: 0.1,
-    imageId: "easter-soft",
+  aurora: {
+    label: "Aurora",
+    primary: "174 72% 56%",
+    secondary: "222 47% 11%",
+    accent: "262 83% 68%",
+    background: "222 47% 5%",
+    foreground: "180 20% 95%",
+    muted: "220 20% 16%",
+    border: "220 20% 20%",
+    card: "222 40% 9%",
+    card_foreground: "180 20% 95%",
+    background_pattern: "none",
+    background_effect: "aurora",
+    overlay_tint: "222 47% 5%",
+    overlay_strength: 0.2,
+    imageId: "aurora-night",
+  },
+  emerald: {
+    label: "Emerald",
+    primary: "160 84% 39%",
+    secondary: "160 30% 12%",
+    accent: "142 71% 45%",
+    background: "160 40% 5%",
+    foreground: "150 20% 95%",
+    muted: "160 20% 14%",
+    border: "160 20% 18%",
+    card: "160 30% 8%",
+    card_foreground: "150 20% 95%",
+    background_pattern: "dots",
+    background_effect: "fireflies",
+    overlay_tint: "160 40% 5%",
+    overlay_strength: 0.3,
+  },
+  crimson: {
+    label: "Crimson",
+    primary: "0 72% 56%",
+    secondary: "0 20% 12%",
+    accent: "350 80% 60%",
+    background: "0 30% 5%",
+    foreground: "0 20% 95%",
+    muted: "0 15% 15%",
+    border: "0 15% 20%",
+    card: "0 20% 9%",
+    card_foreground: "0 20% 95%",
+    background_pattern: "grain",
+    background_effect: "shimmer",
+    overlay_tint: "0 30% 5%",
+    overlay_strength: 0.3,
+    imageId: "ember-glow",
   },
   halloween: {
     label: "Halloween",

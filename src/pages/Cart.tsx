@@ -113,6 +113,13 @@ export default function CartPage() {
   const remainingForFreeShipping = Math.max(FREE_SHIPPING_THRESHOLD - totalPrice, 0);
 
   const shippingCost = totalPrice >= FREE_SHIPPING_THRESHOLD || totalPrice === 0 ? 0 : BASE_SHIPPING_PRICE;
+
+  const GIFT_FEE_PER_ITEM = 10;
+  const GIFT_WRAP_FEE = 25;
+  const totalItemCount = cartItems.reduce((sum, i) => sum + i.quantity, 0);
+  const giftFee = giftSettings.enabled ? GIFT_FEE_PER_ITEM * totalItemCount : 0;
+  const giftWrapFee = giftSettings.enabled && giftSettings.giftWrap ? GIFT_WRAP_FEE : 0;
+
   const pointsToEarn = Math.floor(totalPrice / 4);
 
   const discountAmount = useMemo(() => {

@@ -81,8 +81,12 @@ export default function CreationDetail() {
   const isOwner = user.id === showcase.owner_user_id;
   const hasReviewed = reviews.some((r) => r.user_id === user.id);
 
+  const isLithophane = showcase.category?.toLowerCase().includes("lithophane") ||
+    showcase.tags?.some((t) => t.toLowerCase().includes("lithophane"));
+
   const handleReorder = () => {
-    navigate(`/create?reorderShowcase=${showcase.id}`);
+    const param = isLithophane ? "reorderLithophane" : "reorderShowcase";
+    navigate(`/create?${param}=${showcase.id}`);
   };
 
   return (

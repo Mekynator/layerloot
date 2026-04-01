@@ -646,7 +646,7 @@ export default function CartPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Package className="h-4 w-4 text-primary" />
-                    <span>Carefully packed before shipping</span>
+                    <span>{t("cart.carefullyPacked")}</span>
                   </div>
                 </div>
               </div>

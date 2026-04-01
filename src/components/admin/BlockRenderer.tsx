@@ -887,8 +887,8 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.04 }}
                 whileHover={{ y: -6 }}
-                className="group relative flex h-40 items-end overflow-hidden rounded-2xl bg-card/60 p-6 backdrop-blur-md transition-all duration-500"
-                style={{ boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)' }}
+                className="group relative flex h-40 items-end overflow-hidden rounded-2xl border border-border/30 bg-card/70 p-6 backdrop-blur-xl transition-all duration-500 hover:border-primary/20"
+                style={{ boxShadow: '0 8px 40px -8px hsl(228 33% 2% / 0.5), inset 0 1px 0 0 hsl(215 25% 95% / 0.04)' }}
             >
               {cat.image_url && (
                 <img

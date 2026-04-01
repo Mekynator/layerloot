@@ -747,6 +747,9 @@ const AdminCustomOrders = () => {
               <TabsList>
                 <TabsTrigger value="details">Details</TabsTrigger>
                 <TabsTrigger value="model">3D Model</TabsTrigger>
+                <TabsTrigger value="pricing">
+                  <DollarSign className="mr-1 h-3.5 w-3.5" /> Pricing Tool
+                </TabsTrigger>
                 <TabsTrigger value="conversation">
                   <MessageSquare className="mr-1 h-3.5 w-3.5" /> Conversation
                 </TabsTrigger>

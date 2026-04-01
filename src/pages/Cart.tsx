@@ -30,6 +30,8 @@ import { CartSummarySkeleton } from "@/components/shared/loading-states";
 import { formatPrice } from "@/lib/currency";
 import GiftMode, { type GiftSettings } from "@/components/cart/GiftMode";
 import FreeShippingBar from "@/components/cart/FreeShippingBar";
+import CartUpsellSection from "@/components/smart/CartUpsellSection";
+import { useStorefrontCatalog } from "@/hooks/use-storefront";
 
 const FREE_SHIPPING_THRESHOLD = 500;
 const BASE_SHIPPING_PRICE = 5.99;
@@ -48,6 +50,7 @@ export default function CartPage() {
   const { toast } = useToast();
   const { t } = useTranslation("common");
   const { data: accountData, isLoading: accountLoading } = useCartAccountData(user?.id, user?.email);
+  const { data: catalog } = useStorefrontCatalog();
 
   type CartItemExt = (typeof items)[number] & {
     material?: string;
@@ -504,6 +507,25 @@ export default function CartPage() {
                   </AnimatePresence>
                 </div>
               </motion.div>
+            )}
+
+            {/* Smart upsell section */}
+            {catalog?.products && (
+              <CartUpsellSection
+                cartProductIds={cartItems.map((i) => String(i.id))}
+                allProducts={catalog.products}
+                freeShippingGap={remainingForFreeShipping}
+                onQuickAdd={(product) => {
+                  addItem({
+                    id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    image: product.images?.[0] || "/placeholder.svg",
+                    slug: product.slug,
+                  });
+                  markItemChanged(product.id, "added");
+                }}
+              />
             )}
 
             {recommendedProducts.length > 0 && (

@@ -29,6 +29,8 @@ import StickyAddToCart from "@/components/product/StickyAddToCart";
 import RecentlyViewedSection from "@/components/product/RecentlyViewedSection";
 import { useRecentlyViewedProducts } from "@/hooks/use-recently-viewed";
 import { useProductDetailQuery } from "@/hooks/use-storefront";
+import ProductFOMOBar from "@/components/smart/ProductFOMOBar";
+import FrequentlyBoughtTogether from "@/components/smart/FrequentlyBoughtTogether";
 
 const AUTO_GALLERY_MS = 6500;
 
@@ -286,6 +288,7 @@ const ProductDetail = () => {
               <RatingStars rating={socialProof?.averageRating} count={socialProof?.reviewCount} />
               <ProductTrustBadges badges={trustBadges} />
               <SocialProofBadges productId={product.id} variant="full" />
+              <ProductFOMOBar productId={product.id} stock={activeStock} />
             </div>
 
             <motion.div
@@ -513,6 +516,32 @@ const ProductDetail = () => {
 
         {/* Product Q&A */}
         <ProductQA productId={product.id} />
+
+        {/* Frequently bought together */}
+        {relatedProducts.length >= 2 && (
+          <FrequentlyBoughtTogether
+            products={[product, ...relatedProducts.slice(0, 2)].map((p) => ({
+              ...p,
+              images: p.images || [],
+              is_featured: (p as any).is_featured ?? false,
+              category_id: (p as any).category_id ?? null,
+              model_url: (p as any).model_url ?? null,
+              compare_at_price: (p as any).compare_at_price ?? null,
+            }))}
+            onAddAll={() => {
+              [product, ...relatedProducts.slice(0, 2)].forEach((p) => {
+                addItem({
+                  id: p.id,
+                  name: p.name,
+                  price: Number(p.price),
+                  image: p.images?.[0] || "/placeholder.svg",
+                  slug: p.slug,
+                });
+              });
+              toast({ title: "Bundle added to cart!", description: `${3} items added` });
+            }}
+          />
+        )}
 
         {relatedProducts.length > 0 ? (
           <section className="space-y-6">

@@ -23,7 +23,7 @@ const accentMap = {
 
 const StatTile = ({ label, value, icon: Icon, sub, to, alert = 0, trend, accent = "primary" }: StatTileProps) => {
   const content = (
-    <div className="glass-card group relative flex flex-col gap-3 rounded-xl border border-white/[0.06] p-5 transition-all duration-300 hover:border-primary/30 hover:shadow-[0_0_20px_-5px_hsl(var(--primary)/0.2)]">
+    <div className="group relative flex flex-col gap-3 rounded-2xl border border-border/30 bg-card/70 p-5 backdrop-blur-xl transition-all duration-300 hover:border-primary/30 hover:shadow-[0_0_24px_-4px_hsl(217_91%_60%/0.15)] shadow-[0_8px_40px_-8px_hsl(228_33%_2%/0.5),inset_0_1px_0_0_hsl(215_25%_95%/0.04)]">
       {alert > 0 && (
         <span className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(239,68,68,0.5)]">
           {alert > 9 ? "9+" : alert}

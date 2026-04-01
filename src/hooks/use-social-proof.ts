@@ -31,20 +31,31 @@ function pseudoRecentViews(productId: string): number {
 }
 
 async function fetchProductSocialProofData(productId: string): Promise<SocialProofData> {
-  // Query order_items for real purchase data
   const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  const { data: recentItems } = await supabase
-    .from("order_items")
-    .select("id, order_id, orders!inner(created_at)")
-    .eq("product_id", productId)
-    .gte("orders.created_at", oneWeekAgo)
-    .order("orders(created_at)", { ascending: false })
-    .limit(20);
+  let lastPurchasedAt: string | null = null;
+  let purchaseCountThisWeek = 0;
 
-  const items = (recentItems as any[]) ?? [];
-  const purchaseCountThisWeek = items.length;
-  const lastPurchasedAt = items.length > 0 ? items[0]?.orders?.created_at ?? null : null;
+  try {
+    const { data: recentItems } = await supabase
+      .from("order_items")
+      .select("id, orders!inner(created_at)")
+      .eq("product_id", productId)
+      .gte("orders.created_at", oneWeekAgo)
+      .limit(20);
+
+    const items = (recentItems as any[]) ?? [];
+    purchaseCountThisWeek = items.length;
+    if (items.length > 0) {
+      const dates = items
+        .map((i) => i.orders?.created_at)
+        .filter(Boolean)
+        .sort((a: string, b: string) => new Date(b).getTime() - new Date(a).getTime());
+      lastPurchasedAt = dates[0] ?? null;
+    }
+  } catch {
+    // Gracefully degrade if join fails
+  }
 
   return {
     viewingNow: pseudoViewing(productId),

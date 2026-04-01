@@ -221,6 +221,7 @@ const Footer = () => {
               </ul>
             </motion.div>
 
+            {footerSettings.show_contact_block && (
               <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.12 }}>
                 <h4 className="mb-5 font-display text-xs font-semibold uppercase tracking-[0.2em] text-foreground">{contactTitle}</h4>
                 {contactDescription && <p className="mb-4 text-sm text-muted-foreground">{contactDescription}</p>}

@@ -537,9 +537,9 @@ export default function CartPage() {
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Shipping</span>
+                  <span className="text-muted-foreground">{t("cart.shipping")}</span>
                   <span className="font-display font-bold text-foreground">
-                    {shippingCost === 0 ? "Free" : `${shippingCost.toFixed(2)} kr`}
+                    {shippingCost === 0 ? t("cart.free") : formatPrice(shippingCost)}
                   </span>
                 </div>
 

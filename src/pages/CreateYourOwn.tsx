@@ -1290,8 +1290,8 @@ const CustomPrintOrder = () => {
               onDrop={(e) => void handleDrop(e, "reference")}
             >
               <UploadDropzone
-                label={referenceImage ? referenceImage.name : "Click to upload reference image"}
-                sublabel="PNG, JPG, JPEG, WEBP supported"
+                label={referenceImage ? referenceImage.name : t("create.clickToUploadReference")}
+                sublabel={t("create.referenceFilesSupported")}
                 icon={<Image className="h-8 w-8 text-muted-foreground" />}
                 dragActive={referenceDragActive}
                 onClick={() => document.getElementById("custom-reference-image-upload")?.click()}

@@ -1,9 +1,10 @@
 import { useCallback, useRef, useState } from "react";
 import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 import { useVisualEditor } from "@/contexts/VisualEditorContext";
-import { Plus, Eye, EyeOff, Copy, Trash2, ChevronUp, ChevronDown, GripVertical, Type } from "lucide-react";
+import { Plus, Eye, EyeOff, Copy, Trash2, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { getBlockSchema, getInlineTextKeys } from "./editable-schema";
 
 const VIEWPORT_WIDTHS = {
   desktop: "100%",
@@ -16,7 +17,7 @@ export default function EditorCanvas() {
     draftBlocks, selectedBlockId, hoveredBlockId,
     selectBlock, hoverBlock, viewport,
     deleteBlock, duplicateBlock, toggleBlockActive, addBlock, moveBlock,
-    updateBlockContent,
+    updateBlockContent, selectElement, inlineEditingKey, setInlineEditingKey,
   } = useVisualEditor();
 
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -28,7 +29,9 @@ export default function EditorCanvas() {
 
   const handleCanvasClick = useCallback(() => {
     selectBlock(null);
-  }, [selectBlock]);
+    selectElement(null);
+    setInlineEditingKey(null);
+  }, [selectBlock, selectElement, setInlineEditingKey]);
 
   const viewportWidth = VIEWPORT_WIDTHS[viewport];
 
@@ -92,6 +95,17 @@ export default function EditorCanvas() {
                   onDragOver={(e) => handleDragOver(e, index)}
                   onDragEnd={handleDragEnd}
                   onUpdateContent={(content) => updateBlockContent(block.id, content)}
+                  inlineEditingKey={selectedBlockId === block.id ? inlineEditingKey : null}
+                  onStartInlineEdit={(key) => {
+                    selectBlock(block.id);
+                    setInlineEditingKey(key);
+                    selectElement({ blockId: block.id, nodeKey: key, nodeType: "text" });
+                  }}
+                  onEndInlineEdit={() => setInlineEditingKey(null)}
+                  onSelectElement={(nodeKey, nodeType) => {
+                    selectBlock(block.id);
+                    selectElement({ blockId: block.id, nodeKey, nodeType });
+                  }}
                 />
               ))
             )}
@@ -122,6 +136,10 @@ interface CanvasBlockWrapperProps {
   onDragOver: (e: React.DragEvent) => void;
   onDragEnd: () => void;
   onUpdateContent: (content: Record<string, any>) => void;
+  inlineEditingKey: string | null;
+  onStartInlineEdit: (key: string) => void;
+  onEndInlineEdit: () => void;
+  onSelectElement: (nodeKey: string, nodeType: "text" | "icon" | "button" | "media" | "layout") => void;
 }
 
 function CanvasBlockWrapper({
@@ -131,26 +149,39 @@ function CanvasBlockWrapper({
   onMoveUp, onMoveDown,
   onDragStart, onDragOver, onDragEnd,
   onUpdateContent,
+  inlineEditingKey, onStartInlineEdit, onEndInlineEdit, onSelectElement,
 }: CanvasBlockWrapperProps) {
   const isInactive = block.is_active === false;
   const showControls = isSelected || isHovered;
-  const [editingField, setEditingField] = useState<string | null>(null);
   const content = (block.content || {}) as Record<string, any>;
+  const schema = getBlockSchema(block.block_type);
+  const inlineTextKeys = getInlineTextKeys(block.block_type);
 
-  // Inline text editing handler
-  const handleInlineEdit = useCallback((field: string) => {
-    setEditingField(field);
-  }, []);
-
-  const handleInlineBlur = useCallback((field: string, value: string) => {
-    setEditingField(null);
-    if (value !== (content[field] || "")) {
-      onUpdateContent({ ...content, [field]: value });
+  // Handle double-click for inline text editing
+  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    // Find the closest editable text element
+    const target = e.target as HTMLElement;
+    const editableEl = target.closest("[data-editable-key]");
+    if (editableEl) {
+      const key = editableEl.getAttribute("data-editable-key")!;
+      onStartInlineEdit(key);
+      return;
     }
-  }, [content, onUpdateContent]);
+    // Fallback: try first inline text key
+    if (inlineTextKeys.length > 0) {
+      onStartInlineEdit(inlineTextKeys[0]);
+    }
+  }, [inlineTextKeys, onStartInlineEdit]);
 
-  // Check if block has inline-editable text fields
-  const inlineFields = getInlineEditableFields(block.block_type);
+  // Handle inline edit save
+  const handleInlineSave = useCallback((key: string, value: string) => {
+    onEndInlineEdit();
+    if (value !== (content[key] || "")) {
+      onUpdateContent({ ...content, [key]: value });
+    }
+  }, [content, onUpdateContent, onEndInlineEdit]);
 
   return (
     <div
@@ -168,6 +199,7 @@ function CanvasBlockWrapper({
       onClick={(e) => onClick(e, block.id)}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
+      onDoubleClick={handleDoubleClick}
     >
       {/* Top insert line */}
       {isHovered && (
@@ -218,23 +250,21 @@ function CanvasBlockWrapper({
         </div>
       )}
 
-      {/* Inline edit overlay for text fields */}
-      {isSelected && inlineFields.length > 0 && (
+      {/* Inline editing hint */}
+      {isSelected && inlineTextKeys.length > 0 && !inlineEditingKey && (
         <div className="absolute bottom-1 left-2 z-30 flex items-center gap-1 rounded-lg border border-border/30 bg-card/95 px-1.5 py-0.5 shadow-lg backdrop-blur-xl">
-          <Type className="h-3 w-3 text-muted-foreground" />
-          <span className="text-[9px] text-muted-foreground">Click text to edit inline</span>
+          <span className="text-[9px] text-muted-foreground">Double-click text to edit inline</span>
         </div>
       )}
 
-      {/* Block content with inline editing overlays */}
+      {/* Block content */}
       <div className={cn(isInactive ? "pointer-events-none" : "")}>
-        {isSelected && inlineFields.length > 0 ? (
+        {isSelected && inlineEditingKey ? (
           <InlineEditableBlock
             block={block}
-            fields={inlineFields}
-            editingField={editingField}
-            onStartEdit={handleInlineEdit}
-            onBlur={handleInlineBlur}
+            editingKey={inlineEditingKey}
+            onSave={handleInlineSave}
+            onCancel={onEndInlineEdit}
             content={content}
           />
         ) : (
@@ -264,43 +294,64 @@ function ToolButton({ children, onClick, title, destructive, disabled }: {
   );
 }
 
-// Get inline-editable text fields per block type
-function getInlineEditableFields(blockType: string): string[] {
-  switch (blockType) {
-    case "hero": return ["eyebrow", "heading", "subheading"];
-    case "text": return ["heading", "body"];
-    case "cta": return ["heading", "subheading", "button_text"];
-    case "banner":
-    case "shipping_banner": return ["text", "heading"];
-    case "newsletter": return ["heading", "subheading"];
-    case "video": return ["heading"];
-    case "embed": return ["heading"];
-    default: return [];
-  }
-}
-
-// Inline editable block - renders the real block but with contentEditable overlays
+/** Renders the block with the currently editing text field replaced by a contentEditable element */
 function InlineEditableBlock({
-  block, fields, editingField, onStartEdit, onBlur, content,
+  block, editingKey, onSave, onCancel, content,
 }: {
   block: SiteBlock;
-  fields: string[];
-  editingField: string | null;
-  onStartEdit: (field: string) => void;
-  onBlur: (field: string, value: string) => void;
+  editingKey: string;
+  onSave: (key: string, value: string) => void;
+  onCancel: () => void;
   content: Record<string, any>;
 }) {
-  // For simplicity, render the block normally and show editable overlay hints
-  // A full WYSIWYG would intercept DOM nodes, but this provides a good UX
+  const editRef = useRef<HTMLDivElement>(null);
+  const currentValue = typeof content[editingKey] === "string" ? content[editingKey] : "";
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      const text = editRef.current?.textContent || "";
+      onSave(editingKey, text);
+    }
+    if (e.key === "Escape") {
+      onCancel();
+    }
+  }, [editingKey, onSave, onCancel]);
+
+  const handleBlur = useCallback(() => {
+    const text = editRef.current?.textContent || "";
+    onSave(editingKey, text);
+  }, [editingKey, onSave]);
+
   return (
     <div className="relative">
       {renderBlock(block)}
-      {/* Overlay editable field hints */}
-      {fields.map((field) => {
-        const value = typeof content[field] === "string" ? content[field] : "";
-        if (!value && !editingField) return null;
-        return null; // Fields are edited via sidebar, the hint tells user
-      })}
+      {/* Overlay editable field */}
+      <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+        <div
+          ref={editRef}
+          contentEditable
+          suppressContentEditableWarning
+          className="pointer-events-auto min-w-[100px] rounded border-2 border-primary bg-background/90 px-3 py-2 text-foreground shadow-lg outline-none backdrop-blur-xl"
+          style={{ fontSize: "inherit" }}
+          onKeyDown={handleKeyDown}
+          onBlur={handleBlur}
+          dangerouslySetInnerHTML={{ __html: currentValue }}
+          // Auto-focus
+          ref2={useCallback((el: HTMLDivElement | null) => {
+            if (el) {
+              el.focus();
+              // Move cursor to end
+              const range = document.createRange();
+              range.selectNodeContents(el);
+              range.collapse(false);
+              const sel = window.getSelection();
+              sel?.removeAllRanges();
+              sel?.addRange(range);
+            }
+          }, [])}
+        />
+      </div>
     </div>
   );
 }

@@ -462,7 +462,7 @@ const ProductDetail = () => {
           <div className="grid gap-4 lg:grid-cols-2">
             {reviews.length === 0 ? (
               <div className="section-surface px-6 py-12 text-center text-muted-foreground">
-                No reviews yet. Be the first to leave feedback.
+                {t("products.noReviews")}
               </div>
             ) : (
               reviews.map((review, index) => (

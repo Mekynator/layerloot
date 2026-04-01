@@ -74,7 +74,7 @@
     "selectOption": "Vælg en mulighed",
     "lovedByBuyers": "Elsket af nylige købere",
     "readyInCart": "Klar i din kurv",
-    "socialProofNote": "Verificeret social proof, sikker checkout og print-klar finish.",
+    
     "customerReviews": "Kundeanmeldelser",
     "reviewsCount": "Kundeanmeldelser ({{count}})",
     "writeReview": "Skriv en anmeldelse",
@@ -87,7 +87,10 @@
     "noReviews": "Ingen anmeldelser endnu. Vær den første til at give feedback.",
     "youMayAlsoLike": "Du vil måske også kunne lide",
     "keepBuilding": "Fortsæt med at bygge",
-    "view3D": "Se 3D-model"
+    "view3D": "Se 3D-model",
+    "productCount": "{{count}} produkter",
+    "categories": "Kategorier",
+    "lowStock": "Kun {{count}} tilbage – skynd dig!"
   },
   "cart": {
     "title": "Indkøbskurv",
@@ -408,6 +411,17 @@
     "qualityStandard": "0,4mm – Balanceret",
     "qualityModerate": "0,6mm – Hurtigere print",
     "qualityLow": "0,8mm – Laveste detalje"
+  },
+  "fomo": {
+    "viewingNow": "{{count}} personer ser lige nu",
+    "purchasedThisWeek": "Købt {{count}}× i denne uge",
+    "lastBought": "Sidst købt {{time}}",
+    "onlyLeft": "Kun {{count}} tilbage!",
+    "remaining": "{{count}} tilbage på lager",
+    "viewing": "ser",
+    "viewingNowLabel": "ser lige nu",
+    "purchasedCount": "Købt {{count}} gange i denne uge",
+    "lastPurchased": "Sidst købt"
   },
   "common": {
     "loading": "Indlæser...",

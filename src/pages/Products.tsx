@@ -67,8 +67,8 @@ const Products = () => {
               >
                 <div className="mb-4 flex items-center gap-2">
                   <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-display text-sm uppercase tracking-widest text-muted-foreground">
-                    Categories
+                   <span className="font-display text-sm uppercase tracking-widest text-muted-foreground">
+                    {t("products.categories", { defaultValue: "Categories" })}
                   </span>
                 </div>
 
@@ -145,7 +145,7 @@ const Products = () => {
                     animate={{ opacity: 1 }}
                     className="text-sm text-muted-foreground"
                   >
-                    {filtered.length} products
+                    {t("products.productCount", { count: filtered.length, defaultValue: "{{count}} products" })}
                   </motion.div>
                 </div>
               </motion.div>

@@ -74,7 +74,7 @@
     "selectOption": "Selectează o opțiune",
     "lovedByBuyers": "Iubit de cumpărătorii recenți",
     "readyInCart": "Gata în coșul tău",
-    "socialProofNote": "Dovadă socială verificată, checkout securizat și finisaj gata de printare.",
+    
     "customerReviews": "Recenzii clienți",
     "reviewsCount": "Recenzii clienți ({{count}})",
     "writeReview": "Scrie o recenzie",
@@ -87,7 +87,10 @@
     "noReviews": "Încă nu există recenzii. Fii primul care lasă feedback.",
     "youMayAlsoLike": "S-ar putea să-ți placă și",
     "keepBuilding": "Continuă să construiești",
-    "view3D": "Vezi model 3D"
+    "view3D": "Vezi model 3D",
+    "productCount": "{{count}} produse",
+    "categories": "Categorii",
+    "lowStock": "Doar {{count}} rămase – comandă acum!"
   },
   "cart": {
     "title": "Coș de cumpărături",
@@ -408,6 +411,17 @@
     "qualityStandard": "0,4mm – Echilibrat",
     "qualityModerate": "0,6mm – Imprimare mai rapidă",
     "qualityLow": "0,8mm – Cel mai scăzut detaliu"
+  },
+  "fomo": {
+    "viewingNow": "{{count}} persoane vizualizează acum",
+    "purchasedThisWeek": "Cumpărat de {{count}}× săptămâna aceasta",
+    "lastBought": "Ultima achiziție {{time}}",
+    "onlyLeft": "Doar {{count}} rămase!",
+    "remaining": "{{count}} în stoc",
+    "viewing": "vizualizează",
+    "viewingNowLabel": "vizualizează acum",
+    "purchasedCount": "Cumpărat de {{count}} ori săptămâna aceasta",
+    "lastPurchased": "Ultima achiziție"
   },
   "common": {
     "loading": "Se încarcă...",

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Star, ShoppingCart, ChevronLeft, ChevronRight, ShieldCheck, Check } from "lucide-react";
+import { ArrowLeft, Star, ShoppingCart, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -20,10 +20,10 @@ import SizePreview from "@/components/SizePreview";
 import { ProductDetailSkeleton } from "@/components/shared/loading-states";
 import RatingStars from "@/components/social/RatingStars";
 import { formatPrice } from "@/lib/currency";
-import ProductTrustBadges from "@/components/social/ProductTrustBadges";
+
 import ReviewCard from "@/components/social/ReviewCard";
 import ProductCard from "@/components/ProductCard";
-import SocialProofBadges from "@/components/social/SocialProofBadges";
+
 import ProductQA from "@/components/product/ProductQA";
 import StickyAddToCart from "@/components/product/StickyAddToCart";
 import RecentlyViewedSection from "@/components/product/RecentlyViewedSection";
@@ -65,11 +65,6 @@ const ProductDetail = () => {
   const images = useMemo(() => (product?.images?.length ? product.images : ["/placeholder.svg"]), [product?.images]);
   const hasConfiguratorAttrs = variants.length > 0 && variants.some((v) => Object.keys(v.attributes || {}).length > 0);
   const hasSimpleVariants = variants.length > 0 && !hasConfiguratorAttrs;
-  const trustBadges = [
-    ...(product?.is_featured ? ["best seller"] : []),
-    ...(socialProof?.badges ?? []),
-    ...(socialProof?.reviewCount ? [`${socialProof.reviewCount} sold signals`] : []),
-  ].slice(0, 3);
 
   useEffect(() => {
     if (show3D || images.length <= 1) return;
@@ -286,8 +281,7 @@ const ProductDetail = () => {
               </Badge>
               <h1 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{product.name}</h1>
               <RatingStars rating={socialProof?.averageRating} count={socialProof?.reviewCount} />
-              <ProductTrustBadges badges={trustBadges} />
-              <SocialProofBadges productId={product.id} variant="full" />
+              
               <ProductFOMOBar productId={product.id} stock={activeStock} />
             </div>
 
@@ -310,10 +304,6 @@ const ProductDetail = () => {
             )}
 
             <motion.div whileHover={{ y: -2 }} className="section-surface p-4">
-              <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
-                <ShieldCheck className="h-4 w-4 text-primary" />
-                {t("products.socialProofNote")}
-              </div>
 
               {hasConfiguratorAttrs && (
                 <ProductConfigurator
@@ -367,27 +357,15 @@ const ProductDetail = () => {
             </div>
 
             <div className="flex items-center gap-3 text-sm">
-              {activeStock > 0 && activeStock <= 5 ? (
-                <motion.span
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex items-center gap-1.5 rounded-full border border-destructive/20 bg-destructive/5 px-3 py-1 font-medium text-destructive"
-                >
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-destructive" />
-                  {t("products.lowStock", { defaultValue: `Only ${activeStock} left – order soon!`, count: activeStock })}
-                </motion.span>
-              ) : (
-                <span className={`font-medium ${activeStock > 0 ? "text-green-600" : "text-destructive"}`}>
-                  {activeStock > 0 ? t("products.inStock", { count: activeStock }) : t("products.outOfStock")}
-                </span>
-              )}
-              {socialProof?.reviewCount ? <span className="text-muted-foreground">{t("products.lovedByBuyers")}</span> : null}
+              <span className={`font-medium ${activeStock > 0 ? "text-green-500" : "text-destructive"}`}>
+                {activeStock > 0 ? t("products.inStock", { count: activeStock }) : t("products.outOfStock")}
+              </span>
             </div>
 
             <div className="relative" ref={addToCartSectionRef}>
               <Button
                 size="lg"
-                className={`w-full font-display uppercase tracking-wider transition-all duration-300 ${justAdded ? "shadow-[0_0_28px_hsl(var(--primary)/0.35)]" : ""}`}
+                className={`w-full font-display uppercase tracking-wider transition-all duration-300 shadow-[0_0_20px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_32px_hsl(var(--primary)/0.35)] ${justAdded ? "shadow-[0_0_28px_hsl(var(--primary)/0.45)]" : ""}`}
                 onClick={handleAddToCart}
                 disabled={activeStock <= 0 || (variants.length > 0 && !selectedVariant && !hasConfiguratorAttrs)}
               >

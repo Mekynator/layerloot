@@ -74,7 +74,7 @@
     "selectOption": "Option wählen",
     "lovedByBuyers": "Von Käufern geliebt",
     "readyInCart": "Bereit in deinem Warenkorb",
-    "socialProofNote": "Verifizierter Social Proof, sicherer Checkout und druckfertige Verarbeitung.",
+    
     "customerReviews": "Kundenbewertungen",
     "reviewsCount": "Kundenbewertungen ({{count}})",
     "writeReview": "Bewertung schreiben",
@@ -87,7 +87,10 @@
     "noReviews": "Noch keine Bewertungen. Sei der Erste mit Feedback.",
     "youMayAlsoLike": "Das könnte dir auch gefallen",
     "keepBuilding": "Weiterbauen",
-    "view3D": "3D-Modell ansehen"
+    "view3D": "3D-Modell ansehen",
+    "productCount": "{{count}} Produkte",
+    "categories": "Kategorien",
+    "lowStock": "Nur noch {{count}} übrig – jetzt bestellen!"
   },
   "cart": {
     "title": "Warenkorb",
@@ -408,6 +411,17 @@
     "qualityStandard": "0,4mm – Ausgewogen",
     "qualityModerate": "0,6mm – Schnellerer Druck",
     "qualityLow": "0,8mm – Geringste Detailgenauigkeit"
+  },
+  "fomo": {
+    "viewingNow": "{{count}} Personen sehen gerade zu",
+    "purchasedThisWeek": "{{count}}× diese Woche gekauft",
+    "lastBought": "Zuletzt gekauft {{time}}",
+    "onlyLeft": "Nur noch {{count}} übrig!",
+    "remaining": "{{count}} auf Lager",
+    "viewing": "sehen zu",
+    "viewingNowLabel": "sehen gerade zu",
+    "purchasedCount": "{{count}} Mal diese Woche gekauft",
+    "lastPurchased": "Zuletzt gekauft"
   },
   "common": {
     "loading": "Laden...",

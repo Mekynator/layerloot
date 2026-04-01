@@ -694,7 +694,7 @@ const PageEditor = () => {
                 setSelectedBlockId(null);
               }}
             >
-              <SelectTrigger className="w-72 border-background/20 bg-background/10 text-background">
+              <SelectTrigger className="w-72 border-border/40 bg-background-secondary/50 text-foreground">
                 <SelectValue />
               </SelectTrigger>
 

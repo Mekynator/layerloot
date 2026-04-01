@@ -536,7 +536,7 @@ export default function CartPage() {
 
           <div className="space-y-6">
             {accountLoading && user ? <CartSummarySkeleton /> : null}
-            <motion.div layout className="rounded-2xl border border-border bg-card p-6 shadow-sm lg:sticky lg:top-24">
+            <motion.div layout className="glass-card p-6 lg:sticky lg:top-24 glow-border">
               <h2 className="mb-5 font-display text-2xl font-bold uppercase text-foreground">{t("cart.orderSummary")}</h2>
 
               {user && pointsBalance > 0 && (

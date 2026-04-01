@@ -259,7 +259,7 @@ export default function CartPage() {
               </Link>
               <Link to="/create">
                 <Button size="lg" variant="outline" className="font-display uppercase tracking-wider">
-                  Create Your Own
+                  {t("cart.createYourOwn")}
                 </Button>
               </Link>
             </div>

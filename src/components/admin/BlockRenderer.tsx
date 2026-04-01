@@ -568,7 +568,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
             </h2>
           )}
           {c.embed_url ? (
-            <div className="overflow-hidden rounded-lg border border-border" style={{ height: `${c.height || 400}px` }}>
+            <div className="overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md shadow-[0_4px_24px_-4px_hsl(225_44%_4%/0.4)]" style={{ height: `${c.height || 400}px` }}>
               <iframe
                 src={c.embed_url}
                 className="h-full w-full border-0"

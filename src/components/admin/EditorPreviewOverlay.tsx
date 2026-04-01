@@ -133,7 +133,7 @@ export default function EditorPreviewOverlay({
             />
 
             <div
-              className={`pointer-events-none absolute ${labelTopClass} ${labelLeftClass} ${labelWidthClass} flex items-center gap-2 rounded-md border border-border bg-background/95 px-2 py-1 shadow-sm backdrop-blur`}
+              className={`pointer-events-none absolute ${labelTopClass} ${labelLeftClass} ${labelWidthClass} flex items-center gap-2 rounded-lg border border-border/30 bg-card/95 px-2 py-1 shadow-[0_2px_12px_-2px_hsl(228_33%_2%/0.4)] backdrop-blur-xl`}
             >
               <span className="truncate font-display text-[10px] font-semibold uppercase tracking-wider text-foreground">
                 {formatBlockLabel(block.type)}

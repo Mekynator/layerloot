@@ -380,7 +380,7 @@ const ProductDetail = () => {
                     exit={{ opacity: 0, y: -8, scale: 0.96 }}
                     className="pointer-events-none absolute left-1/2 top-full mt-3 -translate-x-1/2 whitespace-nowrap rounded-full border border-primary/20 bg-background/95 px-3 py-1.5 text-xs font-medium text-primary shadow-sm"
                   >
-                    Ready in your cart
+                    {t("products.readyInCart")}
                   </motion.div>
                 )}
               </AnimatePresence>

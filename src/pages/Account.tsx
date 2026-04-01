@@ -464,13 +464,13 @@ const Account = () => {
   );
 
   const activeVouchers = useMemo(
-    () => userVouchers.filter((voucher) => user && !isVoucherUsedOrArchived(voucher, user.id, user.email)),
-    [user, userVouchers],
+    () => userVouchers.filter((voucher) => !isVoucherUsedOrArchived(voucher)),
+    [userVouchers],
   );
 
   const usedVouchers = useMemo(
-    () => userVouchers.filter((voucher) => !user || isVoucherUsedOrArchived(voucher, user.id, user.email)),
-    [user, userVouchers],
+    () => userVouchers.filter((voucher) => isVoucherUsedOrArchived(voucher)),
+    [userVouchers],
   );
 
   const activeVoucherGroups = useMemo(() => groupVouchersByDefinition(activeVouchers), [activeVouchers]);

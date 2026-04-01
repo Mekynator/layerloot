@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Activity, Clock3, Gift, Mail, Pencil, Plus, Minus, ShieldCheck, ShoppingBag, Ticket, Crown, AlertTriangle, UserMinus, Zap, TrendingUp } from "lucide-react";
+import { Activity, Clock3, Gift, Mail, Pencil, Plus, Minus, ShieldCheck, ShoppingBag, Ticket, Crown, AlertTriangle, UserMinus, Users, Zap, TrendingUp } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";

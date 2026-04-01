@@ -35,6 +35,7 @@ import AdminRevenue from "./pages/admin/AdminRevenue";
 import PageEditor from "./pages/admin/PageEditor";
 import DynamicPage from "./pages/DynamicPage";
 import CreateYourOwn from "./pages/CreateYourOwn";
+import Policies from "./pages/Policies";
 import Gallery from "./pages/Gallery";
 import About from "./pages/About";
 import SubmitDesign from "./pages/SubmitDesign";

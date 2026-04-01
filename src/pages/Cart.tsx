@@ -320,15 +320,7 @@ export default function CartPage() {
         <div className="grid gap-8 lg:grid-cols-[1.4fr_0.8fr]">
           <div className="space-y-6">
             <motion.div layout className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-              <div className="mb-3 flex items-center gap-2">
-                <Truck className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium text-card-foreground">
-                {remainingForFreeShipping > 0
-                    ? t("cart.freeShippingRemaining", { amount: formatPrice(remainingForFreeShipping) })
-                    : t("cart.freeShippingQualified")}
-                </span>
-              </div>
-              <Progress value={shippingProgress} className="h-2" />
+              <FreeShippingBar subtotal={totalPrice} threshold={FREE_SHIPPING_THRESHOLD} />
             </motion.div>
 
             {/* Gift Mode */}

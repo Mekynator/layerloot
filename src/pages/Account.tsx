@@ -36,6 +36,8 @@ import { motion } from "framer-motion";
 import ToolReviewForm from "@/components/reviews/ToolReviewForm";
 import { payCustomOrder } from "@/lib/payCustomOrder";
 import { useAccountOverview } from "@/hooks/use-account-overview";
+import { computeLoyaltyProgress } from "@/hooks/use-loyalty-progress";
+import LoyaltyProgressCard from "@/components/social/LoyaltyProgressCard";
 import { AccountOverviewSkeleton, RewardsGridSkeleton, SectionCardSkeleton } from "@/components/shared/loading-states";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, LANGUAGE_STORAGE_KEY, type SupportedLanguage } from "@/lib/i18n";
@@ -1419,6 +1421,14 @@ const Account = () => {
         {tab === "rewards" && (
           <>
             {overviewLoading && !overview ? <RewardsGridSkeleton count={4} /> : null}
+            {overview && (
+              <div className="mb-6">
+                <LoyaltyProgressCard
+                  progress={computeLoyaltyProgress(overview.pointsBalance, overview.pointsEarned, overview.pointsSpent)}
+                  variant="full"
+                />
+              </div>
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
               {REWARD_CATALOG.map((reward) => {
                 const canRedeem = pointsBalance >= reward.pointsCost;

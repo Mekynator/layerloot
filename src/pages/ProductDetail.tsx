@@ -23,6 +23,7 @@ import { formatPrice } from "@/lib/currency";
 import ProductTrustBadges from "@/components/social/ProductTrustBadges";
 import ReviewCard from "@/components/social/ReviewCard";
 import ProductCard from "@/components/ProductCard";
+import SocialProofBadges from "@/components/social/SocialProofBadges";
 import { useProductDetailQuery } from "@/hooks/use-storefront";
 
 const AUTO_GALLERY_MS = 6500;
@@ -266,6 +267,7 @@ const ProductDetail = () => {
               <h1 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{product.name}</h1>
               <RatingStars rating={socialProof?.averageRating} count={socialProof?.reviewCount} />
               <ProductTrustBadges badges={trustBadges} />
+              <SocialProofBadges productId={product.id} variant="full" />
             </div>
 
             <motion.div

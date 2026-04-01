@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { useCart } from "@/contexts/CartContext";
 import RatingStars from "@/components/social/RatingStars";
 import ProductTrustBadges from "@/components/social/ProductTrustBadges";
+import SocialProofBadges from "@/components/social/SocialProofBadges";
 import { formatPrice } from "@/lib/currency";
 import type { ProductSocialProof } from "@/lib/social-proof";
 
@@ -192,6 +193,7 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
             </h3>
             <RatingStars rating={socialProof?.averageRating} count={socialProof?.reviewCount} className="min-h-5" />
             <ProductTrustBadges badges={trustBadges} />
+            <SocialProofBadges productId={product.id} variant="compact" />
           </div>
 
           <div className="mt-auto space-y-3">

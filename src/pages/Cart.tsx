@@ -566,7 +566,7 @@ export default function CartPage() {
                     <input
                       value={manualDiscountCode}
                       onChange={(e) => setManualDiscountCode(e.target.value)}
-                      placeholder="Enter discount code"
+                      placeholder={t("cart.enterDiscountCode")}
                       className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none"
                     />
                   )}

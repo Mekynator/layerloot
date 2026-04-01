@@ -360,7 +360,7 @@ export default function CartPage() {
                                 {item.printTime && (
                                   <div className="flex items-center gap-2">
                                     <Clock3 className="h-4 w-4 text-primary" />
-                                    <span>Print: {item.printTime}</span>
+                                    <span>{t("cart.printTime")} {item.printTime}</span>
                                   </div>
                                 )}
 

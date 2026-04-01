@@ -3,6 +3,7 @@ import { useSearchParams, useLocation } from "react-router-dom";
 import Header from "./Header";
 import Footer from "./Footer";
 import GlobalSectionRenderer from "./GlobalSectionRenderer";
+import PageBackgroundSlideshow from "./PageBackgroundSlideshow";
 import FloatingCartSummary from "@/components/cart/FloatingCartSummary";
 import AchievementToast, { useAchievements } from "@/components/smart/AchievementToast";
 

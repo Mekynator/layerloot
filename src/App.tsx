@@ -90,6 +90,7 @@ const AppShell = () => {
 
       {!isEditorPreview && !isAdminRoute && <ChatWidget />}
       {!isEditorPreview && !isAdminRoute && <PromotionPopup />}
+      {!isEditorPreview && !isAdminRoute && <GiftClaimPopup />}
     </>
   );
 };

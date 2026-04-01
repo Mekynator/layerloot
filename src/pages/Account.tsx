@@ -1642,10 +1642,12 @@ const Account = () => {
 
                                   {isUsed ? (
                                     <Badge variant="secondary">{tt("account.vouchers.used", "Used")}</Badge>
-                                  ) : isGifted ? (
-                                    <Badge variant="secondary">{tt("account.vouchers.gifted", "Gifted")}</Badge>
+                                  ) : isPendingGift ? (
+                                    <Badge variant="secondary">Pending Claim</Badge>
                                   ) : isReceived ? (
                                     <Badge variant="secondary">{tt("account.vouchers.received", "Received")}</Badge>
+                                  ) : isGifted ? (
+                                    <Badge variant="secondary">{tt("account.vouchers.gifted", "Gifted")}</Badge>
                                   ) : (
                                     <Badge variant="default">{tt("account.vouchers.active", "Active")}</Badge>
                                   )}

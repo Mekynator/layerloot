@@ -1278,7 +1278,7 @@ const CustomPrintOrder = () => {
           </div>
 
           <div>
-            <Label>Add Reference Picture</Label>
+            <Label>{t("create.addReferencePicture")}</Label>
 
             <div
               className="relative"

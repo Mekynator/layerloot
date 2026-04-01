@@ -558,12 +558,12 @@ const AdminClients = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>User</TableHead>
+                <TableHead>Tier</TableHead>
                 <TableHead>Orders</TableHead>
                 <TableHead>Spent</TableHead>
                 <TableHead>Points</TableHead>
-                <TableHead>Rewards</TableHead>
                 <TableHead>Last Activity</TableHead>
-                <TableHead>Joined</TableHead>
+                <TableHead>Action Hint</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>

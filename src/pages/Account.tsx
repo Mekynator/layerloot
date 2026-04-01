@@ -35,6 +35,7 @@ import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import ToolReviewForm from "@/components/reviews/ToolReviewForm";
 import OrderTimeline from "@/components/orders/OrderTimeline";
+import { useReorder } from "@/hooks/use-reorder";
 import { payCustomOrder } from "@/lib/payCustomOrder";
 import { useAccountOverview } from "@/hooks/use-account-overview";
 import { computeLoyaltyProgress } from "@/hooks/use-loyalty-progress";

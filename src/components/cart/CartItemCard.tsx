@@ -1,7 +1,9 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, Minus, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { formatPrice } from "@/lib/currency";
 import type { CartItem } from "@/types/cart";
 
 interface CartItemCardProps {
@@ -21,6 +23,7 @@ export default function CartItemCard({
   onRemove,
   onSaveForLater,
 }: CartItemCardProps) {
+  const { t } = useTranslation("common");
   const [pulse, setPulse] = useState(false);
 
   useEffect(() => {
@@ -42,7 +45,7 @@ export default function CartItemCard({
           {item.image_url ? (
             <img src={item.image_url} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
           ) : (
-            <div className="flex h-full items-center justify-center text-xs text-muted-foreground">No preview</div>
+            <div className="flex h-full items-center justify-center text-xs text-muted-foreground">{t("cart.noPreview")}</div>
           )}
         </div>
 
@@ -52,7 +55,7 @@ export default function CartItemCard({
               <h3 className="truncate text-lg font-semibold uppercase tracking-wide">{item.title}</h3>
 
               <div className="mt-1 text-sm text-muted-foreground">
-                {[item.variant_label, item.material, item.color].filter(Boolean).join(" • ") || "Standard setup"}
+                {[item.variant_label, item.material, item.color].filter(Boolean).join(" • ") || t("cart.standardSetup")}
               </div>
 
               {item.custom_note ? (
@@ -62,23 +65,23 @@ export default function CartItemCard({
               {(item.print_time_hours || item.material_grams || item.dispatch_note) && (
                 <div className="mt-3 grid gap-1 rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground sm:grid-cols-3">
                   <div>
-                    <span className="font-medium text-foreground">Print time:</span>{" "}
+                    <span className="font-medium text-foreground">{t("cart.printTime")}</span>{" "}
                     {item.print_time_hours ? `${item.print_time_hours}h` : "—"}
                   </div>
                   <div>
-                    <span className="font-medium text-foreground">Material:</span>{" "}
+                    <span className="font-medium text-foreground">{t("cart.material")}</span>{" "}
                     {item.material_grams ? `${item.material_grams}g` : "—"}
                   </div>
                   <div>
-                    <span className="font-medium text-foreground">Dispatch:</span> {item.dispatch_note ?? "—"}
+                    <span className="font-medium text-foreground">{t("cart.dispatch")}</span> {item.dispatch_note ?? "—"}
                   </div>
                 </div>
               )}
             </div>
 
             <motion.div animate={pulse ? { scale: [1, 1.04, 1] } : { scale: 1 }} className="text-right">
-              <div className="text-2xl font-bold">{(item.price * item.quantity).toFixed(2)} DKK</div>
-              <div className="text-xs text-muted-foreground">{item.price.toFixed(2)} DKK each</div>
+              <div className="text-2xl font-bold">{formatPrice(item.price * item.quantity)}</div>
+              <div className="text-xs text-muted-foreground">{formatPrice(item.price)} {t("cart.each")}</div>
             </motion.div>
           </div>
 
@@ -115,7 +118,7 @@ export default function CartItemCard({
                 onClick={() => onSaveForLater(item.id)}
                 disabled={isUpdating}
               >
-                Save for later
+                {t("cart.saveForLater")}
               </Button>
               <Button
                 variant="ghost"

@@ -1327,7 +1327,7 @@ const Account = () => {
                 {orders.map((order) => {
                   const isNewOrder = isAfter(order.created_at, seenState.ordersLastSeenAt);
                   return (
-                    <Card key={order.id} className="transition-all hover:border-primary hover:shadow-sm">
+                    <Card key={order.id} className="glass-card transition-all hover:border-primary/30 hover:shadow-lg">
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <Link to={`/orders/${order.id}`} className="flex flex-1 items-center justify-between">

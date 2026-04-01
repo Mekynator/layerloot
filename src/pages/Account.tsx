@@ -1478,7 +1478,7 @@ const Account = () => {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <Card className="h-full">
+                    <Card className="glass-card h-full shine-sweep">
                       <CardContent className="space-y-4 p-6">
                         <div className="flex items-center gap-2">
                           <div className="font-display text-lg uppercase">{rewardName}</div>

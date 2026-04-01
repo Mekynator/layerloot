@@ -23,6 +23,7 @@ import { formatPrice } from "@/lib/currency";
 import ProductTrustBadges from "@/components/social/ProductTrustBadges";
 import ReviewCard from "@/components/social/ReviewCard";
 import ProductCard from "@/components/ProductCard";
+import SocialProofBadges from "@/components/social/SocialProofBadges";
 import { useProductDetailQuery } from "@/hooks/use-storefront";
 
 const AUTO_GALLERY_MS = 6500;

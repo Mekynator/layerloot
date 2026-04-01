@@ -636,6 +636,7 @@ const AdminClients = () => {
             <Tabs defaultValue="overview" className="space-y-4">
               <TabsList className="flex w-full flex-wrap justify-start gap-2 bg-transparent p-0">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="crm">CRM</TabsTrigger>
                 <TabsTrigger value="orders">Orders</TabsTrigger>
                 <TabsTrigger value="rewards">Rewards</TabsTrigger>
                 <TabsTrigger value="activity">Activity</TabsTrigger>

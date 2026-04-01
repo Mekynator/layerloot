@@ -1074,8 +1074,8 @@ const CustomPrintOrder = () => {
 
     if (!form.description.trim()) {
       toast({
-        title: "Missing fields",
-        description: "Please fill in the additional details field.",
+        title: t("create.missingFields"),
+        description: t("create.missingFieldsDesc"),
         variant: "destructive",
       });
       return;

@@ -344,7 +344,7 @@ export default function CartPage() {
                       }}
                       exit={{ opacity: 0, y: -10, scale: 0.96 }}
                       transition={{ duration: 0.25 }}
-                      className={`rounded-2xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md ${
+                      className={`glass-card p-4 transition-shadow hover:shadow-lg ${
                         changedState === "added" ? "ring-1 ring-primary/30" : ""
                       }`}
                     >

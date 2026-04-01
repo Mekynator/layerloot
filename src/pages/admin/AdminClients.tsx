@@ -394,7 +394,18 @@ const AdminClients = () => {
         loyaltyHistory: userLoyalty,
         vouchers: userVouchers,
         activity,
-      } satisfies AdminUser;
+        tier: "new" as AdminUser["tier"],
+        daysSinceLastActivity: null as number | null,
+        recommendedAction: null as string | null,
+      };
+
+      const lastAct = built.last_activity_at;
+      const daysSince = lastAct ? Math.floor((Date.now() - new Date(lastAct).getTime()) / 86400000) : null;
+      built.daysSinceLastActivity = daysSince;
+      built.tier = classifyTier(built.order_count, built.total_spent, daysSince);
+      built.recommendedAction = getRecommendedAction({ tier: built.tier, unusedVouchers: built.active_vouchers, customOrderCount: built.custom_order_count, pointsBalance: built.points_balance });
+
+      return built satisfies AdminUser;
     });
 
     setUsers(

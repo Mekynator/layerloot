@@ -669,19 +669,19 @@ const PageEditor = () => {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
-      <div className="sticky top-16 z-40 border-b border-border bg-foreground text-background">
+      <div className="sticky top-16 z-40 border-b border-border/30 bg-card/95 backdrop-blur-xl text-foreground">
         <div className="flex h-12 items-center justify-between gap-3 px-4">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate("/admin")}
-              className="text-background/70 hover:bg-background/10 hover:text-background"
+              className="text-muted-foreground hover:bg-accent/10 hover:text-foreground"
             >
               <ArrowLeft className="mr-1 h-4 w-4" /> Admin
             </Button>
 
-            <div className="h-5 w-px bg-background/20" />
+            <div className="h-5 w-px bg-border/30" />
 
             <Select
               value={activePage}
@@ -694,7 +694,7 @@ const PageEditor = () => {
                 setSelectedBlockId(null);
               }}
             >
-              <SelectTrigger className="w-72 border-background/20 bg-background/10 text-background">
+              <SelectTrigger className="w-72 border-border/40 bg-background-secondary/50 text-foreground">
                 <SelectValue />
               </SelectTrigger>
 
@@ -742,7 +742,7 @@ const PageEditor = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate(pageToRealPath(selectedPage))}
-                className="text-background/70 hover:bg-background/10 hover:text-background"
+                className="text-muted-foreground hover:bg-accent/10 hover:text-foreground"
               >
                 Open real page
               </Button>
@@ -753,7 +753,7 @@ const PageEditor = () => {
                 variant="ghost"
                 size="sm"
                 onClick={openEditPageDialog}
-                className="text-background/70 hover:bg-background/10 hover:text-background"
+                className="text-muted-foreground hover:bg-accent/10 hover:text-foreground"
               >
                 <Settings2 className="mr-1 h-3.5 w-3.5" /> Page Settings
               </Button>
@@ -776,7 +776,7 @@ const PageEditor = () => {
               variant="ghost"
               size="sm"
               onClick={() => setPanelCollapsed(!panelCollapsed)}
-              className="text-background/70 hover:bg-background/10 hover:text-background"
+              className="text-muted-foreground hover:bg-accent/10 hover:text-foreground"
             >
               {panelCollapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
             </Button>
@@ -807,7 +807,7 @@ const PageEditor = () => {
               variant="ghost"
               size="sm"
               onClick={() => navigate("/")}
-              className="text-background/70 hover:bg-background/10 hover:text-background"
+              className="text-muted-foreground hover:bg-accent/10 hover:text-foreground"
             >
               <X className="mr-1 h-4 w-4" /> Exit
             </Button>
@@ -817,11 +817,11 @@ const PageEditor = () => {
 
       <div className="flex flex-1 overflow-hidden">
         <aside
-          className={`shrink-0 overflow-y-auto border-r border-border bg-card transition-all duration-300 ${
+          className={`shrink-0 overflow-y-auto border-r border-border/30 bg-card/80 backdrop-blur-xl transition-all duration-300 ${
             panelCollapsed ? "w-0 overflow-hidden" : "w-72 lg:w-80"
           }`}
         >
-          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-4 py-3">
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/30 bg-card/95 px-4 py-3 backdrop-blur-xl">
             <div className="flex items-center gap-2">
               <LayoutGrid className="h-4 w-4 text-primary" />
               <span className="font-display text-xs font-bold uppercase tracking-widest text-foreground">
@@ -833,7 +833,7 @@ const PageEditor = () => {
             </Badge>
           </div>
 
-          <div className="border-b border-border bg-muted/30 px-4 py-3">
+          <div className="border-b border-border/30 bg-background-secondary/50 px-4 py-3">
             <p className="font-display text-[10px] uppercase tracking-widest text-muted-foreground">Editing</p>
             <p className="mt-1 text-sm font-medium text-foreground">
               {selectedPage ? pageDisplayTitle(selectedPage) : prettyLabel(activePage)}
@@ -886,8 +886,8 @@ const PageEditor = () => {
                       }}
                       onDragEnd={handleStructureDragEnd}
                       onClick={() => setSelectedBlockId(isSelected ? null : block.id)}
-                      className={`group cursor-pointer rounded-md border-l-[3px] px-2 py-2 text-sm transition-all ${colorClass} ${
-                        isSelected ? "ring-2 ring-primary ring-offset-1 ring-offset-card" : "hover:bg-accent/50"
+                      className={`group cursor-pointer rounded-lg border-l-[3px] px-2 py-2 text-sm transition-all duration-200 ${colorClass} ${
+                        isSelected ? "ring-2 ring-primary/60 ring-offset-1 ring-offset-card shadow-[0_0_16px_hsl(217_91%_60%/0.1)]" : "hover:bg-accent/30 hover:shadow-[0_2px_12px_-2px_hsl(228_33%_2%/0.3)]"
                       } ${!block.is_active ? "opacity-50" : ""}`}
                     >
                       <div className="flex items-start gap-2">
@@ -969,7 +969,7 @@ const PageEditor = () => {
                 <span className="font-display text-[10px] uppercase tracking-wider">Add Section</span>
               </button>
 
-              <div className="mt-4 rounded-md border border-border bg-muted/30 p-3">
+              <div className="mt-4 rounded-xl border border-border/30 bg-card/60 p-3 backdrop-blur-xl" style={{ boxShadow: '0 4px 20px -4px hsl(228 33% 2% / 0.3)' }}>
                 <h3 className="mb-2 font-display text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                   Summary
                 </h3>
@@ -1037,24 +1037,31 @@ const PageEditor = () => {
       <PageBackgroundEditor page={activePage} open={backgroundEditorOpen} onOpenChange={setBackgroundEditorOpen} />
 
       <Dialog open={addBlockOpen} onOpenChange={setAddBlockOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="font-display uppercase">
+            <DialogTitle className="font-display uppercase tracking-wider">
               Add Section · {selectedPage ? pageDisplayTitle(selectedPage) : prettyLabel(activePage)}
             </DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-3 gap-2">
-            {blockTypes.map(({ value, label, icon: Icon }) => (
-              <Button
-                key={value}
-                variant="outline"
-                onClick={() => void addBlock(value)}
-                className="h-auto flex-col gap-2 py-3 font-display text-[10px] uppercase tracking-wider"
-              >
-                <Icon className="h-5 w-5" />
-                {label}
-              </Button>
-            ))}
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+            {blockTypes.map(({ value, label, icon: Icon }) => {
+              const accentColor = BLOCK_COLORS[value] ?? "";
+              return (
+                <button
+                  key={value}
+                  onClick={() => void addBlock(value)}
+                  className={`group relative flex h-auto flex-col items-center gap-2.5 rounded-xl border border-border/40 bg-card/60 px-3 py-4 backdrop-blur-xl transition-all duration-200 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_12px_40px_-8px_hsl(217_91%_60%/0.2)] ${accentColor ? `border-l-[3px] ${accentColor.split(' ')[0]}` : ''}`}
+                  style={{ boxShadow: '0 4px 20px -4px hsl(228 33% 2% / 0.4), inset 0 1px 0 0 hsl(215 25% 95% / 0.04)' }}
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/20">
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <span className="font-display text-[10px] font-semibold uppercase tracking-wider text-foreground/80 group-hover:text-foreground">
+                    {label}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </DialogContent>
       </Dialog>

@@ -464,10 +464,12 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
     case "shipping_banner":
       return withSection(
         block,
-        "bg-primary py-3",
-        <div className="container flex items-center justify-center gap-2 text-primary-foreground">
-          <Truck className="h-5 w-5" />
-          <span className="font-display text-sm uppercase tracking-widest">
+        "py-3 border-y border-border/20",
+        <div className="container flex items-center justify-center gap-2 text-foreground">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
+            <Truck className="h-4 w-4 text-primary" />
+          </div>
+          <span className="font-display text-sm uppercase tracking-widest text-foreground/90">
             {getLocalizedValue(c.text, tr("blocks.shippingBanner.text", "Free shipping on orders over 500 kr"))}
           </span>
         </div>,
@@ -527,14 +529,14 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
     case "banner":
       return withSection(
         block,
-        "bg-accent py-3",
-        <div className="container flex items-center justify-center gap-2 text-accent-foreground">
+        "py-3 border-y border-border/20",
+        <div className="container flex items-center justify-center gap-3 text-foreground">
           {c.badge && (
-            <span className="rounded bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider">
+            <span className="rounded-lg bg-primary/15 px-2.5 py-0.5 font-display text-[10px] uppercase tracking-wider text-primary">
               {getLocalizedValue(c.badge)}
             </span>
           )}
-          <span className="font-display text-sm uppercase tracking-widest">
+          <span className="font-display text-sm uppercase tracking-widest text-foreground/90">
             {getLocalizedValue(c.heading || c.title, tr("blocks.banner.title", "Banner"))}
           </span>
         </div>,
@@ -1350,8 +1352,8 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
         </h2>
       )}
 
-      <div className="relative overflow-hidden rounded-lg">
-        <div className="aspect-[21/9] overflow-hidden">
+      <div className="relative overflow-hidden rounded-2xl border border-border/30" style={{ boxShadow: '0 8px 40px -8px hsl(228 33% 2% / 0.5)' }}>
+        <div className="aspect-[21/9] overflow-hidden bg-card/40">
           <AnimatePresence mode="wait">{wrappedImage}</AnimatePresence>
         </div>
 

@@ -101,6 +101,7 @@ const Dashboard = () => {
         clients: profilesRes.count ?? 0,
         customOrders: customOrdersRes.count ?? 0,
         reviews: reviewsRes.count ?? 0,
+        showcases: pendingShowcasesRes.count ?? 0,
       });
 
       setAlerts({

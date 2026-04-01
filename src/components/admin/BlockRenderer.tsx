@@ -1457,6 +1457,7 @@ const VideoBlock = ({ block }: { block: SiteBlock }) => {
 };
 
 const CtaBlock = ({ block }: { block: SiteBlock }) => {
+  useTranslation();
   const c = block.content || {};
   const align = c.alignment || "center";
   const buttons = resolveButtons(c, [

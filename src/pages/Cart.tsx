@@ -318,7 +318,7 @@ export default function CartPage() {
 
         <div className="grid gap-8 lg:grid-cols-[1.4fr_0.8fr]">
           <div className="space-y-6">
-            <motion.div layout className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+            <motion.div layout className="glass-card p-4">
               <FreeShippingBar subtotal={totalPrice} threshold={FREE_SHIPPING_THRESHOLD} />
             </motion.div>
 

@@ -341,32 +341,35 @@ const FileStatusCard = ({
   previewUrl?: string | null;
   alt: string;
   icon?: ReactNode;
-}) => (
-  <motion.div
-    initial={{ opacity: 0, y: 6 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="mt-3 overflow-hidden rounded-xl border border-border bg-card"
-  >
-    {previewUrl ? (
-      <img src={previewUrl} alt={alt} className="h-56 w-full object-cover bg-muted/20" />
-    ) : (
-      <div className="flex h-28 items-center justify-center bg-muted/20">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <FileImage className="h-4 w-4" />
-          3D file ready
+}) => {
+  const { t } = useTranslation();
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mt-3 overflow-hidden rounded-xl border border-border bg-card"
+    >
+      {previewUrl ? (
+        <img src={previewUrl} alt={alt} className="h-56 w-full object-cover bg-muted/20" />
+      ) : (
+        <div className="flex h-28 items-center justify-center bg-muted/20">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <FileImage className="h-4 w-4" />
+            {t("create.fileReady")}
+          </div>
         </div>
-      </div>
-    )}
+      )}
 
-    <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-foreground">{fileName}</p>
-        <p className="text-xs text-muted-foreground">Ready</p>
+      <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-foreground">{fileName}</p>
+          <p className="text-xs text-muted-foreground">{t("create.ready")}</p>
+        </div>
+        {icon}
       </div>
-      {icon}
-    </div>
-  </motion.div>
-);
+    </motion.div>
+  );
+};
 
 const UploadDropzone = ({
   label,

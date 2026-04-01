@@ -206,6 +206,19 @@ const Dashboard = () => {
       to: "/admin/reviews",
       alert: alerts.reviews,
     },
+    {
+      label: "Showcases",
+      value: stats.showcases,
+      icon: Palette,
+      sub: `Pending: ${alerts.showcases}`,
+      to: "/admin/showcases",
+      alert: alerts.showcases,
+    },
+    { label: "Discounts", value: "—", icon: TicketPercent, sub: "Manage codes", to: "/admin/discounts", alert: 0 },
+    { label: "Categories", value: "—", icon: Tags, sub: "Organize products", to: "/admin/categories", alert: 0 },
+    { label: "Shipping", value: "—", icon: Truck, sub: "Rates & providers", to: "/admin/shipping", alert: 0 },
+    { label: "Page Editor", value: "—", icon: FileText, sub: "Edit site content", to: "/admin/editor", alert: 0 },
+    { label: "Settings", value: "—", icon: Settings, sub: "Site configuration", to: "/admin/settings", alert: 0 },
   ];
 
   return (

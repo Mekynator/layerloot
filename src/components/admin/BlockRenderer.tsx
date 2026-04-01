@@ -1417,7 +1417,7 @@ const VideoBlock = ({ block }: { block: SiteBlock }) => {
     "py-16 lg:py-24",
     <div className="container max-w-4xl">
       {block.title && (
-        <h2 className="mb-8 text-center font-display text-3xl font-bold uppercase text-secondary-foreground">
+        <h2 className="mb-8 text-center font-display text-3xl font-bold uppercase text-foreground">
           {getLocalizedValue(block.title)}
         </h2>
       )}

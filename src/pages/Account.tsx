@@ -1198,7 +1198,6 @@ const Account = () => {
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <div className="glass-card mb-8 border-primary/20 p-6 glow-border">
-            <CardContent className="p-6">
               <div className="flex flex-wrap items-center gap-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
                   <Star className="h-7 w-7 text-primary" />

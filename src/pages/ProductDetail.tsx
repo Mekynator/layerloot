@@ -186,7 +186,7 @@ const ProductDetail = () => {
                 <ModelViewer url={product.model_url} className="aspect-square" />
               </motion.div>
             ) : (
-              <div className="glass-card relative aspect-square overflow-hidden rounded-[1.75rem] glow-border">
+              <div className="glass-card relative aspect-square overflow-hidden rounded-[1.75rem]">
                 <AnimatePresence mode="wait">
                   <motion.img
                     ref={heroImageRef}
@@ -250,10 +250,10 @@ const ProductDetail = () => {
                     setCurrentImage(i);
                     setShow3D(false);
                   }}
-                  className={`h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-200 ${
+                  className={`h-16 w-16 shrink-0 overflow-hidden rounded-xl transition-all duration-200 ${
                     !show3D && i === currentImage
-                      ? "border-primary ring-2 ring-primary/20"
-                      : "border-border hover:border-muted-foreground"
+                      ? "ring-2 ring-primary shadow-lg shadow-primary/20"
+                      : "opacity-70 hover:opacity-100"
                   }`}
                 >
                   <img src={img} alt="" className="h-full w-full object-cover" />
@@ -263,10 +263,10 @@ const ProductDetail = () => {
                 <motion.button
                   whileHover={{ y: -2 }}
                   onClick={() => setShow3D(true)}
-                  className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border-2 transition-all duration-200 ${
+                  className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-xl transition-all duration-200 ${
                     show3D
-                      ? "border-primary bg-primary/10 ring-2 ring-primary/20"
-                      : "border-border hover:border-primary"
+                      ? "bg-primary/10 ring-2 ring-primary shadow-lg shadow-primary/20"
+                      : "bg-muted/30 opacity-70 hover:opacity-100 hover:bg-primary/5"
                   }`}
                   title={t("products.view3D")}
                 >
@@ -335,10 +335,10 @@ const ProductDetail = () => {
                         whileTap={{ scale: 0.98 }}
                         key={variant.id}
                         onClick={() => setSelectedVariantId(selectedVariant?.id === variant.id ? null : variant.id)}
-                        className={`rounded-xl border px-4 py-2 font-display text-sm uppercase transition-all duration-200 ${
+                        className={`rounded-xl px-4 py-2 font-display text-sm uppercase transition-all duration-200 ${
                           selectedVariant?.id === variant.id
-                            ? "border-primary bg-primary text-primary-foreground shadow-md"
-                            : "border-border text-foreground hover:border-primary/50"
+                            ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                            : "bg-muted/30 text-foreground hover:bg-primary/10"
                         } ${variant.stock <= 0 ? "cursor-not-allowed opacity-40" : ""}`}
                         disabled={variant.stock <= 0}
                       >

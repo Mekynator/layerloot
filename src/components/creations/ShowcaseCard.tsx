@@ -30,7 +30,8 @@ export default function ShowcaseCard({ item, onQuickView }: ShowcaseCardProps) {
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -4 }}
       transition={{ duration: 0.25 }}
-      className="group relative rounded-2xl border border-border/60 bg-card overflow-hidden shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300"
+      className="group relative rounded-2xl bg-card/60 overflow-hidden backdrop-blur-md transition-all duration-500"
+      style={{ boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)' }}
     >
       {/* Image area */}
       <div className="relative aspect-[4/5] overflow-hidden bg-muted">
@@ -85,7 +86,7 @@ export default function ShowcaseCard({ item, onQuickView }: ShowcaseCardProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="absolute right-2.5 top-2.5 z-10 h-9 w-9 rounded-full bg-background/70 backdrop-blur-md border border-border/40 shadow-sm hover:bg-background/90 transition-all"
+          className="absolute right-2.5 top-2.5 z-10 h-9 w-9 rounded-full bg-background/70 backdrop-blur-md shadow-lg hover:bg-background/90 transition-all"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -101,7 +102,7 @@ export default function ShowcaseCard({ item, onQuickView }: ShowcaseCardProps) {
             <Button
               size="sm"
               variant="secondary"
-              className="h-8 rounded-full bg-background/90 backdrop-blur-md text-xs font-medium shadow-lg border border-border/40 gap-1.5 hover:bg-background"
+              className="h-8 rounded-full bg-background/90 backdrop-blur-md text-xs font-medium shadow-lg gap-1.5 hover:bg-background"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

@@ -347,7 +347,7 @@ const FileStatusCard = ({
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mt-3 overflow-hidden rounded-xl border border-border bg-card"
+      className="mt-3 overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md shadow-[0_4px_24px_-4px_hsl(225_44%_4%/0.4)]"
     >
       {previewUrl ? (
         <img src={previewUrl} alt={alt} className="h-56 w-full object-cover bg-muted/20" />
@@ -360,7 +360,7 @@ const FileStatusCard = ({
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
+      <div className="flex items-center justify-between gap-3 border-t border-muted-foreground/10 px-4 py-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-foreground">{fileName}</p>
           <p className="text-xs text-muted-foreground">{t("create.ready")}</p>
@@ -419,8 +419,8 @@ const ToolShell = ({
   description: string;
   children: ReactNode;
 }) => (
-  <Card className="overflow-hidden border-border/80 shadow-sm">
-    <CardHeader className="border-b border-border/60 bg-muted/20">
+  <Card className="overflow-hidden shadow-[0_8px_40px_-8px_hsl(225_44%_4%/0.5)]">
+    <CardHeader className="bg-muted/10">
       <div className="space-y-2">
         <p className="text-[11px] font-display uppercase tracking-[0.24em] text-primary">{eyebrow}</p>
         <CardTitle className="font-display text-lg uppercase tracking-wide text-foreground sm:text-xl">
@@ -486,7 +486,7 @@ const ReviewSection = ({ title }: { toolType: "custom-print" | "lithophane"; tit
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.2 }}
               transition={{ delay: index * 0.06, duration: 0.25 }}
-              className="rounded-xl border border-border bg-card p-4"
+             className="rounded-2xl bg-card/60 p-4 shadow-[0_4px_24px_-4px_hsl(225_44%_4%/0.4)] backdrop-blur-md"
             >
               <div className="mb-2 flex items-center justify-between gap-2">
                 <p className="font-medium text-foreground">{review.title || t("create.verifiedCustomer")}</p>

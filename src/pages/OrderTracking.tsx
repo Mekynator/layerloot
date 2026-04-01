@@ -186,7 +186,7 @@ const OrderTracking = () => {
                   key={item.id}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center justify-between rounded-xl border border-border/40 bg-background/30 p-3 transition-colors hover:bg-muted/20"
+                  className="flex items-center justify-between rounded-xl bg-card/60 p-3 backdrop-blur-md shadow-[0_2px_12px_-2px_hsl(225_44%_4%/0.3)] transition-colors hover:bg-card/80"
                 >
                   <div>
                     <p className="font-display text-sm font-semibold uppercase text-card-foreground">{item.product_name}</p>

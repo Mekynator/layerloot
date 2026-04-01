@@ -99,8 +99,9 @@ const ImageCollectionBlock = ({ content, className }: { content?: ImageCollectio
   const renderCard = (item: ImageItem, index: number) => {
     const card = (
       <div
-        className="group relative overflow-hidden rounded-2xl border border-border/60 bg-muted/20"
+        className="group relative overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md"
         style={{
+          boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)',
           gridColumn: `span ${Math.min(Math.max(item.colSpan ?? 1, 1), columns)}`,
           gridRow: `span ${Math.min(Math.max(item.rowSpan ?? 1, 1), 4)}`,
           minHeight: 220,
@@ -513,7 +514,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
               className="mx-auto max-h-[600px] w-full rounded-lg object-contain"
             />
           ) : (
-            <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted text-muted-foreground">
+            <div className="flex h-64 items-center justify-center rounded-2xl border-2 border-dashed border-muted-foreground/20 bg-muted/10 text-muted-foreground">
               {tr("blocks.image.noImage", "No image set")}
             </div>
           )}
@@ -567,7 +568,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
             </h2>
           )}
           {c.embed_url ? (
-            <div className="overflow-hidden rounded-lg border border-border" style={{ height: `${c.height || 400}px` }}>
+            <div className="overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md shadow-[0_4px_24px_-4px_hsl(225_44%_4%/0.4)]" style={{ height: `${c.height || 400}px` }}>
               <iframe
                 src={c.embed_url}
                 className="h-full w-full border-0"
@@ -576,7 +577,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
               />
             </div>
           ) : (
-            <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted text-muted-foreground">
+            <div className="flex h-64 items-center justify-center rounded-2xl border-2 border-dashed border-muted-foreground/20 bg-muted/10 text-muted-foreground">
               {tr("blocks.embed.noUrl", "No embed URL set")}
             </div>
           )}
@@ -788,7 +789,8 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
             const cardBody = (
               <motion.div
                 whileHover={{ y: -4 }}
-                className={`group flex h-full flex-col rounded-lg border border-border bg-card p-8 transition-all duration-300 hover:border-primary hover:shadow-xl ${alignmentClass(card.alignment || align)}`}
+                className={`group flex h-full flex-col rounded-2xl bg-card/60 p-8 backdrop-blur-md transition-all duration-500 hover:shadow-[0_24px_80px_-12px_hsl(217_91%_60%/0.18)] ${alignmentClass(card.alignment || align)}`}
+                style={{ boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)' }}
               >
                 <div
                   className={`mb-5 flex h-16 w-16 items-center justify-center rounded-xl ${hasImage ? "overflow-hidden" : "bg-primary/10 transition-colors group-hover:bg-primary/20"} ${card.alignment === "center" || (!card.alignment && align === "center") ? "mx-auto" : ""}`}

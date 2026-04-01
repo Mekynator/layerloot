@@ -421,7 +421,7 @@ export default function CartPage() {
                           <motion.div
                             animate={changedState ? { scale: [1, 1.08, 1] } : { scale: 1 }}
                             transition={{ duration: 0.3 }}
-                            className="flex items-center gap-2 rounded-xl border border-border bg-background/60 p-1"
+                            className="flex items-center gap-2 rounded-xl bg-muted/30 p-1"
                           >
                             <Button
                               variant="ghost"

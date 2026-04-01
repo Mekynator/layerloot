@@ -31,6 +31,7 @@ const sidebarLinks = [
   { to: "/admin/discounts", label: "Discounts", icon: TicketPercent, notificationKey: null },
   { to: "/admin/clients", label: "Users", icon: Users, notificationKey: null },
   { to: "/admin/reviews", label: "Reviews", icon: Star, notificationKey: "reviews" },
+  { to: "/admin/showcases", label: "Showcases", icon: Palette, notificationKey: "showcases" },
   { to: "/admin/editor", label: "Page Editor", icon: FileText, notificationKey: null },
   { to: "/admin/shipping", label: "Shipping", icon: Truck, notificationKey: null },
   { to: "/admin/settings", label: "Settings", icon: Settings, notificationKey: null },

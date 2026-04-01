@@ -34,6 +34,8 @@ const sidebarLinks = [
   { to: "/admin/clients", label: "Users", icon: Users, notificationKey: null },
   { to: "/admin/reviews", label: "Reviews", icon: Star, notificationKey: "reviews" },
   { to: "/admin/showcases", label: "Showcases", icon: Palette, notificationKey: "showcases" },
+  { to: "/admin/pricing", label: "Pricing", icon: Calculator, notificationKey: null },
+  { to: "/admin/growth", label: "Growth", icon: TrendingUp, notificationKey: null },
   { to: "/admin/editor", label: "Page Editor", icon: FileText, notificationKey: null },
   { to: "/admin/shipping", label: "Shipping", icon: Truck, notificationKey: null },
   { to: "/admin/settings", label: "Settings", icon: Settings, notificationKey: null },

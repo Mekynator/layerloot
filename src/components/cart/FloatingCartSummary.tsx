@@ -25,7 +25,7 @@ const FloatingCartSummary = () => {
       animate={{ x: 0, opacity: 1 }}
       className="fixed bottom-20 right-4 z-40 w-72 md:bottom-6"
     >
-      <div className="overflow-hidden rounded-2xl border border-border bg-background/95 shadow-xl backdrop-blur-lg">
+      <div className="glass-card overflow-hidden glow-border">
         {/* Header – always visible */}
         <button
           onClick={() => setExpanded((p) => !p)}

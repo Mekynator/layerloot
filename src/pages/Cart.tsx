@@ -265,7 +265,7 @@ export default function CartPage() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="rounded-2xl border border-border bg-card px-6 py-16 text-center shadow-sm"
+            className="glass-card px-6 py-16 text-center"
           >
             <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-muted">
               <ShoppingBag className="h-10 w-10 text-muted-foreground" />
@@ -318,7 +318,7 @@ export default function CartPage() {
 
         <div className="grid gap-8 lg:grid-cols-[1.4fr_0.8fr]">
           <div className="space-y-6">
-            <motion.div layout className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+            <motion.div layout className="glass-card p-4">
               <FreeShippingBar subtotal={totalPrice} threshold={FREE_SHIPPING_THRESHOLD} />
             </motion.div>
 
@@ -344,7 +344,7 @@ export default function CartPage() {
                       }}
                       exit={{ opacity: 0, y: -10, scale: 0.96 }}
                       transition={{ duration: 0.25 }}
-                      className={`rounded-2xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md ${
+                      className={`glass-card p-4 transition-shadow hover:shadow-lg ${
                         changedState === "added" ? "ring-1 ring-primary/30" : ""
                       }`}
                     >
@@ -474,7 +474,7 @@ export default function CartPage() {
             </div>
 
             {savedItems.length > 0 && (
-              <motion.div layout className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <motion.div layout className="glass-card p-5">
                 <h2 className="mb-4 font-display text-xl font-bold uppercase text-foreground">{t("cart.savedForLater")}</h2>
 
                 <div className="space-y-3">
@@ -507,7 +507,7 @@ export default function CartPage() {
             )}
 
             {recommendedProducts.length > 0 && (
-              <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <div className="glass-card p-5">
                 <h2 className="mb-4 font-display text-xl font-bold uppercase text-foreground">{t("cart.youMayAlsoLike")}</h2>
 
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -536,7 +536,7 @@ export default function CartPage() {
 
           <div className="space-y-6">
             {accountLoading && user ? <CartSummarySkeleton /> : null}
-            <motion.div layout className="rounded-2xl border border-border bg-card p-6 shadow-sm lg:sticky lg:top-24">
+            <motion.div layout className="glass-card p-6 lg:sticky lg:top-24 glow-border">
               <h2 className="mb-5 font-display text-2xl font-bold uppercase text-foreground">{t("cart.orderSummary")}</h2>
 
               {user && pointsBalance > 0 && (

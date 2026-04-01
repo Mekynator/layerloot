@@ -99,7 +99,7 @@ export default function GiftMode({
   };
 
   return (
-    <motion.div layout className="rounded-2xl border border-border bg-card shadow-sm">
+    <motion.div layout className="glass-card glow-border">
       <button
         onClick={() => onChange({ ...settings, enabled: !settings.enabled })}
         className="flex w-full items-center justify-between p-4"

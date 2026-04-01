@@ -1197,8 +1197,7 @@ const Account = () => {
         </div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="mb-8 border-primary/30 bg-primary/5">
-            <CardContent className="p-6">
+          <div className="glass-card mb-8 border-primary/20 p-6 glow-border">
               <div className="flex flex-wrap items-center gap-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
                   <Star className="h-7 w-7 text-primary" />
@@ -1279,11 +1278,10 @@ const Account = () => {
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
+          </div>
         </motion.div>
 
-        <div className="mb-6 flex flex-wrap gap-2">
+        <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-border/20 bg-card/40 p-2 backdrop-blur-sm">
           {[
             { key: "orders" as const, label: tt("account.tabs.orders", "Orders"), icon: Package, hasDot: hasNewOrders },
             {
@@ -1298,14 +1296,16 @@ const Account = () => {
           ].map(({ key, label, icon: Icon, hasDot }) => (
             <Button
               key={key}
-              variant={tab === key ? "default" : "outline"}
+              variant={tab === key ? "default" : "ghost"}
               size="sm"
               onClick={() => setTab(key)}
-              className="relative font-display uppercase tracking-wider"
+              className={`relative font-display uppercase tracking-wider transition-all ${
+                tab === key ? "glow-primary shadow-md" : "hover:bg-muted/40"
+              }`}
             >
               <Icon className="mr-1 h-4 w-4" />
               {label}
-              {hasDot && <span className="ml-2 h-2.5 w-2.5 rounded-full bg-red-500" />}
+              {hasDot && <span className="ml-2 h-2.5 w-2.5 rounded-full bg-destructive animate-pulse" />}
             </Button>
           ))}
         </div>
@@ -1326,7 +1326,7 @@ const Account = () => {
                 {orders.map((order) => {
                   const isNewOrder = isAfter(order.created_at, seenState.ordersLastSeenAt);
                   return (
-                    <Card key={order.id} className="transition-all hover:border-primary hover:shadow-sm">
+                    <Card key={order.id} className="glass-card transition-all hover:border-primary/30 hover:shadow-lg">
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <Link to={`/orders/${order.id}`} className="flex flex-1 items-center justify-between">
@@ -1478,7 +1478,7 @@ const Account = () => {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <Card className="h-full">
+                    <Card className="glass-card h-full shine-sweep">
                       <CardContent className="space-y-4 p-6">
                         <div className="flex items-center gap-2">
                           <div className="font-display text-lg uppercase">{rewardName}</div>

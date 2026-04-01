@@ -184,7 +184,7 @@ const ProductDetail = () => {
                 <ModelViewer url={product.model_url} className="aspect-square" />
               </motion.div>
             ) : (
-              <div className="relative aspect-square overflow-hidden rounded-[1.75rem] border border-border/80 bg-muted shadow-sm">
+              <div className="glass-card relative aspect-square overflow-hidden rounded-[1.75rem] glow-border">
                 <AnimatePresence mode="wait">
                   <motion.img
                     ref={heroImageRef}
@@ -274,7 +274,7 @@ const ProductDetail = () => {
             </div>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6 lg:sticky lg:top-24 lg:self-start">
             <div className="space-y-3">
               <Badge
                 variant="outline"
@@ -364,9 +364,20 @@ const ProductDetail = () => {
             </div>
 
             <div className="flex items-center gap-3 text-sm">
-              <span className={`font-medium ${activeStock > 0 ? "text-green-600" : "text-destructive"}`}>
-                {activeStock > 0 ? t("products.inStock", { count: activeStock }) : t("products.outOfStock")}
-              </span>
+              {activeStock > 0 && activeStock <= 5 ? (
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex items-center gap-1.5 rounded-full border border-destructive/20 bg-destructive/5 px-3 py-1 font-medium text-destructive"
+                >
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-destructive" />
+                  {t("products.lowStock", { defaultValue: `Only ${activeStock} left – order soon!`, count: activeStock })}
+                </motion.span>
+              ) : (
+                <span className={`font-medium ${activeStock > 0 ? "text-green-600" : "text-destructive"}`}>
+                  {activeStock > 0 ? t("products.inStock", { count: activeStock }) : t("products.outOfStock")}
+                </span>
+              )}
               {socialProof?.reviewCount ? <span className="text-muted-foreground">{t("products.lovedByBuyers")}</span> : null}
             </div>
 

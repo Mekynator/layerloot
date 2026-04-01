@@ -52,7 +52,7 @@ const StickyAddToCart = ({
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 80, opacity: 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 shadow-[0_-4px_20px_hsl(var(--foreground)/0.08)] backdrop-blur-lg"
+          className="fixed inset-x-0 bottom-0 z-50 border-t border-border/20 bg-secondary/90 shadow-[0_-4px_30px_hsl(var(--primary)/0.1)] backdrop-blur-2xl"
         >
           <div className="container flex items-center gap-3 py-3 md:gap-4">
             <img

@@ -838,6 +838,7 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
 };
 
 const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) => {
+  useTranslation();
   const [categories, setCategories] = useState<any[]>([]);
   const c = block.content || {};
 

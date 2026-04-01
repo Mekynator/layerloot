@@ -232,12 +232,16 @@ const AdminSettings = () => {
         facebook: footerContact.facebook_url,
       },
     };
+    const policyUpserts = Object.entries(policies).map(([key, val]) =>
+      upsertSetting(key, val)
+    );
     await Promise.all([
       upsertSetting("contact", mergedContact),
       upsertSetting("store", store),
       upsertSetting("promotion_popup", promo),
       upsertSetting("footer_settings", footer),
       upsertSetting("branding", branding),
+      ...policyUpserts,
     ]);
     setSaving(false);
     toast({ title: "Settings saved!" });

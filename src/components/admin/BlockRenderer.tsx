@@ -873,7 +873,7 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
     "py-16 lg:py-24",
     <div className="container">
       <div className={`mb-12 ${alignmentClass(align)}`}>
-        <h2 className="font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">{heading}</h2>
+        <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{heading}</h2>
         <p className="mt-2 text-muted-foreground">{subheading}</p>
       </div>
 

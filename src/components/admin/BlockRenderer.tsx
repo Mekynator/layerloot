@@ -714,6 +714,7 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
 };
 
 const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boolean }) => {
+  useTranslation();
   const c = block.content || {};
   const cards = c.cards || [
     {

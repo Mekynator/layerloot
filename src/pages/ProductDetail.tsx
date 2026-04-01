@@ -202,7 +202,7 @@ const ProductDetail = () => {
                 )}
 
                 {product.compare_at_price && (
-                  <Badge className="absolute left-4 top-4 bg-primary font-display uppercase">Sale</Badge>
+                  <Badge className="absolute left-4 top-4 bg-primary font-display uppercase">{t("products.sale")}</Badge>
                 )}
 
                 {images.length > 1 && (

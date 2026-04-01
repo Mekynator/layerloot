@@ -1348,6 +1348,11 @@ const Account = () => {
                           </Link>
                         </div>
 
+                        {/* Order Timeline */}
+                        <div className="mt-4 border-t border-border pt-4">
+                          <OrderTimeline status={order.status} />
+                        </div>
+
                         {order.status === "delivered" &&
                           (order.tool_type === "custom-print" || order.tool_type === "lithophane") && (
                             <div className="mt-4 border-t border-border pt-4">

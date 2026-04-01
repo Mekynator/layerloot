@@ -65,11 +65,6 @@ const ProductDetail = () => {
   const images = useMemo(() => (product?.images?.length ? product.images : ["/placeholder.svg"]), [product?.images]);
   const hasConfiguratorAttrs = variants.length > 0 && variants.some((v) => Object.keys(v.attributes || {}).length > 0);
   const hasSimpleVariants = variants.length > 0 && !hasConfiguratorAttrs;
-  const trustBadges = [
-    ...(product?.is_featured ? ["best seller"] : []),
-    ...(socialProof?.badges ?? []),
-    ...(socialProof?.reviewCount ? [`${socialProof.reviewCount} sold signals`] : []),
-  ].slice(0, 3);
 
   useEffect(() => {
     if (show3D || images.length <= 1) return;

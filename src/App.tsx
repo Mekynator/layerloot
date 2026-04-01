@@ -35,6 +35,7 @@ import SubmitDesign from "./pages/SubmitDesign";
 import NotFound from "./pages/NotFound";
 import ChatWidget from "./components/ChatWidget";
 import PromotionPopup from "./components/PromotionPopup";
+import GiftClaimPopup from "./components/GiftClaimPopup";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -89,6 +90,7 @@ const AppShell = () => {
 
       {!isEditorPreview && !isAdminRoute && <ChatWidget />}
       {!isEditorPreview && !isAdminRoute && <PromotionPopup />}
+      {!isEditorPreview && !isAdminRoute && <GiftClaimPopup />}
     </>
   );
 };

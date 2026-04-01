@@ -20,43 +20,23 @@ function summarizeLoyalty(rows: { points: number }[]) {
   return { balance, earned, spent };
 }
 
-function mergeUserVouchers(owned: any[], received: any[], userId: string, userEmail?: string) {
-  const normalizedEmail = (userEmail || "").trim().toLowerCase();
-  const merged = [...owned, ...received].filter(Boolean);
-  const unique = new Map<string, any>();
 
-  merged.forEach((voucher) => {
-    const recipientEmail = (voucher.recipient_email || "").trim().toLowerCase();
-    const isGiftCard = voucher.vouchers?.discount_type === "gift_card";
-    const giftedAway = isGiftCard && voucher.user_id === userId && recipientEmail && recipientEmail !== normalizedEmail;
-    if (!giftedAway) unique.set(voucher.id, voucher);
-  });
+async function fetchAccountOverview(userId: string): Promise<AccountOverviewData> {
+  const voucherSelect = "id, user_id, voucher_id, code, is_used, balance, redeemed_at, recipient_email, recipient_name, recipient_user_id, sender_user_id, sender_name, sender_email, gift_message, gifted_at, claimed_at, gift_status, used_at, vouchers(name, discount_value, discount_type)";
 
-  return Array.from(unique.values()).sort(
-    (a, b) => new Date(b.redeemed_at).getTime() - new Date(a.redeemed_at).getTime(),
-  );
-}
-
-async function fetchAccountOverview(userId: string, userEmail?: string): Promise<AccountOverviewData> {
-  const voucherSelect = "id, user_id, voucher_id, code, is_used, balance, redeemed_at, recipient_email, recipient_name, used_at, vouchers(name, discount_value, discount_type)";
-
-  const [loyaltyRes, ordersRes, customOrdersRes, vouchersRes, ownedVouchersRes, receivedVouchersRes] = await Promise.all([
+  const [loyaltyRes, ordersRes, customOrdersRes, vouchersRes, userVouchersRes] = await Promise.all([
     supabase.from("loyalty_points").select("id, points, reason, created_at").eq("user_id", userId).order("created_at", { ascending: false }),
     supabase.from("orders").select("id, status, total, created_at, tool_type").eq("user_id", userId).order("created_at", { ascending: false }),
     supabase.from("custom_orders").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
     supabase.from("vouchers").select("*").eq("is_active", true).order("points_cost", { ascending: true }),
     supabase.from("user_vouchers").select(voucherSelect).eq("user_id", userId).order("redeemed_at", { ascending: false }),
-    userEmail
-      ? supabase.from("user_vouchers").select(voucherSelect).ilike("recipient_email", userEmail).neq("user_id", userId).order("redeemed_at", { ascending: false })
-      : Promise.resolve({ data: [], error: null }),
   ]);
 
   if (loyaltyRes.error) throw loyaltyRes.error;
   if (ordersRes.error) throw ordersRes.error;
   if (customOrdersRes.error) throw customOrdersRes.error;
   if (vouchersRes.error) throw vouchersRes.error;
-  if (ownedVouchersRes.error) throw ownedVouchersRes.error;
-  if (receivedVouchersRes.error) throw receivedVouchersRes.error;
+  if (userVouchersRes.error) throw userVouchersRes.error;
 
   const customOrders = customOrdersRes.data ?? [];
   let customOrderMessages: Record<string, any[]> = {};
@@ -87,17 +67,19 @@ async function fetchAccountOverview(userId: string, userEmail?: string): Promise
     customOrders,
     customOrderMessages,
     vouchers: vouchersRes.data ?? [],
-    userVouchers: mergeUserVouchers(ownedVouchersRes.data ?? [], receivedVouchersRes.data ?? [], userId, userEmail),
+    userVouchers: (userVouchersRes.data ?? []).sort(
+      (a: any, b: any) => new Date(b.redeemed_at).getTime() - new Date(a.redeemed_at).getTime(),
+    ),
     pointsBalance: summary.balance,
     pointsEarned: summary.earned,
     pointsSpent: summary.spent,
   };
 }
 
-export function useAccountOverview(userId?: string, userEmail?: string) {
+export function useAccountOverview(userId?: string) {
   return useQuery({
-    queryKey: ["account-overview", userId, userEmail ?? ""],
-    queryFn: () => fetchAccountOverview(userId as string, userEmail),
+    queryKey: ["account-overview", userId],
+    queryFn: () => fetchAccountOverview(userId as string),
     enabled: Boolean(userId),
     staleTime: 1000 * 30,
   });

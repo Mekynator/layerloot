@@ -68,6 +68,14 @@ interface UserVoucher {
   redeemed_at: string;
   recipient_email: string | null;
   recipient_name?: string | null;
+  recipient_user_id?: string | null;
+  sender_user_id?: string | null;
+  sender_name?: string | null;
+  sender_email?: string | null;
+  gift_message?: string | null;
+  gifted_at?: string | null;
+  claimed_at?: string | null;
+  gift_status?: string | null;
   used_at?: string | null;
   vouchers: { name: string; discount_value: number; discount_type: string } | null;
 }
@@ -230,13 +238,11 @@ function detectCustomOrderType(order: CustomOrder): "custom-print" | "lithophane
   return "custom-print";
 }
 
-function isVoucherUsedOrArchived(voucher: UserVoucher, currentUserId: string, currentUserEmail?: string | null) {
+function isVoucherUsedOrArchived(voucher: UserVoucher) {
   const remainingBalance = voucher.balance !== null ? Number(voucher.balance) : null;
-  const normalizedEmail = (currentUserEmail || "").trim().toLowerCase();
-  const recipientEmail = (voucher.recipient_email || "").trim().toLowerCase();
-  const giftedAway = Boolean(recipientEmail) && voucher.user_id === currentUserId && recipientEmail !== normalizedEmail;
+  const gs = voucher.gift_status;
 
-  return voucher.is_used || !!voucher.used_at || giftedAway || (remainingBalance !== null && remainingBalance <= 0);
+  return voucher.is_used || !!voucher.used_at || gs === "pending_claim" || gs === "cancelled" || (remainingBalance !== null && remainingBalance <= 0);
 }
 
 function parseCustomOrderDescription(description: string) {
@@ -368,7 +374,7 @@ const Account = () => {
     data: overview,
     isLoading: overviewLoading,
     refetch: refetchOverview,
-  } = useAccountOverview(user?.id, user?.email);
+  } = useAccountOverview(user?.id);
 
   const [showHistory, setShowHistory] = useState(false);
   const [tab, setTab] = useState<AccountTab>("orders");
@@ -458,13 +464,13 @@ const Account = () => {
   );
 
   const activeVouchers = useMemo(
-    () => userVouchers.filter((voucher) => user && !isVoucherUsedOrArchived(voucher, user.id, user.email)),
-    [user, userVouchers],
+    () => userVouchers.filter((voucher) => !isVoucherUsedOrArchived(voucher)),
+    [userVouchers],
   );
 
   const usedVouchers = useMemo(
-    () => userVouchers.filter((voucher) => !user || isVoucherUsedOrArchived(voucher, user.id, user.email)),
-    [user, userVouchers],
+    () => userVouchers.filter((voucher) => isVoucherUsedOrArchived(voucher)),
+    [userVouchers],
   );
 
   const activeVoucherGroups = useMemo(() => groupVouchersByDefinition(activeVouchers), [activeVouchers]);
@@ -1569,10 +1575,10 @@ const Account = () => {
                     {isExpanded ? (
                       <CardContent className="space-y-3 border-t border-border bg-background/40 p-4">
                         {group.items.map((uv) => {
-                          const recipientEmail = (uv.recipient_email || "").trim().toLowerCase();
-                          const isReceived =
-                            recipientEmail !== "" && recipientEmail === (user?.email || "").trim().toLowerCase();
-                          const isGifted = !!uv.recipient_email && !isReceived;
+                          const giftStatus = uv.gift_status || "";
+                          const isPendingGift = giftStatus === "pending_claim";
+                          const isReceived = !!uv.sender_user_id && uv.user_id === user?.id && (giftStatus === "claimed" || (uv.recipient_email || "").trim().toLowerCase() === (user?.email || "").trim().toLowerCase());
+                          const isGifted = isPendingGift || (!!uv.recipient_email && !isReceived);
                           const isUsed = uv.is_used || !!uv.used_at || (uv.balance !== null && Number(uv.balance) <= 0);
 
                           return (
@@ -1590,14 +1596,22 @@ const Account = () => {
                                   ) : null}
                                   {isGifted && uv.recipient_email ? (
                                     <p className="text-xs text-muted-foreground">
-                                      {tt("account.vouchers.sentTo", "Sent to")}:{" "}
-                                      {uv.recipient_name ? `${uv.recipient_name} ` : ""}({uv.recipient_email})
+                                      {isPendingGift
+                                        ? `Pending claim for: ${uv.recipient_name ? `${uv.recipient_name} ` : ""}(${uv.recipient_email})`
+                                        : `${tt("account.vouchers.sentTo", "Sent to")}: ${uv.recipient_name ? `${uv.recipient_name} ` : ""}(${uv.recipient_email})`}
                                     </p>
                                   ) : null}
-                                  {isReceived ? (
+                                  {isReceived && uv.sender_name ? (
+                                    <p className="text-xs text-muted-foreground">
+                                      Received gift card from {uv.sender_name}
+                                    </p>
+                                  ) : isReceived ? (
                                     <p className="text-xs text-muted-foreground">
                                       {tt("account.vouchers.receivedGiftCard", "Received gift card")}
                                     </p>
+                                  ) : null}
+                                  {(isReceived || isGifted) && uv.gift_message ? (
+                                    <p className="text-xs italic text-muted-foreground">"{uv.gift_message}"</p>
                                   ) : null}
                                   <p className="text-xs text-muted-foreground">
                                     {tt("account.vouchers.redeemedAt", "Redeemed")}:{" "}
@@ -1628,10 +1642,12 @@ const Account = () => {
 
                                   {isUsed ? (
                                     <Badge variant="secondary">{tt("account.vouchers.used", "Used")}</Badge>
-                                  ) : isGifted ? (
-                                    <Badge variant="secondary">{tt("account.vouchers.gifted", "Gifted")}</Badge>
+                                  ) : isPendingGift ? (
+                                    <Badge variant="secondary">Pending Claim</Badge>
                                   ) : isReceived ? (
                                     <Badge variant="secondary">{tt("account.vouchers.received", "Received")}</Badge>
+                                  ) : isGifted ? (
+                                    <Badge variant="secondary">{tt("account.vouchers.gifted", "Gifted")}</Badge>
                                   ) : (
                                     <Badge variant="default">{tt("account.vouchers.active", "Active")}</Badge>
                                   )}

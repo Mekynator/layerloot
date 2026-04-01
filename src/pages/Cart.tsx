@@ -147,7 +147,7 @@ export default function CartPage() {
       if (exists) return prev;
       return [...prev, item];
     });
-    setSavedToast(`${item.name} saved for later`);
+    setSavedToast(t("cart.savedToast", { name: item.name }));
     removeItem(item.id);
   };
 

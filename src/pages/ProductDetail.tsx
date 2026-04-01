@@ -48,6 +48,8 @@ const ProductDetail = () => {
   const [justAdded, setJustAdded] = useState(false);
 
   const heroImageRef = useRef<HTMLImageElement | null>(null);
+  const addToCartSectionRef = useRef<HTMLDivElement | null>(null);
+  const { recentProducts, trackProduct } = useRecentlyViewedProducts();
 
   const product = data?.product ?? null;
   const variants = data?.variants ?? [];

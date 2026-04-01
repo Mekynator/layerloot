@@ -34,11 +34,13 @@ const Dashboard = () => {
     clients: 0,
     customOrders: 0,
     reviews: 0,
+    showcases: 0,
   });
   const [alerts, setAlerts] = useState({
     orders: 0,
     customOrders: 0,
     reviews: 0,
+    showcases: 0,
   });
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [revenueByPeriod, setRevenueByPeriod] = useState<any[]>([]);

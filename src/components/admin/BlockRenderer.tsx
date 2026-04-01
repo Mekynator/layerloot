@@ -1472,9 +1472,9 @@ const CtaBlock = ({ block }: { block: SiteBlock }) => {
 
   return withSection(
     block,
-    "bg-secondary py-16 lg:py-24",
+    "py-16 lg:py-24",
     <div className={`container ${alignmentClass(align)}`}>
-      <h2 className="mb-4 font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">
+      <h2 className="mb-4 font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
         {getLocalizedValue(c.heading, tr("blocks.cta.heading", "Ready to get started?"))}
       </h2>
       {c.subheading && <p className="mb-8 text-lg text-muted-foreground">{getLocalizedValue(c.subheading)}</p>}

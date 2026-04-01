@@ -118,7 +118,7 @@ const ProductDetail = () => {
 
     setSubmitting(false);
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: t("common.error"), description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Review submitted!", description: "It will appear after admin approval." });
       setReviewForm({ rating: 5, title: "", comment: "" });

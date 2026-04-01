@@ -1314,7 +1314,7 @@ const CustomPrintOrder = () => {
               <FileStatusCard
                 fileName={referenceImage.name}
                 previewUrl={referenceImagePreviewUrl}
-                alt="Reference preview"
+                alt={t("create.referencePreview")}
               />
             )}
           </div>

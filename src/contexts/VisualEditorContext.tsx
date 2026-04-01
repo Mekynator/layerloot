@@ -444,6 +444,10 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     selectedBlockId,
     selectedBlock,
     hoveredBlockId,
+    selectedElement,
+    selectElement,
+    inlineEditingKey,
+    setInlineEditingKey,
     selectBlock: setSelectedBlockId,
     hoverBlock: setHoveredBlockId,
     updateBlockContent,
@@ -465,7 +469,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     frontendPages,
     globalPages,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [pages, activePage, selectedPage, pageBlocks, savedBlocks, isDirty, selectedBlockId, selectedBlock, hoveredBlockId, saving, viewport, frontendPages, globalPages, undoVersion]);
+  }), [pages, activePage, selectedPage, pageBlocks, savedBlocks, isDirty, selectedBlockId, selectedBlock, hoveredBlockId, saving, viewport, frontendPages, globalPages, undoVersion, selectedElement, inlineEditingKey]);
 
   return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;
 }

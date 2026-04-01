@@ -523,10 +523,10 @@ export default function CartPage() {
                   <span className="text-sm font-medium text-foreground">{t("cart.loyaltyRewards")}</span>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Current balance: <span className="font-semibold text-foreground">{pointsBalance}</span> points
+                  {t("cart.currentBalance")} <span className="font-semibold text-foreground">{pointsBalance}</span> {t("cart.points")}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  This order will earn about <span className="font-semibold text-primary">{pointsToEarn}</span> points
+                  {t("cart.earnPoints", { count: pointsToEarn })}
                 </p>
               </div>
 

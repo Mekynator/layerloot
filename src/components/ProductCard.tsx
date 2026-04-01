@@ -130,7 +130,7 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
     >
       <Link
         to={`/products/${product.slug}`}
-        className="group relative flex h-full flex-col overflow-hidden rounded-[1.35rem] border border-border/80 bg-card/95 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-[0_20px_60px_-32px_hsl(var(--foreground)/0.45)]"
+        className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/30 bg-card/60 shadow-[0_8px_32px_hsl(217_91%_60%/0.06)] backdrop-blur-xl transition-all duration-400 hover:border-primary/40 hover:shadow-[0_20px_60px_hsl(217_91%_60%/0.15)]"
       >
         <div className="relative aspect-square overflow-hidden bg-muted">
           <AnimatePresence mode="wait">

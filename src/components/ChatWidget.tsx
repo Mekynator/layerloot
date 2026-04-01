@@ -567,7 +567,7 @@ const ChatWidget = () => {
                 e.preventDefault();
                 send();
               }}
-              className="flex items-center gap-2 border-t border-border bg-card px-4 py-3"
+              className="flex items-center gap-2 border-t border-border/20 bg-card/50 backdrop-blur-xl px-4 py-3"
             >
               <Input
                 value={input}

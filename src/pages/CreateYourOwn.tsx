@@ -1252,6 +1252,11 @@ const CustomPrintOrder = () => {
             reference_image_filename: referenceImage?.name ?? null,
             uploaded_model_url: modelUrl,
             uploaded_model_filename: modelFilename,
+            ...(showcaseSource ? {
+              source_showcase_id: showcaseSource.id,
+              source_showcase_title: showcaseSource.title,
+              showcase_request_type: showcaseSource.type,
+            } : {}),
           },
         })
         .select("id")

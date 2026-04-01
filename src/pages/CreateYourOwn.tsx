@@ -1335,7 +1335,7 @@ const CustomPrintOrder = () => {
               {file && <FileStatusCard fileName={file.name} alt="3D model preview" />}
 
               <p className="mt-2 text-xs text-muted-foreground">
-                Preview colors may differ slightly from the finished printed material.
+                {t("create.previewColorNote")}
               </p>
             </motion.div>
           )}

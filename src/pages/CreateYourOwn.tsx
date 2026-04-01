@@ -295,38 +295,41 @@ const UploadProgressOverlay = ({ progress, status }: { progress: number; status:
   </AnimatePresence>
 );
 
-const ProcessingDialog = ({ open, progress, status, title }: ProgressState & { title: string }) => (
-  <Dialog open={open}>
-    <DialogContent
-      className="sm:max-w-md [&>button]:hidden"
-      onEscapeKeyDown={(e) => e.preventDefault()}
-      onInteractOutside={(e) => e.preventDefault()}
-    >
-      <div className="py-2">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{status || "Working on your request..."}</DialogDescription>
-        </DialogHeader>
+const ProcessingDialog = ({ open, progress, status, title }: ProgressState & { title: string }) => {
+  const { t } = useTranslation();
+  return (
+    <Dialog open={open}>
+      <DialogContent
+        className="sm:max-w-md [&>button]:hidden"
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        <div className="py-2">
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+            <DialogDescription>{status || t("create.workingOnRequest")}</DialogDescription>
+          </DialogHeader>
 
-        <div className="mt-5">
-          <div className="h-3 overflow-hidden rounded-full bg-muted">
-            <motion.div
-              className="h-full rounded-full bg-primary"
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ ease: "easeOut", duration: 0.3 }}
-            />
-          </div>
+          <div className="mt-5">
+            <div className="h-3 overflow-hidden rounded-full bg-muted">
+              <motion.div
+                className="h-full rounded-full bg-primary"
+                initial={{ width: 0 }}
+                animate={{ width: `${progress}%` }}
+                transition={{ ease: "easeOut", duration: 0.3 }}
+              />
+            </div>
 
-          <div className="mt-3 flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">{status}</span>
-            <span className="font-semibold text-foreground">{Math.round(progress)}%</span>
+            <div className="mt-3 flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">{status}</span>
+              <span className="font-semibold text-foreground">{Math.round(progress)}%</span>
+            </div>
           </div>
         </div>
-      </div>
-    </DialogContent>
-  </Dialog>
-);
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 const FileStatusCard = ({
   fileName,

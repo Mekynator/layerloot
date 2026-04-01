@@ -486,7 +486,7 @@ const ReviewSection = ({ title }: { toolType: "custom-print" | "lithophane"; tit
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.2 }}
               transition={{ delay: index * 0.06, duration: 0.25 }}
-             className="rounded-xl border border-border bg-card p-4"
+             className="rounded-2xl bg-card/60 p-4 shadow-[0_4px_24px_-4px_hsl(225_44%_4%/0.4)] backdrop-blur-md"
             >
               <div className="mb-2 flex items-center justify-between gap-2">
                 <p className="font-medium text-foreground">{review.title || t("create.verifiedCustomer")}</p>

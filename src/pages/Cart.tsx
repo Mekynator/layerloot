@@ -50,6 +50,7 @@ export default function CartPage() {
   const { toast } = useToast();
   const { t } = useTranslation("common");
   const { data: accountData, isLoading: accountLoading } = useCartAccountData(user?.id, user?.email);
+  const { data: catalog } = useStorefrontCatalog();
 
   type CartItemExt = (typeof items)[number] & {
     material?: string;

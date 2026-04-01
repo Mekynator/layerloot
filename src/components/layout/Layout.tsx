@@ -6,12 +6,14 @@ import GlobalSectionRenderer from "./GlobalSectionRenderer";
 import PageBackgroundSlideshow from "@/components/layout/PageBackgroundSlideshow";
 import ThemeRuntime from "@/components/theme/ThemeRuntime";
 import FloatingCartSummary from "@/components/cart/FloatingCartSummary";
+import AchievementToast, { useAchievements } from "@/components/smart/AchievementToast";
 
 const Layout = ({ children }: { children: ReactNode }) => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const isEditorPreview = searchParams.get("editorPreview") === "1";
   const isCartPage = location.pathname === "/cart";
+  const { currentAchievement, dismiss } = useAchievements();
 
   return (
     <div
@@ -36,6 +38,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
         <Footer />
       </div>
       {!isCartPage && !isEditorPreview && <FloatingCartSummary />}
+      <AchievementToast achievement={currentAchievement} onDismiss={dismiss} />
     </div>
   );
 };

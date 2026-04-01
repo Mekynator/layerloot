@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { useCart } from "@/contexts/CartContext";
 import RatingStars from "@/components/social/RatingStars";
 import ProductTrustBadges from "@/components/social/ProductTrustBadges";
+import SocialProofBadges from "@/components/social/SocialProofBadges";
 import { formatPrice } from "@/lib/currency";
 import type { ProductSocialProof } from "@/lib/social-proof";
 

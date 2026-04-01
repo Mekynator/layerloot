@@ -10,6 +10,17 @@ type Viewport = "desktop" | "tablet" | "mobile";
 
 type UndoEntry = { blocks: SiteBlock[]; label: string };
 
+/** Identifies a selected element within a block */
+export interface SelectedElement {
+  blockId: string;
+  /** "root" = whole block, or a content key like "heading", "buttons.0.text" */
+  nodeKey: string;
+  /** Type of element */
+  nodeType: "text" | "icon" | "button" | "media" | "layout" | "root";
+  /** For repeater items, the item index */
+  repeaterIndex?: number;
+}
+
 interface EditorState {
   // Pages
   pages: SitePage[];
@@ -25,6 +36,13 @@ interface EditorState {
   selectedBlockId: string | null;
   selectedBlock: SiteBlock | null;
   hoveredBlockId: string | null;
+
+  // Element-level selection
+  selectedElement: SelectedElement | null;
+  selectElement: (element: SelectedElement | null) => void;
+  /** Currently inline-editing text field key (set on double-click) */
+  inlineEditingKey: string | null;
+  setInlineEditingKey: (key: string | null) => void;
 
   // Actions
   selectBlock: (id: string | null) => void;

@@ -37,7 +37,7 @@ const RecentlyViewedSection = ({ products, title, maxItems = 6 }: RecentlyViewed
               to={`/products/${product.slug}`}
               className="group block w-36 shrink-0"
             >
-              <div className="aspect-square overflow-hidden rounded-xl border border-border bg-muted transition-all group-hover:border-primary/40 group-hover:shadow-sm">
+              <div className="aspect-square overflow-hidden rounded-xl bg-card/60 backdrop-blur-md shadow-[0_4px_20px_-4px_hsl(225_44%_4%/0.4)] transition-all group-hover:shadow-[0_8px_30px_-4px_hsl(217_91%_60%/0.15)]">
                 <img
                   src={product.image}
                   alt={product.name}

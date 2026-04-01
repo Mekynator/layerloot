@@ -527,7 +527,7 @@ const ChatWidget = () => {
               </div>
             </div>
 
-            <div className="border-b border-border bg-muted/40 px-3 py-2.5">
+            <div className="border-b border-border/20 bg-muted/30 backdrop-blur-sm px-3 py-2.5">
               <HorizontalSuggestions items={starterSuggestions} onPick={send} />
             </div>
 

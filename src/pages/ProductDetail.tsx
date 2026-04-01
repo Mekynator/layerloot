@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Star, ShoppingCart, ChevronLeft, ChevronRight, ShieldCheck, Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,6 +19,7 @@ import PrintInfo from "@/components/PrintInfo";
 import SizePreview from "@/components/SizePreview";
 import { ProductDetailSkeleton } from "@/components/shared/loading-states";
 import RatingStars from "@/components/social/RatingStars";
+import { formatPrice } from "@/lib/currency";
 import ProductTrustBadges from "@/components/social/ProductTrustBadges";
 import ReviewCard from "@/components/social/ReviewCard";
 import ProductCard from "@/components/ProductCard";
@@ -26,6 +28,7 @@ import { useProductDetailQuery } from "@/hooks/use-storefront";
 const AUTO_GALLERY_MS = 6500;
 
 const ProductDetail = () => {
+  const { t } = useTranslation("common");
   const { slug } = useParams<{ slug: string }>();
   const { addItem } = useCart();
   const { user } = useAuth();
@@ -98,7 +101,7 @@ const ProductDetail = () => {
     );
 
     setJustAdded(true);
-    toast({ title: "Added to cart!", description: name });
+    toast({ title: t("common.addedToCart"), description: name });
   };
 
   const handleSubmitReview = async () => {
@@ -115,9 +118,9 @@ const ProductDetail = () => {
 
     setSubmitting(false);
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: t("common.error"), description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Review submitted!", description: "It will appear after admin approval." });
+      toast({ title: t("products.reviewSubmitted"), description: t("products.reviewApproval") });
       setReviewForm({ rating: 5, title: "", comment: "" });
       queryClient.invalidateQueries({ queryKey: ["product-detail", slug] });
       queryClient.invalidateQueries({ queryKey: ["storefront-catalog"] });
@@ -135,9 +138,9 @@ const ProductDetail = () => {
   if (!product) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
-        <h1 className="mb-4 font-display text-2xl font-bold uppercase text-foreground">Product Not Found</h1>
+        <h1 className="mb-4 font-display text-2xl font-bold uppercase text-foreground">{t("products.productNotFound")}</h1>
         <Link to="/products">
-          <Button>Back to Products</Button>
+          <Button>{t("products.backToProducts")}</Button>
         </Link>
       </div>
     );
@@ -151,7 +154,7 @@ const ProductDetail = () => {
             to="/products"
             className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-primary"
           >
-            <ArrowLeft className="h-4 w-4" /> Back to Products
+            <ArrowLeft className="h-4 w-4" /> {t("products.backToProducts")}
           </Link>
         </motion.div>
 
@@ -199,7 +202,7 @@ const ProductDetail = () => {
                 )}
 
                 {product.compare_at_price && (
-                  <Badge className="absolute left-4 top-4 bg-primary font-display uppercase">Sale</Badge>
+                  <Badge className="absolute left-4 top-4 bg-primary font-display uppercase">{t("products.sale")}</Badge>
                 )}
 
                 {images.length > 1 && (
@@ -244,7 +247,7 @@ const ProductDetail = () => {
                       ? "border-primary bg-primary/10 ring-2 ring-primary/20"
                       : "border-border hover:border-primary"
                   }`}
-                  title="View 3D Model"
+                  title={t("products.view3D")}
                 >
                   <span className="font-display text-xs font-bold uppercase text-primary">3D</span>
                 </motion.button>
@@ -258,7 +261,7 @@ const ProductDetail = () => {
                 variant="outline"
                 className="rounded-full border-primary/20 bg-primary/5 uppercase tracking-[0.2em] text-primary"
               >
-                Premium print
+                {t("products.premiumPrint")}
               </Badge>
               <h1 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{product.name}</h1>
               <RatingStars rating={socialProof?.averageRating} count={socialProof?.reviewCount} />
@@ -271,10 +274,10 @@ const ProductDetail = () => {
               animate={{ opacity: 1, scale: 1 }}
               className="flex items-baseline gap-3"
             >
-              <span className="font-display text-3xl font-bold text-primary">{activePrice.toFixed(2)} kr</span>
+              <span className="font-display text-3xl font-bold text-primary">{formatPrice(activePrice)}</span>
               {product.compare_at_price && !selectedVariant && (
                 <span className="text-lg text-muted-foreground line-through">
-                  {Number(product.compare_at_price).toFixed(2)} kr
+                  {formatPrice(Number(product.compare_at_price))}
                 </span>
               )}
             </motion.div>
@@ -286,7 +289,7 @@ const ProductDetail = () => {
             <motion.div whileHover={{ y: -2 }} className="section-surface p-4">
               <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
                 <ShieldCheck className="h-4 w-4 text-primary" />
-                Verified social proof, trusted checkout, and print-ready finishing.
+                {t("products.socialProofNote")}
               </div>
 
               {hasConfiguratorAttrs && (
@@ -300,7 +303,7 @@ const ProductDetail = () => {
               {hasSimpleVariants && (
                 <div className="space-y-3">
                   <p className="font-display text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    Options
+                    {t("products.options")}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {variants.map((variant) => (
@@ -317,7 +320,7 @@ const ProductDetail = () => {
                         disabled={variant.stock <= 0}
                       >
                         {variant.name}
-                        {variant.stock <= 0 && " (Out of stock)"}
+                        {variant.stock <= 0 && ` (${t("products.outOfStock")})`}
                       </motion.button>
                     ))}
                   </div>
@@ -342,9 +345,9 @@ const ProductDetail = () => {
 
             <div className="flex items-center gap-3 text-sm">
               <span className={`font-medium ${activeStock > 0 ? "text-green-600" : "text-destructive"}`}>
-                {activeStock > 0 ? `${activeStock} in stock` : "Out of stock"}
+                {activeStock > 0 ? t("products.inStock", { count: activeStock }) : t("products.outOfStock")}
               </span>
-              {socialProof?.reviewCount ? <span className="text-muted-foreground">Loved by recent buyers</span> : null}
+              {socialProof?.reviewCount ? <span className="text-muted-foreground">{t("products.lovedByBuyers")}</span> : null}
             </div>
 
             <div className="relative">
@@ -357,14 +360,14 @@ const ProductDetail = () => {
                 {justAdded ? (
                   <>
                     <Check className="mr-2 h-5 w-5" />
-                    Added to Cart
+                    {t("products.addedToCart")}
                   </>
                 ) : (
                   <>
                     <ShoppingCart className="mr-2 h-5 w-5" />
                     {variants.length > 0 && !selectedVariant && !hasConfiguratorAttrs
-                      ? "Select an option"
-                      : "Add to Cart"}
+                      ? t("products.selectOption")
+                      : t("products.addToCart")}
                   </>
                 )}
               </Button>
@@ -377,7 +380,7 @@ const ProductDetail = () => {
                     exit={{ opacity: 0, y: -8, scale: 0.96 }}
                     className="pointer-events-none absolute left-1/2 top-full mt-3 -translate-x-1/2 whitespace-nowrap rounded-full border border-primary/20 bg-background/95 px-3 py-1.5 text-xs font-medium text-primary shadow-sm"
                   >
-                    Ready in your cart
+                    {t("products.readyInCart")}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -392,10 +395,10 @@ const ProductDetail = () => {
                 variant="outline"
                 className="rounded-full border-primary/20 bg-primary/5 uppercase tracking-[0.2em] text-primary"
               >
-                Customer reviews
+                {t("products.customerReviews")}
               </Badge>
               <h2 className="font-display text-2xl font-bold uppercase text-foreground">
-                Customer Reviews {reviews.length > 0 && `(${reviews.length})`}
+                {reviews.length > 0 ? t("products.reviewsCount", { count: reviews.length }) : t("products.customerReviews")}
               </h2>
             </div>
           </div>
@@ -405,7 +408,7 @@ const ProductDetail = () => {
               <CardContent className="grid gap-4 p-6 md:grid-cols-[1fr_auto] md:items-end">
                 <div className="space-y-4">
                   <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-foreground">
-                    Write a Review
+                    {t("products.writeReview")}
                   </h3>
                   <div className="flex items-center gap-1">
                     {[1, 2, 3, 4, 5].map((s) => (
@@ -421,12 +424,12 @@ const ProductDetail = () => {
                     ))}
                   </div>
                   <Input
-                    placeholder="Review title (optional)"
+                    placeholder={t("products.reviewTitle")}
                     value={reviewForm.title}
                     onChange={(e) => setReviewForm({ ...reviewForm, title: e.target.value })}
                   />
                   <Textarea
-                    placeholder="Your review..."
+                    placeholder={t("products.yourReview")}
                     value={reviewForm.comment}
                     onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
                     rows={3}
@@ -438,7 +441,7 @@ const ProductDetail = () => {
                     disabled={submitting}
                     className="font-display uppercase tracking-wider"
                   >
-                    {submitting ? "Submitting..." : "Submit Review"}
+                    {submitting ? t("products.submitting") : t("products.submitReview")}
                   </Button>
                 </div>
               </CardContent>
@@ -448,9 +451,9 @@ const ProductDetail = () => {
               <CardContent className="p-6 text-center">
                 <p className="text-muted-foreground">
                   <Link to="/auth" className="text-primary hover:underline">
-                    Sign in
+                    {t("auth.signIn")}
                   </Link>{" "}
-                  to leave a review.
+                  {t("auth.signInToReview")}
                 </p>
               </CardContent>
             </Card>
@@ -459,7 +462,7 @@ const ProductDetail = () => {
           <div className="grid gap-4 lg:grid-cols-2">
             {reviews.length === 0 ? (
               <div className="section-surface px-6 py-12 text-center text-muted-foreground">
-                No reviews yet. Be the first to leave feedback.
+                {t("products.noReviews")}
               </div>
             ) : (
               reviews.map((review, index) => (
@@ -484,9 +487,9 @@ const ProductDetail = () => {
                 variant="outline"
                 className="rounded-full border-primary/20 bg-primary/5 uppercase tracking-[0.2em] text-primary"
               >
-                You may also like
+                {t("products.youMayAlsoLike")}
               </Badge>
-              <h2 className="font-display text-2xl font-bold uppercase text-foreground">Keep the build going</h2>
+              <h2 className="font-display text-2xl font-bold uppercase text-foreground">{t("products.keepBuilding")}</h2>
             </div>
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
               {relatedProducts.map((related, index) => (

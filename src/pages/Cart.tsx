@@ -16,6 +16,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -25,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCartAccountData } from "@/hooks/use-cart-account-data";
 import { CartSummarySkeleton } from "@/components/shared/loading-states";
+import { formatPrice } from "@/lib/currency";
 
 const FREE_SHIPPING_THRESHOLD = 500;
 const BASE_SHIPPING_PRICE = 5.99;
@@ -41,6 +43,7 @@ export default function CartPage() {
   const { items, removeItem, updateQuantity, totalPrice, addItem } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation("common");
   const { data: accountData, isLoading: accountLoading } = useCartAccountData(user?.id, user?.email);
 
   type CartItemExt = (typeof items)[number] & {
@@ -144,7 +147,7 @@ export default function CartPage() {
       if (exists) return prev;
       return [...prev, item];
     });
-    setSavedToast(`${item.name} saved for later`);
+    setSavedToast(t("cart.savedToast", { name: item.name }));
     removeItem(item.id);
   };
 
@@ -168,8 +171,8 @@ export default function CartPage() {
     try {
       if (!user && (selectedDiscountCode || manualDiscountCode.trim())) {
         toast({
-          title: "Sign in required",
-          description: "Sign in to use a voucher or gift card.",
+          title: t("cart.signInRequired"),
+          description: t("cart.signInForVoucher"),
           variant: "destructive",
         });
         return;
@@ -219,8 +222,8 @@ export default function CartPage() {
     } catch (error: any) {
       console.error("Checkout error:", error);
       toast({
-        title: "Checkout error",
-        description: error?.message || "Unable to start Stripe checkout.",
+        title: t("cart.checkoutError"),
+        description: error?.message || t("cart.checkoutErrorDesc"),
         variant: "destructive",
       });
     } finally {
@@ -242,21 +245,21 @@ export default function CartPage() {
             </div>
 
             <h1 className="mb-2 font-display text-3xl font-bold uppercase text-foreground md:text-4xl">
-              Your Cart Is Empty
+              {t("cart.empty")}
             </h1>
             <p className="mx-auto mb-8 max-w-xl text-muted-foreground">
-              Looks like the cart is taking a nap. Add some prints and wake the beast.
+              {t("cart.emptyHint")}
             </p>
 
             <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link to="/products">
                 <Button size="lg" className="font-display uppercase tracking-wider">
-                  Browse Products
+                  {t("cart.browseProducts")}
                 </Button>
               </Link>
               <Link to="/create">
                 <Button size="lg" variant="outline" className="font-display uppercase tracking-wider">
-                  Create Your Own
+                  {t("cart.createYourOwn")}
                 </Button>
               </Link>
             </div>
@@ -270,7 +273,7 @@ export default function CartPage() {
     <div className="py-8 md:py-10">
       <div className="container max-w-6xl">
         <div className="mb-8 flex items-center justify-between gap-4">
-          <h1 className="font-display text-4xl font-bold uppercase text-foreground">Shopping Cart</h1>
+          <h1 className="font-display text-4xl font-bold uppercase text-foreground">{t("cart.title")}</h1>
 
           <AnimatePresence>
             {savedToast && (
@@ -292,9 +295,9 @@ export default function CartPage() {
               <div className="mb-3 flex items-center gap-2">
                 <Truck className="h-4 w-4 text-primary" />
                 <span className="text-sm font-medium text-card-foreground">
-                  {remainingForFreeShipping > 0
-                    ? `Add ${remainingForFreeShipping.toFixed(2)} kr more for free shipping`
-                    : "🎉 You qualify for free shipping!"}
+                {remainingForFreeShipping > 0
+                    ? t("cart.freeShippingRemaining", { amount: formatPrice(remainingForFreeShipping) })
+                    : t("cart.freeShippingQualified")}
                 </span>
               </div>
               <Progress value={shippingProgress} className="h-2" />
@@ -341,7 +344,7 @@ export default function CartPage() {
                               )}
                               {changedState === "added" && (
                                 <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-600">
-                                  Added back
+                                  {t("cart.addedBack")}
                                 </span>
                               )}
                             </div>
@@ -357,14 +360,14 @@ export default function CartPage() {
                                 {item.printTime && (
                                   <div className="flex items-center gap-2">
                                     <Clock3 className="h-4 w-4 text-primary" />
-                                    <span>Print: {item.printTime}</span>
+                                    <span>{t("cart.printTime")} {item.printTime}</span>
                                   </div>
                                 )}
 
                                 {item.materialGrams && (
                                   <div className="flex items-center gap-2">
                                     <Package className="h-4 w-4 text-primary" />
-                                    <span>Material: {item.materialGrams}g</span>
+                                    <span>{t("cart.material")} {item.materialGrams}g</span>
                                   </div>
                                 )}
 
@@ -383,7 +386,7 @@ export default function CartPage() {
                                 className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
                               >
                                 <Bookmark className="h-4 w-4" />
-                                Save for later
+                                {t("cart.saveForLater")}
                               </button>
                             </div>
                           </div>
@@ -427,8 +430,8 @@ export default function CartPage() {
                             transition={{ duration: 0.35 }}
                             className="text-right"
                           >
-                            <p className="text-sm text-muted-foreground">{item.price.toFixed(2)} kr each</p>
-                            <p className="font-display text-lg font-bold text-foreground">{lineTotal.toFixed(2)} kr</p>
+                            <p className="text-sm text-muted-foreground">{formatPrice(item.price)} {t("cart.each")}</p>
+                            <p className="font-display text-lg font-bold text-foreground">{formatPrice(lineTotal)}</p>
                           </motion.div>
 
                           <Button
@@ -450,7 +453,7 @@ export default function CartPage() {
 
             {savedItems.length > 0 && (
               <motion.div layout className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                <h2 className="mb-4 font-display text-xl font-bold uppercase text-foreground">Saved for Later</h2>
+                <h2 className="mb-4 font-display text-xl font-bold uppercase text-foreground">{t("cart.savedForLater")}</h2>
 
                 <div className="space-y-3">
                   <AnimatePresence initial={false}>
@@ -467,12 +470,12 @@ export default function CartPage() {
                           <img src={item.image} alt={item.name} className="h-16 w-16 rounded-lg object-cover" />
                           <div>
                             <p className="font-display text-sm font-bold uppercase text-foreground">{item.name}</p>
-                            <p className="text-sm text-muted-foreground">{item.price.toFixed(2)} kr</p>
+                            <p className="text-sm text-muted-foreground">{formatPrice(item.price)}</p>
                           </div>
                         </div>
 
                         <Button variant="outline" onClick={() => handleMoveToCart(item)}>
-                          Move to Cart
+                          {t("cart.moveToCart")}
                         </Button>
                       </motion.div>
                     ))}
@@ -483,7 +486,7 @@ export default function CartPage() {
 
             {recommendedProducts.length > 0 && (
               <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                <h2 className="mb-4 font-display text-xl font-bold uppercase text-foreground">You May Also Like</h2>
+                <h2 className="mb-4 font-display text-xl font-bold uppercase text-foreground">{t("cart.youMayAlsoLike")}</h2>
 
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   {recommendedProducts.map((product) => (
@@ -501,7 +504,7 @@ export default function CartPage() {
                         />
                       </div>
                       <p className="font-display text-sm font-bold uppercase text-foreground">{product.name}</p>
-                      <p className="mt-1 text-sm font-semibold text-primary">{product.price.toFixed(2)} kr</p>
+                      <p className="mt-1 text-sm font-semibold text-primary">{formatPrice(product.price)}</p>
                     </Link>
                   ))}
                 </div>
@@ -512,36 +515,36 @@ export default function CartPage() {
           <div className="space-y-6">
             {accountLoading && user ? <CartSummarySkeleton /> : null}
             <motion.div layout className="rounded-2xl border border-border bg-card p-6 shadow-sm lg:sticky lg:top-24">
-              <h2 className="mb-5 font-display text-2xl font-bold uppercase text-foreground">Order Summary</h2>
+              <h2 className="mb-5 font-display text-2xl font-bold uppercase text-foreground">{t("cart.orderSummary")}</h2>
 
               <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
                 <div className="flex items-center gap-2">
                   <Star className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium text-foreground">Loyalty rewards</span>
+                  <span className="text-sm font-medium text-foreground">{t("cart.loyaltyRewards")}</span>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Current balance: <span className="font-semibold text-foreground">{pointsBalance}</span> points
+                  {t("cart.currentBalance")} <span className="font-semibold text-foreground">{pointsBalance}</span> {t("cart.points")}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  This order will earn about <span className="font-semibold text-primary">{pointsToEarn}</span> points
+                  {t("cart.earnPoints", { count: pointsToEarn })}
                 </p>
               </div>
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span className="font-display font-bold text-foreground">{totalPrice.toFixed(2)} kr</span>
+                  <span className="text-muted-foreground">{t("cart.subtotal")}</span>
+                  <span className="font-display font-bold text-foreground">{formatPrice(totalPrice)}</span>
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Shipping</span>
+                  <span className="text-muted-foreground">{t("cart.shipping")}</span>
                   <span className="font-display font-bold text-foreground">
-                    {shippingCost === 0 ? "Free" : `${shippingCost.toFixed(2)} kr`}
+                    {shippingCost === 0 ? t("cart.free") : formatPrice(shippingCost)}
                   </span>
                 </div>
 
                 <div className="rounded-xl border border-border bg-background/50 p-3">
-                  <label className="mb-2 block text-sm font-medium text-foreground">Discount</label>
+                  <label className="mb-2 block text-sm font-medium text-foreground">{t("cart.discount")}</label>
 
                   {availableDiscountCodes.length > 0 ? (
                     <select
@@ -552,7 +555,7 @@ export default function CartPage() {
                       }}
                       className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none"
                     >
-                      <option value="">Choose a saved voucher</option>
+                      <option value="">{t("cart.chooseVoucher")}</option>
                       {availableDiscountCodes.map((discount) => (
                         <option key={discount.code} value={discount.code}>
                           {discount.label}
@@ -563,15 +566,15 @@ export default function CartPage() {
                     <input
                       value={manualDiscountCode}
                       onChange={(e) => setManualDiscountCode(e.target.value)}
-                      placeholder="Enter discount code"
+                      placeholder={t("cart.enterDiscountCode")}
                       className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none"
                     />
                   )}
 
                   {selectedDiscount && (
                     <div className="mt-2 flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Applied</span>
-                      <span className="font-semibold text-primary">-{discountAmount.toFixed(2)} kr</span>
+                      <span className="text-muted-foreground">{t("cart.applied")}</span>
+                      <span className="font-semibold text-primary">-{formatPrice(discountAmount)}</span>
                     </div>
                   )}
                 </div>
@@ -579,20 +582,20 @@ export default function CartPage() {
                 <div className="border-t border-border pt-4">
                   {discountAmount > 0 && (
                     <div className="mb-2 flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Discount</span>
-                      <span className="font-display font-bold text-primary">-{discountAmount.toFixed(2)} kr</span>
+                      <span className="text-muted-foreground">{t("cart.discount")}</span>
+                      <span className="font-display font-bold text-primary">-{formatPrice(discountAmount)}</span>
                     </div>
                   )}
 
                   <div className="flex items-center justify-between">
-                    <span className="font-display text-lg font-bold uppercase text-foreground">Total</span>
+                    <span className="font-display text-lg font-bold uppercase text-foreground">{t("cart.total")}</span>
                     <motion.span
                       key={finalTotal}
                       initial={{ scale: 0.96, opacity: 0.7 }}
                       animate={{ scale: 1, opacity: 1 }}
                       className="font-display text-2xl font-bold text-primary"
                     >
-                      {finalTotal.toFixed(2)} kr
+                      {formatPrice(finalTotal)}
                     </motion.span>
                   </div>
                 </div>
@@ -608,10 +611,10 @@ export default function CartPage() {
                     {isCheckingOut ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Redirecting...
+                        {t("cart.redirecting")}
                       </>
                     ) : (
-                      "Continue to Secure Checkout"
+                      t("cart.checkout")
                     )}
                   </Button>
 
@@ -625,7 +628,7 @@ export default function CartPage() {
                       >
                         <div className="flex items-center gap-2">
                           <CheckCircle2 className="h-4 w-4" />
-                          Preparing secure Stripe checkout...
+                          {t("cart.preparingCheckout")}
                         </div>
                       </motion.div>
                     )}
@@ -635,15 +638,15 @@ export default function CartPage() {
                 <div className="space-y-2 pt-2 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="h-4 w-4 text-primary" />
-                    <span>Secure checkout</span>
+                    <span>{t("cart.secureCheckout")}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Truck className="h-4 w-4 text-primary" />
-                    <span>Fast production turnaround</span>
+                    <span>{t("cart.fastProduction")}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Package className="h-4 w-4 text-primary" />
-                    <span>Carefully packed before shipping</span>
+                    <span>{t("cart.carefullyPacked")}</span>
                   </div>
                 </div>
               </div>
@@ -653,7 +656,7 @@ export default function CartPage() {
               to="/products"
               className="inline-flex items-center gap-2 text-sm font-medium text-primary transition-opacity hover:opacity-80"
             >
-              Continue shopping
+              {t("cart.continueShopping")}
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>

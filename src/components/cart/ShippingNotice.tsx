@@ -1,5 +1,7 @@
 import { CheckCircle2, Truck } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import { formatPrice } from "@/lib/currency";
 
 interface ShippingNoticeProps {
   qualifies: boolean;
@@ -12,6 +14,7 @@ export default function ShippingNotice({
   amountUntilFreeShipping,
   threshold = 499,
 }: ShippingNoticeProps) {
+  const { t } = useTranslation("common");
   const progress = qualifies
     ? 100
     : Math.max(8, Math.min(100, Math.round(((threshold - amountUntilFreeShipping) / threshold) * 100)));
@@ -27,13 +30,13 @@ export default function ShippingNotice({
         {qualifies ? (
           <>
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-            <span className="text-emerald-700">You qualify for free shipping.</span>
+            <span className="text-emerald-700">{t("shipping.qualifies")}</span>
           </>
         ) : (
           <>
             <Truck className="h-4 w-4 text-orange-500" />
             <span>
-              Add <strong>{amountUntilFreeShipping.toFixed(2)} DKK</strong> more for free shipping.
+              {t("shipping.addMore", { amount: formatPrice(amountUntilFreeShipping) })}
             </span>
           </>
         )}

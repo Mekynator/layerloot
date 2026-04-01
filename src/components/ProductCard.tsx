@@ -4,9 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ShoppingBag } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useCart } from "@/contexts/CartContext";
 import RatingStars from "@/components/social/RatingStars";
 import ProductTrustBadges from "@/components/social/ProductTrustBadges";
+import { formatPrice } from "@/lib/currency";
 import type { ProductSocialProof } from "@/lib/social-proof";
 
 interface ProductCardProps {
@@ -28,6 +30,7 @@ interface ProductCardProps {
 const AUTO_SLIDE_MS = 7000;
 
 const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
+  const { t } = useTranslation("common");
   const { addItem } = useCart();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
@@ -158,12 +161,12 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
           <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
             {hasSale && (
               <Badge className="bg-primary font-display text-[10px] uppercase tracking-wider text-primary-foreground">
-                Sale {discountPct > 0 ? `-${discountPct}%` : ""}
+                {t("products.sale")} {discountPct > 0 ? `-${discountPct}%` : ""}
               </Badge>
             )}
             {product.is_featured && (
               <Badge className="bg-secondary font-display text-[10px] uppercase tracking-wider text-secondary-foreground">
-                Popular
+                {t("products.popular")}
               </Badge>
             )}
           </div>
@@ -193,10 +196,10 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
 
           <div className="mt-auto space-y-3">
             <div className="flex items-end gap-2">
-              <span className="font-display text-xl font-bold text-primary">{Number(product.price).toFixed(2)} kr</span>
+              <span className="font-display text-xl font-bold text-primary">{formatPrice(Number(product.price))}</span>
               {hasSale && (
                 <span className="pb-0.5 text-sm text-muted-foreground line-through">
-                  {Number(product.compare_at_price).toFixed(2)} kr
+                  {formatPrice(Number(product.compare_at_price))}
                 </span>
               )}
             </div>
@@ -204,8 +207,8 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
             <div className="flex items-center justify-between gap-3 border-t border-border/70 pt-3">
               <p className="text-xs text-muted-foreground">
                 {socialProof?.reviewCount
-                  ? `${socialProof.reviewCount} verified opinions`
-                  : "Premium print-ready finish"}
+                  ? t("products.verifiedOpinions", { count: socialProof.reviewCount })
+                  : t("products.premiumFinish")}
               </p>
 
               <div className="relative">
@@ -221,12 +224,12 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
                   {justAdded ? (
                     <>
                       <Check className="mr-1.5 h-4 w-4" />
-                      Added
+                      {t("products.added")}
                     </>
                   ) : (
                     <>
                       <ShoppingBag className="mr-1.5 h-4 w-4" />
-                      Add to cart
+                      {t("products.addToCart")}
                     </>
                   )}
                 </Button>
@@ -239,7 +242,7 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
                       exit={{ opacity: 0, y: -4, scale: 0.95 }}
                       className="pointer-events-none absolute right-0 top-full mt-2 whitespace-nowrap rounded-full border border-primary/20 bg-background/95 px-2.5 py-1 text-[11px] font-medium text-primary shadow-sm"
                     >
-                      Added to cart
+                      {t("products.addedToCart")}
                     </motion.div>
                   )}
                 </AnimatePresence>

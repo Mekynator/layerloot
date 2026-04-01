@@ -622,7 +622,7 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
 
   return withSection(
     block,
-    "relative overflow-hidden bg-secondary py-20 lg:py-32",
+    "relative overflow-hidden py-20 lg:py-32",
     <>
       {c.bg_image && (
         <motion.div
@@ -635,14 +635,10 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
         </motion.div>
       )}
 
-      <div className="absolute inset-0 opacity-5">
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(45deg, transparent, transparent 35px, currentColor 35px, currentColor 36px)",
-          }}
-        />
+      {/* Ambient glow behind hero */}
+      <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+        <div className="absolute -top-1/4 -left-1/4 h-[600px] w-[600px] rounded-full bg-primary/10 blur-[120px]" />
+        <div className="absolute -bottom-1/4 -right-1/4 h-[500px] w-[500px] rounded-full bg-accent/8 blur-[100px]" />
       </div>
 
       <div className="container relative">
@@ -673,7 +669,7 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.04 }}
-            className="mb-6 font-display text-5xl font-bold uppercase leading-tight text-secondary-foreground lg:text-7xl"
+            className="mb-6 font-display text-5xl font-bold uppercase leading-tight text-foreground lg:text-7xl"
           >
             {getLocalizedValue(c.heading, tr("blocks.hero.heading", "Gear Up Your Print Lab"))}
           </motion.h1>
@@ -704,7 +700,7 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
               <ActionButton
                 key={`${button.text}-${index}`}
                 button={button}
-                className={`font-display uppercase tracking-wider ${button.variant === "outline" ? "border-muted-foreground/30 text-secondary hover:border-primary hover:text-primary" : ""}`}
+                className={`font-display uppercase tracking-wider ${button.variant === "outline" ? "border-foreground/20 text-foreground hover:border-primary hover:text-primary" : ""}`}
               />
             ))}
           </motion.div>
@@ -861,9 +857,9 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
   if (categories.length === 0) {
     return withSection(
       block,
-      "bg-secondary py-16 lg:py-24",
+      "py-16 lg:py-24",
       <div className="container text-center">
-        <h2 className="font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">{heading}</h2>
+        <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{heading}</h2>
         <p className="mt-2 text-muted-foreground">{subheading}</p>
         <p className="mt-8 text-sm italic text-muted-foreground">
           {tr("blocks.categories.empty", "No categories available.")}
@@ -874,10 +870,10 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
 
   return withSection(
     block,
-    "bg-secondary py-16 lg:py-24",
+    "py-16 lg:py-24",
     <div className="container">
       <div className={`mb-12 ${alignmentClass(align)}`}>
-        <h2 className="font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">{heading}</h2>
+        <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{heading}</h2>
         <p className="mt-2 text-muted-foreground">{subheading}</p>
       </div>
 
@@ -885,13 +881,14 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
         {categories.map((cat, index) => {
           const catName = getLocalizedValue(cat.name, cat.name || "");
           const content = (
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.04 }}
-              whileHover={{ y: -4 }}
-              className="group relative flex h-40 items-end overflow-hidden rounded-lg border border-border p-6 transition-all duration-300 hover:border-primary"
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.04 }}
+                whileHover={{ y: -6 }}
+                className="group relative flex h-40 items-end overflow-hidden rounded-2xl bg-card/60 p-6 backdrop-blur-md transition-all duration-500"
+                style={{ boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)' }}
             >
               {cat.image_url && (
                 <img
@@ -900,8 +897,8 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
                   className="absolute inset-0 h-full w-full object-cover opacity-30 transition-all duration-500 group-hover:scale-110 group-hover:opacity-40"
                 />
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-secondary via-secondary/60 to-transparent" />
-              <h3 className="relative font-display text-xl font-bold uppercase text-secondary-foreground transition-colors group-hover:text-primary">
+              <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent" />
+              <h3 className="relative font-display text-xl font-bold uppercase text-foreground transition-colors group-hover:text-primary">
                 {catName}
               </h3>
             </motion.div>
@@ -1038,7 +1035,7 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
 
   return withSection(
     block,
-    "bg-muted/50 py-16 lg:py-24",
+    "py-16 lg:py-24",
     <div className="container">
       <div className={`mb-12 ${alignmentClass(align)}`}>
         <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
@@ -1073,7 +1070,8 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
                 className={`${alignmentClass(s.alignment || align)} ${isClickable && !isEditorPreviewMode() ? "cursor-pointer" : ""}`}
               >
                 <div
-                  className={`mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full border-2 border-primary/20 bg-card transition-all hover:border-primary hover:shadow-lg ${hasImage ? "overflow-hidden" : ""}`}
+                  className={`mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-card/60 backdrop-blur-md transition-all hover:shadow-[0_0_24px_hsl(217_91%_60%/0.2)] ${hasImage ? "overflow-hidden" : ""}`}
+                  style={{ boxShadow: '0 4px 24px -4px hsl(225 44% 4% / 0.4)' }}
                 >
                   {hasImage ? (
                     <img src={s.image} alt={title || ""} className="h-full w-full object-cover" />
@@ -1154,7 +1152,7 @@ const FaqBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) 
         {items
           .filter((item: any) => item?.visible !== false)
           .map((item: any, i: number) => (
-            <AccordionItem key={i} value={`faq-${i}`} className="rounded-lg border border-border bg-card px-6">
+            <AccordionItem key={i} value={`faq-${i}`} className="rounded-2xl bg-card/60 px-6 backdrop-blur-md" style={{ boxShadow: '0 4px 24px -4px hsl(225 44% 4% / 0.3)' }}>
               <AccordionTrigger className="font-display text-sm uppercase tracking-wider text-card-foreground hover:text-primary hover:no-underline">
                 {getLocalizedValue(item.q)}
               </AccordionTrigger>
@@ -1229,7 +1227,8 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.05 }}
                 whileHover={{ y: -3 }}
-                className={`flex gap-4 rounded-md border border-border bg-card p-6 transition-all duration-300 hover:border-primary hover:shadow-md ${verticalClass(c.verticalAlignment)} ${action.actionType !== "none" && !isEditorPreviewMode() ? "cursor-pointer" : ""}`}
+                className={`flex gap-4 rounded-2xl bg-card/60 p-6 backdrop-blur-md transition-all duration-500 hover:shadow-[0_24px_80px_-12px_hsl(217_91%_60%/0.18)] ${verticalClass(c.verticalAlignment)} ${action.actionType !== "none" && !isEditorPreviewMode() ? "cursor-pointer" : ""}`}
+                style={{ boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)' }}
               >
                 <div
                   className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${hasImage ? "overflow-hidden" : "bg-primary/10"}`}
@@ -1415,15 +1414,15 @@ const VideoBlock = ({ block }: { block: SiteBlock }) => {
 
   return withSection(
     block,
-    "bg-secondary py-16 lg:py-24",
+    "py-16 lg:py-24",
     <div className="container max-w-4xl">
       {block.title && (
-        <h2 className="mb-8 text-center font-display text-3xl font-bold uppercase text-secondary-foreground">
+        <h2 className="mb-8 text-center font-display text-3xl font-bold uppercase text-foreground">
           {getLocalizedValue(block.title)}
         </h2>
       )}
 
-      <motion.div whileHover={{ y: -2 }} className="overflow-hidden rounded-lg border border-border shadow-xl">
+      <motion.div whileHover={{ y: -4 }} className="overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md" style={{ boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)' }}>
         {isYouTube ? (
           <div className="aspect-video">
             <iframe
@@ -1473,9 +1472,9 @@ const CtaBlock = ({ block }: { block: SiteBlock }) => {
 
   return withSection(
     block,
-    "bg-secondary py-16 lg:py-24",
+    "py-16 lg:py-24",
     <div className={`container ${alignmentClass(align)}`}>
-      <h2 className="mb-4 font-display text-3xl font-bold uppercase text-secondary-foreground lg:text-4xl">
+      <h2 className="mb-4 font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
         {getLocalizedValue(c.heading, tr("blocks.cta.heading", "Ready to get started?"))}
       </h2>
       {c.subheading && <p className="mb-8 text-lg text-muted-foreground">{getLocalizedValue(c.subheading)}</p>}
@@ -1538,9 +1537,9 @@ const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
 
   return withSection(
     block,
-    "bg-secondary py-16",
+    "py-16",
     <div className={`container max-w-xl ${alignmentClass(align)}`}>
-      <h2 className="mb-2 font-display text-2xl font-bold uppercase text-secondary-foreground">
+      <h2 className="mb-2 font-display text-2xl font-bold uppercase text-foreground">
         {getLocalizedValue(c.heading, tr("blocks.newsletter.heading", "Stay Updated"))}
       </h2>
       <p className="mb-6 text-muted-foreground">
@@ -1560,11 +1559,11 @@ const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder={tr("blocks.newsletter.placeholder", "your@email.com")}
-            className="flex-1 rounded-md border border-border bg-background px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            className="flex-1 rounded-xl border-0 bg-card/60 px-4 py-2 text-sm text-foreground shadow-[0_4px_24px_-4px_hsl(225_44%_4%/0.3)] backdrop-blur-md placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           />
           <button
             type="submit"
-            className="rounded-md bg-primary px-6 py-2 font-display text-sm uppercase tracking-wider text-primary-foreground hover:bg-primary/90"
+            className="rounded-xl bg-primary px-6 py-2 font-display text-sm uppercase tracking-wider text-primary-foreground shadow-[0_4px_24px_hsl(217_91%_60%/0.3)] hover:bg-primary/90 hover:shadow-[0_8px_36px_hsl(217_91%_60%/0.45)]"
           >
             {getLocalizedValue(c.submit_text, tr("blocks.newsletter.submit", "Subscribe"))}
           </button>
@@ -1672,7 +1671,7 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
     block,
     "py-16 lg:py-24",
     <div className="container">
-      <div className="rounded-3xl border bg-card/70 p-5 shadow-sm backdrop-blur md:p-6">
+      <div className="rounded-3xl bg-card/60 p-5 backdrop-blur-md md:p-6" style={{ boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)' }}>
         <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-2xl font-bold">
@@ -1738,7 +1737,7 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: index * 0.04 }}
-                    className="overflow-hidden rounded-2xl border bg-background"
+                    className="overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md" style={{ boxShadow: '0 4px 24px -4px hsl(225 44% 4% / 0.4)' }}
                   >
                     {card}
                   </motion.div>
@@ -1756,7 +1755,8 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
                   viewport={{ once: true }}
                   transition={{ delay: index * 0.04 }}
                   whileHover={{ y: -3 }}
-                  className="overflow-hidden rounded-2xl border bg-background transition hover:shadow-md"
+                  className="overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md transition-all duration-500 hover:shadow-[0_24px_80px_-12px_hsl(217_91%_60%/0.18)]"
+                  style={{ boxShadow: '0 4px 24px -4px hsl(225 44% 4% / 0.4)' }}
                 >
                   {card}
                 </motion.a>

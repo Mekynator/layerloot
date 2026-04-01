@@ -47,7 +47,7 @@ export default function HomeSocialProof() {
           <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-4">
             {data.recentPrints.map((item, index) => (
               <motion.div key={item.id} variants={fadeUp}>
-                <Card className="overflow-hidden rounded-2xl border-border/70 bg-card/90 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+                <Card className="overflow-hidden rounded-2xl border-0 bg-card/60 backdrop-blur-md shadow-[0_8px_40px_-8px_hsl(225_44%_4%/0.5)] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_24px_80px_-12px_hsl(217_91%_60%/0.18)]">
                   <div className="aspect-[4/5] overflow-hidden bg-muted">
                     <img
                       src={item.image_url}

@@ -247,7 +247,7 @@ const ProductDetail = () => {
                       ? "border-primary bg-primary/10 ring-2 ring-primary/20"
                       : "border-border hover:border-primary"
                   }`}
-                  title="View 3D Model"
+                  title={t("products.view3D")}
                 >
                   <span className="font-display text-xs font-bold uppercase text-primary">3D</span>
                 </motion.button>

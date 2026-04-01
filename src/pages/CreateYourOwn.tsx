@@ -1193,31 +1193,32 @@ const CustomPrintOrder = () => {
 
   return (
     <div className="space-y-6">
-      <ProcessingDialog {...submitProgress} title="Submitting custom order" />
+      <ProcessingDialog {...submitProgress} title={t("create.submittingCustomOrder")} />
 
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-primary" />
-              Request fee required
+              {t("create.requestFeeTitle")}
             </DialogTitle>
             <DialogDescription>
-              A {REQUEST_FEE_DKK} kr custom request fee is charged before the order is submitted.
+              {t("create.requestFeeDesc", { amount: REQUEST_FEE_DKK })}
             </DialogDescription>
           </DialogHeader>
 
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
-            After successful payment, your custom request is created and sent to the admin team for review. This amount
-            will later be <span className="font-semibold">deducted from the final quoted price</span>.
+            <Trans i18nKey="create.requestFeeNote">
+              After successful payment, your custom request is created and sent to the admin team for review. This amount will later be <span className="font-semibold">deducted from the final quoted price</span>.
+            </Trans>
           </div>
 
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button type="button" variant="outline" onClick={() => setPaymentDialogOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="button" onClick={handleSubmit} disabled={submitting || uploadBusy}>
-              {submitting ? "Preparing..." : "Continue to payment"}
+              {submitting ? t("create.preparing") : t("create.continueToPayment")}
             </Button>
           </div>
         </DialogContent>
@@ -1225,17 +1226,17 @@ const CustomPrintOrder = () => {
 
       {!user && (
         <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-          Please{" "}
-          <Link to="/auth" className="text-primary hover:underline">
-            sign in
-          </Link>{" "}
-          to submit a custom 3D print order.
+          <Trans i18nKey="create.signInToOrder">
+            Please <Link to="/auth" className="text-primary hover:underline">sign in</Link> to submit a custom 3D print order.
+          </Trans>
         </div>
       )}
 
       {user && (
         <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-          Ordering as <span className="font-medium text-foreground">{userName || "Account User"}</span>
+          <Trans i18nKey="create.orderingAs" values={{ name: userName || "Account User" }}>
+            Ordering as <span className="font-medium text-foreground">{{ name: userName || "Account User" } as any}</span>
+          </Trans>
           {userEmail ? <> · {userEmail}</> : null}
         </div>
       )}

@@ -1447,11 +1447,11 @@ const CustomPrintOrder = () => {
           </div>
 
           <div>
-            <Label>Additional Details *</Label>
+            <Label>{t("create.additionalDetails")}</Label>
             <Textarea
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder="Any special requirements, notes, or preferences..."
+              placeholder={t("create.detailsPlaceholder")}
               rows={5}
             />
           </div>
@@ -1461,7 +1461,8 @@ const CustomPrintOrder = () => {
             disabled={submitDisabled}
             className="w-full font-display uppercase tracking-wider"
           >
-            {submitting ? "Preparing..." : "Submit custom order"}
+            {submitting ? t("create.preparing") : t("create.submitCustomOrder")}
+          </Button>
           </Button>
         </div>
       </div>

@@ -67,7 +67,9 @@ async function fetchAccountOverview(userId: string): Promise<AccountOverviewData
     customOrders,
     customOrderMessages,
     vouchers: vouchersRes.data ?? [],
-    userVouchers: mergeUserVouchers(ownedVouchersRes.data ?? [], receivedVouchersRes.data ?? [], userId, userEmail),
+    userVouchers: (userVouchersRes.data ?? []).sort(
+      (a: any, b: any) => new Date(b.redeemed_at).getTime() - new Date(a.redeemed_at).getTime(),
+    ),
     pointsBalance: summary.balance,
     pointsEarned: summary.earned,
     pointsSpent: summary.spent,

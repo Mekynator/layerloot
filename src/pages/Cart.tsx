@@ -642,7 +642,7 @@ export default function CartPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Truck className="h-4 w-4 text-primary" />
-                    <span>Fast production turnaround</span>
+                    <span>{t("cart.fastProduction")}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Package className="h-4 w-4 text-primary" />

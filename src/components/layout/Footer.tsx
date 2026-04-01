@@ -210,7 +210,7 @@ const Footer = () => {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.08 }}
         transition={{ duration: 0.4 }}
-        className="border-t border-border bg-secondary"
+        className="border-t border-border/20 bg-secondary/80 backdrop-blur-xl"
       >
         <div className="container py-12">
           <div className="grid gap-8 md:grid-cols-4">

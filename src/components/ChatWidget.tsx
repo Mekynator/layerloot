@@ -433,7 +433,7 @@ const ChatWidget = () => {
             initial={{ opacity: 0, y: 12, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.96 }}
-            className="fixed bottom-24 right-6 z-50 max-w-[260px] rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-xl"
+            className="fixed bottom-24 right-6 z-50 max-w-[260px] rounded-2xl border border-border/30 bg-card/70 px-4 py-3 text-left shadow-[0_16px_48px_hsl(217_91%_60%/0.12)] backdrop-blur-xl"
           >
             <button
               type="button"
@@ -482,9 +482,9 @@ const ChatWidget = () => {
             initial={{ opacity: 0, y: 18, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 18, scale: 0.97 }}
-            className="fixed bottom-4 right-4 z-50 flex h-[46vh] min-h-[380px] w-[calc(100vw-2rem)] max-w-[430px] flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-2xl sm:h-[52vh]"
+            className="fixed bottom-4 right-4 z-50 flex h-[46vh] min-h-[380px] w-[calc(100vw-2rem)] max-w-[430px] flex-col overflow-hidden rounded-3xl border border-border/30 bg-card/70 shadow-[0_24px_80px_hsl(217_91%_60%/0.15)] backdrop-blur-2xl sm:h-[52vh]"
           >
-            <div className="flex items-center justify-between border-b border-border bg-primary px-4 py-2.5">
+            <div className="flex items-center justify-between border-b border-border/20 bg-gradient-to-r from-primary to-primary/80 px-4 py-2.5">
               <div className="flex items-center gap-2">
                 <Bot className="h-5 w-5 text-primary-foreground" />
                 <div className="font-display text-sm font-bold uppercase tracking-wider text-primary-foreground">
@@ -527,7 +527,7 @@ const ChatWidget = () => {
               </div>
             </div>
 
-            <div className="border-b border-border bg-muted/40 px-3 py-2.5">
+            <div className="border-b border-border/20 bg-muted/30 backdrop-blur-sm px-3 py-2.5">
               <HorizontalSuggestions items={starterSuggestions} onPick={send} />
             </div>
 
@@ -567,7 +567,7 @@ const ChatWidget = () => {
                 e.preventDefault();
                 send();
               }}
-              className="flex items-center gap-2 border-t border-border bg-card px-4 py-3"
+              className="flex items-center gap-2 border-t border-border/20 bg-card/50 backdrop-blur-xl px-4 py-3"
             >
               <Input
                 value={input}

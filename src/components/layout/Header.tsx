@@ -395,7 +395,7 @@ const Header = () => {
         )}
       </AnimatePresence>
 
-      <header className="sticky top-0 z-50 border-b border-border bg-secondary">
+      <header className="sticky top-0 z-50 glass-nav">
         <div className="container flex h-16 items-center justify-between">
           <Link to={logoLink} className="flex items-center gap-2">
             {branding.logo_image_url ? (
@@ -582,7 +582,7 @@ const Header = () => {
         </div>
 
         {mobileOpen && headerSettings.mobile_nav_enabled && (
-          <nav className="border-t border-border bg-secondary px-4 pb-4 md:hidden">
+          <nav className="border-t border-border/20 bg-secondary/90 backdrop-blur-2xl px-4 pb-4 md:hidden">
             {desktopLinks.map((link) => (
               <Link
                 key={`${link.to}-${link.localizedLabel}-mobile`}

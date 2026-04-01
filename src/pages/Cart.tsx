@@ -314,6 +314,9 @@ export default function CartPage() {
               <Progress value={shippingProgress} className="h-2" />
             </motion.div>
 
+            {/* Gift Mode */}
+            <GiftMode settings={giftSettings} onChange={setGiftSettings} />
+
             <div className="space-y-4">
               <AnimatePresence initial={false}>
                 {cartItems.map((item) => {

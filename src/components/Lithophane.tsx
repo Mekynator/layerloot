@@ -255,6 +255,7 @@ export default function Lithophane({
   onDraftChange,
   submitLabel = "Submit Lithophane Design",
   initialNotes = "",
+  preloadedImageFile,
 }: LithophaneProps) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [shape, setShape] = useState<LithophaneShape>(DEFAULTS.shape);

@@ -776,7 +776,7 @@ const PageEditor = () => {
               variant="ghost"
               size="sm"
               onClick={() => setPanelCollapsed(!panelCollapsed)}
-              className="text-background/70 hover:bg-background/10 hover:text-background"
+              className="text-muted-foreground hover:bg-accent/10 hover:text-foreground"
             >
               {panelCollapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
             </Button>

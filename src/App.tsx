@@ -27,6 +27,8 @@ import AdminSettings from "./pages/admin/AdminSettings";
 import AdminCustomOrders from "./pages/admin/AdminCustomOrders";
 import AdminDiscounts from "./pages/admin/AdminDiscounts";
 import AdminShowcases from "./pages/admin/AdminShowcases";
+import AdminPricing from "./pages/admin/AdminPricing";
+import AdminGrowth from "./pages/admin/AdminGrowth";
 import PageEditor from "./pages/admin/PageEditor";
 import DynamicPage from "./pages/DynamicPage";
 import CreateYourOwn from "./pages/CreateYourOwn";
@@ -85,6 +87,8 @@ const AppShell = () => {
           <Route path="/admin/discounts" element={<AdminDiscounts />} />
           <Route path="/admin/reviews" element={<AdminReviews />} />
           <Route path="/admin/showcases" element={<AdminShowcases />} />
+          <Route path="/admin/pricing" element={<AdminPricing />} />
+          <Route path="/admin/growth" element={<AdminGrowth />} />
           <Route path="/admin/content" element={<AdminContent />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
           <Route path="/admin/editor" element={<PageEditor />} />

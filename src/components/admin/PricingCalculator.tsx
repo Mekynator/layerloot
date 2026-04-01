@@ -1,12 +1,12 @@
 import { useState, useCallback } from "react";
-import { Calculator, Save, History } from "lucide-react";
+import { Calculator, Save, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,6 +31,8 @@ interface CalcResult {
   finishingCost: number;
   productionCost: number;
   suggestedPrice: number;
+  minSafePrice: number;
+  premiumPrice: number;
 }
 
 const FINISHING_COSTS: Record<string, number> = {
@@ -62,16 +64,18 @@ export function calculatePrice(inputs: CalcInputs): CalcResult {
   const failureCost = subtotal * inputs.failureBuffer;
   const productionCost = subtotal + failureCost + finishingCost;
   const suggestedPrice = productionCost * (1 + inputs.marginPercentage / 100);
+  const minSafePrice = productionCost * 1.15;
+  const premiumPrice = productionCost * 2.0;
 
-  return {
-    materialCost,
-    electricityCost,
-    machineWear,
-    failureCost,
-    finishingCost,
-    productionCost,
-    suggestedPrice,
-  };
+  return { materialCost, electricityCost, machineWear, failureCost, finishingCost, productionCost, suggestedPrice, minSafePrice, premiumPrice };
+}
+
+function getPriceHealth(production: number, price: number) {
+  const margin = ((price - production) / price) * 100;
+  if (margin >= 50) return { label: "Premium", color: "bg-blue-500/10 text-blue-400", icon: "🔵" };
+  if (margin >= 35) return { label: "Optimal", color: "bg-emerald-500/10 text-emerald-400", icon: "🟢" };
+  if (margin >= 15) return { label: "Low Margin", color: "bg-amber-500/10 text-amber-400", icon: "🟡" };
+  return { label: "Underpriced", color: "bg-red-500/10 text-red-400", icon: "🔴" };
 }
 
 interface PricingCalculatorProps {
@@ -129,6 +133,11 @@ const PricingCalculator = ({
     } else {
       toast({ title: "Calculation saved to history" });
     }
+  };
+
+  const applyPrice = (price: number) => {
+    setFinalPrice(Math.ceil(price));
+    onPriceCalculated?.(Math.ceil(price));
   };
 
   const update = (key: keyof CalcInputs, value: number | string) =>
@@ -212,14 +221,44 @@ const PricingCalculator = ({
               <Row label="Failure Buffer" value={result.failureCost} />
               <Separator className="my-2" />
               <Row label="Total Production Cost" value={result.productionCost} bold />
-              <Row label={`+ ${inputs.marginPercentage}% Margin`} value={result.suggestedPrice - result.productionCost} />
-              <Separator className="my-2" />
-              <Row label="Suggested Retail Price" value={result.suggestedPrice} bold primary />
+            </div>
+
+            {/* Price Tiers */}
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              <PriceTierCard
+                label="Min Safe Price"
+                price={result.minSafePrice}
+                margin={((result.minSafePrice - result.productionCost) / result.minSafePrice * 100)}
+                health={getPriceHealth(result.productionCost, result.minSafePrice)}
+                onApply={() => applyPrice(result.minSafePrice)}
+              />
+              <PriceTierCard
+                label="Recommended"
+                price={result.suggestedPrice}
+                margin={((result.suggestedPrice - result.productionCost) / result.suggestedPrice * 100)}
+                health={getPriceHealth(result.productionCost, result.suggestedPrice)}
+                onApply={() => applyPrice(result.suggestedPrice)}
+                highlighted
+              />
+              <PriceTierCard
+                label="Premium"
+                price={result.premiumPrice}
+                margin={((result.premiumPrice - result.productionCost) / result.premiumPrice * 100)}
+                health={getPriceHealth(result.productionCost, result.premiumPrice)}
+                onApply={() => applyPrice(result.premiumPrice)}
+              />
             </div>
 
             <div className="mt-4 space-y-3">
               <div>
-                <Label className="text-xs">Final Price DKK (override)</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Final Price DKK (override)</Label>
+                  {finalPrice && (
+                    <Badge variant="outline" className={`${getPriceHealth(result.productionCost, finalPrice).color} border-0 text-[10px]`}>
+                      {getPriceHealth(result.productionCost, finalPrice).icon} {getPriceHealth(result.productionCost, finalPrice).label}
+                    </Badge>
+                  )}
+                </div>
                 <Input
                   type="number"
                   step="1"
@@ -253,6 +292,27 @@ const PricingCalculator = ({
     </div>
   );
 };
+
+function PriceTierCard({ label, price, margin, health, onApply, highlighted }: {
+  label: string; price: number; margin: number;
+  health: { label: string; color: string; icon: string };
+  onApply: () => void; highlighted?: boolean;
+}) {
+  return (
+    <div className={`rounded-lg border p-3 text-center transition-colors ${
+      highlighted ? "border-primary/30 bg-primary/5" : "border-white/[0.06] bg-white/[0.02]"
+    }`}>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="font-display text-lg font-bold text-foreground">{Math.ceil(price)} DKK</p>
+      <Badge variant="outline" className={`${health.color} border-0 text-[10px] mt-1`}>
+        {health.icon} {margin.toFixed(0)}% margin
+      </Badge>
+      <Button variant="ghost" size="sm" onClick={onApply} className="mt-2 h-7 w-full text-[10px] font-display uppercase">
+        Apply
+      </Button>
+    </div>
+  );
+}
 
 function Row({ label, value, bold, primary }: { label: string; value: number; bold?: boolean; primary?: boolean }) {
   return (

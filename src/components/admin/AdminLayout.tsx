@@ -75,13 +75,14 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
     let mounted = true;
 
     const fetchNotifications = async () => {
-      const [ordersRes, customOrdersRes, reviewsRes] = await Promise.all([
+      const [ordersRes, customOrdersRes, reviewsRes, showcasesRes] = await Promise.all([
         supabase.from("orders").select("id", { count: "exact", head: true }).in("status", ["pending", "processing"]),
         supabase
           .from("custom_orders")
           .select("id", { count: "exact", head: true })
           .in("status", ["pending", "reviewing", "quoted", "accepted"]),
         supabase.from("product_reviews").select("id", { count: "exact", head: true }).eq("is_approved", false),
+        supabase.from("custom_order_showcases").select("id", { count: "exact", head: true }).eq("visibility_status", "shared").eq("approved_by_admin", false),
       ]);
 
       if (!mounted) return;

@@ -112,12 +112,13 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
     >
       <Link
         to={`/products/${product.slug}`}
-        className="group relative flex h-full flex-col overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md transition-all duration-500"
+        className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/30 bg-card/70 backdrop-blur-xl transition-all duration-500"
         style={{
           boxShadow: isHovered
-            ? '0 24px 80px -12px hsl(217 91% 60% / 0.18), 0 0 0 1px hsl(217 91% 60% / 0.08)'
-            : '0 8px 40px -8px hsl(225 44% 4% / 0.5), 0 0 0 1px hsl(215 20% 93% / 0.04)',
+            ? '0 24px 80px -12px hsl(217 91% 60% / 0.15), 0 0 0 1px hsl(217 91% 60% / 0.15), inset 0 1px 0 0 hsl(215 25% 95% / 0.06)'
+            : '0 8px 40px -8px hsl(228 33% 2% / 0.5), inset 0 1px 0 0 hsl(215 25% 95% / 0.04)',
           transform: isHovered ? 'translateY(-8px)' : 'translateY(0)',
+          borderColor: isHovered ? 'hsl(217 91% 60% / 0.2)' : undefined,
         }}
       >
         {/* Image area */}

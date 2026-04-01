@@ -347,12 +347,17 @@ const Header = () => {
     () =>
       navLinks
         .filter((link) => !!link.to && !!link.label)
+        .filter((link) => {
+          const path = normalizePath(link.to);
+          if (path === "/creations" && !user) return false;
+          return true;
+        })
         .map((link) => ({
           ...link,
           to: normalizePath(link.to),
           localizedLabel: getLocalizedValue(link.label, typeof link.label === "string" ? link.label : ""),
         })),
-    [navLinks, i18n.resolvedLanguage, i18n.language],
+    [navLinks, i18n.resolvedLanguage, i18n.language, user],
   );
 
   const cartDestinationRect = cartButtonRef.current?.getBoundingClientRect();

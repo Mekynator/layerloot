@@ -395,10 +395,10 @@ const ProductDetail = () => {
                 variant="outline"
                 className="rounded-full border-primary/20 bg-primary/5 uppercase tracking-[0.2em] text-primary"
               >
-                Customer reviews
+                {t("products.customerReviews")}
               </Badge>
               <h2 className="font-display text-2xl font-bold uppercase text-foreground">
-                Customer Reviews {reviews.length > 0 && `(${reviews.length})`}
+                {reviews.length > 0 ? t("products.reviewsCount", { count: reviews.length }) : t("products.customerReviews")}
               </h2>
             </div>
           </div>

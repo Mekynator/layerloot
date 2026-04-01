@@ -1001,8 +1001,8 @@ const CustomPrintOrder = () => {
   const processReferenceImage = async (selectedImage: File) => {
     if (!selectedImage.type.startsWith("image/")) {
       toast({
-        title: "Invalid image",
-        description: "Please upload a PNG, JPG, or WEBP image.",
+        title: t("create.invalidImage"),
+        description: t("create.invalidImageDesc"),
         variant: "destructive",
       });
       return;

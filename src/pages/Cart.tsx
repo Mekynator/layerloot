@@ -573,8 +573,8 @@ export default function CartPage() {
 
                   {selectedDiscount && (
                     <div className="mt-2 flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Applied</span>
-                      <span className="font-semibold text-primary">-{discountAmount.toFixed(2)} kr</span>
+                      <span className="text-muted-foreground">{t("cart.applied")}</span>
+                      <span className="font-semibold text-primary">-{formatPrice(discountAmount)}</span>
                     </div>
                   )}
                 </div>

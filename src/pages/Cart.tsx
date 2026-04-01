@@ -430,8 +430,8 @@ export default function CartPage() {
                             transition={{ duration: 0.35 }}
                             className="text-right"
                           >
-                            <p className="text-sm text-muted-foreground">{item.price.toFixed(2)} kr each</p>
-                            <p className="font-display text-lg font-bold text-foreground">{lineTotal.toFixed(2)} kr</p>
+                            <p className="text-sm text-muted-foreground">{formatPrice(item.price)} {t("cart.each")}</p>
+                            <p className="font-display text-lg font-bold text-foreground">{formatPrice(lineTotal)}</p>
                           </motion.div>
 
                           <Button

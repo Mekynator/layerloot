@@ -263,10 +263,10 @@ const ProductDetail = () => {
                 <motion.button
                   whileHover={{ y: -2 }}
                   onClick={() => setShow3D(true)}
-                  className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border-2 transition-all duration-200 ${
+                  className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-xl transition-all duration-200 ${
                     show3D
-                      ? "border-primary bg-primary/10 ring-2 ring-primary/20"
-                      : "border-border hover:border-primary"
+                      ? "bg-primary/10 ring-2 ring-primary shadow-lg shadow-primary/20"
+                      : "bg-muted/30 opacity-70 hover:opacity-100 hover:bg-primary/5"
                   }`}
                   title={t("products.view3D")}
                 >

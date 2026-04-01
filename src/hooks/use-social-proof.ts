@@ -79,13 +79,22 @@ export function useSocialProof(productId?: string) {
 }
 
 export function useSocialProofCompact(productId?: string) {
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setTick((t) => t + 1), 15000);
+    return () => window.clearInterval(id);
+  }, []);
+
   const result = useMemo(() => {
     if (!productId) return { viewingNow: 0, purchaseHint: null };
+    // tick is consumed to trigger recalc every 15s
+    void tick;
     return {
       viewingNow: pseudoViewing(productId),
       purchaseHint: null as string | null,
     };
-  }, [productId]);
+  }, [productId, tick]);
 
   return result;
 }

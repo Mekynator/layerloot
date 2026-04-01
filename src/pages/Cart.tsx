@@ -519,6 +519,15 @@ export default function CartPage() {
             <motion.div layout className="rounded-2xl border border-border bg-card p-6 shadow-sm lg:sticky lg:top-24">
               <h2 className="mb-5 font-display text-2xl font-bold uppercase text-foreground">{t("cart.orderSummary")}</h2>
 
+              {user && pointsBalance > 0 && (
+                <div className="mb-4">
+                  <LoyaltyProgressCard
+                    progress={computeLoyaltyProgress(pointsBalance, pointsBalance, 0)}
+                    variant="compact"
+                  />
+                </div>
+              )}
+
               <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
                 <div className="flex items-center gap-2">
                   <Star className="h-4 w-4 text-primary" />

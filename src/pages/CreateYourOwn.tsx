@@ -1467,7 +1467,7 @@ const CustomPrintOrder = () => {
         </div>
       </div>
 
-      <ReviewSection toolType="custom-print" title="Custom 3D Print Reviews" />
+      <ReviewSection toolType="custom-print" title={t("create.customPrintReviews")} />
     </div>
   );
 };

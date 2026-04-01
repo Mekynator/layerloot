@@ -1152,7 +1152,7 @@ const FaqBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) 
         {items
           .filter((item: any) => item?.visible !== false)
           .map((item: any, i: number) => (
-            <AccordionItem key={i} value={`faq-${i}`} className="rounded-lg border border-border bg-card px-6">
+            <AccordionItem key={i} value={`faq-${i}`} className="rounded-2xl bg-card/60 px-6 backdrop-blur-md" style={{ boxShadow: '0 4px 24px -4px hsl(225 44% 4% / 0.3)' }}>
               <AccordionTrigger className="font-display text-sm uppercase tracking-wider text-card-foreground hover:text-primary hover:no-underline">
                 {getLocalizedValue(item.q)}
               </AccordionTrigger>

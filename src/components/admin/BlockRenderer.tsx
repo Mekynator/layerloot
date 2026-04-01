@@ -99,7 +99,8 @@ const ImageCollectionBlock = ({ content, className }: { content?: ImageCollectio
   const renderCard = (item: ImageItem, index: number) => {
     const card = (
       <div
-        className="group relative overflow-hidden rounded-2xl border border-border/60 bg-muted/20"
+        className="group relative overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md"
+        style={{ boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)' }}
         style={{
           gridColumn: `span ${Math.min(Math.max(item.colSpan ?? 1, 1), columns)}`,
           gridRow: `span ${Math.min(Math.max(item.rowSpan ?? 1, 1), 4)}`,

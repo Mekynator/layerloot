@@ -19,7 +19,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";

@@ -183,6 +183,7 @@ const AdminSettings = () => {
     const load = async () => {
       const { data } = await supabase.from("site_settings").select("*");
       if (data) {
+        const policyData: Record<string, { title: string; body: string }> = {};
         data.forEach((s: any) => {
           if (s.key === "contact") {
             setContact((prev) => ({ ...prev, ...(s.value as any) }));
@@ -192,7 +193,11 @@ const AdminSettings = () => {
           if (s.key === "promotion_popup") setPromo({ ...defaultPromo, ...(s.value as any) });
           if (s.key === "footer_settings") setFooter({ ...defaultFooter, ...(s.value as any) });
           if (s.key === "branding") setBranding({ ...defaultBranding, ...(s.value as any) });
+          if (s.key.startsWith("policy_") && s.value) {
+            policyData[s.key] = s.value as { title: string; body: string };
+          }
         });
+        setPolicies(policyData);
       }
     };
     load();

@@ -508,6 +508,7 @@ const ReviewSection = ({ title }: { toolType: "custom-print" | "lithophane"; tit
 const LithophaneOrderSection = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const userName = getUserDisplayName(user);
   const userEmail = user?.email || "";
@@ -531,8 +532,8 @@ const LithophaneOrderSection = () => {
   const handleLithophaneSubmit = async (payload: LithophaneSubmitPayload) => {
     if (!user) {
       toast({
-        title: "Please sign in",
-        description: "You need to sign in to submit a lithophane order.",
+        title: t("create.pleaseSignIn"),
+        description: t("create.signInToSubmitLithophane"),
         variant: "destructive",
       });
       return;
@@ -540,8 +541,8 @@ const LithophaneOrderSection = () => {
 
     if (!payload.sourceDataUrl) {
       toast({
-        title: "Missing image",
-        description: "Please upload a photo before submitting.",
+        title: t("create.missingImage"),
+        description: t("create.missingImageDesc"),
         variant: "destructive",
       });
       return;
@@ -660,8 +661,8 @@ const LithophaneOrderSection = () => {
       await animateProgress(setLithophaneProgress, 100, "Lithophane order submitted", 280);
 
       toast({
-        title: "Lithophane submitted!",
-        description: "Your lithophane design was added to custom orders successfully.",
+        title: t("create.lithophaneSubmitted"),
+        description: t("create.lithophaneSubmittedDesc"),
       });
     } catch (error: any) {
       if (!orderCreated) {
@@ -669,8 +670,8 @@ const LithophaneOrderSection = () => {
       }
 
       toast({
-        title: "Submission failed",
-        description: error?.message || "Could not submit lithophane order.",
+        title: t("create.submissionFailed"),
+        description: error?.message || t("create.couldNotSubmit"),
         variant: "destructive",
       });
     } finally {
@@ -681,21 +682,21 @@ const LithophaneOrderSection = () => {
 
   return (
     <div className="space-y-6">
-      <ProcessingDialog {...lithophaneProgress} title="Submitting lithophane" />
+      <ProcessingDialog {...lithophaneProgress} title={t("create.submittingLithophane")} />
 
       {!user && (
         <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-          Please{" "}
-          <Link to="/auth" className="text-primary hover:underline">
-            sign in
-          </Link>{" "}
-          to submit a lithophane order.
+          <Trans i18nKey="create.signInToOrderLithophane">
+            Please <Link to="/auth" className="text-primary hover:underline">sign in</Link> to submit a lithophane order.
+          </Trans>
         </div>
       )}
 
       {user && (
         <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-          Ordering as <span className="font-medium text-foreground">{userName || "Account User"}</span>
+          <Trans i18nKey="create.orderingAs" values={{ name: userName || "Account User" }}>
+            Ordering as <span className="font-medium text-foreground">{{ name: userName || "Account User" } as any}</span>
+          </Trans>
           {userEmail ? <> · {userEmail}</> : null}
         </div>
       )}
@@ -703,11 +704,11 @@ const LithophaneOrderSection = () => {
       <div className={submittingLithophane ? "pointer-events-none opacity-80" : ""}>
         <Lithophane
           onSubmitDesign={handleLithophaneSubmit}
-          submitLabel={submittingLithophane ? "Submitting..." : "Order Lithophane"}
+          submitLabel={submittingLithophane ? t("create.preparing") : t("create.orderLithophane")}
         />
       </div>
 
-      <ReviewSection toolType="lithophane" title="Lithophane Reviews" />
+      <ReviewSection toolType="lithophane" title={t("create.lithophaneReviews")} />
     </div>
   );
 };

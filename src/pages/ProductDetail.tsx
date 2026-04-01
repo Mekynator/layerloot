@@ -25,6 +25,9 @@ import ReviewCard from "@/components/social/ReviewCard";
 import ProductCard from "@/components/ProductCard";
 import SocialProofBadges from "@/components/social/SocialProofBadges";
 import ProductQA from "@/components/product/ProductQA";
+import StickyAddToCart from "@/components/product/StickyAddToCart";
+import RecentlyViewedSection from "@/components/product/RecentlyViewedSection";
+import { useRecentlyViewedProducts } from "@/hooks/use-recently-viewed";
 import { useProductDetailQuery } from "@/hooks/use-storefront";
 
 const AUTO_GALLERY_MS = 6500;

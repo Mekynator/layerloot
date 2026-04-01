@@ -977,8 +977,8 @@ const CustomPrintOrder = () => {
     const ext = selectedFile.name.split(".").pop()?.toLowerCase();
     if (!["stl", "obj", "3mf"].includes(ext ?? "")) {
       toast({
-        title: "Invalid file",
-        description: "Please upload an STL, OBJ, or 3MF file.",
+        title: t("create.invalidFile"),
+        description: t("create.invalidFileDesc"),
         variant: "destructive",
       });
       return;

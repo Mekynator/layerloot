@@ -87,7 +87,10 @@
     "noReviews": "No reviews yet. Be the first to leave feedback.",
     "youMayAlsoLike": "You may also like",
     "keepBuilding": "Keep the build going",
-    "view3D": "View 3D Model"
+    "view3D": "View 3D Model",
+    "productCount": "{{count}} products",
+    "categories": "Categories",
+    "lowStock": "Only {{count}} left – order soon!"
   },
   "cart": {
     "title": "Shopping Cart",

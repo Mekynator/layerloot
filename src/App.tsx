@@ -26,6 +26,7 @@ import AdminContent from "./pages/admin/AdminContent";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminCustomOrders from "./pages/admin/AdminCustomOrders";
 import AdminDiscounts from "./pages/admin/AdminDiscounts";
+import AdminShowcases from "./pages/admin/AdminShowcases";
 import PageEditor from "./pages/admin/PageEditor";
 import DynamicPage from "./pages/DynamicPage";
 import CreateYourOwn from "./pages/CreateYourOwn";

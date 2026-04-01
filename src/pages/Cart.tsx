@@ -132,7 +132,7 @@ export default function CartPage() {
     return Math.min(selectedDiscount.value, totalPrice + shippingCost);
   }, [selectedDiscount, totalPrice, shippingCost]);
 
-  const finalTotal = Math.max(totalPrice + shippingCost - discountAmount, 0);
+  const finalTotal = Math.max(totalPrice + shippingCost + giftFee + giftWrapFee - discountAmount, 0);
 
   const recommendedProducts = useMemo(() => {
     const map = new Map<string, RecommendedProduct>();

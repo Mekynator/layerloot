@@ -29,6 +29,7 @@ import { computeLoyaltyProgress } from "@/hooks/use-loyalty-progress";
 import LoyaltyProgressCard from "@/components/social/LoyaltyProgressCard";
 import { CartSummarySkeleton } from "@/components/shared/loading-states";
 import { formatPrice } from "@/lib/currency";
+import GiftMode, { type GiftSettings } from "@/components/cart/GiftMode";
 
 const FREE_SHIPPING_THRESHOLD = 500;
 const BASE_SHIPPING_PRICE = 5.99;

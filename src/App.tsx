@@ -33,6 +33,8 @@ import Gallery from "./pages/Gallery";
 import About from "./pages/About";
 import SubmitDesign from "./pages/SubmitDesign";
 import NotFound from "./pages/NotFound";
+import Creations from "./pages/Creations";
+import CreationDetail from "./pages/CreationDetail";
 import ChatWidget from "./components/ChatWidget";
 import PromotionPopup from "./components/PromotionPopup";
 import GiftClaimPopup from "./components/GiftClaimPopup";
@@ -69,6 +71,8 @@ const AppShell = () => {
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/about" element={<About />} />
           <Route path="/submit-design" element={<SubmitDesign />} />
+          <Route path="/creations" element={<Creations />} />
+          <Route path="/creations/:slug" element={<CreationDetail />} />
           <Route path="/admin" element={<Dashboard />} />
           <Route path="/admin/products" element={<AdminProducts />} />
           <Route path="/admin/products/:productId/variants" element={<AdminVariants />} />

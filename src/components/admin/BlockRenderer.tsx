@@ -700,7 +700,7 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
               <ActionButton
                 key={`${button.text}-${index}`}
                 button={button}
-                className={`font-display uppercase tracking-wider ${button.variant === "outline" ? "border-muted-foreground/30 text-secondary hover:border-primary hover:text-primary" : ""}`}
+                className={`font-display uppercase tracking-wider ${button.variant === "outline" ? "border-foreground/20 text-foreground hover:border-primary hover:text-primary" : ""}`}
               />
             ))}
           </motion.div>

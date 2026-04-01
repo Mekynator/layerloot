@@ -582,7 +582,7 @@ const Header = () => {
         </div>
 
         {mobileOpen && headerSettings.mobile_nav_enabled && (
-          <nav className="border-t border-border bg-secondary px-4 pb-4 md:hidden">
+          <nav className="border-t border-border/20 bg-secondary/90 backdrop-blur-2xl px-4 pb-4 md:hidden">
             {desktopLinks.map((link) => (
               <Link
                 key={`${link.to}-${link.localizedLabel}-mobile`}

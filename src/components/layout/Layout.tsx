@@ -20,6 +20,14 @@ const Layout = ({ children }: { children: ReactNode }) => {
     >
       <ThemeRuntime />
       <PageBackgroundSlideshow />
+
+      {/* Ambient gradient blobs */}
+      <div className="ambient-bg" aria-hidden="true">
+        <div className="ambient-blob ambient-blob--1" />
+        <div className="ambient-blob ambient-blob--2" />
+        <div className="ambient-blob ambient-blob--3" />
+      </div>
+
       <div className="relative z-10 flex min-h-screen flex-col">
         <Header />
         <GlobalSectionRenderer page="global_before_main" />

@@ -374,7 +374,7 @@ const Account = () => {
     data: overview,
     isLoading: overviewLoading,
     refetch: refetchOverview,
-  } = useAccountOverview(user?.id, user?.email);
+  } = useAccountOverview(user?.id);
 
   const [showHistory, setShowHistory] = useState(false);
   const [tab, setTab] = useState<AccountTab>("orders");

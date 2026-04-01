@@ -532,8 +532,8 @@ export default function CartPage() {
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span className="font-display font-bold text-foreground">{totalPrice.toFixed(2)} kr</span>
+                  <span className="text-muted-foreground">{t("cart.subtotal")}</span>
+                  <span className="font-display font-bold text-foreground">{formatPrice(totalPrice)}</span>
                 </div>
 
                 <div className="flex items-center justify-between text-sm">

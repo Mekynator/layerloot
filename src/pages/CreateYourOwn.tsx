@@ -419,8 +419,8 @@ const ToolShell = ({
   description: string;
   children: ReactNode;
 }) => (
-  <Card className="overflow-hidden border-border/80 shadow-sm">
-    <CardHeader className="border-b border-border/60 bg-muted/20">
+  <Card className="overflow-hidden shadow-[0_8px_40px_-8px_hsl(225_44%_4%/0.5)]">
+    <CardHeader className="bg-muted/10">
       <div className="space-y-2">
         <p className="text-[11px] font-display uppercase tracking-[0.24em] text-primary">{eyebrow}</p>
         <CardTitle className="font-display text-lg uppercase tracking-wide text-foreground sm:text-xl">

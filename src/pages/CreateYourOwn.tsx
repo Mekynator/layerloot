@@ -921,6 +921,7 @@ const GiftFinder = () => {
 const CustomPrintOrder = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const userName = getUserDisplayName(user);
   const userEmail = user?.email || "";

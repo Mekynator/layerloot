@@ -57,6 +57,7 @@ export interface LithophaneProps {
   onDraftChange?: (payload: Partial<LithophaneSubmitPayload>) => void;
   submitLabel?: string;
   initialNotes?: string;
+  preloadedImageFile?: File | null;
 }
 
 type UploadProgressState = {

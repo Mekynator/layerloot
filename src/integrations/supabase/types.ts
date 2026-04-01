@@ -812,6 +812,53 @@ export type Database = {
           },
         ]
       }
+      product_questions: {
+        Row: {
+          answer: string | null
+          answered_at: string | null
+          answered_by: string | null
+          created_at: string
+          id: string
+          is_public: boolean
+          product_id: string
+          question: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          answer?: string | null
+          answered_at?: string | null
+          answered_by?: string | null
+          created_at?: string
+          id?: string
+          is_public?: boolean
+          product_id: string
+          question: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          answer?: string | null
+          answered_at?: string | null
+          answered_by?: string | null
+          created_at?: string
+          id?: string
+          is_public?: boolean
+          product_id?: string
+          question?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_questions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_reviews: {
         Row: {
           comment: string | null

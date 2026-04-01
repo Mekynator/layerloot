@@ -1282,7 +1282,7 @@ const Account = () => {
           </div>
         </motion.div>
 
-        <div className="mb-6 flex flex-wrap gap-2">
+        <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-border/20 bg-card/40 p-2 backdrop-blur-sm">
           {[
             { key: "orders" as const, label: tt("account.tabs.orders", "Orders"), icon: Package, hasDot: hasNewOrders },
             {
@@ -1297,14 +1297,16 @@ const Account = () => {
           ].map(({ key, label, icon: Icon, hasDot }) => (
             <Button
               key={key}
-              variant={tab === key ? "default" : "outline"}
+              variant={tab === key ? "default" : "ghost"}
               size="sm"
               onClick={() => setTab(key)}
-              className="relative font-display uppercase tracking-wider"
+              className={`relative font-display uppercase tracking-wider transition-all ${
+                tab === key ? "glow-primary shadow-md" : "hover:bg-muted/40"
+              }`}
             >
               <Icon className="mr-1 h-4 w-4" />
               {label}
-              {hasDot && <span className="ml-2 h-2.5 w-2.5 rounded-full bg-red-500" />}
+              {hasDot && <span className="ml-2 h-2.5 w-2.5 rounded-full bg-destructive animate-pulse" />}
             </Button>
           ))}
         </div>

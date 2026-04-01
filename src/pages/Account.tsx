@@ -1421,6 +1421,14 @@ const Account = () => {
         {tab === "rewards" && (
           <>
             {overviewLoading && !overview ? <RewardsGridSkeleton count={4} /> : null}
+            {overview && (
+              <div className="mb-6">
+                <LoyaltyProgressCard
+                  progress={computeLoyaltyProgress(overview.pointsBalance, overview.pointsEarned, overview.pointsSpent)}
+                  variant="full"
+                />
+              </div>
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
               {REWARD_CATALOG.map((reward) => {
                 const canRedeem = pointsBalance >= reward.pointsCost;

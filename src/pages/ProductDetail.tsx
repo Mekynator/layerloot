@@ -517,6 +517,32 @@ const ProductDetail = () => {
         {/* Product Q&A */}
         <ProductQA productId={product.id} />
 
+        {/* Frequently bought together */}
+        {relatedProducts.length >= 2 && (
+          <FrequentlyBoughtTogether
+            products={[product, ...relatedProducts.slice(0, 2)].map((p) => ({
+              ...p,
+              images: p.images || [],
+              is_featured: (p as any).is_featured ?? false,
+              category_id: (p as any).category_id ?? null,
+              model_url: (p as any).model_url ?? null,
+              compare_at_price: (p as any).compare_at_price ?? null,
+            }))}
+            onAddAll={() => {
+              [product, ...relatedProducts.slice(0, 2)].forEach((p) => {
+                addItem({
+                  id: p.id,
+                  name: p.name,
+                  price: Number(p.price),
+                  image: p.images?.[0] || "/placeholder.svg",
+                  slug: p.slug,
+                });
+              });
+              toast({ title: "Bundle added to cart!", description: `${3} items added` });
+            }}
+          />
+        )}
+
         {relatedProducts.length > 0 ? (
           <section className="space-y-6">
             <div className="space-y-2">

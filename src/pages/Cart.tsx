@@ -344,7 +344,7 @@ export default function CartPage() {
                               )}
                               {changedState === "added" && (
                                 <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-600">
-                                  Added back
+                                  {t("cart.addedBack")}
                                 </span>
                               )}
                             </div>

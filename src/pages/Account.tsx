@@ -1596,14 +1596,22 @@ const Account = () => {
                                   ) : null}
                                   {isGifted && uv.recipient_email ? (
                                     <p className="text-xs text-muted-foreground">
-                                      {tt("account.vouchers.sentTo", "Sent to")}:{" "}
-                                      {uv.recipient_name ? `${uv.recipient_name} ` : ""}({uv.recipient_email})
+                                      {isPendingGift
+                                        ? `Pending claim for: ${uv.recipient_name ? `${uv.recipient_name} ` : ""}(${uv.recipient_email})`
+                                        : `${tt("account.vouchers.sentTo", "Sent to")}: ${uv.recipient_name ? `${uv.recipient_name} ` : ""}(${uv.recipient_email})`}
                                     </p>
                                   ) : null}
-                                  {isReceived ? (
+                                  {isReceived && uv.sender_name ? (
+                                    <p className="text-xs text-muted-foreground">
+                                      Received gift card from {uv.sender_name}
+                                    </p>
+                                  ) : isReceived ? (
                                     <p className="text-xs text-muted-foreground">
                                       {tt("account.vouchers.receivedGiftCard", "Received gift card")}
                                     </p>
+                                  ) : null}
+                                  {(isReceived || isGifted) && uv.gift_message ? (
+                                    <p className="text-xs italic text-muted-foreground">"{uv.gift_message}"</p>
                                   ) : null}
                                   <p className="text-xs text-muted-foreground">
                                     {tt("account.vouchers.redeemedAt", "Redeemed")}:{" "}

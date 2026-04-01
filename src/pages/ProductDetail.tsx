@@ -303,7 +303,7 @@ const ProductDetail = () => {
               {hasSimpleVariants && (
                 <div className="space-y-3">
                   <p className="font-display text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    Options
+                    {t("products.options")}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {variants.map((variant) => (

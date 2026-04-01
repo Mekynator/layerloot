@@ -806,6 +806,7 @@ const AdminClients = () => {
                 </div>
               </TabsContent>
 
+              <TabsContent value="orders" className="space-y-4">
                 <div className="grid gap-4 lg:grid-cols-2">
                   <Card>
                     <CardHeader>

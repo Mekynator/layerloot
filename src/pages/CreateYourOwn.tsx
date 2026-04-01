@@ -1343,7 +1343,7 @@ const CustomPrintOrder = () => {
 
         <div className="space-y-4">
           <div>
-            <Label>Material</Label>
+            <Label>{t("create.material")}</Label>
             <Select value={form.material} onValueChange={(value) => setForm({ ...form, material: value })}>
               <SelectTrigger>
                 <SelectValue />

@@ -1575,10 +1575,10 @@ const Account = () => {
                     {isExpanded ? (
                       <CardContent className="space-y-3 border-t border-border bg-background/40 p-4">
                         {group.items.map((uv) => {
-                          const recipientEmail = (uv.recipient_email || "").trim().toLowerCase();
-                          const isReceived =
-                            recipientEmail !== "" && recipientEmail === (user?.email || "").trim().toLowerCase();
-                          const isGifted = !!uv.recipient_email && !isReceived;
+                          const giftStatus = uv.gift_status || "";
+                          const isPendingGift = giftStatus === "pending_claim";
+                          const isReceived = !!uv.sender_user_id && uv.user_id === user?.id && (giftStatus === "claimed" || (uv.recipient_email || "").trim().toLowerCase() === (user?.email || "").trim().toLowerCase());
+                          const isGifted = isPendingGift || (!!uv.recipient_email && !isReceived);
                           const isUsed = uv.is_used || !!uv.used_at || (uv.balance !== null && Number(uv.balance) <= 0);
 
                           return (

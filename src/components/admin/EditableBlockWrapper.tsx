@@ -55,12 +55,12 @@ const EditableBlockWrapper = ({
         } ${!block.is_active ? "opacity-40" : ""}`}
       >
         {/* Floating toolbar */}
-        <div className={`absolute -top-4 left-4 z-20 flex items-center gap-1 rounded-lg bg-foreground px-2 py-1 shadow-lg transition-opacity ${
+        <div className={`absolute -top-4 left-4 z-20 flex items-center gap-1 rounded-xl border border-border/30 bg-card/95 px-2 py-1 shadow-[0_4px_20px_-4px_hsl(228_33%_2%/0.5)] backdrop-blur-xl transition-opacity ${
           isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
         }`}>
-          <GripVertical className="h-3.5 w-3.5 cursor-grab text-background" />
-          <Badge className="border-none bg-primary/20 font-display text-[10px] uppercase text-background">{block.block_type}</Badge>
-          <span className="max-w-[100px] truncate text-[10px] text-background/70">{block.title || ""}</span>
+          <GripVertical className="h-3.5 w-3.5 cursor-grab text-muted-foreground" />
+          <Badge className="border-none bg-primary/15 font-display text-[10px] uppercase text-primary">{block.block_type}</Badge>
+          <span className="max-w-[100px] truncate text-[10px] text-muted-foreground">{block.title || ""}</span>
           <div className="ml-1 flex gap-0.5">
             <ToolBtn onClick={onMoveUp} disabled={index === 0}><ArrowUp className="h-3 w-3" /></ToolBtn>
             <ToolBtn onClick={onMoveDown} disabled={index === total - 1}><ArrowDown className="h-3 w-3" /></ToolBtn>

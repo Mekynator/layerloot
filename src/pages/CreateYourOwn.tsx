@@ -1181,8 +1181,8 @@ const CustomPrintOrder = () => {
       }
 
       toast({
-        title: "Error",
-        description: error?.message || "Could not start custom order payment.",
+        title: t("create.error"),
+        description: error?.message || t("create.couldNotStartPayment"),
         variant: "destructive",
       });
     } finally {

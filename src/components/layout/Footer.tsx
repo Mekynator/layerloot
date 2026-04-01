@@ -164,7 +164,7 @@ const Footer = () => {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 h-px w-2/3 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
         <div className="container py-16">
-          <div className="grid gap-10 md:grid-cols-4">
+          <div className="grid gap-10 md:grid-cols-5">
             <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
               <Link to={branding.logo_link || "/"} className="mb-5 flex items-center gap-2.5 group">
                 {branding.logo_image_url ? (
@@ -204,20 +204,22 @@ const Footer = () => {
                   <li><Link to="/account" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">{accountLinkLabel}</Link></li>
                   <li><Link to="/account/orders" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">{ordersLinkLabel}</Link></li>
                 </ul>
-
-                <h4 className="mb-3 mt-6 font-display text-xs font-semibold uppercase tracking-[0.2em] text-foreground">Policies</h4>
-                <ul className="space-y-2.5 text-sm text-muted-foreground">
-                  <li><Link to="/policies/returns-policy" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Returns Policy</Link></li>
-                  <li><Link to="/policies/cancellation-policy" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Cancellation Policy</Link></li>
-                  <li><Link to="/policies/refund-policy" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Refund Policy</Link></li>
-                  <li><Link to="/policies/privacy-policy" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Privacy Policy</Link></li>
-                  <li><Link to="/policies/terms-of-service" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Terms of Service</Link></li>
-                  <li><Link to="/policies/safety-regulations" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Safety Regulations</Link></li>
-                  <li><Link to="/policies/intellectual-property" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Intellectual Property</Link></li>
-                  <li><Link to="/policies/shipping-policy" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Shipping Policy</Link></li>
-                </ul>
               </motion.div>
             )}
+
+            <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.10 }}>
+              <h4 className="mb-5 font-display text-xs font-semibold uppercase tracking-[0.2em] text-foreground">Policies</h4>
+              <ul className="space-y-2.5 text-sm text-muted-foreground">
+                <li><Link to="/policies/returns-policy" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Returns Policy</Link></li>
+                <li><Link to="/policies/cancellation-policy" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Cancellation Policy</Link></li>
+                <li><Link to="/policies/refund-policy" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Refund Policy</Link></li>
+                <li><Link to="/policies/privacy-policy" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Privacy Policy</Link></li>
+                <li><Link to="/policies/terms-of-service" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Terms of Service</Link></li>
+                <li><Link to="/policies/safety-regulations" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Safety Regulations</Link></li>
+                <li><Link to="/policies/intellectual-property" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Intellectual Property</Link></li>
+                <li><Link to="/policies/shipping-policy" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Shipping Policy</Link></li>
+              </ul>
+            </motion.div>
 
             {footerSettings.show_contact_block && (
               <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.12 }}>

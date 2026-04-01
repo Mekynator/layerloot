@@ -9,11 +9,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 
 const Gallery = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation("common");
 
   const [posts, setPosts] = useState<any[]>([]);
   const [pageBlocks, setPageBlocks] = useState<SiteBlock[]>([]);
@@ -60,7 +62,7 @@ const Gallery = () => {
     const { error: upErr } = await supabase.storage.from("gallery-images").upload(path, file);
 
     if (upErr) {
-      toast({ title: "Upload failed", description: upErr.message, variant: "destructive" });
+      toast({ title: t("gallery.uploadFailed"), description: upErr.message, variant: "destructive" });
       setUploading(false);
       return;
     }
@@ -77,11 +79,11 @@ const Gallery = () => {
     setUploading(false);
 
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: t("common.error"), description: error.message, variant: "destructive" });
       return;
     }
 
-    toast({ title: "Photo submitted!", description: "It will appear after admin approval." });
+    toast({ title: t("gallery.photoSubmitted"), description: t("gallery.photoApproval") });
     setForm({ product_name: "", comment: "" });
     setFile(null);
     setOpen(false);
@@ -110,38 +112,40 @@ const Gallery = () => {
             <div>
               <div className="mb-2 flex items-center gap-2">
                 <Camera className="h-5 w-5 text-primary" />
-                <span className="font-display text-sm uppercase tracking-widest text-primary">Community</span>
+                <span className="font-display text-sm uppercase tracking-widest text-primary">
+                  {t("gallery.community")}
+                </span>
               </div>
               <h1 className="font-display text-3xl font-bold uppercase text-foreground lg:text-5xl">
-                Customer <span className="text-primary">Gallery</span>
+                {t("gallery.title")}
               </h1>
-              <p className="mt-2 max-w-lg text-muted-foreground">
-                See what our community has printed. Share your own creations!
-              </p>
+              <p className="mt-2 max-w-lg text-muted-foreground">{t("gallery.subtitle")}</p>
             </div>
 
             {user && (
               <Dialog open={open} onOpenChange={setOpen}>
                 <DialogTrigger asChild>
                   <Button className="font-display uppercase tracking-wider">
-                    <Upload className="mr-2 h-4 w-4" /> Share Your Print
+                    <Upload className="mr-2 h-4 w-4" /> {t("gallery.sharePrint")}
                   </Button>
                 </DialogTrigger>
 
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle className="font-display uppercase">Share Your Print</DialogTitle>
+                    <DialogTitle className="font-display uppercase">{t("gallery.sharePrint")}</DialogTitle>
                   </DialogHeader>
 
                   <div className="space-y-4 pt-2">
                     <div>
-                      <Label>Photo</Label>
+                      <Label>{t("gallery.photo")}</Label>
                       <div
                         className="mt-1 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-6 transition-colors hover:border-primary"
                         onClick={() => document.getElementById("gallery-upload")?.click()}
                       >
                         <Camera className="mb-1 h-6 w-6 text-muted-foreground" />
-                        <p className="text-sm text-foreground">{file ? file.name : "Click to upload"}</p>
+                        <p className="text-sm text-foreground">
+                          {file ? file.name : t("gallery.clickToUpload")}
+                        </p>
                       </div>
 
                       <input
@@ -154,21 +158,21 @@ const Gallery = () => {
                     </div>
 
                     <div>
-                      <Label>Product Name *</Label>
+                      <Label>{t("gallery.productName")}</Label>
                       <Input
                         value={form.product_name}
                         onChange={(e) => setForm({ ...form, product_name: e.target.value })}
-                        placeholder="e.g. Dragon Miniature"
+                        placeholder={t("gallery.productPlaceholder")}
                         maxLength={100}
                       />
                     </div>
 
                     <div>
-                      <Label>Comment (optional)</Label>
+                      <Label>{t("gallery.commentOptional")}</Label>
                       <Textarea
                         value={form.comment}
                         onChange={(e) => setForm({ ...form, comment: e.target.value })}
-                        placeholder="Tell us about your print..."
+                        placeholder={t("gallery.commentPlaceholder")}
                         rows={3}
                         maxLength={500}
                       />
@@ -179,12 +183,10 @@ const Gallery = () => {
                       disabled={uploading || !file || !form.product_name.trim()}
                       className="w-full font-display uppercase tracking-wider"
                     >
-                      {uploading ? "Uploading..." : "Submit"}
+                      {uploading ? t("gallery.uploading") : t("gallery.submit")}
                     </Button>
 
-                    <p className="text-center text-xs text-muted-foreground">
-                      Photos are reviewed before appearing in the gallery.
-                    </p>
+                    <p className="text-center text-xs text-muted-foreground">{t("gallery.reviewNotice")}</p>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -228,8 +230,8 @@ const Gallery = () => {
           ) : (
             <div className="py-16 text-center">
               <Camera className="mx-auto mb-4 h-12 w-12 text-muted-foreground/40" />
-              <h3 className="mb-2 font-display text-lg uppercase text-foreground">No photos yet</h3>
-              <p className="text-muted-foreground">Be the first to share your 3D printed creation!</p>
+              <h3 className="mb-2 font-display text-lg uppercase text-foreground">{t("gallery.noPhotos")}</h3>
+              <p className="text-muted-foreground">{t("gallery.beFirst")}</p>
             </div>
           )}
         </div>

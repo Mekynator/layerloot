@@ -1165,6 +1165,7 @@ const FaqBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) 
 };
 
 const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) => {
+  useTranslation();
   const c = block.content || {};
   const badges = c.badges || [
     {

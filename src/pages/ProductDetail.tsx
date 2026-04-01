@@ -261,7 +261,7 @@ const ProductDetail = () => {
                 variant="outline"
                 className="rounded-full border-primary/20 bg-primary/5 uppercase tracking-[0.2em] text-primary"
               >
-                Premium print
+                {t("products.premiumPrint")}
               </Badge>
               <h1 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{product.name}</h1>
               <RatingStars rating={socialProof?.averageRating} count={socialProof?.reviewCount} />

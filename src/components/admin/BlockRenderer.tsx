@@ -1559,7 +1559,7 @@ const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder={tr("blocks.newsletter.placeholder", "your@email.com")}
-            className="flex-1 rounded-md border border-border bg-background px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            className="flex-1 rounded-xl border-0 bg-card/60 px-4 py-2 text-sm text-foreground shadow-[0_4px_24px_-4px_hsl(225_44%_4%/0.3)] backdrop-blur-md placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           />
           <button
             type="submit"

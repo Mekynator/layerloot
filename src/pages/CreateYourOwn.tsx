@@ -1334,6 +1334,24 @@ const CustomPrintOrder = () => {
         </div>
       )}
 
+      {showcaseSource && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm"
+        >
+          <p className="font-medium text-foreground">
+            {showcaseSource.type === "reorder" ? "🔁 Reordering" : "✏️ Requesting modification of"}:{" "}
+            <span className="text-primary">{showcaseSource.title}</span>
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {showcaseSource.type === "reorder"
+              ? "Model, image, and settings have been pre-loaded. Review and submit when ready."
+              : "Model and image are pre-loaded. Describe your desired changes below, then submit."}
+          </p>
+        </motion.div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           <div>

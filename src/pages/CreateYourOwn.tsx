@@ -9,6 +9,7 @@ import {
   type SetStateAction,
 } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation, Trans } from "react-i18next";
 import {
   Baby,
   Box,
@@ -64,11 +65,11 @@ const REQUEST_FEE_DKK = 100;
 const CUSTOM_ORDER_FILES_BUCKET = "custom-order-files";
 
 const MATERIALS = [
-  { value: "pla", label: "PLA", desc: "Standard, biodegradable" },
-  { value: "abs", label: "ABS", desc: "Strong, heat-resistant" },
-  { value: "petg", label: "PETG", desc: "Durable, flexible" },
-  { value: "tpu", label: "TPU", desc: "Flexible, rubber-like" },
-  { value: "resin", label: "Resin", desc: "High detail, smooth" },
+  { value: "pla", label: "PLA", descKey: "create.materialPla" },
+  { value: "abs", label: "ABS", descKey: "create.materialAbs" },
+  { value: "petg", label: "PETG", descKey: "create.materialPetg" },
+  { value: "tpu", label: "TPU", descKey: "create.materialTpu" },
+  { value: "resin", label: "Resin", descKey: "create.materialResin" },
 ];
 
 const COLORS = [
@@ -83,10 +84,10 @@ const COLORS = [
 ];
 
 const QUALITIES = [
-  { value: "high", label: "High", desc: "0.2mm – Fine detail" },
-  { value: "standard", label: "Standard", desc: "0.4mm – Balanced" },
-  { value: "moderate", label: "Moderate", desc: "0.6mm – Faster print" },
-  { value: "low", label: "Low", desc: "0.8mm – Lowest detail" },
+  { value: "high", label: "High", descKey: "create.qualityHigh" },
+  { value: "standard", label: "Standard", descKey: "create.qualityStandard" },
+  { value: "moderate", label: "Moderate", descKey: "create.qualityModerate" },
+  { value: "low", label: "Low", descKey: "create.qualityLow" },
 ];
 
 const GIFT_FINDER_ICON_MAP = {
@@ -294,38 +295,41 @@ const UploadProgressOverlay = ({ progress, status }: { progress: number; status:
   </AnimatePresence>
 );
 
-const ProcessingDialog = ({ open, progress, status, title }: ProgressState & { title: string }) => (
-  <Dialog open={open}>
-    <DialogContent
-      className="sm:max-w-md [&>button]:hidden"
-      onEscapeKeyDown={(e) => e.preventDefault()}
-      onInteractOutside={(e) => e.preventDefault()}
-    >
-      <div className="py-2">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{status || "Working on your request..."}</DialogDescription>
-        </DialogHeader>
+const ProcessingDialog = ({ open, progress, status, title }: ProgressState & { title: string }) => {
+  const { t } = useTranslation();
+  return (
+    <Dialog open={open}>
+      <DialogContent
+        className="sm:max-w-md [&>button]:hidden"
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        <div className="py-2">
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+            <DialogDescription>{status || t("create.workingOnRequest")}</DialogDescription>
+          </DialogHeader>
 
-        <div className="mt-5">
-          <div className="h-3 overflow-hidden rounded-full bg-muted">
-            <motion.div
-              className="h-full rounded-full bg-primary"
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ ease: "easeOut", duration: 0.3 }}
-            />
-          </div>
+          <div className="mt-5">
+            <div className="h-3 overflow-hidden rounded-full bg-muted">
+              <motion.div
+                className="h-full rounded-full bg-primary"
+                initial={{ width: 0 }}
+                animate={{ width: `${progress}%` }}
+                transition={{ ease: "easeOut", duration: 0.3 }}
+              />
+            </div>
 
-          <div className="mt-3 flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">{status}</span>
-            <span className="font-semibold text-foreground">{Math.round(progress)}%</span>
+            <div className="mt-3 flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">{status}</span>
+              <span className="font-semibold text-foreground">{Math.round(progress)}%</span>
+            </div>
           </div>
         </div>
-      </div>
-    </DialogContent>
-  </Dialog>
-);
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 const FileStatusCard = ({
   fileName,
@@ -337,32 +341,35 @@ const FileStatusCard = ({
   previewUrl?: string | null;
   alt: string;
   icon?: ReactNode;
-}) => (
-  <motion.div
-    initial={{ opacity: 0, y: 6 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="mt-3 overflow-hidden rounded-xl border border-border bg-card"
-  >
-    {previewUrl ? (
-      <img src={previewUrl} alt={alt} className="h-56 w-full object-cover bg-muted/20" />
-    ) : (
-      <div className="flex h-28 items-center justify-center bg-muted/20">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <FileImage className="h-4 w-4" />
-          3D file ready
+}) => {
+  const { t } = useTranslation();
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mt-3 overflow-hidden rounded-xl border border-border bg-card"
+    >
+      {previewUrl ? (
+        <img src={previewUrl} alt={alt} className="h-56 w-full object-cover bg-muted/20" />
+      ) : (
+        <div className="flex h-28 items-center justify-center bg-muted/20">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <FileImage className="h-4 w-4" />
+            {t("create.fileReady")}
+          </div>
         </div>
-      </div>
-    )}
+      )}
 
-    <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-foreground">{fileName}</p>
-        <p className="text-xs text-muted-foreground">Ready</p>
+      <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-foreground">{fileName}</p>
+          <p className="text-xs text-muted-foreground">{t("create.ready")}</p>
+        </div>
+        {icon}
       </div>
-      {icon}
-    </div>
-  </motion.div>
-);
+    </motion.div>
+  );
+};
 
 const UploadDropzone = ({
   label,
@@ -427,6 +434,7 @@ const ToolShell = ({
 );
 
 const ReviewSection = ({ title }: { toolType: "custom-print" | "lithophane"; title: string }) => {
+  const { t } = useTranslation();
   const [reviews, setReviews] = useState<ToolReview[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -481,7 +489,7 @@ const ReviewSection = ({ title }: { toolType: "custom-print" | "lithophane"; tit
               className="rounded-xl border border-border bg-card p-4"
             >
               <div className="mb-2 flex items-center justify-between gap-2">
-                <p className="font-medium text-foreground">{review.title || "Verified Customer"}</p>
+                <p className="font-medium text-foreground">{review.title || t("create.verifiedCustomer")}</p>
                 <div className="flex gap-1">
                   {Array.from({ length: review.rating }).map((_, i) => (
                     <Star key={i} className="h-4 w-4 fill-primary text-primary" />
@@ -500,6 +508,7 @@ const ReviewSection = ({ title }: { toolType: "custom-print" | "lithophane"; tit
 const LithophaneOrderSection = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const userName = getUserDisplayName(user);
   const userEmail = user?.email || "";
@@ -523,8 +532,8 @@ const LithophaneOrderSection = () => {
   const handleLithophaneSubmit = async (payload: LithophaneSubmitPayload) => {
     if (!user) {
       toast({
-        title: "Please sign in",
-        description: "You need to sign in to submit a lithophane order.",
+        title: t("create.pleaseSignIn"),
+        description: t("create.signInToSubmitLithophane"),
         variant: "destructive",
       });
       return;
@@ -532,8 +541,8 @@ const LithophaneOrderSection = () => {
 
     if (!payload.sourceDataUrl) {
       toast({
-        title: "Missing image",
-        description: "Please upload a photo before submitting.",
+        title: t("create.missingImage"),
+        description: t("create.missingImageDesc"),
         variant: "destructive",
       });
       return;
@@ -652,8 +661,8 @@ const LithophaneOrderSection = () => {
       await animateProgress(setLithophaneProgress, 100, "Lithophane order submitted", 280);
 
       toast({
-        title: "Lithophane submitted!",
-        description: "Your lithophane design was added to custom orders successfully.",
+        title: t("create.lithophaneSubmitted"),
+        description: t("create.lithophaneSubmittedDesc"),
       });
     } catch (error: any) {
       if (!orderCreated) {
@@ -661,8 +670,8 @@ const LithophaneOrderSection = () => {
       }
 
       toast({
-        title: "Submission failed",
-        description: error?.message || "Could not submit lithophane order.",
+        title: t("create.submissionFailed"),
+        description: error?.message || t("create.couldNotSubmit"),
         variant: "destructive",
       });
     } finally {
@@ -673,21 +682,21 @@ const LithophaneOrderSection = () => {
 
   return (
     <div className="space-y-6">
-      <ProcessingDialog {...lithophaneProgress} title="Submitting lithophane" />
+      <ProcessingDialog {...lithophaneProgress} title={t("create.submittingLithophane")} />
 
       {!user && (
         <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-          Please{" "}
-          <Link to="/auth" className="text-primary hover:underline">
-            sign in
-          </Link>{" "}
-          to submit a lithophane order.
+          <Trans i18nKey="create.signInToOrderLithophane">
+            Please <Link to="/auth" className="text-primary hover:underline">sign in</Link> to submit a lithophane order.
+          </Trans>
         </div>
       )}
 
       {user && (
         <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-          Ordering as <span className="font-medium text-foreground">{userName || "Account User"}</span>
+          <Trans i18nKey="create.orderingAs" values={{ name: userName || "Account User" }}>
+            Ordering as <span className="font-medium text-foreground">{{ name: userName || "Account User" } as any}</span>
+          </Trans>
           {userEmail ? <> · {userEmail}</> : null}
         </div>
       )}
@@ -695,16 +704,17 @@ const LithophaneOrderSection = () => {
       <div className={submittingLithophane ? "pointer-events-none opacity-80" : ""}>
         <Lithophane
           onSubmitDesign={handleLithophaneSubmit}
-          submitLabel={submittingLithophane ? "Submitting..." : "Order Lithophane"}
+          submitLabel={submittingLithophane ? t("create.preparing") : t("create.orderLithophane")}
         />
       </div>
 
-      <ReviewSection toolType="lithophane" title="Lithophane Reviews" />
+      <ReviewSection toolType="lithophane" title={t("create.lithophaneReviews")} />
     </div>
   );
 };
 
 const GiftFinder = () => {
+  const { t } = useTranslation();
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [tags, setTags] = useState<GiftFinderTag[]>([]);
   const [products, setProducts] = useState<(GiftFinderProduct & { matchScore: number })[]>([]);
@@ -802,16 +812,14 @@ const GiftFinder = () => {
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm text-muted-foreground">Pick one or more vibes.</p>
-          <p className="text-xs text-muted-foreground">
-            Smarter matching ranks products higher when they fit more of the selected gift types.
-          </p>
+          <p className="text-sm text-muted-foreground">{t("create.giftPickVibes")}</p>
+          <p className="text-xs text-muted-foreground">{t("create.giftSmartMatching")}</p>
         </div>
 
         {selectedTagIds.length > 0 && (
           <Button type="button" variant="outline" size="sm" onClick={clearTags}>
             <X className="mr-2 h-4 w-4" />
-            Clear selection
+            {t("create.clearSelection")}
           </Button>
         )}
       </div>
@@ -864,12 +872,10 @@ const GiftFinder = () => {
       {selectedTagIds.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           {loading ? (
-            <div className="py-8 text-center text-muted-foreground">Searching for the best gift matches...</div>
+            <div className="py-8 text-center text-muted-foreground">{t("create.searching")}</div>
           ) : products.length > 0 ? (
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Showing the best matches first based on how many selected tags each product fits.
-              </p>
+              <p className="text-sm text-muted-foreground">{t("create.bestMatchesFirst")}</p>
 
               <div className="grid grid-cols-2 gap-3">
                 {products.map((product) => (
@@ -892,7 +898,7 @@ const GiftFinder = () => {
                           {product.name}
                         </p>
                         <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
-                          {product.matchScore} match{product.matchScore === 1 ? "" : "es"}
+                          {product.matchScore} {product.matchScore === 1 ? t("create.match") : t("create.matches")}
                         </span>
                       </div>
                       <p className="text-xs font-semibold text-primary">{product.price} kr</p>
@@ -903,7 +909,7 @@ const GiftFinder = () => {
             </div>
           ) : (
             <div className="py-8 text-center">
-              <p className="mb-3 text-muted-foreground">No direct match yet — use the custom print tab.</p>
+              <p className="mb-3 text-muted-foreground">{t("create.noMatchYet")}</p>
             </div>
           )}
         </motion.div>
@@ -915,6 +921,7 @@ const GiftFinder = () => {
 const CustomPrintOrder = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const userName = getUserDisplayName(user);
   const userEmail = user?.email || "";
@@ -970,8 +977,8 @@ const CustomPrintOrder = () => {
     const ext = selectedFile.name.split(".").pop()?.toLowerCase();
     if (!["stl", "obj", "3mf"].includes(ext ?? "")) {
       toast({
-        title: "Invalid file",
-        description: "Please upload an STL, OBJ, or 3MF file.",
+        title: t("create.invalidFile"),
+        description: t("create.invalidFileDesc"),
         variant: "destructive",
       });
       return;
@@ -994,8 +1001,8 @@ const CustomPrintOrder = () => {
   const processReferenceImage = async (selectedImage: File) => {
     if (!selectedImage.type.startsWith("image/")) {
       toast({
-        title: "Invalid image",
-        description: "Please upload a PNG, JPG, or WEBP image.",
+        title: t("create.invalidImage"),
+        description: t("create.invalidImageDesc"),
         variant: "destructive",
       });
       return;
@@ -1049,8 +1056,8 @@ const CustomPrintOrder = () => {
   const openPaymentDialog = () => {
     if (!user) {
       toast({
-        title: "Please sign in",
-        description: "You need to sign in to submit a custom order.",
+        title: t("create.pleaseSignIn"),
+        description: t("create.signInToSubmit"),
         variant: "destructive",
       });
       return;
@@ -1058,8 +1065,8 @@ const CustomPrintOrder = () => {
 
     if (!file && !referenceImage) {
       toast({
-        title: "Missing file",
-        description: "Please upload either a 3D model or a reference image.",
+        title: t("create.missingFile"),
+        description: t("create.missingFileDesc"),
         variant: "destructive",
       });
       return;
@@ -1067,8 +1074,8 @@ const CustomPrintOrder = () => {
 
     if (!form.description.trim()) {
       toast({
-        title: "Missing fields",
-        description: "Please fill in the additional details field.",
+        title: t("create.missingFields"),
+        description: t("create.missingFieldsDesc"),
         variant: "destructive",
       });
       return;
@@ -1174,8 +1181,8 @@ const CustomPrintOrder = () => {
       }
 
       toast({
-        title: "Error",
-        description: error?.message || "Could not start custom order payment.",
+        title: t("create.error"),
+        description: error?.message || t("create.couldNotStartPayment"),
         variant: "destructive",
       });
     } finally {
@@ -1186,31 +1193,32 @@ const CustomPrintOrder = () => {
 
   return (
     <div className="space-y-6">
-      <ProcessingDialog {...submitProgress} title="Submitting custom order" />
+      <ProcessingDialog {...submitProgress} title={t("create.submittingCustomOrder")} />
 
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-primary" />
-              Request fee required
+              {t("create.requestFeeTitle")}
             </DialogTitle>
             <DialogDescription>
-              A {REQUEST_FEE_DKK} kr custom request fee is charged before the order is submitted.
+              {t("create.requestFeeDesc", { amount: REQUEST_FEE_DKK })}
             </DialogDescription>
           </DialogHeader>
 
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
-            After successful payment, your custom request is created and sent to the admin team for review. This amount
-            will later be <span className="font-semibold">deducted from the final quoted price</span>.
+            <Trans i18nKey="create.requestFeeNote">
+              After successful payment, your custom request is created and sent to the admin team for review. This amount will later be <span className="font-semibold">deducted from the final quoted price</span>.
+            </Trans>
           </div>
 
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button type="button" variant="outline" onClick={() => setPaymentDialogOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="button" onClick={handleSubmit} disabled={submitting || uploadBusy}>
-              {submitting ? "Preparing..." : "Continue to payment"}
+              {submitting ? t("create.preparing") : t("create.continueToPayment")}
             </Button>
           </div>
         </DialogContent>
@@ -1218,17 +1226,17 @@ const CustomPrintOrder = () => {
 
       {!user && (
         <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-          Please{" "}
-          <Link to="/auth" className="text-primary hover:underline">
-            sign in
-          </Link>{" "}
-          to submit a custom 3D print order.
+          <Trans i18nKey="create.signInToOrder">
+            Please <Link to="/auth" className="text-primary hover:underline">sign in</Link> to submit a custom 3D print order.
+          </Trans>
         </div>
       )}
 
       {user && (
         <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-          Ordering as <span className="font-medium text-foreground">{userName || "Account User"}</span>
+          <Trans i18nKey="create.orderingAs" values={{ name: userName || "Account User" }}>
+            Ordering as <span className="font-medium text-foreground">{{ name: userName || "Account User" } as any}</span>
+          </Trans>
           {userEmail ? <> · {userEmail}</> : null}
         </div>
       )}
@@ -1236,7 +1244,7 @@ const CustomPrintOrder = () => {
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           <div>
-            <Label>Upload 3D Model</Label>
+            <Label>{t("create.upload3DModel")}</Label>
 
             <div
               className="relative"
@@ -1248,8 +1256,8 @@ const CustomPrintOrder = () => {
               onDrop={(e) => void handleDrop(e, "model")}
             >
               <UploadDropzone
-                label={file ? file.name : "Click to upload"}
-                sublabel="STL, OBJ, 3MF files supported"
+                label={file ? file.name : t("create.clickToUpload")}
+                sublabel={t("create.modelFilesSupported")}
                 icon={<Upload className="h-8 w-8 text-muted-foreground" />}
                 dragActive={modelDragActive}
                 onClick={() => document.getElementById("custom-model-upload")?.click()}
@@ -1270,7 +1278,7 @@ const CustomPrintOrder = () => {
           </div>
 
           <div>
-            <Label>Add Reference Picture</Label>
+            <Label>{t("create.addReferencePicture")}</Label>
 
             <div
               className="relative"
@@ -1282,8 +1290,8 @@ const CustomPrintOrder = () => {
               onDrop={(e) => void handleDrop(e, "reference")}
             >
               <UploadDropzone
-                label={referenceImage ? referenceImage.name : "Click to upload reference image"}
-                sublabel="PNG, JPG, JPEG, WEBP supported"
+                label={referenceImage ? referenceImage.name : t("create.clickToUploadReference")}
+                sublabel={t("create.referenceFilesSupported")}
                 icon={<Image className="h-8 w-8 text-muted-foreground" />}
                 dragActive={referenceDragActive}
                 onClick={() => document.getElementById("custom-reference-image-upload")?.click()}
@@ -1306,7 +1314,7 @@ const CustomPrintOrder = () => {
               <FileStatusCard
                 fileName={referenceImage.name}
                 previewUrl={referenceImagePreviewUrl}
-                alt="Reference preview"
+                alt={t("create.referencePreview")}
               />
             )}
           </div>
@@ -1327,7 +1335,7 @@ const CustomPrintOrder = () => {
               {file && <FileStatusCard fileName={file.name} alt="3D model preview" />}
 
               <p className="mt-2 text-xs text-muted-foreground">
-                Preview colors may differ slightly from the finished printed material.
+                {t("create.previewColorNote")}
               </p>
             </motion.div>
           )}
@@ -1335,7 +1343,7 @@ const CustomPrintOrder = () => {
 
         <div className="space-y-4">
           <div>
-            <Label>Material</Label>
+            <Label>{t("create.material")}</Label>
             <Select value={form.material} onValueChange={(value) => setForm({ ...form, material: value })}>
               <SelectTrigger>
                 <SelectValue />
@@ -1344,7 +1352,7 @@ const CustomPrintOrder = () => {
                 {MATERIALS.map((material) => (
                   <SelectItem key={material.value} value={material.value}>
                     <span className="font-medium">{material.label}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">– {material.desc}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">– {t(material.descKey)}</span>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1352,7 +1360,7 @@ const CustomPrintOrder = () => {
           </div>
 
           <div>
-            <Label>Color</Label>
+            <Label>{t("create.color")}</Label>
             <div className="mt-2 flex flex-wrap gap-2">
               {COLORS.map((color, index) => (
                 <motion.button
@@ -1381,7 +1389,7 @@ const CustomPrintOrder = () => {
           </div>
 
           <div>
-            <Label>Print Quality</Label>
+            <Label>{t("create.printQuality")}</Label>
             <RadioGroup
               value={form.quality}
               onValueChange={(value) => setForm({ ...form, quality: value })}
@@ -1403,7 +1411,7 @@ const CustomPrintOrder = () => {
                   <RadioGroupItem value={quality.value} />
                   <div>
                     <p className="text-sm font-medium text-foreground">{quality.label}</p>
-                    <p className="text-xs text-muted-foreground">{quality.desc}</p>
+                    <p className="text-xs text-muted-foreground">{t(quality.descKey)}</p>
                   </div>
                 </motion.label>
               ))}
@@ -1412,7 +1420,7 @@ const CustomPrintOrder = () => {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <Label>Quantity</Label>
+              <Label>{t("create.quantity")}</Label>
               <Input
                 type="number"
                 min={1}
@@ -1427,7 +1435,7 @@ const CustomPrintOrder = () => {
             </div>
 
             <div>
-              <Label>Scale (%)</Label>
+              <Label>{t("create.scale")}</Label>
               <Input
                 type="number"
                 min={10}
@@ -1439,11 +1447,11 @@ const CustomPrintOrder = () => {
           </div>
 
           <div>
-            <Label>Additional Details *</Label>
+            <Label>{t("create.additionalDetails")}</Label>
             <Textarea
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder="Any special requirements, notes, or preferences..."
+              placeholder={t("create.detailsPlaceholder")}
               rows={5}
             />
           </div>
@@ -1453,17 +1461,18 @@ const CustomPrintOrder = () => {
             disabled={submitDisabled}
             className="w-full font-display uppercase tracking-wider"
           >
-            {submitting ? "Preparing..." : "Submit custom order"}
+            {submitting ? t("create.preparing") : t("create.submitCustomOrder")}
           </Button>
         </div>
       </div>
 
-      <ReviewSection toolType="custom-print" title="Custom 3D Print Reviews" />
+      <ReviewSection toolType="custom-print" title={t("create.customPrintReviews")} />
     </div>
   );
 };
 
 const CreateYourOwn = () => {
+  const { t } = useTranslation();
   const [pageBlocks, setPageBlocks] = useState<SiteBlock[]>([]);
   const [blocksLoading, setBlocksLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<CreateTabValue>("custom-print");
@@ -1507,12 +1516,11 @@ const CreateYourOwn = () => {
         <div className="container max-w-6xl">
           <motion.div {...fadeUp} className="mb-8">
             <h1 className="mb-2 font-display text-3xl font-bold uppercase text-foreground lg:text-5xl">
-              Create Your <span className="text-primary">Own</span>
+              {t("create.pageTitle")}
             </h1>
 
             <p className="max-w-2xl text-muted-foreground">
-              Upload, customize, preview, and submit. Use custom print for 3D models, lithophane for photo lamps, or
-              gift finder for quick inspiration.
+              {t("create.pageSubtitle")}
             </p>
           </motion.div>
 
@@ -1526,21 +1534,21 @@ const CreateYourOwn = () => {
                 value="custom-print"
                 className="gap-1.5 rounded-xl font-display text-xs uppercase tracking-wider"
               >
-                <Box className="h-4 w-4" /> Custom 3D Print
+                <Box className="h-4 w-4" /> {t("create.tabCustomPrint")}
               </TabsTrigger>
 
               <TabsTrigger
                 value="lithophane"
                 className="gap-1.5 rounded-xl font-display text-xs uppercase tracking-wider"
               >
-                <Image className="h-4 w-4" /> Lithophane
+                <Image className="h-4 w-4" /> {t("create.tabLithophane")}
               </TabsTrigger>
 
               <TabsTrigger
                 value="gift-finder"
                 className="gap-1.5 rounded-xl font-display text-xs uppercase tracking-wider"
               >
-                <Gift className="h-4 w-4" /> Gift Finder
+                <Gift className="h-4 w-4" /> {t("create.tabGiftFinder")}
               </TabsTrigger>
             </TabsList>
 
@@ -1554,9 +1562,9 @@ const CreateYourOwn = () => {
               >
                 {activeTab === "custom-print" && (
                   <ToolShell
-                    eyebrow="Custom print"
-                    title="Custom 3D Print Order"
-                    description="Upload your 3D file or a reference image, choose material and print quality, then continue to the request fee checkout."
+                    eyebrow={t("create.customPrintEyebrow")}
+                    title={t("create.customPrintTitle")}
+                    description={t("create.customPrintDesc")}
                   >
                     <CustomPrintOrder />
                   </ToolShell>
@@ -1564,9 +1572,9 @@ const CreateYourOwn = () => {
 
                 {activeTab === "lithophane" && (
                   <ToolShell
-                    eyebrow="Lithophane"
-                    title="Photo to lithophane"
-                    description="Upload your image, crop it, preview the lamp style in 3D, and send the configuration directly as a custom order."
+                    eyebrow={t("create.lithophaneEyebrow")}
+                    title={t("create.lithophaneTitle")}
+                    description={t("create.lithophaneDesc")}
                   >
                     <LithophaneOrderSection />
                   </ToolShell>
@@ -1574,9 +1582,9 @@ const CreateYourOwn = () => {
 
                 {activeTab === "gift-finder" && (
                   <ToolShell
-                    eyebrow="Gift finder"
-                    title="Find the best match"
-                    description="Choose one or more vibes and get the strongest product matches first."
+                    eyebrow={t("create.giftFinderEyebrow")}
+                    title={t("create.giftFinderTitle")}
+                    description={t("create.giftFinderDesc")}
                   >
                     <GiftFinder />
                   </ToolShell>

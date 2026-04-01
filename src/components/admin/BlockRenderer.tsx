@@ -35,6 +35,7 @@ import { ProductGridSkeleton } from "@/components/shared/loading-states";
 import { fadeUp } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import i18n from "@/lib/i18n";
+import { useTranslation } from "react-i18next";
 
 type ActionType = "none" | "internal_link" | "external_link";
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Eye, Clock, Flame } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useSocialProof, useSocialProofCompact, formatRelativePurchaseTime } from "@/hooks/use-social-proof";
 
 interface SocialProofBadgesProps {
@@ -8,7 +9,6 @@ interface SocialProofBadgesProps {
   variant?: "full" | "compact";
 }
 
-/** Smoothly steps a displayed number toward a target without unmounting */
 function AnimatedNumber({ value }: { value: number }) {
   const [display, setDisplay] = useState(value);
 
@@ -32,6 +32,7 @@ function AnimatedNumber({ value }: { value: number }) {
 }
 
 export default function SocialProofBadges({ productId, variant = "full" }: SocialProofBadgesProps) {
+  const { t } = useTranslation("common");
   const { data } = useSocialProof(variant === "full" ? productId : undefined);
   const compact = useSocialProofCompact(variant === "compact" ? productId : undefined);
 
@@ -47,7 +48,7 @@ export default function SocialProofBadges({ productId, variant = "full" }: Socia
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60" />
           <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
         </span>
-        <span><AnimatedNumber value={viewingNow} /> viewing</span>
+        <span><AnimatedNumber value={viewingNow} /> {t("fomo.viewing")}</span>
       </div>
     );
   }
@@ -65,32 +66,32 @@ export default function SocialProofBadges({ productId, variant = "full" }: Socia
       className="flex flex-wrap gap-2"
     >
       {showViewing && (
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/80 px-2.5 py-1 text-xs text-muted-foreground backdrop-blur-sm">
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-card/60 px-2.5 py-1 text-xs text-muted-foreground shadow-[0_2px_8px_hsl(225_44%_4%/0.3)] backdrop-blur-sm">
           <span className="relative flex h-2 w-2 shrink-0">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/50 duration-[2s]" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
           </span>
           <Eye className="h-3 w-3" />
           <span>
-            <span className="font-medium text-foreground"><AnimatedNumber value={viewingNow} /></span> viewing now
+            <span className="font-medium text-foreground"><AnimatedNumber value={viewingNow} /></span> {t("fomo.viewingNowLabel")}
           </span>
         </div>
       )}
 
       {weeklyPurchases >= 2 && (
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/80 px-2.5 py-1 text-xs text-muted-foreground backdrop-blur-sm">
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-card/60 px-2.5 py-1 text-xs text-muted-foreground shadow-[0_2px_8px_hsl(225_44%_4%/0.3)] backdrop-blur-sm">
           <Flame className="h-3 w-3 text-primary" />
           <span>
-            Purchased <span className="font-medium text-foreground">{weeklyPurchases}</span> times this week
+            {t("fomo.purchasedCount", { count: weeklyPurchases })}
           </span>
         </div>
       )}
 
       {lastPurchased && weeklyPurchases < 2 && (
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/80 px-2.5 py-1 text-xs text-muted-foreground backdrop-blur-sm">
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-card/60 px-2.5 py-1 text-xs text-muted-foreground shadow-[0_2px_8px_hsl(225_44%_4%/0.3)] backdrop-blur-sm">
           <Clock className="h-3 w-3 text-muted-foreground" />
           <span>
-            Last purchased{" "}
+            {t("fomo.lastPurchased")}{" "}
             <span className="font-medium text-foreground">
               {formatRelativePurchaseTime(lastPurchased)}
             </span>

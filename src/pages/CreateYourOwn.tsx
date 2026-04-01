@@ -1678,7 +1678,11 @@ const CreateYourOwn = () => {
   const { t } = useTranslation();
   const [pageBlocks, setPageBlocks] = useState<SiteBlock[]>([]);
   const [blocksLoading, setBlocksLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<CreateTabValue>("custom-print");
+  const [activeTab, setActiveTab] = useState<CreateTabValue>(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("reorderLithophane") || params.get("modifyLithophane")) return "lithophane";
+    return "custom-print";
+  });
 
   useEffect(() => {
     const fetchBlocks = async () => {

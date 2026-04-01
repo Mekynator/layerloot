@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { DollarSign, Package, ShoppingCart, Users, Download, Calendar, Star, MessageSquareMore } from "lucide-react";
+import { DollarSign, Package, ShoppingCart, Users, Download, Calendar, Star, MessageSquareMore, Palette, TicketPercent, Truck, Tags, FileText, Settings } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

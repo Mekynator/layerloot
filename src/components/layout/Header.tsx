@@ -83,7 +83,7 @@ const defaultHeaderSettings: HeaderSettings = {
   desktop_nav_enabled: true,
   mobile_nav_enabled: true,
   logo_height_px: 36,
-  logo_text_class: "font-display text-2xl font-bold uppercase tracking-wider text-secondary-foreground",
+  logo_text_class: "font-display text-2xl font-bold uppercase tracking-wider text-foreground",
   account_label: "My Account",
   auth_label: "Login / Register",
   admin_label: "Admin Dashboard",
@@ -97,40 +97,28 @@ const getNotificationsStorageKey = (userId: string) => `layerloot_account_notifi
 const getLocalizedValue = (value: unknown, fallback = ""): string => {
   if (typeof value === "string") return value;
   if (!value || typeof value !== "object" || Array.isArray(value)) return fallback;
-
   const lang = (i18n.resolvedLanguage || i18n.language || "en").toLowerCase().split("-")[0];
   const map = value as Record<string, string>;
-
   return map[lang] || map.en || fallback;
 };
 
 const readSeenState = (userId: string): SeenState => {
   try {
     const raw = localStorage.getItem(getNotificationsStorageKey(userId));
-    if (!raw) {
-      return {
-        ordersLastSeenAt: null,
-        customRequestsLastSeenAt: null,
-      };
-    }
-
+    if (!raw) return { ordersLastSeenAt: null, customRequestsLastSeenAt: null };
     const parsed = JSON.parse(raw);
     return {
       ordersLastSeenAt: parsed?.ordersLastSeenAt ?? null,
       customRequestsLastSeenAt: parsed?.customRequestsLastSeenAt ?? null,
     };
   } catch {
-    return {
-      ordersLastSeenAt: null,
-      customRequestsLastSeenAt: null,
-    };
+    return { ordersLastSeenAt: null, customRequestsLastSeenAt: null };
   }
 };
 
 const getLatestDate = (values: (string | null | undefined)[]) => {
   const valid = values.filter(Boolean) as string[];
   if (valid.length === 0) return null;
-
   return valid.reduce((latest, current) =>
     new Date(current).getTime() > new Date(latest).getTime() ? current : latest,
   );
@@ -151,7 +139,6 @@ const normalizePath = (value?: string | null) => {
 const isActiveLink = (pathname: string, to: string) => {
   const current = normalizePath(pathname);
   const target = normalizePath(to);
-
   if (target === "/") return current === "/";
   return current === target || current.startsWith(`${target}/`);
 };
@@ -164,18 +151,9 @@ const Header = () => {
   const [hasAccountNotifications, setHasAccountNotifications] = useState(false);
   const [cartPulse, setCartPulse] = useState(false);
   const [cartGlow, setCartGlow] = useState(false);
-  const [cartToast, setCartToast] = useState<{ visible: boolean; text: string }>({
-    visible: false,
-    text: "",
-  });
-  const [flyToCart, setFlyToCart] = useState<FlyToCartState>({
-    visible: false,
-    image: null,
-    x: 0,
-    y: 0,
-    width: 0,
-    height: 0,
-  });
+  const [cartToast, setCartToast] = useState<{ visible: boolean; text: string }>({ visible: false, text: "" });
+  const [flyToCart, setFlyToCart] = useState<FlyToCartState>({ visible: false, image: null, x: 0, y: 0, width: 0, height: 0 });
+  const [scrolled, setScrolled] = useState(false);
 
   const location = useLocation();
   const { totalItems } = useCart();
@@ -185,83 +163,49 @@ const Header = () => {
   const cartButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
-    const fetchAdminAlerts = async () => {
-      if (!isAdmin) {
-        setAdminAlerts(0);
-        return;
-      }
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
+  useEffect(() => {
+    const fetchAdminAlerts = async () => {
+      if (!isAdmin) { setAdminAlerts(0); return; }
       const [ordersRes, customRes, reviewsRes] = await Promise.all([
         supabase.from("orders").select("id", { count: "exact", head: true }).in("status", ["pending", "processing"]),
-        supabase
-          .from("custom_orders")
-          .select("id", { count: "exact", head: true })
-          .in("status", ["pending", "reviewing", "quoted", "accepted"]),
+        supabase.from("custom_orders").select("id", { count: "exact", head: true }).in("status", ["pending", "reviewing", "quoted", "accepted"]),
         supabase.from("product_reviews").select("id", { count: "exact", head: true }).eq("is_approved", false),
       ]);
-
       setAdminAlerts((ordersRes.count ?? 0) + (customRes.count ?? 0) + (reviewsRes.count ?? 0));
     };
-
     void fetchAdminAlerts();
   }, [isAdmin, user]);
 
   useEffect(() => {
     const fetchAccountNotifications = async () => {
-      if (!user) {
-        setHasAccountNotifications(false);
-        return;
-      }
-
+      if (!user) { setHasAccountNotifications(false); return; }
       const seenState = readSeenState(user.id);
-
       const [ordersRes, customOrdersRes] = await Promise.all([
-        supabase
-          .from("orders")
-          .select("created_at")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false }) as unknown as Promise<{
-          data: { created_at: string }[] | null;
-          error: any;
-        }>,
-        supabase
-          .from("custom_orders")
-          .select("id, created_at, updated_at")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false }) as unknown as Promise<{
-          data: { id: string; created_at: string; updated_at: string }[] | null;
-          error: any;
-        }>,
+        supabase.from("orders").select("created_at").eq("user_id", user.id).order("created_at", { ascending: false }) as unknown as Promise<{ data: { created_at: string }[] | null; error: any }>,
+        supabase.from("custom_orders").select("id, created_at, updated_at").eq("user_id", user.id).order("created_at", { ascending: false }) as unknown as Promise<{ data: { id: string; created_at: string; updated_at: string }[] | null; error: any }>,
       ]);
-
       const customOrders = customOrdersRes.data ?? [];
       const customOrderIds = customOrders.map((order) => order.id);
-
       let messages: { created_at: string }[] = [];
-
       if (customOrderIds.length > 0) {
-        const { data: msgData } = await supabase
-          .from("custom_order_messages")
-          .select("created_at, custom_order_id")
-          .in("custom_order_id", customOrderIds);
-
+        const { data: msgData } = await supabase.from("custom_order_messages").select("created_at, custom_order_id").in("custom_order_id", customOrderIds);
         messages = msgData ?? [];
       }
-
       const latestOrderActivityAt = getLatestDate((ordersRes.data ?? []).map((order) => order.created_at));
       const latestCustomActivityAt = getLatestDate([
         ...customOrders.flatMap((order) => [order.created_at, order.updated_at]),
         ...messages.map((msg) => msg.created_at),
       ]);
-
       const hasNewOrders = isAfter(latestOrderActivityAt, seenState.ordersLastSeenAt);
       const hasNewCustomRequests = isAfter(latestCustomActivityAt, seenState.customRequestsLastSeenAt);
-
       setHasAccountNotifications(hasNewOrders || hasNewCustomRequests);
     };
-
     void fetchAccountNotifications();
-
     const interval = window.setInterval(fetchAccountNotifications, 30000);
     return () => window.clearInterval(interval);
   }, [user]);
@@ -271,25 +215,12 @@ const Header = () => {
       supabase.from("site_settings").select("value").eq("key", "branding").maybeSingle(),
       supabase.from("site_settings").select("value").eq("key", "header_settings").maybeSingle(),
     ]).then(([brandingRes, headerRes]) => {
-      if (brandingRes.data?.value) {
-        setBranding({
-          ...defaultBranding,
-          ...(brandingRes.data.value as BrandingSettings),
-        });
-      }
-
-      if (headerRes.data?.value) {
-        setHeaderSettings({
-          ...defaultHeaderSettings,
-          ...(headerRes.data.value as HeaderSettings),
-        });
-      }
+      if (brandingRes.data?.value) setBranding({ ...defaultBranding, ...(brandingRes.data.value as BrandingSettings) });
+      if (headerRes.data?.value) setHeaderSettings({ ...defaultHeaderSettings, ...(headerRes.data.value as HeaderSettings) });
     });
   }, []);
 
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [location.pathname]);
+  useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
   useEffect(() => {
     const handleAddToCartEvent = (event: Event) => {
@@ -298,7 +229,6 @@ const Header = () => {
         image?: string | null;
         sourceRect?: { left: number; top: number; width: number; height: number } | null;
       };
-
       setCartPulse(true);
       setCartGlow(true);
       setCartToast({
@@ -307,34 +237,18 @@ const Header = () => {
           ? t("header.addedToCartNamed", { name: detail.name, defaultValue: `${detail.name} added to cart` })
           : t("header.addedToCart", "Added to cart"),
       });
-
       window.setTimeout(() => setCartPulse(false), 550);
       window.setTimeout(() => setCartGlow(false), 1600);
       window.setTimeout(() => setCartToast({ visible: false, text: "" }), 1900);
-
       const cartRect = cartButtonRef.current?.getBoundingClientRect();
       const sourceRect = detail?.sourceRect;
-
       if (detail?.image && cartRect && sourceRect) {
-        setFlyToCart({
-          visible: true,
-          image: detail.image,
-          x: sourceRect.left,
-          y: sourceRect.top,
-          width: sourceRect.width,
-          height: sourceRect.height,
-        });
-
-        window.setTimeout(() => {
-          setFlyToCart((prev) => ({ ...prev, visible: false }));
-        }, 900);
+        setFlyToCart({ visible: true, image: detail.image, x: sourceRect.left, y: sourceRect.top, width: sourceRect.width, height: sourceRect.height });
+        window.setTimeout(() => { setFlyToCart((prev) => ({ ...prev, visible: false })); }, 900);
       }
     };
-
     window.addEventListener("layerloot:add-to-cart", handleAddToCartEvent as EventListener);
-    return () => {
-      window.removeEventListener("layerloot:add-to-cart", handleAddToCartEvent as EventListener);
-    };
+    return () => { window.removeEventListener("layerloot:add-to-cart", handleAddToCartEvent as EventListener); };
   }, [t]);
 
   const logoLeft = getLocalizedValue(branding.logo_text_left, "Layer");
@@ -372,53 +286,36 @@ const Header = () => {
             src={flyToCart.image}
             alt=""
             className="pointer-events-none fixed z-[80] rounded-xl object-cover shadow-2xl"
-            initial={{
-              left: flyToCart.x,
-              top: flyToCart.y,
-              width: flyToCart.width,
-              height: flyToCart.height,
-              opacity: 0.95,
-              scale: 1,
-            }}
-            animate={{
-              left: cartDestinationRect.left + cartDestinationRect.width / 2 - 18,
-              top: cartDestinationRect.top + cartDestinationRect.height / 2 - 18,
-              width: 36,
-              height: 36,
-              opacity: 0.15,
-              scale: 0.35,
-              rotate: 12,
-            }}
+            initial={{ left: flyToCart.x, top: flyToCart.y, width: flyToCart.width, height: flyToCart.height, opacity: 0.95, scale: 1 }}
+            animate={{ left: cartDestinationRect.left + cartDestinationRect.width / 2 - 18, top: cartDestinationRect.top + cartDestinationRect.height / 2 - 18, width: 36, height: 36, opacity: 0.15, scale: 0.35, rotate: 12 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.75, ease: "easeInOut" }}
           />
         )}
       </AnimatePresence>
 
-      <header className="sticky top-0 z-50 glass-nav">
+      <motion.header
+        initial={false}
+        animate={{
+          backgroundColor: scrolled ? "hsl(225 44% 4% / 0.85)" : "hsl(225 44% 4% / 0.4)",
+          backdropFilter: scrolled ? "blur(24px) saturate(1.2)" : "blur(16px)",
+        }}
+        transition={{ duration: 0.3 }}
+        className="sticky top-0 z-50 border-b border-border/10"
+      >
         <div className="container flex h-16 items-center justify-between">
-          <Link to={logoLink} className="flex items-center gap-2">
+          <Link to={logoLink} className="flex items-center gap-2.5 group">
             {branding.logo_image_url ? (
-              <img
-                src={branding.logo_image_url}
-                alt={logoAlt}
-                style={{ height: `${logoHeight}px` }}
-                className="w-auto object-contain"
-              />
+              <img src={branding.logo_image_url} alt={logoAlt} style={{ height: `${logoHeight}px` }} className="w-auto object-contain" />
             ) : (
               <>
                 {headerSettings.show_logo_icon && (
-                  <img
-                    src={logoImg}
-                    alt={logoAlt}
-                    style={{ height: `${logoHeight}px` }}
-                    className="w-auto object-contain"
-                  />
+                  <img src={logoImg} alt={logoAlt} style={{ height: `${logoHeight}px` }} className="w-auto object-contain transition-transform duration-300 group-hover:scale-105" />
                 )}
                 {headerSettings.show_logo_text && (
                   <span className={headerSettings.logo_text_class || defaultHeaderSettings.logo_text_class}>
                     {logoLeft}
-                    <span className="text-primary">{logoRight}</span>
+                    <span className="gradient-text">{logoRight}</span>
                   </span>
                 )}
               </>
@@ -426,44 +323,41 @@ const Header = () => {
           </Link>
 
           {headerSettings.desktop_nav_enabled && (
-            <nav className="hidden items-center gap-8 md:flex">
+            <nav className="hidden items-center gap-1 md:flex">
               {desktopLinks.map((link) => (
                 <Link
                   key={`${link.to}-${link.localizedLabel}`}
                   to={link.to}
-                  className={`font-display text-sm uppercase tracking-widest transition-colors hover:text-primary ${
-                    isActiveLink(location.pathname, link.to) ? "text-primary" : "text-secondary-foreground"
+                  className={`relative px-4 py-2 font-display text-sm uppercase tracking-widest transition-all duration-200 rounded-lg hover:bg-accent/10 ${
+                    isActiveLink(location.pathname, link.to) ? "text-primary" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {link.localizedLabel}
+                  {isActiveLink(location.pathname, link.to) && (
+                    <motion.div
+                      layoutId="nav-indicator"
+                      className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full bg-primary"
+                      transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
+                    />
+                  )}
                 </Link>
               ))}
             </nav>
           )}
 
-          <div className="relative flex items-center gap-2">
+          <div className="relative flex items-center gap-1">
             {headerSettings.show_cart_icon && (
               <div className="relative">
                 <Link to="/cart">
                   <motion.div
-                    animate={
-                      cartPulse
-                        ? {
-                            scale: [1, 0.92, 1.12, 1],
-                            rotate: [0, -6, 4, 0],
-                          }
-                        : {
-                            scale: 1,
-                            rotate: 0,
-                          }
-                    }
+                    animate={cartPulse ? { scale: [1, 0.92, 1.12, 1], rotate: [0, -6, 4, 0] } : { scale: 1, rotate: 0 }}
                     transition={{ duration: 0.5, ease: "easeOut" }}
                   >
                     <Button
                       ref={cartButtonRef}
                       variant="ghost"
                       size="icon"
-                      className={`relative text-secondary-foreground transition-all hover:text-foreground ${
+                      className={`relative text-muted-foreground transition-all hover:text-foreground ${
                         cartGlow ? "shadow-[0_0_28px_hsl(var(--primary)/0.35)]" : ""
                       }`}
                       aria-label={t("nav.cart", "Cart")}
@@ -474,7 +368,7 @@ const Header = () => {
                           key={totalItems}
                           initial={{ scale: 0.7, opacity: 0.5 }}
                           animate={{ scale: 1, opacity: 1 }}
-                          className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-xs font-bold text-primary"
+                          className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-r from-primary to-accent text-[10px] font-bold text-primary-foreground"
                         >
                           {totalItems}
                         </motion.span>
@@ -482,14 +376,13 @@ const Header = () => {
                     </Button>
                   </motion.div>
                 </Link>
-
                 <AnimatePresence>
                   {cartToast.visible && (
                     <motion.div
                       initial={{ opacity: 0, y: 6, scale: 0.96 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -6, scale: 0.96 }}
-                      className="pointer-events-none absolute right-0 top-full mt-2 whitespace-nowrap rounded-full border border-primary/20 bg-background/95 px-3 py-1.5 text-xs font-medium text-primary shadow-lg"
+                      className="pointer-events-none absolute right-0 top-full mt-2 whitespace-nowrap rounded-full border border-primary/20 bg-card/90 px-3 py-1.5 text-xs font-medium text-primary shadow-lg backdrop-blur-xl"
                     >
                       {cartToast.text}
                     </motion.div>
@@ -502,14 +395,9 @@ const Header = () => {
 
             {isAdmin && headerSettings.show_admin_icon && (
               <Link to="/admin">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative text-secondary-foreground hover:text-foreground"
-                  aria-label={getLocalizedValue(headerSettings.admin_label, t("nav.admin", "Admin"))}
-                >
+                <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground" aria-label={getLocalizedValue(headerSettings.admin_label, t("nav.admin", "Admin"))}>
                   <Shield className="h-5 w-5" />
-                  {adminAlerts > 0 && <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500" />}
+                  {adminAlerts > 0 && <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-primary animate-pulse" />}
                 </Button>
               </Link>
             )}
@@ -519,47 +407,29 @@ const Header = () => {
                 {user ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="relative text-secondary-foreground hover:text-primary"
-                        aria-label={getLocalizedValue(headerSettings.account_label, t("nav.account", "My Account"))}
-                      >
+                      <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-primary" aria-label={getLocalizedValue(headerSettings.account_label, t("nav.account", "My Account"))}>
                         <User className="h-5 w-5" />
-                        {hasAccountNotifications && (
-                          <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500" />
-                        )}
+                        {hasAccountNotifications && <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-primary animate-pulse" />}
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
+                    <DropdownMenuContent align="end" className="border-border/20 bg-card/90 backdrop-blur-2xl">
                       <DropdownMenuItem asChild>
-                        <Link to="/account" className="cursor-pointer">
-                          {getLocalizedValue(headerSettings.account_label, t("nav.account", "My Account"))}
-                        </Link>
+                        <Link to="/account" className="cursor-pointer">{getLocalizedValue(headerSettings.account_label, t("nav.account", "My Account"))}</Link>
                       </DropdownMenuItem>
                       {isAdmin && (
                         <DropdownMenuItem asChild>
-                          <Link to="/admin" className="cursor-pointer">
-                            <Shield className="mr-2 h-4 w-4" />{" "}
-                            {getLocalizedValue(headerSettings.admin_label, t("nav.admin", "Admin"))}
-                          </Link>
+                          <Link to="/admin" className="cursor-pointer"><Shield className="mr-2 h-4 w-4" /> {getLocalizedValue(headerSettings.admin_label, t("nav.admin", "Admin"))}</Link>
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuSeparator />
+                      <DropdownMenuSeparator className="bg-border/20" />
                       <DropdownMenuItem onClick={signOut} className="cursor-pointer">
-                        <LogOut className="mr-2 h-4 w-4" />{" "}
-                        {getLocalizedValue(headerSettings.sign_out_label, t("nav.signOut", "Sign Out"))}
+                        <LogOut className="mr-2 h-4 w-4" /> {getLocalizedValue(headerSettings.sign_out_label, t("nav.signOut", "Sign Out"))}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : (
                   <Link to="/auth">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-secondary-foreground hover:text-primary"
-                      aria-label={getLocalizedValue(headerSettings.auth_label, t("nav.login", "Login / Register"))}
-                    >
+                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary" aria-label={getLocalizedValue(headerSettings.auth_label, t("nav.login", "Login / Register"))}>
                       <User className="h-5 w-5" />
                     </Button>
                   </Link>
@@ -571,7 +441,7 @@ const Header = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-secondary-foreground hover:text-primary md:hidden"
+                className="text-muted-foreground hover:text-primary md:hidden"
                 onClick={() => setMobileOpen((v) => !v)}
                 aria-label={mobileOpen ? t("nav.closeMenu", "Close menu") : t("nav.openMenu", "Open menu")}
               >
@@ -581,55 +451,46 @@ const Header = () => {
           </div>
         </div>
 
-        {mobileOpen && headerSettings.mobile_nav_enabled && (
-          <nav className="border-t border-border/20 bg-secondary/90 backdrop-blur-2xl px-4 pb-4 md:hidden">
-            {desktopLinks.map((link) => (
-              <Link
-                key={`${link.to}-${link.localizedLabel}-mobile`}
-                to={link.to}
-                className={`block py-3 font-display text-sm uppercase tracking-widest transition-colors hover:text-primary ${
-                  isActiveLink(location.pathname, link.to) ? "text-primary" : "text-secondary-foreground"
-                }`}
-              >
-                {link.localizedLabel}
-              </Link>
-            ))}
-
-            {user ? (
-              <>
+        <AnimatePresence>
+          {mobileOpen && headerSettings.mobile_nav_enabled && (
+            <motion.nav
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="overflow-hidden border-t border-border/10 bg-card/80 backdrop-blur-2xl px-4 pb-4 md:hidden"
+            >
+              {desktopLinks.map((link) => (
                 <Link
-                  to="/account"
-                  className="block py-3 font-display text-sm uppercase tracking-widest text-secondary-foreground hover:text-primary"
+                  key={`${link.to}-${link.localizedLabel}-mobile`}
+                  to={link.to}
+                  className={`block py-3 font-display text-sm uppercase tracking-widest transition-colors hover:text-primary ${
+                    isActiveLink(location.pathname, link.to) ? "text-primary" : "text-muted-foreground"
+                  }`}
                 >
-                  {getLocalizedValue(
-                    headerSettings.mobile_account_label,
-                    getLocalizedValue(headerSettings.account_label, t("nav.account", "My Account")),
-                  )}
+                  {link.localizedLabel}
                 </Link>
-
-                {isAdmin && (
-                  <Link
-                    to="/admin"
-                    className="block py-3 font-display text-sm uppercase tracking-widest text-secondary-foreground hover:text-primary"
-                  >
-                    {getLocalizedValue(
-                      headerSettings.mobile_admin_label,
-                      getLocalizedValue(headerSettings.admin_label, t("nav.admin", "Admin")),
-                    )}
+              ))}
+              {user ? (
+                <>
+                  <Link to="/account" className="block py-3 font-display text-sm uppercase tracking-widest text-muted-foreground hover:text-primary">
+                    {getLocalizedValue(headerSettings.mobile_account_label, getLocalizedValue(headerSettings.account_label, t("nav.account", "My Account")))}
                   </Link>
-                )}
-              </>
-            ) : (
-              <Link
-                to="/auth"
-                className="block py-3 font-display text-sm uppercase tracking-widest text-secondary-foreground hover:text-primary"
-              >
-                {getLocalizedValue(headerSettings.auth_label, t("nav.login", "Login / Register"))}
-              </Link>
-            )}
-          </nav>
-        )}
-      </header>
+                  {isAdmin && (
+                    <Link to="/admin" className="block py-3 font-display text-sm uppercase tracking-widest text-muted-foreground hover:text-primary">
+                      {getLocalizedValue(headerSettings.mobile_admin_label, getLocalizedValue(headerSettings.admin_label, t("nav.admin", "Admin")))}
+                    </Link>
+                  )}
+                </>
+              ) : (
+                <Link to="/auth" className="block py-3 font-display text-sm uppercase tracking-widest text-muted-foreground hover:text-primary">
+                  {getLocalizedValue(headerSettings.auth_label, t("nav.login", "Login / Register"))}
+                </Link>
+              )}
+            </motion.nav>
+          )}
+        </AnimatePresence>
+      </motion.header>
 
       <GlobalSectionRenderer page="global_header_bottom" />
     </>

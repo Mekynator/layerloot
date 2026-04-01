@@ -395,6 +395,53 @@ const AdminSettings = () => {
             </Card>
           </div>
         </TabsContent>
+
+        <TabsContent value="policies" className="space-y-6">
+          <p className="text-sm text-muted-foreground">Edit your store policies below. Content supports Markdown formatting. Changes apply after saving.</p>
+          <div className="grid gap-4">
+            {POLICY_KEYS.map((policy) => {
+              const current = policies[policy.settingKey] || { title: policy.title, body: "" };
+              return (
+                <Card key={policy.settingKey}>
+                  <CardHeader>
+                    <CardTitle className="font-display text-sm uppercase">{policy.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <Label className="text-xs">Page Title</Label>
+                      <Input
+                        value={current.title}
+                        onChange={(e) =>
+                          setPolicies((prev) => ({
+                            ...prev,
+                            [policy.settingKey]: { ...current, title: e.target.value },
+                          }))
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Content (Markdown)</Label>
+                      <Textarea
+                        value={current.body}
+                        onChange={(e) =>
+                          setPolicies((prev) => ({
+                            ...prev,
+                            [policy.settingKey]: { ...current, body: e.target.value },
+                          }))
+                        }
+                        rows={10}
+                        className="font-mono text-xs"
+                      />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      Live at: <span className="font-mono text-primary">/policies/{policy.slug}</span>
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </TabsContent>
       </Tabs>
     </AdminLayout>
   );

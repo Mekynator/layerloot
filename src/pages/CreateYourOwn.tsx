@@ -1351,7 +1351,7 @@ const CustomPrintOrder = () => {
                 {MATERIALS.map((material) => (
                   <SelectItem key={material.value} value={material.value}>
                     <span className="font-medium">{material.label}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">– {material.desc}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">– {t(material.descKey)}</span>
                   </SelectItem>
                 ))}
               </SelectContent>

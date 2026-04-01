@@ -75,6 +75,7 @@ const Dashboard = () => {
         pendingOrdersRes,
         activeCustomOrdersRes,
         pendingReviewsRes,
+        pendingShowcasesRes,
       ] = await Promise.all([
         supabase.from("products").select("id", { count: "exact", head: true }),
         supabase.from("profiles").select("id", { count: "exact", head: true }),
@@ -89,6 +90,7 @@ const Dashboard = () => {
           .select("id", { count: "exact", head: true })
           .in("status", ["pending", "reviewing", "quoted", "accepted"]),
         supabase.from("product_reviews").select("id", { count: "exact", head: true }).eq("is_approved", false),
+        supabase.from("custom_order_showcases").select("id", { count: "exact", head: true }).eq("visibility_status", "shared").eq("approved_by_admin", false),
       ]);
 
       const revenue = allOrders.reduce((s, o) => s + Number(o.total), 0);

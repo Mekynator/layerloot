@@ -628,7 +628,7 @@ export default function CartPage() {
                       >
                         <div className="flex items-center gap-2">
                           <CheckCircle2 className="h-4 w-4" />
-                          Preparing secure Stripe checkout...
+                          {t("cart.preparingCheckout")}
                         </div>
                       </motion.div>
                     )}

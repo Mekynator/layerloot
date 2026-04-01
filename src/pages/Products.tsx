@@ -145,7 +145,7 @@ const Products = () => {
                     animate={{ opacity: 1 }}
                     className="text-sm text-muted-foreground"
                   >
-                    {filtered.length} products
+                    {t("products.productCount", { count: filtered.length, defaultValue: "{{count}} products" })}
                   </motion.div>
                 </div>
               </motion.div>

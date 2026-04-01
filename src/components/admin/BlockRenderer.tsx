@@ -1579,6 +1579,7 @@ const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
 };
 
 const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
+  useTranslation();
   const c = block.content || {};
   const [items, setItems] = useState<InstagramMediaItem[]>([]);
   const [loading, setLoading] = useState(true);

@@ -9,15 +9,18 @@ export type SocialProofData = {
   purchaseCountThisWeek: number;
 };
 
-// Deterministic pseudo-random from product ID for consistent "live" counts
+// Pseudo-random viewing count that shifts every 15 seconds with small drift
 function pseudoViewing(productId: string): number {
   let hash = 0;
   for (let i = 0; i < productId.length; i++) {
     hash = ((hash << 5) - hash + productId.charCodeAt(i)) | 0;
   }
-  const minute = Math.floor(Date.now() / 60000);
-  const seed = Math.abs(hash ^ minute);
-  return 3 + (seed % 18); // 3-20 range
+  const tick = Math.floor(Date.now() / 15000); // 15-second buckets
+  const seed = Math.abs(hash ^ tick);
+  const base = 3 + (seed % 18); // 3-20 base
+  // add small random drift (-2 to +2) seeded by a second hash layer
+  const drift = ((seed * 7 + tick * 3) % 5) - 2;
+  return Math.max(2, Math.min(22, base + drift));
 }
 
 function pseudoRecentViews(productId: string): number {

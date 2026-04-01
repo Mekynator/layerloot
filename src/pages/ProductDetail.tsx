@@ -28,6 +28,7 @@ import { useProductDetailQuery } from "@/hooks/use-storefront";
 const AUTO_GALLERY_MS = 6500;
 
 const ProductDetail = () => {
+  const { t } = useTranslation("common");
   const { slug } = useParams<{ slug: string }>();
   const { addItem } = useCart();
   const { user } = useAuth();

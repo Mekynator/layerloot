@@ -17,6 +17,7 @@ const getBlockLabel = (blockType: string, title?: string | null) => {
 };
 
 const GlobalSectionRenderer = ({ page }: GlobalSectionRendererProps) => {
+  useTranslation();
   const [blocks, setBlocks] = useState<SiteBlock[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchParams] = useSearchParams();

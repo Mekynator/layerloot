@@ -1,0 +1,2 @@
+ALTER TABLE public.user_vouchers DROP CONSTRAINT user_vouchers_gift_status_check;
+ALTER TABLE public.user_vouchers ADD CONSTRAINT user_vouchers_gift_status_check CHECK (gift_status = ANY (ARRAY['available'::text, 'pending_claim'::text, 'gifted'::text, 'claimed'::text, 'used'::text, 'cancelled'::text]));

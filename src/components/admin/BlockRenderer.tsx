@@ -1491,6 +1491,7 @@ const CtaBlock = ({ block }: { block: SiteBlock }) => {
 };
 
 const SingleButtonBlock = ({ block }: { block: SiteBlock }) => {
+  useTranslation();
   const c = block.content || {};
   const buttons = resolveButtons(c, [
     {

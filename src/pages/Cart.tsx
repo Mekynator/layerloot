@@ -611,10 +611,10 @@ export default function CartPage() {
                     {isCheckingOut ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Redirecting...
+                        {t("cart.redirecting")}
                       </>
                     ) : (
-                      "Continue to Secure Checkout"
+                      t("cart.checkout")
                     )}
                   </Button>
 

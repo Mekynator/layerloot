@@ -100,8 +100,8 @@ const ImageCollectionBlock = ({ content, className }: { content?: ImageCollectio
     const card = (
       <div
         className="group relative overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md"
-        style={{ boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)' }}
         style={{
+          boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)',
           gridColumn: `span ${Math.min(Math.max(item.colSpan ?? 1, 1), columns)}`,
           gridRow: `span ${Math.min(Math.max(item.rowSpan ?? 1, 1), 4)}`,
           minHeight: 220,

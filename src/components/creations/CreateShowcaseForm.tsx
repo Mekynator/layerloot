@@ -39,6 +39,9 @@ export default function CreateShowcaseForm({ onCreated }: { onCreated?: () => vo
   const [reorderEnabled, setReorderEnabled] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [modelUploading, setModelUploading] = useState(false);
+  const [modelUrl, setModelUrl] = useState<string | null>(null);
+  const [modelFilename, setModelFilename] = useState<string | null>(null);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -56,6 +59,23 @@ export default function CreateShowcaseForm({ onCreated }: { onCreated?: () => vo
     }
     setImageUrls((prev) => [...prev, ...urls]);
     setUploading(false);
+  };
+
+  const handleModelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setModelUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `showcases/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage.from("custom-order-files").upload(path, file);
+    if (!error) {
+      const { data } = supabase.storage.from("custom-order-files").getPublicUrl(path);
+      setModelUrl(data.publicUrl);
+      setModelFilename(file.name);
+    } else {
+      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+    }
+    setModelUploading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

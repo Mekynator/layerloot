@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Activity, Clock3, Gift, Mail, Pencil, Plus, Minus, ShieldCheck, ShoppingBag, Ticket } from "lucide-react";
+import { Activity, Clock3, Gift, Mail, Pencil, Plus, Minus, ShieldCheck, ShoppingBag, Ticket, Crown, AlertTriangle, UserMinus, Users, Zap, TrendingUp } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -118,6 +119,41 @@ interface AdminUser {
   loyaltyHistory: LoyaltyRow[];
   vouchers: VoucherRow[];
   activity: ActivityItem[];
+  tier: "new" | "active" | "loyal" | "vip" | "dormant" | "at_risk";
+  daysSinceLastActivity: number | null;
+  recommendedAction: string | null;
+}
+
+const TIER_STYLES: Record<AdminUser["tier"], string> = {
+  new: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  active: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  loyal: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+  vip: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  dormant: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
+  at_risk: "bg-red-500/10 text-red-400 border-red-500/20",
+};
+
+const TIER_LABELS: Record<AdminUser["tier"], string> = {
+  new: "New", active: "Active", loyal: "Loyal", vip: "VIP", dormant: "Dormant", at_risk: "At Risk",
+};
+
+function classifyTier(orderCount: number, totalSpent: number, daysSince: number | null): AdminUser["tier"] {
+  if (daysSince !== null && daysSince > 90) return "dormant";
+  if (daysSince !== null && daysSince > 60 && totalSpent > 500) return "at_risk";
+  if (totalSpent > 3000 || orderCount > 8) return "vip";
+  if (orderCount >= 3 || totalSpent > 1000) return "loyal";
+  if (orderCount >= 1) return "active";
+  return "new";
+}
+
+function getRecommendedAction(user: { tier: AdminUser["tier"]; unusedVouchers: number; customOrderCount: number; pointsBalance: number }): string | null {
+  if (user.tier === "at_risk") return "Send personalized win-back offer";
+  if (user.tier === "dormant") return "Re-engage with discount campaign";
+  if (user.tier === "vip" && user.unusedVouchers === 0) return "Reward with exclusive voucher";
+  if (user.unusedVouchers > 0) return "Remind about unused vouchers";
+  if (user.pointsBalance > 200) return "Encourage reward redemption";
+  if (user.customOrderCount > 0 && user.tier === "active") return "Follow up on custom orders";
+  return null;
 }
 
 const currency = new Intl.NumberFormat("da-DK", {
@@ -339,26 +375,36 @@ const AdminClients = () => {
         vouchers: userVouchers,
       });
 
+      const lastActivityAt = activity[0]?.created_at ?? authUser.last_sign_in_at ?? authUser.created_at;
+      const daysSince = lastActivityAt ? Math.floor((Date.now() - new Date(lastActivityAt).getTime()) / 86400000) : null;
+      const orderCount = userOrders.length;
+      const activeVouchers = userVouchers.filter((voucher) => !voucher.is_used).length;
+      const customOrderCount = userCustomOrders.length;
+      const tier = classifyTier(orderCount, totalSpent, daysSince);
+
       return {
         id: authUser.id,
         email: authUser.email,
         full_name: profile?.full_name || authUser.user_metadata?.full_name || authUser.email?.split("@")[0] || "Unnamed user",
         joined_at: authUser.created_at,
         last_sign_in_at: authUser.last_sign_in_at,
-        last_activity_at: activity[0]?.created_at ?? authUser.last_sign_in_at ?? authUser.created_at,
+        last_activity_at: lastActivityAt,
         role: roleMap.get(authUser.id) === "admin" || authUser.role === "admin" ? "admin" : "user",
         profile,
         points_balance: pointsBalance,
-        order_count: userOrders.length,
+        order_count: orderCount,
         total_spent: totalSpent,
-        active_vouchers: userVouchers.filter((voucher) => !voucher.is_used).length,
+        active_vouchers: activeVouchers,
         used_vouchers: userVouchers.filter((voucher) => voucher.is_used).length,
-        custom_order_count: userCustomOrders.length,
+        custom_order_count: customOrderCount,
         orders: userOrders,
         customOrders: userCustomOrders,
         loyaltyHistory: userLoyalty,
         vouchers: userVouchers,
         activity,
+        tier,
+        daysSinceLastActivity: daysSince,
+        recommendedAction: getRecommendedAction({ tier, unusedVouchers: activeVouchers, customOrderCount, pointsBalance }),
       } satisfies AdminUser;
     });
 
@@ -513,12 +559,12 @@ const AdminClients = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>User</TableHead>
+                <TableHead>Tier</TableHead>
                 <TableHead>Orders</TableHead>
                 <TableHead>Spent</TableHead>
                 <TableHead>Points</TableHead>
-                <TableHead>Rewards</TableHead>
                 <TableHead>Last Activity</TableHead>
-                <TableHead>Joined</TableHead>
+                <TableHead>Action Hint</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -549,16 +595,20 @@ const AdminClients = () => {
                         <p className="text-sm text-muted-foreground">{user.email || "No email available"}</p>
                       </div>
                     </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={`text-[10px] ${TIER_STYLES[user.tier]}`}>
+                        {TIER_LABELS[user.tier]}
+                      </Badge>
+                    </TableCell>
                     <TableCell>{user.order_count + user.custom_order_count}</TableCell>
                     <TableCell className="font-display font-bold text-primary">{currency.format(user.total_spent)}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">{user.points_balance} pts</Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {user.active_vouchers} active · {user.used_vouchers} used
-                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{dateTime(user.last_activity_at)}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{dateOnly(user.joined_at)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">
+                      {user.recommendedAction || "—"}
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(user)}>
                         <Pencil className="h-4 w-4" />
@@ -587,6 +637,7 @@ const AdminClients = () => {
             <Tabs defaultValue="overview" className="space-y-4">
               <TabsList className="flex w-full flex-wrap justify-start gap-2 bg-transparent p-0">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="crm">CRM</TabsTrigger>
                 <TabsTrigger value="orders">Orders</TabsTrigger>
                 <TabsTrigger value="rewards">Rewards</TabsTrigger>
                 <TabsTrigger value="activity">Activity</TabsTrigger>
@@ -662,6 +713,94 @@ const AdminClients = () => {
                       <div className="rounded-lg border border-border p-4">
                         <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Active rewards</p>
                         <p className="mt-2 font-display text-2xl font-bold">{selectedUser.active_vouchers}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="crm" className="space-y-4">
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="font-display uppercase">Customer Intelligence</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center gap-3 rounded-lg border border-border p-4">
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${TIER_STYLES[selectedUser.tier]}`}>
+                          {selectedUser.tier === "vip" ? <Crown className="h-5 w-5" /> :
+                           selectedUser.tier === "at_risk" ? <AlertTriangle className="h-5 w-5" /> :
+                           selectedUser.tier === "dormant" ? <UserMinus className="h-5 w-5" /> :
+                           <Users className="h-5 w-5" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">Customer Tier</p>
+                          <Badge variant="outline" className={`mt-1 ${TIER_STYLES[selectedUser.tier]}`}>
+                            {TIER_LABELS[selectedUser.tier]}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="rounded-lg border border-border bg-muted/30 p-4">
+                          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Avg Order Value</p>
+                          <p className="mt-2 font-display text-xl font-bold">
+                            {selectedUser.order_count > 0 ? currency.format(selectedUser.total_spent / selectedUser.order_count) : "—"}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-muted/30 p-4">
+                          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Days Since Activity</p>
+                          <p className="mt-2 font-display text-xl font-bold">
+                            {selectedUser.daysSinceLastActivity !== null ? `${selectedUser.daysSinceLastActivity}d` : "—"}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-muted/30 p-4">
+                          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Lifetime Value</p>
+                          <p className="mt-2 font-display text-xl font-bold">{currency.format(selectedUser.total_spent)}</p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-muted/30 p-4">
+                          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Unused Vouchers</p>
+                          <p className="mt-2 font-display text-xl font-bold">{selectedUser.active_vouchers}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="font-display uppercase">Recommended Actions</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {selectedUser.recommendedAction ? (
+                        <div className="flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
+                          <Zap className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{selectedUser.recommendedAction}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Based on {TIER_LABELS[selectedUser.tier]} tier classification and activity patterns.
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4 text-sm text-foreground">
+                          No specific action needed — customer is engaged.
+                        </div>
+                      )}
+
+                      <div className="space-y-2 pt-2">
+                        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Quick Actions</p>
+                        <div className="flex flex-wrap gap-2">
+                          <Button size="sm" variant="outline" className="h-7 text-xs" asChild>
+                            <Link to="/admin/discounts">Create Offer</Link>
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-7 text-xs" asChild>
+                            <Link to="/admin/campaigns">Start Campaign</Link>
+                          </Button>
+                          {selectedUser.custom_order_count > 0 && (
+                            <Button size="sm" variant="outline" className="h-7 text-xs" asChild>
+                              <Link to="/admin/custom-orders">View Custom Orders</Link>
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>

@@ -65,11 +65,11 @@ const REQUEST_FEE_DKK = 100;
 const CUSTOM_ORDER_FILES_BUCKET = "custom-order-files";
 
 const MATERIALS = [
-  { value: "pla", label: "PLA", desc: "Standard, biodegradable" },
-  { value: "abs", label: "ABS", desc: "Strong, heat-resistant" },
-  { value: "petg", label: "PETG", desc: "Durable, flexible" },
-  { value: "tpu", label: "TPU", desc: "Flexible, rubber-like" },
-  { value: "resin", label: "Resin", desc: "High detail, smooth" },
+  { value: "pla", label: "PLA", descKey: "create.materialPla" },
+  { value: "abs", label: "ABS", descKey: "create.materialAbs" },
+  { value: "petg", label: "PETG", descKey: "create.materialPetg" },
+  { value: "tpu", label: "TPU", descKey: "create.materialTpu" },
+  { value: "resin", label: "Resin", descKey: "create.materialResin" },
 ];
 
 const COLORS = [
@@ -84,10 +84,10 @@ const COLORS = [
 ];
 
 const QUALITIES = [
-  { value: "high", label: "High", desc: "0.2mm – Fine detail" },
-  { value: "standard", label: "Standard", desc: "0.4mm – Balanced" },
-  { value: "moderate", label: "Moderate", desc: "0.6mm – Faster print" },
-  { value: "low", label: "Low", desc: "0.8mm – Lowest detail" },
+  { value: "high", label: "High", descKey: "create.qualityHigh" },
+  { value: "standard", label: "Standard", descKey: "create.qualityStandard" },
+  { value: "moderate", label: "Moderate", descKey: "create.qualityModerate" },
+  { value: "low", label: "Low", descKey: "create.qualityLow" },
 ];
 
 const GIFT_FINDER_ICON_MAP = {

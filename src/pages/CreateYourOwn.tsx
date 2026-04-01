@@ -1256,8 +1256,8 @@ const CustomPrintOrder = () => {
               onDrop={(e) => void handleDrop(e, "model")}
             >
               <UploadDropzone
-                label={file ? file.name : "Click to upload"}
-                sublabel="STL, OBJ, 3MF files supported"
+                label={file ? file.name : t("create.clickToUpload")}
+                sublabel={t("create.modelFilesSupported")}
                 icon={<Upload className="h-8 w-8 text-muted-foreground" />}
                 dragActive={modelDragActive}
                 onClick={() => document.getElementById("custom-model-upload")?.click()}

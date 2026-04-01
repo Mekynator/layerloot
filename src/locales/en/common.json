@@ -417,6 +417,17 @@
     "qualityModerate": "0.6mm – Faster print",
     "qualityLow": "0.8mm – Lowest detail"
   },
+  "fomo": {
+    "viewingNow": "{{count}} people viewing right now",
+    "purchasedThisWeek": "Purchased {{count}}× this week",
+    "lastBought": "Last bought {{time}}",
+    "onlyLeft": "Only {{count}} left!",
+    "remaining": "{{count}} remaining in stock",
+    "viewing": "viewing",
+    "viewingNowLabel": "viewing now",
+    "purchasedCount": "Purchased {{count}} times this week",
+    "lastPurchased": "Last purchased"
+  },
   "common": {
     "loading": "Loading...",
     "error": "Error",

@@ -409,6 +409,17 @@
     "qualityModerate": "0,6mm – Imprimare mai rapidă",
     "qualityLow": "0,8mm – Cel mai scăzut detaliu"
   },
+  "fomo": {
+    "viewingNow": "{{count}} persoane vizualizează acum",
+    "purchasedThisWeek": "Cumpărat de {{count}}× săptămâna aceasta",
+    "lastBought": "Ultima achiziție {{time}}",
+    "onlyLeft": "Doar {{count}} rămase!",
+    "remaining": "{{count}} în stoc",
+    "viewing": "vizualizează",
+    "viewingNowLabel": "vizualizează acum",
+    "purchasedCount": "Cumpărat de {{count}} ori săptămâna aceasta",
+    "lastPurchased": "Ultima achiziție"
+  },
   "common": {
     "loading": "Se încarcă...",
     "error": "Eroare",

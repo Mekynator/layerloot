@@ -409,6 +409,17 @@
     "qualityModerate": "0,6mm – Impresión más rápida",
     "qualityLow": "0,8mm – Menor detalle"
   },
+  "fomo": {
+    "viewingNow": "{{count}} personas viendo ahora mismo",
+    "purchasedThisWeek": "Comprado {{count}}× esta semana",
+    "lastBought": "Última compra {{time}}",
+    "onlyLeft": "¡Solo quedan {{count}}!",
+    "remaining": "{{count}} en stock",
+    "viewing": "viendo",
+    "viewingNowLabel": "viendo ahora",
+    "purchasedCount": "Comprado {{count}} veces esta semana",
+    "lastPurchased": "Última compra"
+  },
   "common": {
     "loading": "Cargando...",
     "error": "Error",

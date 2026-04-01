@@ -3,12 +3,10 @@ import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ShoppingBag } from "lucide-react";
+import { Check, ShoppingBag, ArrowRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useCart } from "@/contexts/CartContext";
 import RatingStars from "@/components/social/RatingStars";
-import ProductTrustBadges from "@/components/social/ProductTrustBadges";
-import SocialProofBadges from "@/components/social/SocialProofBadges";
 import { formatPrice } from "@/lib/currency";
 import type { ProductSocialProof } from "@/lib/social-proof";
 
@@ -46,18 +44,11 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
   }, [product.images]);
 
   const currentImage = images[currentImageIndex] || "/placeholder.svg";
-  const secondaryImage = images.length > 1 ? images[(currentImageIndex + 1) % images.length] : null;
   const isNew = product.created_at ? Date.now() - new Date(product.created_at).getTime() < 14 * 86400000 : false;
   const hasSale = product.compare_at_price != null && Number(product.compare_at_price) > Number(product.price);
   const discountPct = hasSale
     ? Math.round(((Number(product.compare_at_price) - Number(product.price)) / Number(product.compare_at_price)) * 100)
     : 0;
-
-  const trustBadges = [
-    ...(product.is_featured ? ["best seller"] : []),
-    ...(isNew ? ["recently added"] : []),
-    ...(socialProof?.badges ?? []),
-  ].slice(0, 3);
 
   useEffect(() => {
     if (images.length <= 1 || isHovered) return;
@@ -112,20 +103,25 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.06 }}
-      whileHover={{ y: -6 }}
+      transition={{ duration: 0.5, delay: index * 0.08, ease: [0.22, 1, 0.36, 1] }}
       className="h-full"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <Link
         to={`/products/${product.slug}`}
-        className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/15 bg-card/40 shadow-[0_4px_32px_hsl(217_91%_60%/0.04)] backdrop-blur-xl transition-all duration-500 hover:border-primary/25 hover:shadow-[0_20px_64px_hsl(217_91%_60%/0.12)] shine-sweep"
+        className="group relative flex h-full flex-col overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md transition-all duration-500"
+        style={{
+          boxShadow: isHovered
+            ? '0 24px 80px -12px hsl(217 91% 60% / 0.18), 0 0 0 1px hsl(217 91% 60% / 0.08)'
+            : '0 8px 40px -8px hsl(225 44% 4% / 0.5), 0 0 0 1px hsl(215 20% 93% / 0.04)',
+          transform: isHovered ? 'translateY(-8px)' : 'translateY(0)',
+        }}
       >
-        {/* Image */}
-        <div className="relative aspect-[4/5] overflow-hidden bg-muted/20">
+        {/* Image area */}
+        <div className="relative aspect-[4/5] overflow-hidden">
           <AnimatePresence mode="wait">
             <motion.img
               key={currentImage}
@@ -134,63 +130,64 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
               alt={product.name}
               className="absolute inset-0 h-full w-full object-cover"
               loading="lazy"
-              initial={{ opacity: 0, scale: 1.04 }}
-              animate={{ opacity: 1, scale: isHovered ? 1.08 : 1 }}
+              initial={{ opacity: 0, scale: 1.06 }}
+              animate={{ opacity: 1, scale: isHovered ? 1.1 : 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.6 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
             />
           </AnimatePresence>
 
-          {secondaryImage && isHovered && (
-            <img src={secondaryImage} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-0" loading="lazy" />
-          )}
+          {/* Soft bottom gradient for text readability */}
+          <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent opacity-70" />
 
-          {/* Gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/10 to-transparent opacity-60 transition-opacity duration-500 group-hover:opacity-80" />
-
-          {/* Badges */}
-          <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
+          {/* Badges — floating, no background strips */}
+          <div className="absolute left-3 top-3 flex flex-wrap gap-2">
             {hasSale && (
-              <Badge className="bg-gradient-to-r from-primary to-accent font-display text-[10px] uppercase tracking-wider text-primary-foreground shadow-lg">
-                {t("products.sale")} {discountPct > 0 ? `-${discountPct}%` : ""}
+              <Badge className="border-0 bg-primary/90 font-display text-[10px] uppercase tracking-wider text-primary-foreground shadow-lg shadow-primary/20 backdrop-blur-sm">
+                {discountPct > 0 ? `-${discountPct}%` : t("products.sale")}
               </Badge>
             )}
             {product.is_featured && (
-              <Badge className="border border-primary/30 bg-background/70 font-display text-[10px] uppercase tracking-wider text-primary backdrop-blur-sm">
+              <Badge className="border-0 bg-accent/90 font-display text-[10px] uppercase tracking-wider text-accent-foreground shadow-lg shadow-accent/20 backdrop-blur-sm">
                 {t("products.popular")}
+              </Badge>
+            )}
+            {isNew && (
+              <Badge className="border-0 bg-secondary font-display text-[10px] uppercase tracking-wider text-secondary-foreground shadow-lg backdrop-blur-sm">
+                NEW
               </Badge>
             )}
           </div>
 
           {/* Image dots */}
           {images.length > 1 && (
-            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-background/50 px-2.5 py-1 backdrop-blur-md">
+            <div className="absolute bottom-14 left-1/2 flex -translate-x-1/2 items-center gap-1.5">
               {images.map((_, idx) => (
                 <span
                   key={`${product.id}-dot-${idx}`}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                    idx === currentImageIndex ? "w-5 bg-primary" : "w-1.5 bg-foreground/30"
+                  className={`rounded-full transition-all duration-300 ${
+                    idx === currentImageIndex
+                      ? "h-1.5 w-5 bg-primary shadow-lg shadow-primary/40"
+                      : "h-1.5 w-1.5 bg-foreground/25"
                   }`}
                 />
               ))}
             </div>
           )}
 
-          {/* Quick add button - appears on hover */}
+          {/* Quick add — slides up on hover */}
           <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : 8 }}
-            transition={{ duration: 0.2 }}
-            className="absolute bottom-3 right-3"
+            initial={false}
+            animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : 12 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="absolute bottom-3 right-3 pointer-events-auto"
           >
             <Button
               ref={addButtonRef}
               type="button"
               size="sm"
               onClick={handleAddToCart}
-              className={`rounded-full px-4 shadow-xl backdrop-blur-sm transition-all duration-300 ${
-                justAdded ? "animate-glow-pulse" : ""
-              }`}
+              className="rounded-full border-0 bg-primary/90 px-4 shadow-xl shadow-primary/25 backdrop-blur-sm transition-all duration-300 hover:bg-primary hover:shadow-primary/40"
             >
               {justAdded ? (
                 <>
@@ -207,33 +204,32 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
           </motion.div>
         </div>
 
-        {/* Content */}
-        <div className="flex flex-1 flex-col gap-2.5 p-4">
-          <div className="space-y-2">
-            <h3 className="line-clamp-2 font-display text-sm font-semibold uppercase tracking-[0.16em] text-foreground transition-colors duration-300 group-hover:text-primary">
-              {product.name}
-            </h3>
-            <RatingStars rating={socialProof?.averageRating} count={socialProof?.reviewCount} className="min-h-5" />
-            <ProductTrustBadges badges={trustBadges} />
-            <SocialProofBadges productId={product.id} variant="compact" />
-          </div>
+        {/* Content — clean, no dividers */}
+        <div className="flex flex-1 flex-col gap-2 p-5">
+          <h3 className="line-clamp-2 font-display text-sm font-semibold uppercase tracking-[0.14em] text-foreground/90 transition-colors duration-300 group-hover:text-primary">
+            {product.name}
+          </h3>
 
-          <div className="mt-auto pt-3">
-            <div className="flex items-end justify-between gap-2">
-              <div className="flex items-end gap-2">
-                <span className="font-display text-xl font-bold gradient-text">{formatPrice(Number(product.price))}</span>
-                {hasSale && (
-                  <span className="pb-0.5 text-sm text-muted-foreground line-through">
-                    {formatPrice(Number(product.compare_at_price))}
-                  </span>
-                )}
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                {socialProof?.reviewCount
-                  ? t("products.verifiedOpinions", { count: socialProof.reviewCount })
-                  : t("products.premiumFinish")}
-              </p>
+          <RatingStars rating={socialProof?.averageRating} count={socialProof?.reviewCount} className="min-h-5" />
+
+          <div className="mt-auto flex items-end justify-between gap-2 pt-2">
+            <div className="flex items-baseline gap-2">
+              <span className="font-display text-xl font-bold text-foreground">{formatPrice(Number(product.price))}</span>
+              {hasSale && (
+                <span className="text-xs text-muted-foreground line-through">
+                  {formatPrice(Number(product.compare_at_price))}
+                </span>
+              )}
             </div>
+
+            {/* Subtle "view" arrow on hover */}
+            <motion.div
+              initial={false}
+              animate={{ opacity: isHovered ? 1 : 0, x: isHovered ? 0 : -8 }}
+              transition={{ duration: 0.25 }}
+            >
+              <ArrowRight className="h-4 w-4 text-primary" />
+            </motion.div>
           </div>
         </div>
       </Link>

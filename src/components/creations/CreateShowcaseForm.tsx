@@ -173,7 +173,25 @@ export default function CreateShowcaseForm({ onCreated }: { onCreated?: () => vo
         </div>
       </div>
 
-      {/* toggles */}
+      {/* 3D model */}
+      <div className="space-y-2">
+        <Label>3D Model File (optional — STL, OBJ, 3MF)</Label>
+        {modelUrl ? (
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
+            <FileBox className="h-4 w-4 text-primary shrink-0" />
+            <span className="text-sm truncate flex-1">{modelFilename}</span>
+            <button type="button" onClick={() => { setModelUrl(null); setModelFilename(null); }} className="text-muted-foreground hover:text-destructive">
+              <XIcon className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <label className="flex cursor-pointer items-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/30 hover:border-primary transition-colors px-4 py-3">
+            {modelUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileBox className="h-4 w-4 text-muted-foreground" />}
+            <span className="text-sm text-muted-foreground">{modelUploading ? "Uploading..." : "Click to upload model file"}</span>
+            <input type="file" accept=".stl,.obj,.3mf,.step,.stp" className="hidden" onChange={handleModelUpload} disabled={modelUploading} />
+          </label>
+        )}
+      </div>
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2">
           <Switch checked={shared} onCheckedChange={setShared} />

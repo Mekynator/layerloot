@@ -529,14 +529,14 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
     case "banner":
       return withSection(
         block,
-        "bg-accent py-3",
-        <div className="container flex items-center justify-center gap-2 text-accent-foreground">
+        "py-3 border-y border-border/20",
+        <div className="container flex items-center justify-center gap-3 text-foreground">
           {c.badge && (
-            <span className="rounded bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider">
+            <span className="rounded-lg bg-primary/15 px-2.5 py-0.5 font-display text-[10px] uppercase tracking-wider text-primary">
               {getLocalizedValue(c.badge)}
             </span>
           )}
-          <span className="font-display text-sm uppercase tracking-widest">
+          <span className="font-display text-sm uppercase tracking-widest text-foreground/90">
             {getLocalizedValue(c.heading || c.title, tr("blocks.banner.title", "Banner"))}
           </span>
         </div>,

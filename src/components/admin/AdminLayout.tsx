@@ -21,6 +21,7 @@ import {
   TrendingUp,
   Megaphone,
   BarChart3,
+  Wallet,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";

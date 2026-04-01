@@ -588,14 +588,14 @@ export default function CartPage() {
                   )}
 
                   <div className="flex items-center justify-between">
-                    <span className="font-display text-lg font-bold uppercase text-foreground">Total</span>
+                    <span className="font-display text-lg font-bold uppercase text-foreground">{t("cart.total")}</span>
                     <motion.span
                       key={finalTotal}
                       initial={{ scale: 0.96, opacity: 0.7 }}
                       animate={{ scale: 1, opacity: 1 }}
                       className="font-display text-2xl font-bold text-primary"
                     >
-                      {finalTotal.toFixed(2)} kr
+                      {formatPrice(finalTotal)}
                     </motion.span>
                   </div>
                 </div>

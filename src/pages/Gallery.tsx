@@ -207,7 +207,8 @@ const Gallery = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="group overflow-hidden rounded-lg border border-border bg-card transition-all hover:-translate-y-1 hover:border-primary hover:shadow-lg"
+                  className="group overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md transition-all duration-500 hover:-translate-y-2"
+                  style={{ boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)' }}
                 >
                   <div className="aspect-square overflow-hidden">
                     <img

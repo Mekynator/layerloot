@@ -102,7 +102,7 @@ export default function ShowcaseCard({ item, onQuickView }: ShowcaseCardProps) {
             <Button
               size="sm"
               variant="secondary"
-              className="h-8 rounded-full bg-background/90 backdrop-blur-md text-xs font-medium shadow-lg border border-border/40 gap-1.5 hover:bg-background"
+              className="h-8 rounded-full bg-background/90 backdrop-blur-md text-xs font-medium shadow-lg gap-1.5 hover:bg-background"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

@@ -49,7 +49,7 @@ const Auth = () => {
 
   return (
     <div className="flex min-h-[70vh] items-center justify-center py-16">
-      <div className="w-full max-w-md rounded-lg border border-border bg-card p-8">
+      <div className="w-full max-w-md rounded-2xl bg-card/60 p-8 shadow-[0_8px_40px_-8px_hsl(225_44%_4%/0.5)] backdrop-blur-md">
         <div className="mb-6 flex flex-col items-center">
           <img src={logoImg} alt="LayerLoot" className="mb-2 h-16 w-auto object-contain" />
           <h1 className="font-display text-2xl font-bold uppercase text-card-foreground">

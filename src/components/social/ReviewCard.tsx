@@ -11,7 +11,7 @@ export type SocialReview = {
 
 export default function ReviewCard({ review }: { review: SocialReview }) {
   return (
-    <Card className="overflow-hidden border-border/15 bg-card/40 shadow-lg backdrop-blur-xl transition-all duration-300 hover:border-primary/20 hover:shadow-[0_8px_32px_hsl(217_91%_60%/0.08)]">
+    <Card className="overflow-hidden bg-card/60 shadow-[0_8px_40px_-8px_hsl(225_44%_4%/0.5)] backdrop-blur-md transition-all duration-500 hover:shadow-[0_16px_56px_-8px_hsl(217_91%_60%/0.12)]">
       <CardContent className="space-y-3 p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">

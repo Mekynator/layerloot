@@ -475,7 +475,7 @@ export default function CartPage() {
                         </div>
 
                         <Button variant="outline" onClick={() => handleMoveToCart(item)}>
-                          Move to Cart
+                          {t("cart.moveToCart")}
                         </Button>
                       </motion.div>
                     ))}

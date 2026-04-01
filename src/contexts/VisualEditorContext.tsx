@@ -10,6 +10,17 @@ type Viewport = "desktop" | "tablet" | "mobile";
 
 type UndoEntry = { blocks: SiteBlock[]; label: string };
 
+/** Identifies a selected element within a block */
+export interface SelectedElement {
+  blockId: string;
+  /** "root" = whole block, or a content key like "heading", "buttons.0.text" */
+  nodeKey: string;
+  /** Type of element */
+  nodeType: "text" | "icon" | "button" | "media" | "layout" | "root";
+  /** For repeater items, the item index */
+  repeaterIndex?: number;
+}
+
 interface EditorState {
   // Pages
   pages: SitePage[];
@@ -25,6 +36,13 @@ interface EditorState {
   selectedBlockId: string | null;
   selectedBlock: SiteBlock | null;
   hoveredBlockId: string | null;
+
+  // Element-level selection
+  selectedElement: SelectedElement | null;
+  selectElement: (element: SelectedElement | null) => void;
+  /** Currently inline-editing text field key (set on double-click) */
+  inlineEditingKey: string | null;
+  setInlineEditingKey: (key: string | null) => void;
 
   // Actions
   selectBlock: (id: string | null) => void;
@@ -174,6 +192,13 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [viewport, setViewport] = useState<Viewport>("desktop");
+  const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
+  const [inlineEditingKey, setInlineEditingKey] = useState<string | null>(null);
+
+  const selectElement = useCallback((el: SelectedElement | null) => {
+    setSelectedElement(el);
+    if (!el) setInlineEditingKey(null);
+  }, []);
 
   const undoStack = useRef<UndoEntry[]>([]);
   const redoStack = useRef<UndoEntry[]>([]);
@@ -419,6 +444,10 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     selectedBlockId,
     selectedBlock,
     hoveredBlockId,
+    selectedElement,
+    selectElement,
+    inlineEditingKey,
+    setInlineEditingKey,
     selectBlock: setSelectedBlockId,
     hoverBlock: setHoveredBlockId,
     updateBlockContent,
@@ -440,7 +469,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     frontendPages,
     globalPages,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [pages, activePage, selectedPage, pageBlocks, savedBlocks, isDirty, selectedBlockId, selectedBlock, hoveredBlockId, saving, viewport, frontendPages, globalPages, undoVersion]);
+  }), [pages, activePage, selectedPage, pageBlocks, savedBlocks, isDirty, selectedBlockId, selectedBlock, hoveredBlockId, saving, viewport, frontendPages, globalPages, undoVersion, selectedElement, inlineEditingKey]);
 
   return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;
 }

@@ -8,13 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trash2, Plus, ArrowUp, ArrowDown, X, Palette, Type, Settings2, Layers, Monitor, Tablet, Smartphone } from "lucide-react";
-import { useVisualEditor } from "@/contexts/VisualEditorContext";
+import { Trash2, Plus, ArrowUp, ArrowDown, X, Palette, Type, Settings2, Layers, Monitor, Tablet, Smartphone, MousePointerClick } from "lucide-react";
+import { useVisualEditor, type SelectedElement } from "@/contexts/VisualEditorContext";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
 import SliderField from "./controls/SliderField";
 import ColorPickerField from "./controls/ColorPickerField";
 import ImageUploadField from "./controls/ImageUploadField";
 import IconPickerField from "./controls/IconPickerField";
+import TypographyControls from "./controls/TypographyControls";
+import { getBlockSchema, type EditableNode } from "./editable-schema";
 
 const getRepeaterKey = (blockType?: string) => {
   switch (blockType) {
@@ -29,7 +31,7 @@ const getRepeaterKey = (blockType?: string) => {
 };
 
 export default function SettingsPanel() {
-  const { selectedBlock, selectedBlockId, selectBlock } = useVisualEditor();
+  const { selectedBlock, selectedBlockId, selectBlock, selectedElement, selectElement } = useVisualEditor();
 
   if (!selectedBlock) {
     return (
@@ -49,10 +51,10 @@ export default function SettingsPanel() {
     );
   }
 
-  return <BlockSettings key={selectedBlockId} block={selectedBlock} />;
+  return <BlockSettings key={selectedBlockId} block={selectedBlock} selectedElement={selectedElement} onSelectElement={selectElement} />;
 }
 
-function BlockSettings({ block }: { block: SiteBlock }) {
+function BlockSettings({ block, selectedElement, onSelectElement }: { block: SiteBlock; selectedElement: SelectedElement | null; onSelectElement: (el: SelectedElement | null) => void }) {
   const { updateBlockContent, updateBlockMeta, selectBlock } = useVisualEditor();
 
   const content = useMemo(() => {
@@ -135,6 +137,24 @@ function BlockSettings({ block }: { block: SiteBlock }) {
     updateBlockMeta(block.id, { is_active: value });
   }, [block.id, updateBlockMeta]);
 
+  // Typography controls for a specific text element
+  const handleTypographyChange = useCallback((elementKey: string, typoKey: string, value: any) => {
+    const typoPath = `_typography_${elementKey}`;
+    const current = localContent[typoPath] || {};
+    patchContent(typoPath, { ...current, [typoKey]: value });
+  }, [localContent, patchContent]);
+
+  const getTypography = useCallback((elementKey: string) => {
+    return localContent[`_typography_${elementKey}`] || {};
+  }, [localContent]);
+
+  // Check if an element is currently selected
+  const isElementSelected = selectedElement?.blockId === block.id;
+  const selectedNodeKey = isElementSelected ? selectedElement?.nodeKey : null;
+  const selectedNodeType = isElementSelected ? selectedElement?.nodeType : null;
+
+  const schema = getBlockSchema(block.block_type);
+
   return (
     <div className="flex h-full flex-col border-l border-border/30 bg-card/80 backdrop-blur-xl">
       <div className="flex items-center justify-between border-b border-border/30 px-3 py-2">
@@ -172,6 +192,48 @@ function BlockSettings({ block }: { block: SiteBlock }) {
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Block Label</Label>
                 <Input value={title} onChange={(e) => handleTitleChange(e.target.value)} className="mt-1 h-8 text-xs" />
               </div>
+
+              {/* Element-level selection panel */}
+              {isElementSelected && selectedNodeKey && selectedNodeType === "text" && (
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-2 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <MousePointerClick className="h-3 w-3 text-primary" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-primary">
+                        Editing: {schema.nodes.find(n => n.key === selectedNodeKey)?.label || selectedNodeKey}
+                      </span>
+                    </div>
+                    <button onClick={() => onSelectElement(null)} className="text-[9px] text-muted-foreground hover:text-foreground underline">
+                      Back to block
+                    </button>
+                  </div>
+                  {/* Element text input */}
+                  {schema.nodes.find(n => n.key === selectedNodeKey && n.type === "text") && (
+                    <div>
+                      <Label className="text-[10px]">Text</Label>
+                      {(schema.nodes.find(n => n.key === selectedNodeKey) as any)?.multiline ? (
+                        <Textarea
+                          value={localContent[selectedNodeKey] || ""}
+                          onChange={(e) => patchContent(selectedNodeKey, e.target.value)}
+                          rows={4} className="text-xs"
+                        />
+                      ) : (
+                        <Input
+                          value={localContent[selectedNodeKey] || ""}
+                          onChange={(e) => patchContent(selectedNodeKey, e.target.value)}
+                          className="h-8 text-xs"
+                        />
+                      )}
+                    </div>
+                  )}
+                  {/* Typography controls for the selected text element */}
+                  <TypographyControls
+                    typography={getTypography(selectedNodeKey)}
+                    onChange={(key, val) => handleTypographyChange(selectedNodeKey, key, val)}
+                  />
+                </div>
+              )}
+
               <ContentEditor
                 blockType={block.block_type}
                 content={localContent}
@@ -181,11 +243,23 @@ function BlockSettings({ block }: { block: SiteBlock }) {
                 addItem={addItem}
                 removeItem={removeItem}
                 moveItem={moveItem}
+                onSelectElement={(nodeKey, nodeType) => onSelectElement({ blockId: block.id, nodeKey, nodeType })}
+                selectedNodeKey={selectedNodeKey}
               />
             </TabsContent>
 
             <TabsContent value="style" className="space-y-3 mt-3">
               <AdvancedStyleEditor content={localContent} patchContent={patchContent} />
+              {/* Per-element typography when an element is selected */}
+              {isElementSelected && selectedNodeKey && selectedNodeType === "text" && (
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-2">
+                  <TypographyControls
+                    typography={getTypography(selectedNodeKey)}
+                    onChange={(key, val) => handleTypographyChange(selectedNodeKey, key, val)}
+                    compact
+                  />
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="responsive" className="space-y-3 mt-3">
@@ -257,6 +331,7 @@ function BlockSettings({ block }: { block: SiteBlock }) {
 function ContentEditor({
   blockType, content, patchContent,
   repeaterItems, patchItem, addItem, removeItem, moveItem,
+  onSelectElement, selectedNodeKey,
 }: {
   blockType: string;
   content: Record<string, any>;
@@ -266,23 +341,85 @@ function ContentEditor({
   addItem: () => void;
   removeItem: (index: number) => void;
   moveItem: (index: number, dir: -1 | 1) => void;
+  onSelectElement: (nodeKey: string, nodeType: "text" | "icon" | "button" | "media" | "layout") => void;
+  selectedNodeKey: string | null;
 }) {
-  const renderSectionTop = () => (
-    <div className="space-y-2">
-      {(content.heading !== undefined || ["categories", "featured_products", "how_it_works", "faq", "trust_badges", "entry_cards"].includes(blockType)) && (
-        <div>
-          <Label className="text-[10px]">Heading</Label>
-          <Input value={content.heading || ""} onChange={(e) => patchContent("heading", e.target.value)} className="h-8 text-xs" />
-        </div>
-      )}
-      {(content.subheading !== undefined || ["categories", "featured_products", "how_it_works", "entry_cards"].includes(blockType)) && (
-        <div>
-          <Label className="text-[10px]">Subheading</Label>
-          <Input value={content.subheading || ""} onChange={(e) => patchContent("subheading", e.target.value)} className="h-8 text-xs" />
-        </div>
-      )}
-    </div>
-  );
+  const schema = getBlockSchema(blockType);
+
+  const renderEditableNode = (node: EditableNode) => {
+    const isSelected = selectedNodeKey === node.key;
+    const wrapperClass = isSelected ? "ring-1 ring-primary/40 rounded-md p-1 bg-primary/5" : "";
+
+    switch (node.type) {
+      case "text":
+        return (
+          <div key={node.key} className={wrapperClass} onClick={() => onSelectElement(node.key, "text")}>
+            <Label className="text-[10px] cursor-pointer hover:text-primary transition-colors">{node.label}</Label>
+            {node.multiline ? (
+              <Textarea
+                value={content[node.key] || ""}
+                onChange={(e) => patchContent(node.key, e.target.value)}
+                rows={3} className="text-xs" placeholder={node.placeholder}
+              />
+            ) : (
+              <Input
+                value={content[node.key] || ""}
+                onChange={(e) => patchContent(node.key, e.target.value)}
+                className="h-8 text-xs" placeholder={node.placeholder}
+              />
+            )}
+          </div>
+        );
+      case "icon":
+        return (
+          <div key={node.key} className={wrapperClass}>
+            <IconPickerField
+              label={node.label}
+              value={content[node.key] || ""}
+              onChange={(v) => patchContent(node.key, v)}
+            />
+            {node.sizeKey && (
+              <SliderField
+                label="Icon Size"
+                value={content[node.sizeKey] ?? 24}
+                onChange={(v) => patchContent(node.sizeKey!, v)}
+                min={12} max={64} step={2}
+              />
+            )}
+            {node.colorKey && (
+              <ColorPickerField
+                label="Icon Color"
+                value={content[node.colorKey] || ""}
+                onChange={(v) => patchContent(node.colorKey!, v)}
+              />
+            )}
+          </div>
+        );
+      case "media":
+        return (
+          <ImageUploadField
+            key={node.key}
+            label={node.label}
+            value={content[node.key] || ""}
+            onChange={(v) => patchContent(node.key, v)}
+          />
+        );
+      case "layout":
+        return (
+          <div key={node.key}>
+            <Label className="text-[10px]">{node.label}</Label>
+            <Select value={String(content[node.key] || node.options[0]?.value || "")} onValueChange={(v) => patchContent(node.key, v)}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {node.options.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
 
   const renderRepeaterControls = (label: string) => (
     <div className="flex items-center justify-between">
@@ -307,526 +444,254 @@ function ContentEditor({
     </div>
   );
 
-  switch (blockType) {
-    case "hero":
-      return (
-        <div className="space-y-3">
-          <div>
-            <Label className="text-[10px]">Eyebrow</Label>
-            <Input value={content.eyebrow || ""} onChange={(e) => patchContent("eyebrow", e.target.value)} className="h-8 text-xs" />
-          </div>
-          <div>
-            <Label className="text-[10px]">Heading</Label>
-            <Input value={content.heading || ""} onChange={(e) => patchContent("heading", e.target.value)} className="h-8 text-xs" />
-          </div>
-          <div>
-            <Label className="text-[10px]">Subheading</Label>
-            <Textarea value={content.subheading || ""} onChange={(e) => patchContent("subheading", e.target.value)} rows={3} className="text-xs" />
-          </div>
-          <ImageUploadField
-            label="Background Image"
-            value={content.bg_image || ""}
-            onChange={(v) => patchContent("bg_image", v)}
-          />
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label className="text-[10px]">Alignment</Label>
-              <Select value={content.alignment || "left"} onValueChange={(v) => patchContent("alignment", v)}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="left">Left</SelectItem>
-                  <SelectItem value="center">Center</SelectItem>
-                  <SelectItem value="right">Right</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <SliderField
-              label="Overlay"
-              value={content.overlayOpacity ?? 50}
-              onChange={(v) => patchContent("overlayOpacity", v)}
-              min={0} max={100} step={5} unit="%"
-            />
-          </div>
+  // Render schema-driven nodes first
+  const schemaNodes = schema.nodes.length > 0;
 
-          {/* Buttons */}
-          {Array.isArray(content.buttons) && (
-            <div className="space-y-2">
-              <Label className="text-[10px] uppercase tracking-wider">Buttons</Label>
-              <Accordion type="multiple" className="space-y-1">
-                {content.buttons.map((btn: any, i: number) => (
-                  <AccordionItem key={i} value={`btn-${i}`} className="rounded-md border border-border/30 px-2">
-                    <AccordionTrigger className="py-2 text-[11px]">{btn.text || `Button ${i + 1}`}</AccordionTrigger>
-                    <AccordionContent className="space-y-2 pb-2">
-                      <Input value={btn.text || ""} onChange={(e) => {
-                        const buttons = [...content.buttons];
-                        buttons[i] = { ...buttons[i], text: e.target.value };
-                        patchContent("buttons", buttons);
-                      }} className="h-7 text-xs" placeholder="Button text" />
-                      <Select value={btn.actionType || "none"} onValueChange={(v) => {
-                        const buttons = [...content.buttons];
-                        buttons[i] = { ...buttons[i], actionType: v };
-                        patchContent("buttons", buttons);
-                      }}>
-                        <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No action</SelectItem>
-                          <SelectItem value="internal_link">Internal page</SelectItem>
-                          <SelectItem value="external_link">External URL</SelectItem>
-                          <SelectItem value="scroll_to">Scroll to section</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {btn.actionType && btn.actionType !== "none" && (
-                        <Input value={btn.actionTarget || ""} onChange={(e) => {
-                          const buttons = [...content.buttons];
-                          buttons[i] = { ...buttons[i], actionTarget: e.target.value };
-                          patchContent("buttons", buttons);
-                        }} className="h-7 text-xs" placeholder={btn.actionType === "external_link" ? "https://..." : btn.actionType === "scroll_to" ? "#section-id" : "/page"} />
-                      )}
-                      <div className="grid grid-cols-2 gap-2">
-                        <Select value={btn.variant || "default"} onValueChange={(v) => {
-                          const buttons = [...content.buttons];
-                          buttons[i] = { ...buttons[i], variant: v };
-                          patchContent("buttons", buttons);
-                        }}>
-                          <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="default">Primary</SelectItem>
-                            <SelectItem value="outline">Outline</SelectItem>
-                            <SelectItem value="ghost">Ghost</SelectItem>
-                            <SelectItem value="secondary">Secondary</SelectItem>
-                          </SelectContent>
-                        </Select>
+  // Special handling for blocks with buttons array (hero)
+  const renderHeroButtons = () => {
+    if (blockType !== "hero" || !Array.isArray(content.buttons)) return null;
+    return (
+      <div className="space-y-2">
+        <Label className="text-[10px] uppercase tracking-wider">Buttons</Label>
+        <Accordion type="multiple" className="space-y-1">
+          {content.buttons.map((btn: any, i: number) => (
+            <AccordionItem key={i} value={`btn-${i}`} className="rounded-md border border-border/30 px-2">
+              <AccordionTrigger className="py-2 text-[11px]">{btn.text || `Button ${i + 1}`}</AccordionTrigger>
+              <AccordionContent className="space-y-2 pb-2">
+                <Input value={btn.text || ""} onChange={(e) => {
+                  const buttons = [...content.buttons];
+                  buttons[i] = { ...buttons[i], text: e.target.value };
+                  patchContent("buttons", buttons);
+                }} className="h-7 text-xs" placeholder="Button text" />
+                <Select value={btn.actionType || "none"} onValueChange={(v) => {
+                  const buttons = [...content.buttons];
+                  buttons[i] = { ...buttons[i], actionType: v };
+                  patchContent("buttons", buttons);
+                }}>
+                  <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No action</SelectItem>
+                    <SelectItem value="internal_link">Internal page</SelectItem>
+                    <SelectItem value="external_link">External URL</SelectItem>
+                    <SelectItem value="scroll_to">Scroll to section</SelectItem>
+                  </SelectContent>
+                </Select>
+                {btn.actionType && btn.actionType !== "none" && (
+                  <Input value={btn.actionTarget || ""} onChange={(e) => {
+                    const buttons = [...content.buttons];
+                    buttons[i] = { ...buttons[i], actionTarget: e.target.value };
+                    patchContent("buttons", buttons);
+                  }} className="h-7 text-xs" placeholder={btn.actionType === "external_link" ? "https://..." : btn.actionType === "scroll_to" ? "#section-id" : "/page"} />
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <Select value={btn.variant || "default"} onValueChange={(v) => {
+                    const buttons = [...content.buttons];
+                    buttons[i] = { ...buttons[i], variant: v };
+                    patchContent("buttons", buttons);
+                  }}>
+                    <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">Primary</SelectItem>
+                      <SelectItem value="outline">Outline</SelectItem>
+                      <SelectItem value="ghost">Ghost</SelectItem>
+                      <SelectItem value="secondary">Secondary</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <IconPickerField
+                    label=""
+                    value={btn.icon || ""}
+                    onChange={(v) => {
+                      const buttons = [...content.buttons];
+                      buttons[i] = { ...buttons[i], icon: v };
+                      patchContent("buttons", buttons);
+                    }}
+                  />
+                </div>
+                <SliderField
+                  label="Border Radius"
+                  value={btn.borderRadius ?? 8}
+                  onChange={(v) => {
+                    const buttons = [...content.buttons];
+                    buttons[i] = { ...buttons[i], borderRadius: v };
+                    patchContent("buttons", buttons);
+                  }}
+                  min={0} max={32} step={2}
+                />
+                <ColorPickerField
+                  label="Button Color"
+                  value={btn.bgColor || ""}
+                  onChange={(v) => {
+                    const buttons = [...content.buttons];
+                    buttons[i] = { ...buttons[i], bgColor: v };
+                    patchContent("buttons", buttons);
+                  }}
+                />
+                <ColorPickerField
+                  label="Text Color"
+                  value={btn.textColor || ""}
+                  onChange={(v) => {
+                    const buttons = [...content.buttons];
+                    buttons[i] = { ...buttons[i], textColor: v };
+                    patchContent("buttons", buttons);
+                  }}
+                />
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </div>
+    );
+  };
+
+  // Render repeater items with schema-driven per-item nodes
+  const renderSchemaRepeater = () => {
+    if (!schema.repeaterKey || !schema.repeaterItemNodes) return null;
+    const repeaterLabel = schema.repeaterKey === "items" ? "Items" :
+      schema.repeaterKey === "steps" ? "Steps" :
+      schema.repeaterKey === "badges" ? "Badges" :
+      schema.repeaterKey === "cards" ? "Cards" :
+      schema.repeaterKey === "slides" ? "Slides" : "Items";
+
+    return (
+      <div className="space-y-2">
+        {renderRepeaterControls(repeaterLabel)}
+        <Accordion type="multiple" className="space-y-1">
+          {repeaterItems.map((item: any, index: number) => (
+            <AccordionItem key={index} value={`item-${index}`} className="rounded-md border border-border/30 px-2">
+              <AccordionTrigger className="py-2 text-[11px]">
+                {item.title || item.question || item.text || `${repeaterLabel.slice(0, -1)} ${index + 1}`}
+              </AccordionTrigger>
+              <AccordionContent className="space-y-2 pb-2">
+                {schema.repeaterItemNodes!.map((node) => {
+                  switch (node.type) {
+                    case "text":
+                      return (
+                        <div key={node.key}>
+                          <Label className="text-[10px]">{node.label}</Label>
+                          {node.multiline ? (
+                            <Textarea
+                              value={item[node.key] || ""}
+                              onChange={(e) => patchItem(index, { [node.key]: e.target.value })}
+                              rows={2} className="text-xs" placeholder={node.placeholder}
+                            />
+                          ) : (
+                            <Input
+                              value={item[node.key] || ""}
+                              onChange={(e) => patchItem(index, { [node.key]: e.target.value })}
+                              className="h-7 text-xs" placeholder={node.placeholder || node.label}
+                            />
+                          )}
+                        </div>
+                      );
+                    case "icon":
+                      return (
                         <IconPickerField
-                          label=""
-                          value={btn.icon || ""}
-                          onChange={(v) => {
-                            const buttons = [...content.buttons];
-                            buttons[i] = { ...buttons[i], icon: v };
-                            patchContent("buttons", buttons);
-                          }}
+                          key={node.key}
+                          label={node.label}
+                          value={item[node.key] || "Star"}
+                          onChange={(v) => patchItem(index, { [node.key]: v })}
                         />
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </div>
-          )}
-        </div>
-      );
+                      );
+                    case "media":
+                      return (
+                        <ImageUploadField
+                          key={node.key}
+                          label={node.label}
+                          value={item[node.key] || ""}
+                          onChange={(v) => patchItem(index, { [node.key]: v })}
+                        />
+                      );
+                    default:
+                      return null;
+                  }
+                })}
+                <div className="flex items-center justify-between">
+                  <Label className="text-[10px]">Visible</Label>
+                  <Switch checked={item.visible !== false} onCheckedChange={(v) => patchItem(index, { visible: v })} />
+                </div>
+                {/* Action/link for items that support it */}
+                {(blockType === "entry_cards" || blockType === "how_it_works" || blockType === "trust_badges") && (
+                  <div className="space-y-1">
+                    <Label className="text-[10px]">Link</Label>
+                    <Input
+                      value={item.link || item.actionTarget || ""}
+                      onChange={(e) => patchItem(index, { link: e.target.value, actionType: e.target.value ? "internal_link" : "none", actionTarget: e.target.value })}
+                      className="h-7 text-xs" placeholder="/page-link"
+                    />
+                  </div>
+                )}
+                {renderItemControls(index)}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </div>
+    );
+  };
 
-    case "shipping_banner":
-    case "banner":
-      return (
-        <div className="space-y-2">
-          <div>
-            <Label className="text-[10px]">Text</Label>
-            <Input value={content.text || content.heading || ""} onChange={(e) => patchContent(content.text !== undefined ? "text" : "heading", e.target.value)} className="h-8 text-xs" />
-          </div>
-          {blockType === "banner" && (
-            <>
-              <div>
-                <Label className="text-[10px]">Badge</Label>
-                <Input value={content.badge || ""} onChange={(e) => patchContent("badge", e.target.value)} className="h-8 text-xs" />
-              </div>
-              <div>
-                <Label className="text-[10px]">Button Text</Label>
-                <Input value={content.button_text || ""} onChange={(e) => patchContent("button_text", e.target.value)} className="h-8 text-xs" />
-              </div>
-              <div>
-                <Label className="text-[10px]">Button Link</Label>
-                <Input value={content.button_link || ""} onChange={(e) => patchContent("button_link", e.target.value)} className="h-8 text-xs" />
-              </div>
-              <ImageUploadField
-                label="Banner Image"
-                value={content.bg_image || ""}
-                onChange={(v) => patchContent("bg_image", v)}
-              />
-            </>
-          )}
-        </div>
-      );
+  // Use schema-driven approach for all blocks
+  if (schemaNodes) {
+    return (
+      <div className="space-y-3">
+        {/* Render top-level editable nodes */}
+        {schema.nodes.map(renderEditableNode)}
 
-    case "text":
-      return (
-        <div className="space-y-2">
-          <div>
-            <Label className="text-[10px]">Heading</Label>
-            <Input value={content.heading || ""} onChange={(e) => patchContent("heading", e.target.value)} className="h-8 text-xs" />
-          </div>
-          <div>
-            <Label className="text-[10px]">Body</Label>
-            <Textarea value={content.body || ""} onChange={(e) => patchContent("body", e.target.value)} rows={6} className="text-xs" />
-          </div>
-        </div>
-      );
+        {/* Hero-specific buttons */}
+        {renderHeroButtons()}
 
-    case "cta":
-      return (
-        <div className="space-y-2">
-          <div>
-            <Label className="text-[10px]">Heading</Label>
-            <Input value={content.heading || ""} onChange={(e) => patchContent("heading", e.target.value)} className="h-8 text-xs" />
-          </div>
-          <div>
-            <Label className="text-[10px]">Subheading</Label>
-            <Input value={content.subheading || ""} onChange={(e) => patchContent("subheading", e.target.value)} className="h-8 text-xs" />
-          </div>
-          <div>
-            <Label className="text-[10px]">Button Text</Label>
-            <Input value={content.button_text || ""} onChange={(e) => patchContent("button_text", e.target.value)} className="h-8 text-xs" />
-          </div>
-          <div>
-            <Label className="text-[10px]">Button Link</Label>
-            <Input value={content.button_link || ""} onChange={(e) => patchContent("button_link", e.target.value)} className="h-8 text-xs" />
-          </div>
-          <ImageUploadField
-            label="Background Image"
-            value={content.bg_image || ""}
-            onChange={(v) => patchContent("bg_image", v)}
+        {/* Overlay opacity for hero */}
+        {blockType === "hero" && (
+          <SliderField
+            label="Overlay Opacity"
+            value={content.overlayOpacity ?? 50}
+            onChange={(v) => patchContent("overlayOpacity", v)}
+            min={0} max={100} step={5} unit="%"
           />
-        </div>
-      );
+        )}
 
-    case "spacer":
-      return (
-        <SliderField
-          label="Height"
-          value={content.height || 40}
-          onChange={(v) => patchContent("height", v)}
-          min={8} max={200} step={4}
-        />
-      );
+        {/* Spacer height */}
+        {blockType === "spacer" && (
+          <SliderField
+            label="Height"
+            value={content.height || 40}
+            onChange={(v) => patchContent("height", v)}
+            min={8} max={200} step={4}
+          />
+        )}
 
-    case "html":
-      return (
-        <div>
-          <Label className="text-[10px]">HTML</Label>
-          <Textarea value={content.html || ""} onChange={(e) => patchContent("html", e.target.value)} rows={10} className="font-mono text-xs" />
-        </div>
-      );
-
-    case "embed":
-      return (
-        <div className="space-y-2">
-          <div>
-            <Label className="text-[10px]">Heading</Label>
-            <Input value={content.heading || ""} onChange={(e) => patchContent("heading", e.target.value)} className="h-8 text-xs" />
-          </div>
-          <div>
-            <Label className="text-[10px]">Embed URL</Label>
-            <Input value={content.embed_url || ""} onChange={(e) => patchContent("embed_url", e.target.value)} className="h-8 text-xs" />
-          </div>
+        {/* Embed height */}
+        {blockType === "embed" && (
           <SliderField
             label="Height"
             value={content.height || 400}
             onChange={(v) => patchContent("height", v)}
             min={100} max={800} step={20}
           />
-        </div>
-      );
+        )}
 
-    case "video":
-      return (
-        <div className="space-y-2">
-          <div>
-            <Label className="text-[10px]">Heading</Label>
-            <Input value={content.heading || ""} onChange={(e) => patchContent("heading", e.target.value)} className="h-8 text-xs" />
-          </div>
-          <div>
-            <Label className="text-[10px]">Video URL</Label>
-            <Input value={content.video_url || ""} onChange={(e) => patchContent("video_url", e.target.value)} className="h-8 text-xs" />
-          </div>
-        </div>
-      );
-
-    case "newsletter":
-      return (
-        <div className="space-y-2">
-          <div>
-            <Label className="text-[10px]">Heading</Label>
-            <Input value={content.heading || ""} onChange={(e) => patchContent("heading", e.target.value)} className="h-8 text-xs" />
-          </div>
-          <div>
-            <Label className="text-[10px]">Subheading</Label>
-            <Input value={content.subheading || ""} onChange={(e) => patchContent("subheading", e.target.value)} className="h-8 text-xs" />
-          </div>
-          <div>
-            <Label className="text-[10px]">Button Text</Label>
-            <Input value={content.button_text || ""} onChange={(e) => patchContent("button_text", e.target.value)} className="h-8 text-xs" />
-          </div>
-        </div>
-      );
-
-    case "categories":
-    case "featured_products":
-      return (
-        <div className="space-y-2">
-          {renderSectionTop()}
-          <div className="grid grid-cols-2 gap-2">
-            <SliderField
-              label="Limit"
-              value={content.limit || 6}
-              onChange={(v) => patchContent("limit", v)}
-              min={1} max={24} step={1} unit=""
-            />
-            <div>
-              <Label className="text-[10px]">Alignment</Label>
-              <Select value={content.alignment || "center"} onValueChange={(v) => patchContent("alignment", v)}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="left">Left</SelectItem>
-                  <SelectItem value="center">Center</SelectItem>
-                  <SelectItem value="right">Right</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-      );
-
-    case "faq":
-      return (
-        <div className="space-y-3">
-          {renderSectionTop()}
-          {renderRepeaterControls("FAQ Items")}
-          <Accordion type="multiple" className="space-y-1">
-            {repeaterItems.map((item: any, index: number) => (
-              <AccordionItem key={index} value={`faq-${index}`} className="rounded-md border border-border/30 px-2">
-                <AccordionTrigger className="py-2 text-[11px]">{item.question || `Item ${index + 1}`}</AccordionTrigger>
-                <AccordionContent className="space-y-2 pb-2">
-                  <Input value={item.question || ""} onChange={(e) => patchItem(index, { question: e.target.value })} className="h-7 text-xs" placeholder="Question" />
-                  <Textarea value={item.answer || ""} onChange={(e) => patchItem(index, { answer: e.target.value })} rows={3} className="text-xs" placeholder="Answer" />
-                  <div className="flex items-center justify-between">
-                    <Label className="text-[10px]">Visible</Label>
-                    <Switch checked={item.visible !== false} onCheckedChange={(v) => patchItem(index, { visible: v })} />
-                  </div>
-                  {renderItemControls(index)}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </div>
-      );
-
-    case "how_it_works":
-      return (
-        <div className="space-y-3">
-          {renderSectionTop()}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label className="text-[10px]">Columns</Label>
-              <Select value={String(content.columns || 4)} onValueChange={(v) => patchContent("columns", Number(v))}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {[1,2,3,4].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-[10px]">Alignment</Label>
-              <Select value={content.alignment || "center"} onValueChange={(v) => patchContent("alignment", v)}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="left">Left</SelectItem>
-                  <SelectItem value="center">Center</SelectItem>
-                  <SelectItem value="right">Right</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          {renderRepeaterControls("Steps")}
-          <Accordion type="multiple" className="space-y-1">
-            {repeaterItems.map((item: any, index: number) => (
-              <AccordionItem key={index} value={`step-${index}`} className="rounded-md border border-border/30 px-2">
-                <AccordionTrigger className="py-2 text-[11px]">{item.title || `Step ${index + 1}`}</AccordionTrigger>
-                <AccordionContent className="space-y-2 pb-2">
-                  <Input value={item.title || ""} onChange={(e) => patchItem(index, { title: e.target.value })} className="h-7 text-xs" placeholder="Title" />
-                  <IconPickerField
-                    label="Icon"
-                    value={item.icon || "Star"}
-                    onChange={(v) => patchItem(index, { icon: v })}
-                  />
-                  <Textarea value={item.desc || ""} onChange={(e) => patchItem(index, { desc: e.target.value })} rows={2} className="text-xs" />
-                  {renderItemControls(index)}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </div>
-      );
-
-    case "trust_badges":
-      return (
-        <div className="space-y-3">
-          {renderSectionTop()}
-          <div>
-            <Label className="text-[10px]">Columns</Label>
-            <Select value={String(content.columns || 3)} onValueChange={(v) => patchContent("columns", Number(v))}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {[2,3,4].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          {renderRepeaterControls("Badges")}
-          <Accordion type="multiple" className="space-y-1">
-            {repeaterItems.map((item: any, index: number) => (
-              <AccordionItem key={index} value={`badge-${index}`} className="rounded-md border border-border/30 px-2">
-                <AccordionTrigger className="py-2 text-[11px]">{item.title || `Badge ${index + 1}`}</AccordionTrigger>
-                <AccordionContent className="space-y-2 pb-2">
-                  <Input value={item.title || ""} onChange={(e) => patchItem(index, { title: e.target.value })} className="h-7 text-xs" />
-                  <IconPickerField
-                    label="Icon"
-                    value={item.icon || "Star"}
-                    onChange={(v) => patchItem(index, { icon: v })}
-                  />
-                  <Input value={item.desc || ""} onChange={(e) => patchItem(index, { desc: e.target.value })} className="h-7 text-xs" placeholder="Description" />
-                  {renderItemControls(index)}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </div>
-      );
-
-    case "entry_cards":
-      return (
-        <div className="space-y-3">
-          {renderSectionTop()}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label className="text-[10px]">Columns</Label>
-              <Select value={String(content.columns || 3)} onValueChange={(v) => patchContent("columns", Number(v))}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {[1,2,3,4].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-[10px]">Alignment</Label>
-              <Select value={content.alignment || "center"} onValueChange={(v) => patchContent("alignment", v)}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="left">Left</SelectItem>
-                  <SelectItem value="center">Center</SelectItem>
-                  <SelectItem value="right">Right</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          {renderRepeaterControls("Cards")}
-          <Accordion type="multiple" className="space-y-1">
-            {repeaterItems.map((item: any, index: number) => (
-              <AccordionItem key={index} value={`card-${index}`} className="rounded-md border border-border/30 px-2">
-                <AccordionTrigger className="py-2 text-[11px]">{item.title || `Card ${index + 1}`}</AccordionTrigger>
-                <AccordionContent className="space-y-2 pb-2">
-                  <Input value={item.title || ""} onChange={(e) => patchItem(index, { title: e.target.value })} className="h-7 text-xs" placeholder="Title" />
-                  <IconPickerField
-                    label="Icon"
-                    value={item.icon || "Star"}
-                    onChange={(v) => patchItem(index, { icon: v })}
-                  />
-                  <Textarea value={item.desc || ""} onChange={(e) => patchItem(index, { desc: e.target.value })} rows={2} className="text-xs" placeholder="Description" />
-                  <Input value={item.cta || ""} onChange={(e) => patchItem(index, { cta: e.target.value })} className="h-7 text-xs" placeholder="Button label" />
-                  <Input value={item.link || ""} onChange={(e) => patchItem(index, { link: e.target.value, actionType: "internal_link", actionTarget: e.target.value })} className="h-7 text-xs" placeholder="/page-link" />
-                  <ImageUploadField
-                    label="Card Image"
-                    value={item.image || ""}
-                    onChange={(v) => patchItem(index, { image: v })}
-                  />
-                  {renderItemControls(index)}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </div>
-      );
-
-    case "image":
-    case "carousel":
-      return (
-        <div className="space-y-3">
-          {renderSectionTop()}
-          {blockType === "image" && (
-            <div>
-              <Label className="text-[10px]">Columns</Label>
-              <Select value={String(content.columns || 3)} onValueChange={(v) => patchContent("columns", Number(v))}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {[1,2,3,4].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          {renderRepeaterControls(blockType === "image" ? "Images" : "Slides")}
-          <Accordion type="multiple" className="space-y-1">
-            {repeaterItems.map((item: any, index: number) => (
-              <AccordionItem key={index} value={`${blockType}-${index}`} className="rounded-md border border-border/30 px-2">
-                <AccordionTrigger className="py-2 text-[11px]">{item.title || `${blockType === "image" ? "Image" : "Slide"} ${index + 1}`}</AccordionTrigger>
-                <AccordionContent className="space-y-2 pb-2">
-                  <ImageUploadField
-                    label="Image"
-                    value={item.image || ""}
-                    onChange={(v) => patchItem(index, { image: v })}
-                  />
-                  <Input value={item.title || ""} onChange={(e) => patchItem(index, { title: e.target.value })} className="h-7 text-xs" placeholder="Title" />
-                  <Input value={item.subtitle || ""} onChange={(e) => patchItem(index, { subtitle: e.target.value })} className="h-7 text-xs" placeholder="Subtitle" />
-                  <Input value={item.alt || ""} onChange={(e) => patchItem(index, { alt: e.target.value })} className="h-7 text-xs" placeholder="Alt text" />
-                  <Select value={item.objectFit || "cover"} onValueChange={(v) => patchItem(index, { objectFit: v })}>
-                    <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cover">Cover</SelectItem>
-                      <SelectItem value="contain">Contain</SelectItem>
-                      <SelectItem value="fill">Fill</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {renderItemControls(index)}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </div>
-      );
-
-    case "instagram_auto_feed":
-      return (
-        <div className="space-y-2">
-          <div>
-            <Label className="text-[10px]">Title</Label>
-            <Input value={content.title || ""} onChange={(e) => patchContent("title", e.target.value)} className="h-8 text-xs" />
-          </div>
-          <div>
-            <Label className="text-[10px]">Subtitle</Label>
-            <Input value={content.subtitle || ""} onChange={(e) => patchContent("subtitle", e.target.value)} className="h-8 text-xs" />
-          </div>
-          <div>
-            <Label className="text-[10px]">Username</Label>
-            <Input value={content.instagramUsername || ""} onChange={(e) => patchContent("instagramUsername", e.target.value)} className="h-8 text-xs" />
-          </div>
+        {/* Limit for categories/featured */}
+        {(blockType === "categories" || blockType === "featured_products") && (
           <SliderField
-            label="Items to show"
+            label="Items to Show"
+            value={content.limit || 6}
+            onChange={(v) => patchContent("limit", v)}
+            min={1} max={24} step={1} unit=""
+          />
+        )}
+
+        {/* Instagram feed specifics */}
+        {blockType === "instagram_auto_feed" && (
+          <SliderField
+            label="Items to Show"
             value={content.itemsToShow || 10}
             onChange={(v) => patchContent("itemsToShow", v)}
             min={1} max={30} step={1} unit=""
           />
-        </div>
-      );
+        )}
 
-    case "button":
-      return (
-        <div className="space-y-2">
-          <div>
-            <Label className="text-[10px]">Button Text</Label>
-            <Input value={content.text || ""} onChange={(e) => patchContent("text", e.target.value)} className="h-8 text-xs" />
-          </div>
-          <div>
-            <Label className="text-[10px]">Link</Label>
-            <Input value={content.link || ""} onChange={(e) => patchContent("link", e.target.value)} className="h-8 text-xs" />
-          </div>
-          <div>
-            <Label className="text-[10px]">Variant</Label>
+        {/* Button block specifics */}
+        {blockType === "button" && (
+          <div className="space-y-2">
             <Select value={content.variant || "default"} onValueChange={(v) => patchContent("variant", v)}>
               <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -837,51 +702,62 @@ function ContentEditor({
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <Label className="text-[10px]">Alignment</Label>
-            <Select value={content.alignment || "center"} onValueChange={(v) => patchContent("alignment", v)}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="left">Left</SelectItem>
-                <SelectItem value="center">Center</SelectItem>
-                <SelectItem value="right">Right</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      );
+        )}
 
-    default:
-      return (
-        <div className="space-y-2">
-          {Object.entries(content).map(([key, value]) => {
-            if (Array.isArray(value) || typeof value === "object") return null;
-            if (typeof value === "boolean") {
-              return (
-                <div key={key} className="flex items-center justify-between rounded-lg border border-border/30 px-3 py-2">
-                  <Label className="text-xs capitalize">{key.replace(/_/g, " ")}</Label>
-                  <Switch checked={value} onCheckedChange={(v) => patchContent(key, v)} />
-                </div>
-              );
-            }
-            if (typeof value === "string" && value.length > 100) {
-              return (
-                <div key={key}>
-                  <Label className="text-[10px] capitalize">{key.replace(/_/g, " ")}</Label>
-                  <Textarea value={String(value)} onChange={(e) => patchContent(key, e.target.value)} rows={4} className="text-xs" />
-                </div>
-              );
-            }
-            return (
-              <div key={key}>
-                <Label className="text-[10px] capitalize">{key.replace(/_/g, " ")}</Label>
-                <Input value={String(value ?? "")} onChange={(e) => patchContent(key, e.target.value)} className="h-8 text-xs" />
+        {/* Schema-driven repeater items */}
+        {renderSchemaRepeater()}
+
+        {/* Image/carousel special: objectFit in items */}
+        {(blockType === "image" || blockType === "carousel") && repeaterItems.length > 0 && (
+          <div className="space-y-1">
+            {blockType === "image" && (
+              <div>
+                <Label className="text-[10px]">Columns</Label>
+                <Select value={String(content.columns || 3)} onValueChange={(v) => patchContent("columns", Number(v))}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[1,2,3,4].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
-            );
-          })}
-        </div>
-      );
+            )}
+          </div>
+        )}
+      </div>
+    );
   }
+
+  // Fallback for unknown block types - render all content keys
+  return (
+    <div className="space-y-2">
+      {Object.entries(content).map(([key, value]) => {
+        if (Array.isArray(value) || typeof value === "object") return null;
+        if (key.startsWith("_")) return null;
+        if (typeof value === "boolean") {
+          return (
+            <div key={key} className="flex items-center justify-between rounded-lg border border-border/30 px-3 py-2">
+              <Label className="text-xs capitalize">{key.replace(/_/g, " ")}</Label>
+              <Switch checked={value} onCheckedChange={(v) => patchContent(key, v)} />
+            </div>
+          );
+        }
+        if (typeof value === "string" && value.length > 100) {
+          return (
+            <div key={key}>
+              <Label className="text-[10px] capitalize">{key.replace(/_/g, " ")}</Label>
+              <Textarea value={String(value)} onChange={(e) => patchContent(key, e.target.value)} rows={4} className="text-xs" />
+            </div>
+          );
+        }
+        return (
+          <div key={key}>
+            <Label className="text-[10px] capitalize">{key.replace(/_/g, " ")}</Label>
+            <Input value={String(value ?? "")} onChange={(e) => patchContent(key, e.target.value)} className="h-8 text-xs" />
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 // ─── Advanced Style Editor ───────────────────────────────────────
@@ -941,6 +817,14 @@ function AdvancedStyleEditor({ content, patchContent }: { content: Record<string
         min={0} max={32} step={2}
       />
 
+      {/* Gap */}
+      <SliderField
+        label="Content Gap"
+        value={content.gap ?? 0}
+        onChange={(v) => patchContent("gap", v)}
+        min={0} max={60} step={4}
+      />
+
       {/* Shadow */}
       <div>
         <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Shadow</Label>
@@ -971,12 +855,34 @@ function AdvancedStyleEditor({ content, patchContent }: { content: Record<string
         </Select>
       </div>
 
+      {/* Min Height */}
+      <SliderField
+        label="Min Height"
+        value={content.minHeight ?? 0}
+        onChange={(v) => patchContent("minHeight", v)}
+        min={0} max={800} step={20}
+      />
+
       {/* Opacity */}
       <SliderField
         label="Opacity"
         value={content.opacity ?? 100}
         onChange={(v) => patchContent("opacity", v)}
         min={0} max={100} step={5} unit="%"
+      />
+
+      {/* Border Color */}
+      <ColorPickerField
+        label="Border Color"
+        value={content.borderColor || ""}
+        onChange={(v) => patchContent("borderColor", v)}
+      />
+
+      {/* Overlay Color (for blocks with overlays) */}
+      <ColorPickerField
+        label="Overlay Color"
+        value={content.overlayColor || ""}
+        onChange={(v) => patchContent("overlayColor", v)}
       />
     </div>
   );

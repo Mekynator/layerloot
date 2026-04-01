@@ -1360,7 +1360,7 @@ const CustomPrintOrder = () => {
           </div>
 
           <div>
-            <Label>Color</Label>
+            <Label>{t("create.color")}</Label>
             <div className="mt-2 flex flex-wrap gap-2">
               {COLORS.map((color, index) => (
                 <motion.button

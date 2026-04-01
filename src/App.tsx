@@ -33,6 +33,8 @@ import Gallery from "./pages/Gallery";
 import About from "./pages/About";
 import SubmitDesign from "./pages/SubmitDesign";
 import NotFound from "./pages/NotFound";
+import Creations from "./pages/Creations";
+import CreationDetail from "./pages/CreationDetail";
 import ChatWidget from "./components/ChatWidget";
 import PromotionPopup from "./components/PromotionPopup";
 import GiftClaimPopup from "./components/GiftClaimPopup";

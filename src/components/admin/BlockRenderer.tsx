@@ -1352,8 +1352,8 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
         </h2>
       )}
 
-      <div className="relative overflow-hidden rounded-lg">
-        <div className="aspect-[21/9] overflow-hidden">
+      <div className="relative overflow-hidden rounded-2xl border border-border/30" style={{ boxShadow: '0 8px 40px -8px hsl(228 33% 2% / 0.5)' }}>
+        <div className="aspect-[21/9] overflow-hidden bg-card/40">
           <AnimatePresence mode="wait">{wrappedImage}</AnimatePresence>
         </div>
 

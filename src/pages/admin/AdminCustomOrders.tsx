@@ -1241,6 +1241,22 @@ const AdminCustomOrders = () => {
                 )}
               </TabsContent>
 
+              <TabsContent value="pricing" className="space-y-4">
+                <div className="rounded-lg border border-border bg-muted/30 p-4">
+                  <h4 className="mb-3 font-display text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+                    Cost Estimator for This Order
+                  </h4>
+                  <p className="mb-4 text-xs text-muted-foreground">
+                    Calculate production cost and get recommended quote prices. Use "Apply" to set the quote amount.
+                  </p>
+                  <PricingCalculator
+                    customOrderId={selectedOrder.id}
+                    compact
+                    onPriceCalculated={(price) => setQuoteAmount(String(price))}
+                  />
+                </div>
+              </TabsContent>
+
               <TabsContent value="conversation" className="space-y-4">
                 <div className="space-y-3 rounded-md border border-border bg-muted/20 p-3">
                   {messages.length === 0 ? (

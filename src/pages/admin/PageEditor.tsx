@@ -1037,24 +1037,31 @@ const PageEditor = () => {
       <PageBackgroundEditor page={activePage} open={backgroundEditorOpen} onOpenChange={setBackgroundEditorOpen} />
 
       <Dialog open={addBlockOpen} onOpenChange={setAddBlockOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="font-display uppercase">
+            <DialogTitle className="font-display uppercase tracking-wider">
               Add Section · {selectedPage ? pageDisplayTitle(selectedPage) : prettyLabel(activePage)}
             </DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-3 gap-2">
-            {blockTypes.map(({ value, label, icon: Icon }) => (
-              <Button
-                key={value}
-                variant="outline"
-                onClick={() => void addBlock(value)}
-                className="h-auto flex-col gap-2 py-3 font-display text-[10px] uppercase tracking-wider"
-              >
-                <Icon className="h-5 w-5" />
-                {label}
-              </Button>
-            ))}
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+            {blockTypes.map(({ value, label, icon: Icon }) => {
+              const accentColor = BLOCK_COLORS[value] ?? "";
+              return (
+                <button
+                  key={value}
+                  onClick={() => void addBlock(value)}
+                  className={`group relative flex h-auto flex-col items-center gap-2.5 rounded-xl border border-border/40 bg-card/60 px-3 py-4 backdrop-blur-xl transition-all duration-200 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_12px_40px_-8px_hsl(217_91%_60%/0.2)] ${accentColor ? `border-l-[3px] ${accentColor.split(' ')[0]}` : ''}`}
+                  style={{ boxShadow: '0 4px 20px -4px hsl(228 33% 2% / 0.4), inset 0 1px 0 0 hsl(215 25% 95% / 0.04)' }}
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/20">
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <span className="font-display text-[10px] font-semibold uppercase tracking-wider text-foreground/80 group-hover:text-foreground">
+                    {label}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </DialogContent>
       </Dialog>

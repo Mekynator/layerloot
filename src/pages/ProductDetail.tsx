@@ -521,7 +521,25 @@ const ProductDetail = () => {
             </div>
           </section>
         ) : null}
+
+        {/* Recently Viewed */}
+        <RecentlyViewedSection
+          products={recentProducts.filter((p) => p.id !== product.id)}
+          maxItems={6}
+        />
       </div>
+
+      {/* Sticky Add-to-Cart bar */}
+      <StickyAddToCart
+        product={product}
+        price={activePrice}
+        stock={activeStock}
+        disabled={activeStock <= 0 || (variants.length > 0 && !selectedVariant && !hasConfiguratorAttrs)}
+        onAddToCart={handleAddToCart}
+        justAdded={justAdded}
+        observeRef={addToCartSectionRef}
+        variantLabel={selectedVariant?.name}
+      />
     </div>
   );
 };

@@ -40,6 +40,7 @@ const sidebarLinks = [
   { to: "/admin/pricing", label: "Pricing", icon: Calculator, notificationKey: null },
   { to: "/admin/growth", label: "Growth", icon: TrendingUp, notificationKey: null },
   { to: "/admin/campaigns", label: "Campaigns", icon: Megaphone, notificationKey: null },
+  { to: "/admin/revenue", label: "Revenue Engine", icon: Wallet, notificationKey: null },
   { to: "/admin/reports", label: "Reports", icon: BarChart3, notificationKey: null },
   { to: "/admin/editor", label: "Page Editor", icon: FileText, notificationKey: null },
   { to: "/admin/shipping", label: "Shipping", icon: Truck, notificationKey: null },

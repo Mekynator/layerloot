@@ -139,7 +139,7 @@ const Gallery = () => {
                     <div>
                       <Label>{t("gallery.photo")}</Label>
                       <div
-                        className="mt-1 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-6 transition-colors hover:border-primary"
+                        className="mt-1 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-muted-foreground/20 p-6 transition-colors hover:border-primary/40"
                         onClick={() => document.getElementById("gallery-upload")?.click()}
                       >
                         <Camera className="mb-1 h-6 w-6 text-muted-foreground" />

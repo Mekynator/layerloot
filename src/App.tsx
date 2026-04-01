@@ -32,7 +32,7 @@ import AdminGrowth from "./pages/admin/AdminGrowth";
 import AdminCampaigns from "./pages/admin/AdminCampaigns";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminRevenue from "./pages/admin/AdminRevenue";
-import PageEditor from "./pages/admin/PageEditor";
+import VisualEditor from "./pages/admin/VisualEditor";
 import DynamicPage from "./pages/DynamicPage";
 import CreateYourOwn from "./pages/CreateYourOwn";
 import Policies from "./pages/Policies";

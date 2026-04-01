@@ -245,7 +245,7 @@ export default function CartPage() {
             </div>
 
             <h1 className="mb-2 font-display text-3xl font-bold uppercase text-foreground md:text-4xl">
-              Your Cart Is Empty
+              {t("cart.empty")}
             </h1>
             <p className="mx-auto mb-8 max-w-xl text-muted-foreground">
               Looks like the cart is taking a nap. Add some prints and wake the beast.

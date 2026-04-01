@@ -288,6 +288,7 @@ const ProductDetail = () => {
               <RatingStars rating={socialProof?.averageRating} count={socialProof?.reviewCount} />
               <ProductTrustBadges badges={trustBadges} />
               <SocialProofBadges productId={product.id} variant="full" />
+              <ProductFOMOBar productId={product.id} stock={activeStock} />
             </div>
 
             <motion.div

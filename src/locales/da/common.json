@@ -87,7 +87,10 @@
     "noReviews": "Ingen anmeldelser endnu. Vær den første til at give feedback.",
     "youMayAlsoLike": "Du vil måske også kunne lide",
     "keepBuilding": "Fortsæt med at bygge",
-    "view3D": "Se 3D-model"
+    "view3D": "Se 3D-model",
+    "productCount": "{{count}} produkter",
+    "categories": "Kategorier",
+    "lowStock": "Kun {{count}} tilbage – skynd dig!"
   },
   "cart": {
     "title": "Indkøbskurv",

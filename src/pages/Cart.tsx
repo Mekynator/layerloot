@@ -515,7 +515,7 @@ export default function CartPage() {
           <div className="space-y-6">
             {accountLoading && user ? <CartSummarySkeleton /> : null}
             <motion.div layout className="rounded-2xl border border-border bg-card p-6 shadow-sm lg:sticky lg:top-24">
-              <h2 className="mb-5 font-display text-2xl font-bold uppercase text-foreground">Order Summary</h2>
+              <h2 className="mb-5 font-display text-2xl font-bold uppercase text-foreground">{t("cart.orderSummary")}</h2>
 
               <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
                 <div className="flex items-center gap-2">

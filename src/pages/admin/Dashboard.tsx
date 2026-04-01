@@ -108,6 +108,7 @@ const Dashboard = () => {
         orders: pendingOrdersRes.count ?? 0,
         customOrders: activeCustomOrdersRes.count ?? 0,
         reviews: pendingReviewsRes.count ?? 0,
+        showcases: pendingShowcasesRes.count ?? 0,
       });
 
       const dayMap: Record<string, { revenue: number; orders: number }> = {};

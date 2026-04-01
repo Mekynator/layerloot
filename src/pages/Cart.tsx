@@ -25,6 +25,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCartAccountData } from "@/hooks/use-cart-account-data";
+import { computeLoyaltyProgress } from "@/hooks/use-loyalty-progress";
+import LoyaltyProgressCard from "@/components/social/LoyaltyProgressCard";
 import { CartSummarySkeleton } from "@/components/shared/loading-states";
 import { formatPrice } from "@/lib/currency";
 

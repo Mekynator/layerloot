@@ -170,10 +170,103 @@
     "languagePreference": "Preferencia de idioma",
     "languageHint": "Elige tu idioma preferido para el sitio web.",
     "languageSaved": "¡Idioma guardado!",
-    "orders": "Pedidos",
-    "customRequests": "Pedidos especiales",
-    "rewards": "Recompensas",
-    "vouchers": "Cupones"
+    "orders": {
+      "empty": "Sin pedidos aún.",
+      "startShopping": "¡Empieza a comprar!",
+      "order": "Pedido",
+      "closeReview": "Cerrar reseña",
+      "leaveReview": "Dejar reseña"
+    },
+    "customRequests": {
+      "empty": "Sin solicitudes personalizadas aún.",
+      "submitFirst": "Envía tu primera solicitud de impresión 3D personalizada.",
+      "ongoing": "En curso",
+      "done": "Completadas",
+      "request": "Solicitud Personalizada",
+      "typeLithophane": "Litofanía",
+      "typeCustomPrint": "Impresión 3D",
+      "feeUnpaid": "Tarifa impaga",
+      "submittedOn": "Enviado el",
+      "material": "Material",
+      "color": "Color",
+      "quality": "Calidad",
+      "quantity": "Cant.",
+      "scale": "Escala",
+      "payment": "Pago",
+      "production": "Producción",
+      "quote": "Cotización",
+      "viewDetails": "Ver detalles",
+      "hideDetails": "Ocultar detalles",
+      "payFee": "Pagar",
+      "fee": "Tarifa",
+      "requestFeeRequired": "Tarifa de solicitud requerida",
+      "requestFeeDescription": "Una tarifa única de",
+      "requestFeeDescriptionEnd": "es requerida antes de que tu pedido personalizado pueda ser revisado. Esta tarifa se deducirá del total final de tu pedido.",
+      "originalRequest": "Tu solicitud original",
+      "adminNotes": "Notas del admin",
+      "noAdminNotes": "Sin notas del admin aún.",
+      "negotiationState": "Estado actual de negociación",
+      "quotedPrice": "Precio cotizado",
+      "finalAgreed": "Acordado final",
+      "yourResponse": "Tu respuesta",
+      "conversationHistory": "Historial de conversación",
+      "noConversation": "Sin conversación aún.",
+      "quoteActionRequired": "Acción de cotización requerida",
+      "quoteActionText": "El admin ha cotizado esta solicitud en",
+      "quoteActionTextEnd": "Por favor acepta o rechaza la cotización.",
+      "acceptQuote": "Aceptar cotización",
+      "declineQuote": "Rechazar cotización",
+      "replyToAdmin": "Responder al admin",
+      "replyPlaceholder": "Escribe un mensaje al admin...",
+      "sendReply": "Enviar respuesta",
+      "replySent": "Respuesta enviada",
+      "paymentPending": "Pago pendiente",
+      "finalAgreedAmount": "Monto final acordado",
+      "payNow": "Pagar ahora",
+      "paymentError": "Error de pago",
+      "couldNotOpenCheckout": "No se pudo abrir el checkout.",
+      "quoteAcceptedPaymentNotStarted": "Cotización aceptada, pago no iniciado",
+      "clickPayNow": "Por favor haz clic en Pagar ahora para completar el pago.",
+      "quoteDeclined": "Cotización rechazada",
+      "requestMarkedDeclined": "La solicitud ha sido marcada como rechazada.",
+      "customerAcceptedQuote": "Cliente aceptó el precio cotizado de",
+      "customerDeclinedQuote": "Cliente rechazó la cotización actual.",
+      "feeAlreadyPaid": "Tarifa ya pagada",
+      "couldNotStartPayment": "No se pudo iniciar el pago",
+      "noneInSection": "Sin solicitudes en esta sección.",
+      "customPrintFeeNote": "La tarifa de solicitud de 100 kr se deducirá del total final del pedido en el checkout.",
+      "lithophaneFeeNote": "Los pedidos de litofanía no incluyen tarifa de solicitud."
+    },
+    "rewards": {
+      "notEnoughPoints": "No tienes suficientes puntos",
+      "createVoucherError": "No se pudo crear el cupón"
+    },
+    "vouchers": {
+      "redeemed": "Cupón canjeado",
+      "code": "Tu código",
+      "enterRecipientEmail": "Ingresa el email del destinatario",
+      "giftCardSent": "Tarjeta de regalo enviada",
+      "giftCardSentTo": "Tarjeta de regalo enviada a",
+      "recipientNotified": "El destinatario también tiene una notificación en su cuenta."
+    },
+    "title": "Mi Cuenta",
+    "tabs": {
+      "orders": "Pedidos",
+      "customRequests": "Solicitudes Personalizadas",
+      "rewards": "Tienda de Recompensas",
+      "vouchers": "Mis Cupones",
+      "settings": "Configuración"
+    },
+    "points": {
+      "balance": "Saldo de Puntos de Fidelidad",
+      "rate": "1 punto se gana por cada 4 kr gastados",
+      "earnedTotal": "Total ganado",
+      "spentTotal": "Total gastado",
+      "recentActivity": "Actividad reciente de puntos",
+      "recentActivityHint": "Presiona para ver descuentos canjeados y puntos ganados",
+      "noActivity": "Sin actividad de fidelidad aún.",
+      "pointsUpdate": "Actualización de puntos"
+    }
   },
   "gallery": {
     "community": "Comunidad",
@@ -322,6 +415,139 @@
     "save": "Guardar",
     "cancel": "Cancelar",
     "addedToCart": "¡Añadido al carrito!",
-    "kr": "kr"
+    "kr": "kr",
+    "redirecting": "Redirigiendo...",
+    "signInAgain": "Por favor inicia sesión de nuevo"
+  },
+  "blocks": {
+    "shippingBanner": {
+      "text": "Envío gratis en pedidos de más de 500 kr"
+    },
+    "hero": {
+      "eyebrow": "Esenciales de Impresión 3D",
+      "heading": "Equipa tu laboratorio de impresión",
+      "subheading": "Filamentos premium, herramientas, miniaturas e impresiones personalizadas. Todo lo que un maker necesita.",
+      "buttonPrimary": "Comprar ahora",
+      "buttonSecondary": "Pedido personalizado"
+    },
+    "entryCards": {
+      "default": {
+        "shop": {
+          "title": "Comprar Productos",
+          "desc": "Explora nuestra colección curada de artículos impresos en 3D, filamentos y accesorios.",
+          "cta": "Explorar tienda"
+        },
+        "customize": {
+          "title": "Personalizar",
+          "desc": "Elige tu material, color y acabado. Haz cualquier producto verdaderamente tuyo.",
+          "cta": "Empezar a personalizar"
+        },
+        "upload": {
+          "title": "Sube tu idea",
+          "desc": "¿Tienes un modelo 3D? Súbelo y lo imprimiremos con calidad profesional.",
+          "cta": "Subir modelo"
+        }
+      }
+    },
+    "categories": {
+      "heading": "Comprar por categoría",
+      "subheading": "Encuentra exactamente lo que necesitas",
+      "empty": "No hay categorías disponibles."
+    },
+    "featuredProducts": {
+      "heading": "Más vendidos",
+      "subheading": "Nuestros artículos impresos en 3D más populares",
+      "viewAll": "Ver todos",
+      "empty": "No hay productos destacados disponibles."
+    },
+    "howItWorks": {
+      "heading": "Cómo funciona",
+      "subheading": "De la idea a tu puerta en 4 simples pasos",
+      "step1": {
+        "title": "Elige",
+        "desc": "Explora productos o sube tu propio modelo 3D"
+      },
+      "step2": {
+        "title": "Personaliza",
+        "desc": "Selecciona material, color, tamaño y acabado"
+      },
+      "step3": {
+        "title": "Imprimimos",
+        "desc": "Tu artículo se imprime en 3D con precisión"
+      },
+      "step4": {
+        "title": "Entregado",
+        "desc": "Empaquetado con seguridad y enviado a tu puerta"
+      }
+    },
+    "faq": {
+      "heading": "Preguntas Frecuentes",
+      "default1": {
+        "q": "¿Qué materiales ofrecen?",
+        "a": "Ofrecemos PLA, PLA Silk, PETG y Resina. Cada material tiene propiedades únicas."
+      },
+      "default2": {
+        "q": "¿Cuánto tarda la impresión?",
+        "a": "Dependiendo del tamaño y complejidad, las impresiones tardan típicamente 2-24 horas. Los pedidos personalizados se envían en 3-5 días hábiles."
+      }
+    },
+    "trustBadges": {
+      "default1": {
+        "title": "Envío gratis",
+        "desc": "En pedidos de más de 500 kr"
+      },
+      "default2": {
+        "title": "Pago seguro",
+        "desc": "Protegido por Stripe y PayPal"
+      },
+      "default3": {
+        "title": "Recompensas de fidelidad",
+        "desc": "Gana puntos en cada compra"
+      }
+    },
+    "cta": {
+      "heading": "¿Listo para empezar?",
+      "button": "Saber más"
+    },
+    "button": {
+      "default": "Haz clic"
+    },
+    "image": {
+      "noImage": "Sin imagen configurada"
+    },
+    "banner": {
+      "title": "Banner"
+    },
+    "embed": {
+      "noUrl": "Sin URL de embed configurada"
+    },
+    "newsletter": {
+      "heading": "Mantente actualizado",
+      "subheading": "Suscríbete a nuestro boletín para las últimas novedades.",
+      "placeholder": "tu@email.es",
+      "submit": "Suscribirse",
+      "success": "¡Gracias por suscribirte!",
+      "error": "Ya suscrito o error ocurrido."
+    },
+    "instagram": {
+      "title": "Síguenos en Instagram",
+      "subtitle": "Últimas publicaciones y reels",
+      "loading": "Cargando feed de Instagram...",
+      "empty": "No se encontraron publicaciones de Instagram.",
+      "usernameMissing": "Agrega un nombre de usuario de Instagram.",
+      "postAlt": "Publicación de Instagram",
+      "noImage": "Sin imagen",
+      "goToItem": "Ir al elemento de Instagram"
+    },
+    "imageCollection": {
+      "alt": "Imagen de galería"
+    },
+    "unknown": "Bloque desconocido"
+  },
+  "header": {
+    "addedToCartNamed": "{{name}} añadido al carrito",
+    "addedToCart": "Añadido al carrito",
+    "closeMenu": "Cerrar menú",
+    "openMenu": "Abrir menú"
   }
 }

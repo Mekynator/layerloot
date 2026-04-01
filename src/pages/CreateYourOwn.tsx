@@ -1435,7 +1435,7 @@ const CustomPrintOrder = () => {
             </div>
 
             <div>
-              <Label>Scale (%)</Label>
+              <Label>{t("create.scale")}</Label>
               <Input
                 type="number"
                 min={10}

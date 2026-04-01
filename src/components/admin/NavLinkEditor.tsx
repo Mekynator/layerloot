@@ -131,6 +131,13 @@ const defaultHeaderNav: NavEditorItem[] = [
     visible: true,
   },
   {
+    label: makeLabel("Creations", "Kreationer", "Kreationen", "Creaciones", "Creații"),
+    to: "/creations",
+    source: "manual",
+    openInNewTab: false,
+    visible: true,
+  },
+  {
     label: makeLabel("About", "Om Os", "Über Uns", "Acerca de", "Despre"),
     to: "/about",
     source: "manual",

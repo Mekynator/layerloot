@@ -434,6 +434,7 @@ const ToolShell = ({
 );
 
 const ReviewSection = ({ title }: { toolType: "custom-print" | "lithophane"; title: string }) => {
+  const { t } = useTranslation();
   const [reviews, setReviews] = useState<ToolReview[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -488,7 +489,7 @@ const ReviewSection = ({ title }: { toolType: "custom-print" | "lithophane"; tit
               className="rounded-xl border border-border bg-card p-4"
             >
               <div className="mb-2 flex items-center justify-between gap-2">
-                <p className="font-medium text-foreground">{review.title || "Verified Customer"}</p>
+                <p className="font-medium text-foreground">{review.title || t("create.verifiedCustomer")}</p>
                 <div className="flex gap-1">
                   {Array.from({ length: review.rating }).map((_, i) => (
                     <Star key={i} className="h-4 w-4 fill-primary text-primary" />

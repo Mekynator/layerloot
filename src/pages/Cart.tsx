@@ -171,8 +171,8 @@ export default function CartPage() {
     try {
       if (!user && (selectedDiscountCode || manualDiscountCode.trim())) {
         toast({
-          title: "Sign in required",
-          description: "Sign in to use a voucher or gift card.",
+          title: t("cart.signInRequired"),
+          description: t("cart.signInForVoucher"),
           variant: "destructive",
         });
         return;

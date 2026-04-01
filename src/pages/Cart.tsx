@@ -254,7 +254,7 @@ export default function CartPage() {
             <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link to="/products">
                 <Button size="lg" className="font-display uppercase tracking-wider">
-                  Browse Products
+                  {t("cart.browseProducts")}
                 </Button>
               </Link>
               <Link to="/create">

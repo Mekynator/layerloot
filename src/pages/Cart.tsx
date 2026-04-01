@@ -520,7 +520,7 @@ export default function CartPage() {
               <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
                 <div className="flex items-center gap-2">
                   <Star className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium text-foreground">Loyalty rewards</span>
+                  <span className="text-sm font-medium text-foreground">{t("cart.loyaltyRewards")}</span>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
                   Current balance: <span className="font-semibold text-foreground">{pointsBalance}</span> points

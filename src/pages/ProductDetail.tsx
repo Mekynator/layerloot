@@ -83,6 +83,18 @@ const ProductDetail = () => {
     return () => window.clearTimeout(timer);
   }, [justAdded]);
 
+  // Track recently viewed product
+  useEffect(() => {
+    if (!product) return;
+    trackProduct({
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      image: product.images?.[0] || "/placeholder.svg",
+      price: Number(product.price),
+    });
+  }, [product?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleAddToCart = () => {
     if (!product) return;
     const variant = selectedVariant;

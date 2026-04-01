@@ -453,7 +453,7 @@ export default function CartPage() {
 
             {savedItems.length > 0 && (
               <motion.div layout className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                <h2 className="mb-4 font-display text-xl font-bold uppercase text-foreground">Saved for Later</h2>
+                <h2 className="mb-4 font-display text-xl font-bold uppercase text-foreground">{t("cart.savedForLater")}</h2>
 
                 <div className="space-y-3">
                   <AnimatePresence initial={false}>

@@ -681,7 +681,7 @@ const PageEditor = () => {
               <ArrowLeft className="mr-1 h-4 w-4" /> Admin
             </Button>
 
-            <div className="h-5 w-px bg-background/20" />
+            <div className="h-5 w-px bg-border/30" />
 
             <Select
               value={activePage}

@@ -807,7 +807,7 @@ const PageEditor = () => {
               variant="ghost"
               size="sm"
               onClick={() => navigate("/")}
-              className="text-background/70 hover:bg-background/10 hover:text-background"
+              className="text-muted-foreground hover:bg-accent/10 hover:text-foreground"
             >
               <X className="mr-1 h-4 w-4" /> Exit
             </Button>

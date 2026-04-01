@@ -362,21 +362,9 @@ const ProductDetail = () => {
             </div>
 
             <div className="flex items-center gap-3 text-sm">
-              {activeStock > 0 && activeStock <= 5 ? (
-                <motion.span
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex items-center gap-1.5 rounded-full border border-destructive/20 bg-destructive/5 px-3 py-1 font-medium text-destructive"
-                >
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-destructive" />
-                  {t("products.lowStock", { defaultValue: `Only ${activeStock} left – order soon!`, count: activeStock })}
-                </motion.span>
-              ) : (
-                <span className={`font-medium ${activeStock > 0 ? "text-green-600" : "text-destructive"}`}>
-                  {activeStock > 0 ? t("products.inStock", { count: activeStock }) : t("products.outOfStock")}
-                </span>
-              )}
-              {socialProof?.reviewCount ? <span className="text-muted-foreground">{t("products.lovedByBuyers")}</span> : null}
+              <span className={`font-medium ${activeStock > 0 ? "text-green-500" : "text-destructive"}`}>
+                {activeStock > 0 ? t("products.inStock", { count: activeStock }) : t("products.outOfStock")}
+              </span>
             </div>
 
             <div className="relative" ref={addToCartSectionRef}>

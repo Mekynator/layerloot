@@ -898,7 +898,7 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
                 />
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent" />
-              <h3 className="relative font-display text-xl font-bold uppercase text-secondary-foreground transition-colors group-hover:text-primary">
+              <h3 className="relative font-display text-xl font-bold uppercase text-foreground transition-colors group-hover:text-primary">
                 {catName}
               </h3>
             </motion.div>

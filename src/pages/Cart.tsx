@@ -470,7 +470,7 @@ export default function CartPage() {
                           <img src={item.image} alt={item.name} className="h-16 w-16 rounded-lg object-cover" />
                           <div>
                             <p className="font-display text-sm font-bold uppercase text-foreground">{item.name}</p>
-                            <p className="text-sm text-muted-foreground">{item.price.toFixed(2)} kr</p>
+                            <p className="text-sm text-muted-foreground">{formatPrice(item.price)}</p>
                           </div>
                         </div>
 

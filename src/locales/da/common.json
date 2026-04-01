@@ -409,6 +409,17 @@
     "qualityModerate": "0,6mm – Hurtigere print",
     "qualityLow": "0,8mm – Laveste detalje"
   },
+  "fomo": {
+    "viewingNow": "{{count}} personer ser lige nu",
+    "purchasedThisWeek": "Købt {{count}}× i denne uge",
+    "lastBought": "Sidst købt {{time}}",
+    "onlyLeft": "Kun {{count}} tilbage!",
+    "remaining": "{{count}} tilbage på lager",
+    "viewing": "ser",
+    "viewingNowLabel": "ser lige nu",
+    "purchasedCount": "Købt {{count}} gange i denne uge",
+    "lastPurchased": "Sidst købt"
+  },
   "common": {
     "loading": "Indlæser...",
     "error": "Fejl",

@@ -87,7 +87,10 @@
     "noReviews": "Încă nu există recenzii. Fii primul care lasă feedback.",
     "youMayAlsoLike": "S-ar putea să-ți placă și",
     "keepBuilding": "Continuă să construiești",
-    "view3D": "Vezi model 3D"
+    "view3D": "Vezi model 3D",
+    "productCount": "{{count}} produse",
+    "categories": "Categorii",
+    "lowStock": "Doar {{count}} rămase – comandă acum!"
   },
   "cart": {
     "title": "Coș de cumpărături",

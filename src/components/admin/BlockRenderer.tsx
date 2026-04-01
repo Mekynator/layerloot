@@ -464,10 +464,12 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
     case "shipping_banner":
       return withSection(
         block,
-        "bg-primary py-3",
-        <div className="container flex items-center justify-center gap-2 text-primary-foreground">
-          <Truck className="h-5 w-5" />
-          <span className="font-display text-sm uppercase tracking-widest">
+        "py-3 border-y border-border/20",
+        <div className="container flex items-center justify-center gap-2 text-foreground">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
+            <Truck className="h-4 w-4 text-primary" />
+          </div>
+          <span className="font-display text-sm uppercase tracking-widest text-foreground/90">
             {getLocalizedValue(c.text, tr("blocks.shippingBanner.text", "Free shipping on orders over 500 kr"))}
           </span>
         </div>,

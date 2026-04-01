@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -9,15 +9,18 @@ export type SocialProofData = {
   purchaseCountThisWeek: number;
 };
 
-// Deterministic pseudo-random from product ID for consistent "live" counts
+// Pseudo-random viewing count that shifts every 15 seconds with small drift
 function pseudoViewing(productId: string): number {
   let hash = 0;
   for (let i = 0; i < productId.length; i++) {
     hash = ((hash << 5) - hash + productId.charCodeAt(i)) | 0;
   }
-  const minute = Math.floor(Date.now() / 60000);
-  const seed = Math.abs(hash ^ minute);
-  return 3 + (seed % 18); // 3-20 range
+  const tick = Math.floor(Date.now() / 15000); // 15-second buckets
+  const seed = Math.abs(hash ^ tick);
+  const base = 3 + (seed % 18); // 3-20 base
+  // add small random drift (-2 to +2) seeded by a second hash layer
+  const drift = ((seed * 7 + tick * 3) % 5) - 2;
+  return Math.max(2, Math.min(22, base + drift));
 }
 
 function pseudoRecentViews(productId: string): number {
@@ -66,23 +69,48 @@ async function fetchProductSocialProofData(productId: string): Promise<SocialPro
 }
 
 export function useSocialProof(productId?: string) {
-  return useQuery({
+  // Force re-render every 15s so viewingNow shifts
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setTick((t) => t + 1), 15000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const query = useQuery({
     queryKey: ["social-proof", productId],
     queryFn: () => fetchProductSocialProofData(productId!),
     enabled: Boolean(productId),
     staleTime: 1000 * 60 * 2,
     refetchInterval: 1000 * 60 * 2,
   });
+
+  // Overlay live-shifting viewingNow on top of cached query data
+  const data = useMemo(() => {
+    if (!query.data || !productId) return query.data;
+    void tick;
+    return { ...query.data, viewingNow: pseudoViewing(productId) };
+  }, [query.data, productId, tick]);
+
+  return { ...query, data };
 }
 
 export function useSocialProofCompact(productId?: string) {
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setTick((t) => t + 1), 15000);
+    return () => window.clearInterval(id);
+  }, []);
+
   const result = useMemo(() => {
     if (!productId) return { viewingNow: 0, purchaseHint: null };
+    // tick is consumed to trigger recalc every 15s
+    void tick;
     return {
       viewingNow: pseudoViewing(productId),
       purchaseHint: null as string | null,
     };
-  }, [productId]);
+  }, [productId, tick]);
 
   return result;
 }

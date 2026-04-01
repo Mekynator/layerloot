@@ -1278,8 +1278,8 @@ const Account = () => {
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </motion.div>
 
         <div className="mb-6 flex flex-wrap gap-2">

@@ -509,6 +509,25 @@ export default function CartPage() {
               </motion.div>
             )}
 
+            {/* Smart upsell section */}
+            {catalog?.products && (
+              <CartUpsellSection
+                cartProductIds={cartItems.map((i) => String(i.id))}
+                allProducts={catalog.products}
+                freeShippingGap={remainingForFreeShipping}
+                onQuickAdd={(product) => {
+                  addItem({
+                    id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    image: product.images?.[0] || "/placeholder.svg",
+                    slug: product.slug,
+                  });
+                  markItemChanged(product.id, "added");
+                }}
+              />
+            )}
+
             {recommendedProducts.length > 0 && (
               <div className="glass-card p-5">
                 <h2 className="mb-4 font-display text-xl font-bold uppercase text-foreground">{t("cart.youMayAlsoLike")}</h2>

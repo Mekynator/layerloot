@@ -31,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
 import ModelViewer from "@/components/ModelViewer";
+import PricingCalculator from "@/components/admin/PricingCalculator";
 
 interface CustomOrder {
   id: string;
@@ -746,6 +747,9 @@ const AdminCustomOrders = () => {
               <TabsList>
                 <TabsTrigger value="details">Details</TabsTrigger>
                 <TabsTrigger value="model">3D Model</TabsTrigger>
+                <TabsTrigger value="pricing">
+                  <DollarSign className="mr-1 h-3.5 w-3.5" /> Pricing Tool
+                </TabsTrigger>
                 <TabsTrigger value="conversation">
                   <MessageSquare className="mr-1 h-3.5 w-3.5" /> Conversation
                 </TabsTrigger>
@@ -1235,6 +1239,22 @@ const AdminCustomOrders = () => {
                     No 3D model or picture available.
                   </div>
                 )}
+              </TabsContent>
+
+              <TabsContent value="pricing" className="space-y-4">
+                <div className="rounded-lg border border-border bg-muted/30 p-4">
+                  <h4 className="mb-3 font-display text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+                    Cost Estimator for This Order
+                  </h4>
+                  <p className="mb-4 text-xs text-muted-foreground">
+                    Calculate production cost and get recommended quote prices. Use "Apply" to set the quote amount.
+                  </p>
+                  <PricingCalculator
+                    customOrderId={selectedOrder.id}
+                    compact
+                    onPriceCalculated={(price) => setQuoteAmount(String(price))}
+                  />
+                </div>
               </TabsContent>
 
               <TabsContent value="conversation" className="space-y-4">

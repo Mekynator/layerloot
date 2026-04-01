@@ -184,7 +184,7 @@ const ProductDetail = () => {
                 <ModelViewer url={product.model_url} className="aspect-square" />
               </motion.div>
             ) : (
-              <div className="relative aspect-square overflow-hidden rounded-[1.75rem] border border-border/80 bg-muted shadow-sm">
+              <div className="glass-card relative aspect-square overflow-hidden rounded-[1.75rem] glow-border">
                 <AnimatePresence mode="wait">
                   <motion.img
                     ref={heroImageRef}

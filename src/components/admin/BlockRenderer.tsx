@@ -998,6 +998,7 @@ const FeaturedProductsBlock = ({
 };
 
 const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) => {
+  useTranslation();
   const c = block.content || {};
   const steps = c.steps || [
     {

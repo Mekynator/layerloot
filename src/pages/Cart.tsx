@@ -248,7 +248,7 @@ export default function CartPage() {
               {t("cart.empty")}
             </h1>
             <p className="mx-auto mb-8 max-w-xl text-muted-foreground">
-              Looks like the cart is taking a nap. Add some prints and wake the beast.
+              {t("cart.emptyHint")}
             </p>
 
             <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">

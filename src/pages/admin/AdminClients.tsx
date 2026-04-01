@@ -594,16 +594,20 @@ const AdminClients = () => {
                         <p className="text-sm text-muted-foreground">{user.email || "No email available"}</p>
                       </div>
                     </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={`text-[10px] ${TIER_STYLES[user.tier]}`}>
+                        {TIER_LABELS[user.tier]}
+                      </Badge>
+                    </TableCell>
                     <TableCell>{user.order_count + user.custom_order_count}</TableCell>
                     <TableCell className="font-display font-bold text-primary">{currency.format(user.total_spent)}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">{user.points_balance} pts</Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {user.active_vouchers} active · {user.used_vouchers} used
-                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{dateTime(user.last_activity_at)}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{dateOnly(user.joined_at)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">
+                      {user.recommendedAction || "—"}
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(user)}>
                         <Pencil className="h-4 w-4" />

@@ -320,7 +320,7 @@ const ProductDetail = () => {
                         disabled={variant.stock <= 0}
                       >
                         {variant.name}
-                        {variant.stock <= 0 && " (Out of stock)"}
+                        {variant.stock <= 0 && ` (${t("products.outOfStock")})`}
                       </motion.button>
                     ))}
                   </div>

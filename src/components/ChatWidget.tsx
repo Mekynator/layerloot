@@ -24,16 +24,34 @@ function uid() {
 
 function getPageSuggestions(pathname: string, loggedIn: boolean): string[] {
   if (pathname.startsWith("/products/") || pathname.startsWith("/product/")) {
-    return ["Show similar items", "How long is delivery?", "Is this available painted?"];
+    return [
+      "Compare materials for this item",
+      "Show similar but cheaper options",
+      "Is this available in a larger size?",
+      "How long until delivery?",
+    ];
   }
   if (pathname.startsWith("/products")) {
-    return ["Show best sellers", "Find gifts under 200 DKK", "Custom print help"];
+    return ["Show best sellers", "Find gifts under 200 DKK", "What's trending right now?", "Custom print help"];
   }
   if (pathname.startsWith("/cart")) {
-    return ["How far am I from free shipping?", "Can I use a coupon?", "Recommend one more item"];
+    return [
+      "How far am I from free shipping?",
+      "Recommend one more item",
+      "Can I use a coupon?",
+      "Is gift wrapping available?",
+    ];
   }
   if (pathname.startsWith("/account")) {
-    return ["Show my latest order", "How many points do I have?", "Recommended products for me"];
+    return ["Show my latest order", "How many points do I have?", "When can I redeem rewards?", "Track my order"];
+  }
+  if (pathname.startsWith("/create")) {
+    return ["What materials work best?", "How does pricing work?", "Can I preview before ordering?", "Upload tips"];
+  }
+  if (pathname === "/") {
+    return loggedIn
+      ? ["Show my points", "What's new this week?", "Recommend something for me", "Track my order"]
+      : ["Show best sellers", "How does custom printing work?", "Shipping information", "Gift ideas"];
   }
   return loggedIn
     ? ["Show my points", "Show my latest order", "Recommended products for me"]

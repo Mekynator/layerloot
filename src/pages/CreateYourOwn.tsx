@@ -347,7 +347,7 @@ const FileStatusCard = ({
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mt-3 overflow-hidden rounded-xl border border-border bg-card"
+      className="mt-3 overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md shadow-[0_4px_24px_-4px_hsl(225_44%_4%/0.4)]"
     >
       {previewUrl ? (
         <img src={previewUrl} alt={alt} className="h-56 w-full object-cover bg-muted/20" />

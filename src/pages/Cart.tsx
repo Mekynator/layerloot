@@ -555,7 +555,7 @@ export default function CartPage() {
                       }}
                       className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none"
                     >
-                      <option value="">Choose a saved voucher</option>
+                      <option value="">{t("cart.chooseVoucher")}</option>
                       {availableDiscountCodes.map((discount) => (
                         <option key={discount.code} value={discount.code}>
                           {discount.label}

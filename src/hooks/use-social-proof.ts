@@ -69,13 +69,29 @@ async function fetchProductSocialProofData(productId: string): Promise<SocialPro
 }
 
 export function useSocialProof(productId?: string) {
-  return useQuery({
+  // Force re-render every 15s so viewingNow shifts
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setTick((t) => t + 1), 15000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const query = useQuery({
     queryKey: ["social-proof", productId],
     queryFn: () => fetchProductSocialProofData(productId!),
     enabled: Boolean(productId),
     staleTime: 1000 * 60 * 2,
     refetchInterval: 1000 * 60 * 2,
   });
+
+  // Overlay live-shifting viewingNow on top of cached query data
+  const data = useMemo(() => {
+    if (!query.data || !productId) return query.data;
+    void tick;
+    return { ...query.data, viewingNow: pseudoViewing(productId) };
+  }, [query.data, productId, tick]);
+
+  return { ...query, data };
 }
 
 export function useSocialProofCompact(productId?: string) {

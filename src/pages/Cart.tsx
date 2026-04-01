@@ -295,9 +295,9 @@ export default function CartPage() {
               <div className="mb-3 flex items-center gap-2">
                 <Truck className="h-4 w-4 text-primary" />
                 <span className="text-sm font-medium text-card-foreground">
-                  {remainingForFreeShipping > 0
-                    ? `Add ${remainingForFreeShipping.toFixed(2)} kr more for free shipping`
-                    : "🎉 You qualify for free shipping!"}
+                {remainingForFreeShipping > 0
+                    ? t("cart.freeShippingRemaining", { amount: formatPrice(remainingForFreeShipping) })
+                    : t("cart.freeShippingQualified")}
                 </span>
               </div>
               <Progress value={shippingProgress} className="h-2" />

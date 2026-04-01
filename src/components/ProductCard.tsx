@@ -61,17 +61,14 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
 
   useEffect(() => {
     if (images.length <= 1 || isHovered) return;
-
     const timer = window.setInterval(() => {
       setCurrentImageIndex((prev) => (prev + 1) % images.length);
     }, AUTO_SLIDE_MS);
-
     return () => window.clearInterval(timer);
   }, [images.length, isHovered]);
 
   useEffect(() => {
     if (!justAdded) return;
-
     const timer = window.setTimeout(() => setJustAdded(false), 1400);
     return () => window.clearTimeout(timer);
   }, [justAdded]);
@@ -92,12 +89,7 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
       },
       rect
         ? {
-            sourceRect: {
-              left: rect.left,
-              top: rect.top,
-              width: rect.width,
-              height: rect.height,
-            },
+            sourceRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
             sourceImage: currentImage,
           }
         : undefined,
@@ -120,19 +112,20 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 18 }}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.36, delay: index * 0.05 }}
-      whileHover={{ y: -4 }}
+      transition={{ duration: 0.4, delay: index * 0.06 }}
+      whileHover={{ y: -6 }}
       className="h-full"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <Link
         to={`/products/${product.slug}`}
-        className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/30 bg-card/60 shadow-[0_8px_32px_hsl(217_91%_60%/0.06)] backdrop-blur-xl transition-all duration-400 hover:border-primary/40 hover:shadow-[0_20px_60px_hsl(217_91%_60%/0.15)]"
+        className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/15 bg-card/40 shadow-[0_4px_32px_hsl(217_91%_60%/0.04)] backdrop-blur-xl transition-all duration-500 hover:border-primary/25 hover:shadow-[0_20px_64px_hsl(217_91%_60%/0.12)] shine-sweep"
       >
-        <div className="relative aspect-square overflow-hidden bg-muted">
+        {/* Image */}
+        <div className="relative aspect-[4/5] overflow-hidden bg-muted/20">
           <AnimatePresence mode="wait">
             <motion.img
               key={currentImage}
@@ -141,54 +134,83 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
               alt={product.name}
               className="absolute inset-0 h-full w-full object-cover"
               loading="lazy"
-              initial={{ opacity: 0.2, scale: 1.02 }}
-              animate={{ opacity: 1, scale: isHovered ? 1.06 : 1 }}
+              initial={{ opacity: 0, scale: 1.04 }}
+              animate={{ opacity: 1, scale: isHovered ? 1.08 : 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.55 }}
+              transition={{ duration: 0.6 }}
             />
           </AnimatePresence>
 
           {secondaryImage && isHovered && (
-            <img
-              src={secondaryImage}
-              alt=""
-              className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-0"
-              loading="lazy"
-            />
+            <img src={secondaryImage} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-0" loading="lazy" />
           )}
 
-          <div className="absolute inset-0 bg-gradient-to-t from-foreground/25 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/10 to-transparent opacity-60 transition-opacity duration-500 group-hover:opacity-80" />
 
+          {/* Badges */}
           <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
             {hasSale && (
-              <Badge className="bg-primary font-display text-[10px] uppercase tracking-wider text-primary-foreground">
+              <Badge className="bg-gradient-to-r from-primary to-accent font-display text-[10px] uppercase tracking-wider text-primary-foreground shadow-lg">
                 {t("products.sale")} {discountPct > 0 ? `-${discountPct}%` : ""}
               </Badge>
             )}
             {product.is_featured && (
-              <Badge className="bg-secondary font-display text-[10px] uppercase tracking-wider text-secondary-foreground">
+              <Badge className="border border-primary/30 bg-background/70 font-display text-[10px] uppercase tracking-wider text-primary backdrop-blur-sm">
                 {t("products.popular")}
               </Badge>
             )}
           </div>
 
+          {/* Image dots */}
           {images.length > 1 && (
-            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-background/60 px-2 py-1 backdrop-blur-sm">
+            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-background/50 px-2.5 py-1 backdrop-blur-md">
               {images.map((_, idx) => (
                 <span
                   key={`${product.id}-dot-${idx}`}
-                  className={`h-1.5 rounded-full transition-all ${
-                    idx == currentImageIndex ? "w-4 bg-white" : "w-1.5 bg-white/45"
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    idx === currentImageIndex ? "w-5 bg-primary" : "w-1.5 bg-foreground/30"
                   }`}
                 />
               ))}
             </div>
           )}
+
+          {/* Quick add button - appears on hover */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : 8 }}
+            transition={{ duration: 0.2 }}
+            className="absolute bottom-3 right-3"
+          >
+            <Button
+              ref={addButtonRef}
+              type="button"
+              size="sm"
+              onClick={handleAddToCart}
+              className={`rounded-full px-4 shadow-xl backdrop-blur-sm transition-all duration-300 ${
+                justAdded ? "animate-glow-pulse" : ""
+              }`}
+            >
+              {justAdded ? (
+                <>
+                  <Check className="mr-1 h-3.5 w-3.5" />
+                  {t("products.added")}
+                </>
+              ) : (
+                <>
+                  <ShoppingBag className="mr-1 h-3.5 w-3.5" />
+                  {t("products.addToCart")}
+                </>
+              )}
+            </Button>
+          </motion.div>
         </div>
 
-        <div className="flex flex-1 flex-col gap-3 p-4 pt-3">
+        {/* Content */}
+        <div className="flex flex-1 flex-col gap-2.5 p-4">
           <div className="space-y-2">
-            <h3 className="line-clamp-2 font-display text-sm font-semibold uppercase tracking-[0.16em] text-card-foreground transition-colors duration-300 group-hover:text-primary">
+            <h3 className="line-clamp-2 font-display text-sm font-semibold uppercase tracking-[0.16em] text-foreground transition-colors duration-300 group-hover:text-primary">
               {product.name}
             </h3>
             <RatingStars rating={socialProof?.averageRating} count={socialProof?.reviewCount} className="min-h-5" />
@@ -196,59 +218,21 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
             <SocialProofBadges productId={product.id} variant="compact" />
           </div>
 
-          <div className="mt-auto space-y-3">
-            <div className="flex items-end gap-2">
-              <span className="font-display text-xl font-bold text-primary">{formatPrice(Number(product.price))}</span>
-              {hasSale && (
-                <span className="pb-0.5 text-sm text-muted-foreground line-through">
-                  {formatPrice(Number(product.compare_at_price))}
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between gap-3 border-t border-border/70 pt-3">
-              <p className="text-xs text-muted-foreground">
+          <div className="mt-auto pt-3">
+            <div className="flex items-end justify-between gap-2">
+              <div className="flex items-end gap-2">
+                <span className="font-display text-xl font-bold gradient-text">{formatPrice(Number(product.price))}</span>
+                {hasSale && (
+                  <span className="pb-0.5 text-sm text-muted-foreground line-through">
+                    {formatPrice(Number(product.compare_at_price))}
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-muted-foreground">
                 {socialProof?.reviewCount
                   ? t("products.verifiedOpinions", { count: socialProof.reviewCount })
                   : t("products.premiumFinish")}
               </p>
-
-              <div className="relative">
-                <Button
-                  ref={addButtonRef}
-                  type="button"
-                  size="sm"
-                  onClick={handleAddToCart}
-                  className={`shrink-0 rounded-xl px-3 transition-all duration-300 ${
-                    justAdded ? "shadow-[0_0_26px_hsl(var(--primary)/0.35)]" : ""
-                  }`}
-                >
-                  {justAdded ? (
-                    <>
-                      <Check className="mr-1.5 h-4 w-4" />
-                      {t("products.added")}
-                    </>
-                  ) : (
-                    <>
-                      <ShoppingBag className="mr-1.5 h-4 w-4" />
-                      {t("products.addToCart")}
-                    </>
-                  )}
-                </Button>
-
-                <AnimatePresence>
-                  {justAdded && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 6, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -4, scale: 0.95 }}
-                      className="pointer-events-none absolute right-0 top-full mt-2 whitespace-nowrap rounded-full border border-primary/20 bg-background/95 px-2.5 py-1 text-[11px] font-medium text-primary shadow-sm"
-                    >
-                      {t("products.addedToCart")}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
             </div>
           </div>
         </div>

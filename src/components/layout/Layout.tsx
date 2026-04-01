@@ -1,10 +1,8 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
 import Header from "./Header";
 import Footer from "./Footer";
 import GlobalSectionRenderer from "./GlobalSectionRenderer";
-import PageBackgroundSlideshow from "@/components/layout/PageBackgroundSlideshow";
-import ThemeRuntime from "@/components/theme/ThemeRuntime";
 import FloatingCartSummary from "@/components/cart/FloatingCartSummary";
 import AchievementToast, { useAchievements } from "@/components/smart/AchievementToast";
 
@@ -15,14 +13,15 @@ const Layout = ({ children }: { children: ReactNode }) => {
   const isCartPage = location.pathname === "/cart";
   const { currentAchievement, dismiss } = useAchievements();
 
+  useEffect(() => {
+    document.documentElement.classList.add("dark");
+  }, []);
+
   return (
     <div
       className="relative isolate flex min-h-screen flex-col overflow-x-hidden"
       data-editor-preview={isEditorPreview ? "true" : "false"}
     >
-      <ThemeRuntime />
-      <PageBackgroundSlideshow />
-
       {/* Ambient gradient blobs */}
       <div className="ambient-bg" aria-hidden="true">
         <div className="ambient-blob ambient-blob--1" />
@@ -30,10 +29,16 @@ const Layout = ({ children }: { children: ReactNode }) => {
         <div className="ambient-blob ambient-blob--3" />
       </div>
 
+      {/* Subtle grid */}
+      <div className="bg-grid-overlay" aria-hidden="true" />
+
+      {/* Noise texture */}
+      <div className="noise-overlay" aria-hidden="true" />
+
       <div className="relative z-10 flex min-h-screen flex-col">
         <Header />
         <GlobalSectionRenderer page="global_before_main" />
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 page-enter">{children}</main>
         <GlobalSectionRenderer page="global_after_main" />
         <Footer />
       </div>

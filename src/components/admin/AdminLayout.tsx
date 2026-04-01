@@ -91,6 +91,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         orders: ordersRes.count ?? 0,
         customOrders: customOrdersRes.count ?? 0,
         reviews: reviewsRes.count ?? 0,
+        showcases: showcasesRes.count ?? 0,
       });
     };
 

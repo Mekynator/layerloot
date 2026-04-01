@@ -345,9 +345,9 @@ const ProductDetail = () => {
 
             <div className="flex items-center gap-3 text-sm">
               <span className={`font-medium ${activeStock > 0 ? "text-green-600" : "text-destructive"}`}>
-                {activeStock > 0 ? `${activeStock} in stock` : "Out of stock"}
+                {activeStock > 0 ? t("products.inStock", { count: activeStock }) : t("products.outOfStock")}
               </span>
-              {socialProof?.reviewCount ? <span className="text-muted-foreground">Loved by recent buyers</span> : null}
+              {socialProof?.reviewCount ? <span className="text-muted-foreground">{t("products.lovedByBuyers")}</span> : null}
             </div>
 
             <div className="relative">

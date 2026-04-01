@@ -335,6 +335,12 @@ export default function Lithophane({
     onDraftChange,
   ]);
 
+  // Auto-load preloaded image file (from showcase reorder/modify)
+  useEffect(() => {
+    if (!preloadedImageFile) return;
+    void runUploadProgress(preloadedImageFile);
+  }, [preloadedImageFile]);
+
   const runUploadProgress = async (selectedFile: File) => {
     setUploadProgress({ active: true, progress: 8, status: "Reading image..." });
     await sleep(120);

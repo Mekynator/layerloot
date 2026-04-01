@@ -1,17 +1,41 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Eye, Clock, Flame } from "lucide-react";
-import { useSocialProof, formatRelativePurchaseTime } from "@/hooks/use-social-proof";
+import { useSocialProof, useSocialProofCompact, formatRelativePurchaseTime } from "@/hooks/use-social-proof";
 
 interface SocialProofBadgesProps {
   productId: string;
   variant?: "full" | "compact";
 }
 
+/** Smoothly steps a displayed number toward a target without unmounting */
+function AnimatedNumber({ value }: { value: number }) {
+  const [display, setDisplay] = useState(value);
+
+  useEffect(() => {
+    if (display === value) return;
+    const step = value > display ? 1 : -1;
+    const timer = window.setInterval(() => {
+      setDisplay((prev) => {
+        const next = prev + step;
+        if ((step > 0 && next >= value) || (step < 0 && next <= value)) {
+          window.clearInterval(timer);
+          return value;
+        }
+        return next;
+      });
+    }, 80);
+    return () => window.clearInterval(timer);
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return <span className="tabular-nums">{display}</span>;
+}
+
 export default function SocialProofBadges({ productId, variant = "full" }: SocialProofBadgesProps) {
   const { data } = useSocialProof(variant === "full" ? productId : undefined);
+  const compact = useSocialProofCompact(variant === "compact" ? productId : undefined);
 
-  // For compact mode, use lightweight pseudo data
-  const viewingNow = data?.viewingNow ?? 0;
+  const viewingNow = variant === "compact" ? compact.viewingNow : (data?.viewingNow ?? 0);
   const lastPurchased = data?.lastPurchasedAt;
   const weeklyPurchases = data?.purchaseCountThisWeek ?? 0;
 
@@ -23,7 +47,7 @@ export default function SocialProofBadges({ productId, variant = "full" }: Socia
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60" />
           <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
         </span>
-        <span>{viewingNow} viewing</span>
+        <span><AnimatedNumber value={viewingNow} /> viewing</span>
       </div>
     );
   }
@@ -48,7 +72,7 @@ export default function SocialProofBadges({ productId, variant = "full" }: Socia
           </span>
           <Eye className="h-3 w-3" />
           <span>
-            <span className="font-medium text-foreground">{viewingNow}</span> viewing now
+            <span className="font-medium text-foreground"><AnimatedNumber value={viewingNow} /></span> viewing now
           </span>
         </div>
       )}

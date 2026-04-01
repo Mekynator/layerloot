@@ -34,6 +34,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import ToolReviewForm from "@/components/reviews/ToolReviewForm";
+import OrderTimeline from "@/components/orders/OrderTimeline";
 import { payCustomOrder } from "@/lib/payCustomOrder";
 import { useAccountOverview } from "@/hooks/use-account-overview";
 import { computeLoyaltyProgress } from "@/hooks/use-loyalty-progress";
@@ -1345,6 +1346,11 @@ const Account = () => {
                               <Eye className="h-4 w-4 text-muted-foreground" />
                             </div>
                           </Link>
+                        </div>
+
+                        {/* Order Timeline */}
+                        <div className="mt-4 border-t border-border pt-4">
+                          <OrderTimeline status={order.status} />
                         </div>
 
                         {order.status === "delivered" &&

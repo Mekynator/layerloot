@@ -29,6 +29,7 @@ import { computeLoyaltyProgress } from "@/hooks/use-loyalty-progress";
 import LoyaltyProgressCard from "@/components/social/LoyaltyProgressCard";
 import { CartSummarySkeleton } from "@/components/shared/loading-states";
 import { formatPrice } from "@/lib/currency";
+import GiftMode, { type GiftSettings } from "@/components/cart/GiftMode";
 
 const FREE_SHIPPING_THRESHOLD = 500;
 const BASE_SHIPPING_PRICE = 5.99;
@@ -69,6 +70,14 @@ export default function CartPage() {
   const [recentlyChanged, setRecentlyChanged] = useState<Record<string, "inc" | "dec" | "added">>({});
   const [removingIds, setRemovingIds] = useState<string[]>([]);
   const [savedToast, setSavedToast] = useState<string>("");
+  const [giftSettings, setGiftSettings] = useState<GiftSettings>({
+    enabled: false,
+    personalMessage: "",
+    giftWrap: false,
+    recipientAgeGroup: "",
+    recipientInterests: [],
+    occasion: "",
+  });
 
   const checkoutButtonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -205,6 +214,15 @@ export default function CartPage() {
           })),
           discountCode: selectedDiscountCode || manualDiscountCode || null,
           shippingCost,
+          giftMode: giftSettings.enabled
+            ? {
+                personalMessage: giftSettings.personalMessage,
+                giftWrap: giftSettings.giftWrap,
+                recipientAgeGroup: giftSettings.recipientAgeGroup,
+                recipientInterests: giftSettings.recipientInterests,
+                occasion: giftSettings.occasion,
+              }
+            : null,
           success_url: `${window.location.origin}/checkout/success`,
           cancel_url: `${window.location.origin}/cart`,
         },
@@ -304,6 +322,9 @@ export default function CartPage() {
               </div>
               <Progress value={shippingProgress} className="h-2" />
             </motion.div>
+
+            {/* Gift Mode */}
+            <GiftMode settings={giftSettings} onChange={setGiftSettings} />
 
             <div className="space-y-4">
               <AnimatePresence initial={false}>

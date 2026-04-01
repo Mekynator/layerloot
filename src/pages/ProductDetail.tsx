@@ -29,6 +29,8 @@ import StickyAddToCart from "@/components/product/StickyAddToCart";
 import RecentlyViewedSection from "@/components/product/RecentlyViewedSection";
 import { useRecentlyViewedProducts } from "@/hooks/use-recently-viewed";
 import { useProductDetailQuery } from "@/hooks/use-storefront";
+import ProductFOMOBar from "@/components/smart/ProductFOMOBar";
+import FrequentlyBoughtTogether from "@/components/smart/FrequentlyBoughtTogether";
 
 const AUTO_GALLERY_MS = 6500;
 

@@ -273,7 +273,7 @@ export default function CartPage() {
     <div className="py-8 md:py-10">
       <div className="container max-w-6xl">
         <div className="mb-8 flex items-center justify-between gap-4">
-          <h1 className="font-display text-4xl font-bold uppercase text-foreground">Shopping Cart</h1>
+          <h1 className="font-display text-4xl font-bold uppercase text-foreground">{t("cart.title")}</h1>
 
           <AnimatePresence>
             {savedToast && (

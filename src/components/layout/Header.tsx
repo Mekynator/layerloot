@@ -395,7 +395,7 @@ const Header = () => {
         )}
       </AnimatePresence>
 
-      <header className="sticky top-0 z-50 border-b border-border bg-secondary">
+      <header className="sticky top-0 z-50 glass-nav">
         <div className="container flex h-16 items-center justify-between">
           <Link to={logoLink} className="flex items-center gap-2">
             {branding.logo_image_url ? (

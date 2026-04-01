@@ -714,6 +714,7 @@ const LithophaneOrderSection = () => {
 };
 
 const GiftFinder = () => {
+  const { t } = useTranslation();
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [tags, setTags] = useState<GiftFinderTag[]>([]);
   const [products, setProducts] = useState<(GiftFinderProduct & { matchScore: number })[]>([]);
@@ -811,16 +812,14 @@ const GiftFinder = () => {
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm text-muted-foreground">Pick one or more vibes.</p>
-          <p className="text-xs text-muted-foreground">
-            Smarter matching ranks products higher when they fit more of the selected gift types.
-          </p>
+          <p className="text-sm text-muted-foreground">{t("create.giftPickVibes")}</p>
+          <p className="text-xs text-muted-foreground">{t("create.giftSmartMatching")}</p>
         </div>
 
         {selectedTagIds.length > 0 && (
           <Button type="button" variant="outline" size="sm" onClick={clearTags}>
             <X className="mr-2 h-4 w-4" />
-            Clear selection
+            {t("create.clearSelection")}
           </Button>
         )}
       </div>
@@ -873,12 +872,10 @@ const GiftFinder = () => {
       {selectedTagIds.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           {loading ? (
-            <div className="py-8 text-center text-muted-foreground">Searching for the best gift matches...</div>
+            <div className="py-8 text-center text-muted-foreground">{t("create.searching")}</div>
           ) : products.length > 0 ? (
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Showing the best matches first based on how many selected tags each product fits.
-              </p>
+              <p className="text-sm text-muted-foreground">{t("create.bestMatchesFirst")}</p>
 
               <div className="grid grid-cols-2 gap-3">
                 {products.map((product) => (
@@ -901,7 +898,7 @@ const GiftFinder = () => {
                           {product.name}
                         </p>
                         <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
-                          {product.matchScore} match{product.matchScore === 1 ? "" : "es"}
+                          {product.matchScore} {product.matchScore === 1 ? t("create.match") : t("create.matches")}
                         </span>
                       </div>
                       <p className="text-xs font-semibold text-primary">{product.price} kr</p>
@@ -912,7 +909,7 @@ const GiftFinder = () => {
             </div>
           ) : (
             <div className="py-8 text-center">
-              <p className="mb-3 text-muted-foreground">No direct match yet — use the custom print tab.</p>
+              <p className="mb-3 text-muted-foreground">{t("create.noMatchYet")}</p>
             </div>
           )}
         </motion.div>

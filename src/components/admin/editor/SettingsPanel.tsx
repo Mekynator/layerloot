@@ -4,20 +4,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trash2, Plus, ArrowUp, ArrowDown, X, Palette, Type, Settings2, Layers, Sparkles, Monitor, Tablet, Smartphone } from "lucide-react";
+import { Trash2, Plus, ArrowUp, ArrowDown, X, Palette, Type, Settings2, Layers, Monitor, Tablet, Smartphone } from "lucide-react";
 import { useVisualEditor } from "@/contexts/VisualEditorContext";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
-
-const ICON_OPTIONS = [
-  "Truck", "Shield", "Star", "ShoppingBag", "Palette", "Upload", "Package",
-  "HelpCircle", "Gift", "Heart", "Sparkles", "BadgeCheck", "Printer", "Box",
-  "Mail", "ExternalLink", "CheckCircle2", "Gem", "Wrench", "Home", "Instagram",
-];
+import SliderField from "./controls/SliderField";
+import ColorPickerField from "./controls/ColorPickerField";
+import ImageUploadField from "./controls/ImageUploadField";
+import IconPickerField from "./controls/IconPickerField";
 
 const getRepeaterKey = (blockType?: string) => {
   switch (blockType) {
@@ -140,7 +137,6 @@ function BlockSettings({ block }: { block: SiteBlock }) {
 
   return (
     <div className="flex h-full flex-col border-l border-border/30 bg-card/80 backdrop-blur-xl">
-      {/* Header */}
       <div className="flex items-center justify-between border-b border-border/30 px-3 py-2">
         <div className="flex items-center gap-2">
           <Settings2 className="h-3.5 w-3.5 text-primary" />
@@ -215,7 +211,6 @@ function BlockSettings({ block }: { block: SiteBlock }) {
                 />
               </div>
 
-              {/* Animation */}
               <div className="space-y-2">
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Animation</Label>
                 <Select value={localContent.animation || "none"} onValueChange={(v) => patchContent("animation", v)}>
@@ -232,7 +227,6 @@ function BlockSettings({ block }: { block: SiteBlock }) {
                 </Select>
               </div>
 
-              {/* Anchor ID */}
               <div>
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Anchor ID</Label>
                 <Input
@@ -243,7 +237,6 @@ function BlockSettings({ block }: { block: SiteBlock }) {
                 <p className="mt-0.5 text-[9px] text-muted-foreground">For scroll-to links: #about-section</p>
               </div>
 
-              {/* Custom CSS class */}
               <div>
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Custom CSS Class</Label>
                 <Input
@@ -330,10 +323,11 @@ function ContentEditor({
             <Label className="text-[10px]">Subheading</Label>
             <Textarea value={content.subheading || ""} onChange={(e) => patchContent("subheading", e.target.value)} rows={3} className="text-xs" />
           </div>
-          <div>
-            <Label className="text-[10px]">Background Image URL</Label>
-            <Input value={content.bg_image || ""} onChange={(e) => patchContent("bg_image", e.target.value)} className="h-8 text-xs" placeholder="https://..." />
-          </div>
+          <ImageUploadField
+            label="Background Image"
+            value={content.bg_image || ""}
+            onChange={(v) => patchContent("bg_image", v)}
+          />
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label className="text-[10px]">Alignment</Label>
@@ -346,15 +340,12 @@ function ContentEditor({
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label className="text-[10px]">Overlay</Label>
-              <Slider
-                value={[content.overlayOpacity ?? 50]}
-                onValueChange={([v]) => patchContent("overlayOpacity", v)}
-                min={0} max={100} step={5}
-                className="mt-2"
-              />
-            </div>
+            <SliderField
+              label="Overlay"
+              value={content.overlayOpacity ?? 50}
+              onChange={(v) => patchContent("overlayOpacity", v)}
+              min={0} max={100} step={5} unit="%"
+            />
           </div>
 
           {/* Buttons */}
@@ -405,17 +396,15 @@ function ContentEditor({
                             <SelectItem value="secondary">Secondary</SelectItem>
                           </SelectContent>
                         </Select>
-                        <Select value={btn.icon || ""} onValueChange={(v) => {
-                          const buttons = [...content.buttons];
-                          buttons[i] = { ...buttons[i], icon: v };
-                          patchContent("buttons", buttons);
-                        }}>
-                          <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Icon" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="">None</SelectItem>
-                            {ICON_OPTIONS.map(icon => <SelectItem key={icon} value={icon}>{icon}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
+                        <IconPickerField
+                          label=""
+                          value={btn.icon || ""}
+                          onChange={(v) => {
+                            const buttons = [...content.buttons];
+                            buttons[i] = { ...buttons[i], icon: v };
+                            patchContent("buttons", buttons);
+                          }}
+                        />
                       </div>
                     </AccordionContent>
                   </AccordionItem>
@@ -448,6 +437,11 @@ function ContentEditor({
                 <Label className="text-[10px]">Button Link</Label>
                 <Input value={content.button_link || ""} onChange={(e) => patchContent("button_link", e.target.value)} className="h-8 text-xs" />
               </div>
+              <ImageUploadField
+                label="Banner Image"
+                value={content.bg_image || ""}
+                onChange={(v) => patchContent("bg_image", v)}
+              />
             </>
           )}
         </div>
@@ -486,25 +480,22 @@ function ContentEditor({
             <Label className="text-[10px]">Button Link</Label>
             <Input value={content.button_link || ""} onChange={(e) => patchContent("button_link", e.target.value)} className="h-8 text-xs" />
           </div>
-          <div>
-            <Label className="text-[10px]">Background Image</Label>
-            <Input value={content.bg_image || ""} onChange={(e) => patchContent("bg_image", e.target.value)} className="h-8 text-xs" />
-          </div>
+          <ImageUploadField
+            label="Background Image"
+            value={content.bg_image || ""}
+            onChange={(v) => patchContent("bg_image", v)}
+          />
         </div>
       );
 
     case "spacer":
       return (
-        <div>
-          <Label className="text-[10px]">Height (px)</Label>
-          <Slider
-            value={[content.height || 40]}
-            onValueChange={([v]) => patchContent("height", v)}
-            min={8} max={200} step={4}
-            className="mt-2"
-          />
-          <p className="mt-1 text-[10px] text-muted-foreground text-right">{content.height || 40}px</p>
-        </div>
+        <SliderField
+          label="Height"
+          value={content.height || 40}
+          onChange={(v) => patchContent("height", v)}
+          min={8} max={200} step={4}
+        />
       );
 
     case "html":
@@ -526,11 +517,12 @@ function ContentEditor({
             <Label className="text-[10px]">Embed URL</Label>
             <Input value={content.embed_url || ""} onChange={(e) => patchContent("embed_url", e.target.value)} className="h-8 text-xs" />
           </div>
-          <div>
-            <Label className="text-[10px]">Height (px)</Label>
-            <Slider value={[content.height || 400]} onValueChange={([v]) => patchContent("height", v)} min={100} max={800} step={20} className="mt-2" />
-            <p className="mt-1 text-[10px] text-muted-foreground text-right">{content.height || 400}px</p>
-          </div>
+          <SliderField
+            label="Height"
+            value={content.height || 400}
+            onChange={(v) => patchContent("height", v)}
+            min={100} max={800} step={20}
+          />
         </div>
       );
 
@@ -572,10 +564,12 @@ function ContentEditor({
         <div className="space-y-2">
           {renderSectionTop()}
           <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label className="text-[10px]">Limit</Label>
-              <Input type="number" value={content.limit || 6} onChange={(e) => patchContent("limit", Number(e.target.value))} className="h-8 text-xs" />
-            </div>
+            <SliderField
+              label="Limit"
+              value={content.limit || 6}
+              onChange={(v) => patchContent("limit", v)}
+              min={1} max={24} step={1} unit=""
+            />
             <div>
               <Label className="text-[10px]">Alignment</Label>
               <Select value={content.alignment || "center"} onValueChange={(v) => patchContent("alignment", v)}>
@@ -648,10 +642,11 @@ function ContentEditor({
                 <AccordionTrigger className="py-2 text-[11px]">{item.title || `Step ${index + 1}`}</AccordionTrigger>
                 <AccordionContent className="space-y-2 pb-2">
                   <Input value={item.title || ""} onChange={(e) => patchItem(index, { title: e.target.value })} className="h-7 text-xs" placeholder="Title" />
-                  <Select value={item.icon || "Star"} onValueChange={(v) => patchItem(index, { icon: v })}>
-                    <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>{ICON_OPTIONS.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <IconPickerField
+                    label="Icon"
+                    value={item.icon || "Star"}
+                    onChange={(v) => patchItem(index, { icon: v })}
+                  />
                   <Textarea value={item.desc || ""} onChange={(e) => patchItem(index, { desc: e.target.value })} rows={2} className="text-xs" />
                   {renderItemControls(index)}
                 </AccordionContent>
@@ -681,10 +676,11 @@ function ContentEditor({
                 <AccordionTrigger className="py-2 text-[11px]">{item.title || `Badge ${index + 1}`}</AccordionTrigger>
                 <AccordionContent className="space-y-2 pb-2">
                   <Input value={item.title || ""} onChange={(e) => patchItem(index, { title: e.target.value })} className="h-7 text-xs" />
-                  <Select value={item.icon || "Star"} onValueChange={(v) => patchItem(index, { icon: v })}>
-                    <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>{ICON_OPTIONS.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <IconPickerField
+                    label="Icon"
+                    value={item.icon || "Star"}
+                    onChange={(v) => patchItem(index, { icon: v })}
+                  />
                   <Input value={item.desc || ""} onChange={(e) => patchItem(index, { desc: e.target.value })} className="h-7 text-xs" placeholder="Description" />
                   {renderItemControls(index)}
                 </AccordionContent>
@@ -727,14 +723,19 @@ function ContentEditor({
                 <AccordionTrigger className="py-2 text-[11px]">{item.title || `Card ${index + 1}`}</AccordionTrigger>
                 <AccordionContent className="space-y-2 pb-2">
                   <Input value={item.title || ""} onChange={(e) => patchItem(index, { title: e.target.value })} className="h-7 text-xs" placeholder="Title" />
-                  <Select value={item.icon || "Star"} onValueChange={(v) => patchItem(index, { icon: v })}>
-                    <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>{ICON_OPTIONS.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <IconPickerField
+                    label="Icon"
+                    value={item.icon || "Star"}
+                    onChange={(v) => patchItem(index, { icon: v })}
+                  />
                   <Textarea value={item.desc || ""} onChange={(e) => patchItem(index, { desc: e.target.value })} rows={2} className="text-xs" placeholder="Description" />
                   <Input value={item.cta || ""} onChange={(e) => patchItem(index, { cta: e.target.value })} className="h-7 text-xs" placeholder="Button label" />
                   <Input value={item.link || ""} onChange={(e) => patchItem(index, { link: e.target.value, actionType: "internal_link", actionTarget: e.target.value })} className="h-7 text-xs" placeholder="/page-link" />
-                  <Input value={item.image || ""} onChange={(e) => patchItem(index, { image: e.target.value })} className="h-7 text-xs" placeholder="Image URL (optional)" />
+                  <ImageUploadField
+                    label="Card Image"
+                    value={item.image || ""}
+                    onChange={(v) => patchItem(index, { image: v })}
+                  />
                   {renderItemControls(index)}
                 </AccordionContent>
               </AccordionItem>
@@ -765,7 +766,11 @@ function ContentEditor({
               <AccordionItem key={index} value={`${blockType}-${index}`} className="rounded-md border border-border/30 px-2">
                 <AccordionTrigger className="py-2 text-[11px]">{item.title || `${blockType === "image" ? "Image" : "Slide"} ${index + 1}`}</AccordionTrigger>
                 <AccordionContent className="space-y-2 pb-2">
-                  <Input value={item.image || ""} onChange={(e) => patchItem(index, { image: e.target.value })} className="h-7 text-xs" placeholder="Image URL" />
+                  <ImageUploadField
+                    label="Image"
+                    value={item.image || ""}
+                    onChange={(v) => patchItem(index, { image: v })}
+                  />
                   <Input value={item.title || ""} onChange={(e) => patchItem(index, { title: e.target.value })} className="h-7 text-xs" placeholder="Title" />
                   <Input value={item.subtitle || ""} onChange={(e) => patchItem(index, { subtitle: e.target.value })} className="h-7 text-xs" placeholder="Subtitle" />
                   <Input value={item.alt || ""} onChange={(e) => patchItem(index, { alt: e.target.value })} className="h-7 text-xs" placeholder="Alt text" />
@@ -800,10 +805,12 @@ function ContentEditor({
             <Label className="text-[10px]">Username</Label>
             <Input value={content.instagramUsername || ""} onChange={(e) => patchContent("instagramUsername", e.target.value)} className="h-8 text-xs" />
           </div>
-          <div>
-            <Label className="text-[10px]">Items to show</Label>
-            <Input type="number" value={content.itemsToShow || 10} onChange={(e) => patchContent("itemsToShow", Number(e.target.value))} className="h-8 text-xs" />
-          </div>
+          <SliderField
+            label="Items to show"
+            value={content.itemsToShow || 10}
+            onChange={(v) => patchContent("itemsToShow", v)}
+            min={1} max={30} step={1} unit=""
+          />
         </div>
       );
 
@@ -887,78 +894,52 @@ function AdvancedStyleEditor({ content, patchContent }: { content: Record<string
           <Palette className="h-3 w-3" /> Colors
         </Label>
         <div className="grid grid-cols-2 gap-2">
-          <div>
-            <Label className="text-[10px]">Background</Label>
-            <div className="flex gap-1">
-              <Input value={content.backgroundColor || ""} onChange={(e) => patchContent("backgroundColor", e.target.value)} className="h-8 text-xs flex-1" placeholder="transparent" />
-              <input type="color" value={content.backgroundColor || "#000000"} onChange={(e) => patchContent("backgroundColor", e.target.value)} className="h-8 w-8 rounded border border-border/30 cursor-pointer" />
-            </div>
-          </div>
-          <div>
-            <Label className="text-[10px]">Text</Label>
-            <div className="flex gap-1">
-              <Input value={content.textColor || ""} onChange={(e) => patchContent("textColor", e.target.value)} className="h-8 text-xs flex-1" placeholder="inherit" />
-              <input type="color" value={content.textColor || "#ffffff"} onChange={(e) => patchContent("textColor", e.target.value)} className="h-8 w-8 rounded border border-border/30 cursor-pointer" />
-            </div>
-          </div>
+          <ColorPickerField
+            label="Background"
+            value={content.backgroundColor || ""}
+            onChange={(v) => patchContent("backgroundColor", v)}
+          />
+          <ColorPickerField
+            label="Text"
+            value={content.textColor || ""}
+            onChange={(v) => patchContent("textColor", v)}
+          />
         </div>
       </div>
 
       {/* Background Image */}
-      <div>
-        <Label className="text-[10px]">Background Image</Label>
-        <Input value={content.backgroundImage || ""} onChange={(e) => patchContent("backgroundImage", e.target.value)} className="h-8 text-xs" placeholder="https://..." />
-      </div>
+      <ImageUploadField
+        label="Background Image"
+        value={content.backgroundImage || ""}
+        onChange={(v) => patchContent("backgroundImage", v)}
+      />
 
       {/* Spacing */}
       <div className="space-y-2">
         <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Padding</Label>
         <div className="grid grid-cols-2 gap-2">
-          <div>
-            <Label className="text-[10px]">Top</Label>
-            <Slider value={[content.paddingTop ?? 0]} onValueChange={([v]) => patchContent("paddingTop", v)} min={0} max={120} step={4} />
-            <p className="text-[9px] text-muted-foreground text-right">{content.paddingTop ?? 0}px</p>
-          </div>
-          <div>
-            <Label className="text-[10px]">Bottom</Label>
-            <Slider value={[content.paddingBottom ?? 0]} onValueChange={([v]) => patchContent("paddingBottom", v)} min={0} max={120} step={4} />
-            <p className="text-[9px] text-muted-foreground text-right">{content.paddingBottom ?? 0}px</p>
-          </div>
-          <div>
-            <Label className="text-[10px]">Left</Label>
-            <Slider value={[content.paddingLeft ?? 0]} onValueChange={([v]) => patchContent("paddingLeft", v)} min={0} max={120} step={4} />
-            <p className="text-[9px] text-muted-foreground text-right">{content.paddingLeft ?? 0}px</p>
-          </div>
-          <div>
-            <Label className="text-[10px]">Right</Label>
-            <Slider value={[content.paddingRight ?? 0]} onValueChange={([v]) => patchContent("paddingRight", v)} min={0} max={120} step={4} />
-            <p className="text-[9px] text-muted-foreground text-right">{content.paddingRight ?? 0}px</p>
-          </div>
+          <SliderField label="Top" value={content.paddingTop ?? 0} onChange={(v) => patchContent("paddingTop", v)} min={0} max={120} step={4} />
+          <SliderField label="Bottom" value={content.paddingBottom ?? 0} onChange={(v) => patchContent("paddingBottom", v)} min={0} max={120} step={4} />
+          <SliderField label="Left" value={content.paddingLeft ?? 0} onChange={(v) => patchContent("paddingLeft", v)} min={0} max={120} step={4} />
+          <SliderField label="Right" value={content.paddingRight ?? 0} onChange={(v) => patchContent("paddingRight", v)} min={0} max={120} step={4} />
         </div>
       </div>
 
       <div className="space-y-2">
         <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Margin</Label>
         <div className="grid grid-cols-2 gap-2">
-          <div>
-            <Label className="text-[10px]">Top</Label>
-            <Slider value={[content.marginTop ?? 0]} onValueChange={([v]) => patchContent("marginTop", v)} min={0} max={120} step={4} />
-            <p className="text-[9px] text-muted-foreground text-right">{content.marginTop ?? 0}px</p>
-          </div>
-          <div>
-            <Label className="text-[10px]">Bottom</Label>
-            <Slider value={[content.marginBottom ?? 0]} onValueChange={([v]) => patchContent("marginBottom", v)} min={0} max={120} step={4} />
-            <p className="text-[9px] text-muted-foreground text-right">{content.marginBottom ?? 0}px</p>
-          </div>
+          <SliderField label="Top" value={content.marginTop ?? 0} onChange={(v) => patchContent("marginTop", v)} min={0} max={120} step={4} />
+          <SliderField label="Bottom" value={content.marginBottom ?? 0} onChange={(v) => patchContent("marginBottom", v)} min={0} max={120} step={4} />
         </div>
       </div>
 
       {/* Border Radius */}
-      <div>
-        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Border Radius</Label>
-        <Slider value={[content.borderRadius ?? 0]} onValueChange={([v]) => patchContent("borderRadius", v)} min={0} max={32} step={2} />
-        <p className="text-[9px] text-muted-foreground text-right">{content.borderRadius ?? 0}px</p>
-      </div>
+      <SliderField
+        label="Border Radius"
+        value={content.borderRadius ?? 0}
+        onChange={(v) => patchContent("borderRadius", v)}
+        min={0} max={32} step={2}
+      />
 
       {/* Shadow */}
       <div>
@@ -991,11 +972,12 @@ function AdvancedStyleEditor({ content, patchContent }: { content: Record<string
       </div>
 
       {/* Opacity */}
-      <div>
-        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Opacity</Label>
-        <Slider value={[content.opacity ?? 100]} onValueChange={([v]) => patchContent("opacity", v)} min={0} max={100} step={5} />
-        <p className="text-[9px] text-muted-foreground text-right">{content.opacity ?? 100}%</p>
-      </div>
+      <SliderField
+        label="Opacity"
+        value={content.opacity ?? 100}
+        onChange={(v) => patchContent("opacity", v)}
+        min={0} max={100} step={5} unit="%"
+      />
     </div>
   );
 }
@@ -1078,14 +1060,18 @@ function ResponsiveEditor({ content, patchContent }: { content: Record<string, a
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label className="text-[10px]">Padding Top</Label>
-              <Input type="number" value={responsive[device]?.paddingTop ?? ""} onChange={(e) => patchResponsive(device, "paddingTop", e.target.value ? Number(e.target.value) : undefined)} className="h-7 text-xs" />
-            </div>
-            <div>
-              <Label className="text-[10px]">Padding Bottom</Label>
-              <Input type="number" value={responsive[device]?.paddingBottom ?? ""} onChange={(e) => patchResponsive(device, "paddingBottom", e.target.value ? Number(e.target.value) : undefined)} className="h-7 text-xs" />
-            </div>
+            <SliderField
+              label="Padding Top"
+              value={responsive[device]?.paddingTop ?? 0}
+              onChange={(v) => patchResponsive(device, "paddingTop", v)}
+              min={0} max={80} step={4}
+            />
+            <SliderField
+              label="Padding Bottom"
+              value={responsive[device]?.paddingBottom ?? 0}
+              onChange={(v) => patchResponsive(device, "paddingBottom", v)}
+              min={0} max={80} step={4}
+            />
           </div>
         </div>
       ))}

@@ -265,7 +265,7 @@ export default function CartPage() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="rounded-2xl border border-border bg-card px-6 py-16 text-center shadow-sm"
+            className="glass-card px-6 py-16 text-center"
           >
             <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-muted">
               <ShoppingBag className="h-10 w-10 text-muted-foreground" />

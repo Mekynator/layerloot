@@ -255,7 +255,13 @@ function isVoucherUsedOrArchived(voucher: UserVoucher) {
   const remainingBalance = voucher.balance !== null ? Number(voucher.balance) : null;
   const gs = voucher.gift_status;
 
-  return voucher.is_used || !!voucher.used_at || gs === "pending_claim" || gs === "cancelled" || (remainingBalance !== null && remainingBalance <= 0);
+  return (
+    voucher.is_used ||
+    !!voucher.used_at ||
+    gs === "pending_claim" ||
+    gs === "cancelled" ||
+    (remainingBalance !== null && remainingBalance <= 0)
+  );
 }
 
 function parseCustomOrderDescription(description: string) {
@@ -383,11 +389,7 @@ const Account = () => {
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
   const tt = (key: string, fallback: string) => t(key, { defaultValue: fallback });
-  const {
-    data: overview,
-    isLoading: overviewLoading,
-    refetch: refetchOverview,
-  } = useAccountOverview(user?.id);
+  const { data: overview, isLoading: overviewLoading, refetch: refetchOverview } = useAccountOverview(user?.id);
 
   const { reorder, reorderingId } = useReorder();
   const [showHistory, setShowHistory] = useState(false);
@@ -1198,86 +1200,86 @@ const Account = () => {
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <div className="glass-card mb-8 border-primary/20 p-6 glow-border">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-                  <Star className="h-7 w-7 text-primary" />
-                </div>
-
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    {tt("account.points.balance", "Loyalty Points Balance")}
-                  </p>
-                  <p className="font-display text-3xl font-bold text-primary">{pointsBalance}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {tt("account.points.rate", "1 point is earned for every 4 kr spent")}
-                  </p>
-                </div>
-
-                <div className="ml-auto grid min-w-[220px] gap-2 sm:grid-cols-2">
-                  <div className="rounded-xl border border-primary/20 bg-background/70 p-3">
-                    <p className="text-xs text-muted-foreground">{tt("account.points.earnedTotal", "Earned total")}</p>
-                    <p className="font-display text-xl font-bold text-foreground">{pointsEarned}</p>
-                  </div>
-                  <div className="rounded-xl border border-primary/20 bg-background/70 p-3">
-                    <p className="text-xs text-muted-foreground">{tt("account.points.spentTotal", "Spent total")}</p>
-                    <p className="font-display text-xl font-bold text-foreground">{pointsSpent}</p>
-                  </div>
-                </div>
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                <Star className="h-7 w-7 text-primary" />
               </div>
 
-              <div className="mt-5 border-t border-border pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowHistory((prev) => !prev)}
-                  className="flex w-full items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3 text-left transition hover:bg-background"
-                >
-                  <div className="flex items-center gap-2">
-                    <History className="h-4 w-4 text-primary" />
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
-                        {tt("account.points.recentActivity", "Recent points activity")}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {tt("account.points.recentActivityHint", "Press to show redeemed discounts and earned points")}
-                      </p>
-                    </div>
-                  </div>
-                  {showHistory ? (
-                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </button>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  {tt("account.points.balance", "Loyalty Points Balance")}
+                </p>
+                <p className="font-display text-3xl font-bold text-primary">{pointsBalance}</p>
+                <p className="text-xs text-muted-foreground">
+                  {tt("account.points.rate", "1 point is earned for every 4 kr spent")}
+                </p>
+              </div>
 
-                {showHistory && (
-                  <div className="mt-3 space-y-2">
-                    {loyaltyHistory.length === 0 ? (
-                      <div className="rounded-xl border border-border bg-background/60 px-4 py-3 text-sm text-muted-foreground">
-                        {tt("account.points.noActivity", "No loyalty activity yet.")}
-                      </div>
-                    ) : (
-                      loyaltyHistory.slice(0, 8).map((row) => (
-                        <div
-                          key={row.id}
-                          className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3"
-                        >
-                          <div className="min-w-0">
-                            <p className="truncate text-sm text-foreground">
-                              {row.reason || tt("account.points.pointsUpdate", "Points update")}
-                            </p>
-                            <p className="text-xs text-muted-foreground">{new Date(row.created_at).toLocaleString()}</p>
-                          </div>
-                          <div
-                            className={`font-display text-sm font-bold ${row.points >= 0 ? "text-green-600" : "text-destructive"}`}
-                          >
-                            {row.points >= 0 ? `+${row.points}` : row.points}
-                          </div>
-                        </div>
-                      ))
-                    )}
+              <div className="ml-auto grid min-w-[220px] gap-2 sm:grid-cols-2">
+                <div className="rounded-xl border border-primary/20 bg-background/70 p-3">
+                  <p className="text-xs text-muted-foreground">{tt("account.points.earnedTotal", "Earned total")}</p>
+                  <p className="font-display text-xl font-bold text-foreground">{pointsEarned}</p>
+                </div>
+                <div className="rounded-xl border border-primary/20 bg-background/70 p-3">
+                  <p className="text-xs text-muted-foreground">{tt("account.points.spentTotal", "Spent total")}</p>
+                  <p className="font-display text-xl font-bold text-foreground">{pointsSpent}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 border-t border-border pt-4">
+              <button
+                type="button"
+                onClick={() => setShowHistory((prev) => !prev)}
+                className="flex w-full items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3 text-left transition hover:bg-background"
+              >
+                <div className="flex items-center gap-2">
+                  <History className="h-4 w-4 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      {tt("account.points.recentActivity", "Recent points activity")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {tt("account.points.recentActivityHint", "Press to show redeemed discounts and earned points")}
+                    </p>
                   </div>
+                </div>
+                {showHistory ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 )}
-              </div>
+              </button>
+
+              {showHistory && (
+                <div className="mt-3 space-y-2">
+                  {loyaltyHistory.length === 0 ? (
+                    <div className="rounded-xl border border-border bg-background/60 px-4 py-3 text-sm text-muted-foreground">
+                      {tt("account.points.noActivity", "No loyalty activity yet.")}
+                    </div>
+                  ) : (
+                    loyaltyHistory.slice(0, 8).map((row) => (
+                      <div
+                        key={row.id}
+                        className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm text-foreground">
+                            {row.reason || tt("account.points.pointsUpdate", "Points update")}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{new Date(row.created_at).toLocaleString()}</p>
+                        </div>
+                        <div
+                          className={`font-display text-sm font-bold ${row.points >= 0 ? "text-green-600" : "text-destructive"}`}
+                        >
+                          {row.points >= 0 ? `+${row.points}` : row.points}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </motion.div>
 
@@ -1364,7 +1366,9 @@ const Account = () => {
                           <div className="flex-1">
                             <OrderTimeline status={order.status} />
                           </div>
-                          {(order.status === "delivered" || order.status === "completed" || order.status === "shipped") && (
+                          {(order.status === "delivered" ||
+                            order.status === "completed" ||
+                            order.status === "shipped") && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -1500,6 +1504,9 @@ const Account = () => {
                                 <span className="font-display text-2xl font-bold text-primary">
                                   {tt("account.rewards.freeDelivery", "Free delivery")}
                                 </span>
+                                <span className="ml-1 text-sm text-muted-foreground">
+                                  {tt("account.rewards.discount", "discount")}
+                                </span>
                               </>
                             ) : (
                               <>
@@ -1508,7 +1515,8 @@ const Account = () => {
                                 </span>
                                 <span className="ml-1 text-sm text-muted-foreground">
                                   {reward.discountType === "gift_card"
-                                    {tt("account.rewards.giftCard", "gift card")}
+                                    ? tt("account.rewards.giftCard", "gift card")
+                                    : tt("account.rewards.discount", "discount")}
                                 </span>
                               </>
                             )}
@@ -1616,7 +1624,12 @@ const Account = () => {
                         {group.items.map((uv) => {
                           const giftStatus = uv.gift_status || "";
                           const isPendingGift = giftStatus === "pending_claim";
-                          const isReceived = !!uv.sender_user_id && uv.user_id === user?.id && (giftStatus === "claimed" || (uv.recipient_email || "").trim().toLowerCase() === (user?.email || "").trim().toLowerCase());
+                          const isReceived =
+                            !!uv.sender_user_id &&
+                            uv.user_id === user?.id &&
+                            (giftStatus === "claimed" ||
+                              (uv.recipient_email || "").trim().toLowerCase() ===
+                                (user?.email || "").trim().toLowerCase());
                           const isGifted = isPendingGift || (!!uv.recipient_email && !isReceived);
                           const isUsed = uv.is_used || !!uv.used_at || (uv.balance !== null && Number(uv.balance) <= 0);
 

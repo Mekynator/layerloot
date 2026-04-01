@@ -20,22 +20,6 @@ function summarizeLoyalty(rows: { points: number }[]) {
   return { balance, earned, spent };
 }
 
-function mergeUserVouchers(owned: any[], received: any[], userId: string, userEmail?: string) {
-  const normalizedEmail = (userEmail || "").trim().toLowerCase();
-  const merged = [...owned, ...received].filter(Boolean);
-  const unique = new Map<string, any>();
-
-  merged.forEach((voucher) => {
-    const recipientEmail = (voucher.recipient_email || "").trim().toLowerCase();
-    const isGiftCard = voucher.vouchers?.discount_type === "gift_card";
-    const giftedAway = isGiftCard && voucher.user_id === userId && recipientEmail && recipientEmail !== normalizedEmail;
-    if (!giftedAway) unique.set(voucher.id, voucher);
-  });
-
-  return Array.from(unique.values()).sort(
-    (a, b) => new Date(b.redeemed_at).getTime() - new Date(a.redeemed_at).getTime(),
-  );
-}
 
 async function fetchAccountOverview(userId: string, userEmail?: string): Promise<AccountOverviewData> {
   const voucherSelect = "id, user_id, voucher_id, code, is_used, balance, redeemed_at, recipient_email, recipient_name, used_at, vouchers(name, discount_value, discount_type)";

@@ -154,7 +154,7 @@ const ProductDetail = () => {
             to="/products"
             className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-primary"
           >
-            <ArrowLeft className="h-4 w-4" /> Back to Products
+            <ArrowLeft className="h-4 w-4" /> {t("products.backToProducts")}
           </Link>
         </motion.div>
 

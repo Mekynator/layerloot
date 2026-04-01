@@ -146,7 +146,8 @@
   }
 
   .section-surface {
-    @apply rounded-2xl border border-border/20 bg-card/50 shadow-xl backdrop-blur-xl;
+    @apply rounded-2xl bg-card/60 backdrop-blur-md;
+    box-shadow: 0 8px 40px -8px hsl(225 44% 4% / 0.5);
   }
 
   /* ─── Premium gradients ─── */

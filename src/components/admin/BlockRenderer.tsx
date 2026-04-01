@@ -669,7 +669,7 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.04 }}
-            className="mb-6 font-display text-5xl font-bold uppercase leading-tight text-secondary-foreground lg:text-7xl"
+            className="mb-6 font-display text-5xl font-bold uppercase leading-tight text-foreground lg:text-7xl"
           >
             {getLocalizedValue(c.heading, tr("blocks.hero.heading", "Gear Up Your Print Lab"))}
           </motion.h1>

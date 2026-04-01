@@ -1389,7 +1389,7 @@ const CustomPrintOrder = () => {
           </div>
 
           <div>
-            <Label>Print Quality</Label>
+            <Label>{t("create.printQuality")}</Label>
             <RadioGroup
               value={form.quality}
               onValueChange={(value) => setForm({ ...form, quality: value })}

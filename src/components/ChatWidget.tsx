@@ -484,7 +484,7 @@ const ChatWidget = () => {
             exit={{ opacity: 0, y: 18, scale: 0.97 }}
             className="fixed bottom-4 right-4 z-50 flex h-[46vh] min-h-[380px] w-[calc(100vw-2rem)] max-w-[430px] flex-col overflow-hidden rounded-3xl border border-border/30 bg-card/70 shadow-[0_24px_80px_hsl(217_91%_60%/0.15)] backdrop-blur-2xl sm:h-[52vh]"
           >
-            <div className="flex items-center justify-between border-b border-border bg-primary px-4 py-2.5">
+            <div className="flex items-center justify-between border-b border-border/20 bg-gradient-to-r from-primary to-primary/80 px-4 py-2.5">
               <div className="flex items-center gap-2">
                 <Bot className="h-5 w-5 text-primary-foreground" />
                 <div className="font-display text-sm font-bold uppercase tracking-wider text-primary-foreground">

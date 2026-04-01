@@ -544,7 +544,7 @@ export default function CartPage() {
                 </div>
 
                 <div className="rounded-xl border border-border bg-background/50 p-3">
-                  <label className="mb-2 block text-sm font-medium text-foreground">Discount</label>
+                  <label className="mb-2 block text-sm font-medium text-foreground">{t("cart.discount")}</label>
 
                   {availableDiscountCodes.length > 0 ? (
                     <select

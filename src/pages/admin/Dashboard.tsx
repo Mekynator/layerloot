@@ -244,7 +244,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
         {cards.map(({ label, value, icon: Icon, sub, to, alert }) => {
           const content = (
             <Card className="relative h-full transition-all hover:border-primary/40">

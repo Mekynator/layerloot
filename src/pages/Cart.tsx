@@ -43,6 +43,7 @@ export default function CartPage() {
   const { items, removeItem, updateQuantity, totalPrice, addItem } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation("common");
   const { data: accountData, isLoading: accountLoading } = useCartAccountData(user?.id, user?.email);
 
   type CartItemExt = (typeof items)[number] & {

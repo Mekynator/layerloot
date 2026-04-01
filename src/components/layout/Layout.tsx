@@ -3,6 +3,7 @@ import { useSearchParams, useLocation } from "react-router-dom";
 import Header from "./Header";
 import Footer from "./Footer";
 import GlobalSectionRenderer from "./GlobalSectionRenderer";
+import PageBackgroundSlideshow from "./PageBackgroundSlideshow";
 import FloatingCartSummary from "@/components/cart/FloatingCartSummary";
 import AchievementToast, { useAchievements } from "@/components/smart/AchievementToast";
 
@@ -28,6 +29,9 @@ const Layout = ({ children }: { children: ReactNode }) => {
         <div className="ambient-blob ambient-blob--2" />
         <div className="ambient-blob ambient-blob--3" />
       </div>
+
+      {/* Page background slideshow (behind all content, not header/footer/tiles) */}
+      <PageBackgroundSlideshow />
 
       {/* Subtle grid */}
       <div className="bg-grid-overlay" aria-hidden="true" />

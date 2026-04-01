@@ -1,124 +1,110 @@
-import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeSettings, type PageBackgroundSettings, type BackgroundSizeMode } from "@/components/admin/PageBackgroundEditor";
 
-type PageBackgroundSettings = {
-  enabled: boolean;
-  images: string[];
-  opacity: number;
-  blur: number;
-  intervalMs: number;
-};
+const SETTING_KEY = "page_background_global";
 
-const DEFAULT_SETTINGS: PageBackgroundSettings = {
-  enabled: false,
-  images: [],
-  opacity: 0.22,
-  blur: 10,
-  intervalMs: 2000,
-};
-
-function normalizeSettings(value: any): PageBackgroundSettings {
-  return {
-    enabled: Boolean(value?.enabled),
-    images: Array.isArray(value?.images) ? value.images.filter(Boolean) : [],
-    opacity: typeof value?.opacity === "number" ? value.opacity : DEFAULT_SETTINGS.opacity,
-    blur: typeof value?.blur === "number" ? value.blur : DEFAULT_SETTINGS.blur,
-    intervalMs:
-      typeof value?.intervalMs === "number" && value.intervalMs > 0 ? value.intervalMs : DEFAULT_SETTINGS.intervalMs,
-  };
-}
-
-function routeToPageKey(pathname: string): string {
-  const clean = pathname.split("?")[0].split("#")[0];
-
-  if (clean === "/" || clean === "") return "home";
-
-  const firstSegment = clean.split("/").filter(Boolean)[0] ?? "home";
-
-  const aliases: Record<string, string> = {
-    create: "create-your-own",
-  };
-
-  return aliases[firstSegment] ?? firstSegment;
+function sizeToCSS(mode: BackgroundSizeMode) {
+  switch (mode) {
+    case "cover": return { backgroundSize: "cover", backgroundRepeat: "no-repeat" };
+    case "contain": return { backgroundSize: "contain", backgroundRepeat: "no-repeat" };
+    case "fill": return { backgroundSize: "100% 100%", backgroundRepeat: "no-repeat" };
+    case "repeat": return { backgroundSize: "auto", backgroundRepeat: "repeat" };
+    case "auto": return { backgroundSize: "auto", backgroundRepeat: "no-repeat" };
+    default: return { backgroundSize: "cover", backgroundRepeat: "no-repeat" };
+  }
 }
 
 export default function PageBackgroundSlideshow() {
-  const location = useLocation();
-  const [settings, setSettings] = useState<PageBackgroundSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<PageBackgroundSettings | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const pageKey = useMemo(() => routeToPageKey(location.pathname), [location.pathname]);
-
+  // Load global settings once
   useEffect(() => {
     let isMounted = true;
 
     async function loadSettings() {
-      const settingKey = `page_background_${pageKey}`;
-
-      const { data } = await supabase.from("site_settings").select("value").eq("key", settingKey).maybeSingle();
+      const { data } = await supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", SETTING_KEY)
+        .maybeSingle();
 
       if (!isMounted) return;
-
-      const nextSettings = normalizeSettings(data?.value);
-      setSettings(nextSettings);
+      setSettings(normalizeSettings(data?.value));
       setCurrentIndex(0);
     }
 
     loadSettings();
 
+    // Also listen for realtime updates so saving in editor applies immediately
+    const channel = supabase
+      .channel("page-bg-settings")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "site_settings", filter: `key=eq.${SETTING_KEY}` },
+        (payload: any) => {
+          if (payload.new?.value) {
+            setSettings(normalizeSettings(payload.new.value));
+            setCurrentIndex(0);
+          }
+        },
+      )
+      .subscribe();
+
     return () => {
       isMounted = false;
+      supabase.removeChannel(channel);
     };
-  }, [pageKey]);
+  }, []);
 
+  // Cycle images
   useEffect(() => {
-    if (!settings.enabled || settings.images.length <= 1) return;
+    if (!settings?.enabled || settings.images.length <= 1) return;
 
     const timer = window.setInterval(
-      () => {
-        setCurrentIndex((prev) => (prev + 1) % settings.images.length);
-      },
-      Math.max(500, settings.intervalMs),
+      () => setCurrentIndex((prev) => (prev + 1) % settings.images.length),
+      Math.max(1000, settings.intervalMs),
     );
 
     return () => window.clearInterval(timer);
-  }, [settings.enabled, settings.images.length, settings.intervalMs]);
+  }, [settings?.enabled, settings?.images.length, settings?.intervalMs]);
 
-  if (!settings.enabled || settings.images.length === 0) return null;
+  if (!settings?.enabled || settings.images.length === 0) return null;
+
+  const sizeCSS = sizeToCSS(settings.sizeMode);
 
   return (
     <>
-      <style>
-        {`
-          @keyframes page-bg-zoom {
-            0% { transform: scale(1.05); }
-            100% { transform: scale(1.12); }
-          }
-        `}
-      </style>
+      <style>{`
+        @keyframes page-bg-zoom {
+          0% { transform: scale(1.02); }
+          100% { transform: scale(1.08); }
+        }
+      `}</style>
 
       <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
         {settings.images.map((src, index) => (
           <div
             key={`${src}-${index}`}
-            className="absolute inset-0 transition-opacity duration-1000"
+            className="absolute inset-0 transition-opacity duration-[1200ms]"
             style={{
               opacity: index === currentIndex ? settings.opacity : 0,
               filter: `blur(${settings.blur}px)`,
               backgroundImage: `url("${src}")`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              animation: "page-bg-zoom 8s ease-in-out infinite alternate",
-              willChange: "transform, opacity, filter",
+              backgroundPosition: settings.position || "center",
+              ...sizeCSS,
+              animation: "page-bg-zoom 12s ease-in-out infinite alternate",
+              willChange: "transform, opacity",
             }}
           />
         ))}
 
+        {/* Dark overlay */}
         <div
           className="absolute inset-0"
           style={{
-            background: "linear-gradient(to bottom, rgba(0,0,0,0.10), rgba(0,0,0,0.18))",
+            background: `linear-gradient(to bottom, rgba(0,0,0,${settings.overlayOpacity}), rgba(0,0,0,${settings.overlayOpacity + 0.05}))`,
           }}
         />
       </div>

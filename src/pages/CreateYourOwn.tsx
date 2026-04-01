@@ -1472,6 +1472,7 @@ const CustomPrintOrder = () => {
 };
 
 const CreateYourOwn = () => {
+  const { t } = useTranslation();
   const [pageBlocks, setPageBlocks] = useState<SiteBlock[]>([]);
   const [blocksLoading, setBlocksLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<CreateTabValue>("custom-print");
@@ -1515,12 +1516,11 @@ const CreateYourOwn = () => {
         <div className="container max-w-6xl">
           <motion.div {...fadeUp} className="mb-8">
             <h1 className="mb-2 font-display text-3xl font-bold uppercase text-foreground lg:text-5xl">
-              Create Your <span className="text-primary">Own</span>
+              {t("create.pageTitle")}
             </h1>
 
             <p className="max-w-2xl text-muted-foreground">
-              Upload, customize, preview, and submit. Use custom print for 3D models, lithophane for photo lamps, or
-              gift finder for quick inspiration.
+              {t("create.pageSubtitle")}
             </p>
           </motion.div>
 
@@ -1534,21 +1534,21 @@ const CreateYourOwn = () => {
                 value="custom-print"
                 className="gap-1.5 rounded-xl font-display text-xs uppercase tracking-wider"
               >
-                <Box className="h-4 w-4" /> Custom 3D Print
+                <Box className="h-4 w-4" /> {t("create.tabCustomPrint")}
               </TabsTrigger>
 
               <TabsTrigger
                 value="lithophane"
                 className="gap-1.5 rounded-xl font-display text-xs uppercase tracking-wider"
               >
-                <Image className="h-4 w-4" /> Lithophane
+                <Image className="h-4 w-4" /> {t("create.tabLithophane")}
               </TabsTrigger>
 
               <TabsTrigger
                 value="gift-finder"
                 className="gap-1.5 rounded-xl font-display text-xs uppercase tracking-wider"
               >
-                <Gift className="h-4 w-4" /> Gift Finder
+                <Gift className="h-4 w-4" /> {t("create.tabGiftFinder")}
               </TabsTrigger>
             </TabsList>
 
@@ -1562,9 +1562,9 @@ const CreateYourOwn = () => {
               >
                 {activeTab === "custom-print" && (
                   <ToolShell
-                    eyebrow="Custom print"
-                    title="Custom 3D Print Order"
-                    description="Upload your 3D file or a reference image, choose material and print quality, then continue to the request fee checkout."
+                    eyebrow={t("create.customPrintEyebrow")}
+                    title={t("create.customPrintTitle")}
+                    description={t("create.customPrintDesc")}
                   >
                     <CustomPrintOrder />
                   </ToolShell>
@@ -1572,9 +1572,9 @@ const CreateYourOwn = () => {
 
                 {activeTab === "lithophane" && (
                   <ToolShell
-                    eyebrow="Lithophane"
-                    title="Photo to lithophane"
-                    description="Upload your image, crop it, preview the lamp style in 3D, and send the configuration directly as a custom order."
+                    eyebrow={t("create.lithophaneEyebrow")}
+                    title={t("create.lithophaneTitle")}
+                    description={t("create.lithophaneDesc")}
                   >
                     <LithophaneOrderSection />
                   </ToolShell>
@@ -1582,9 +1582,9 @@ const CreateYourOwn = () => {
 
                 {activeTab === "gift-finder" && (
                   <ToolShell
-                    eyebrow="Gift finder"
-                    title="Find the best match"
-                    description="Choose one or more vibes and get the strongest product matches first."
+                    eyebrow={t("create.giftFinderEyebrow")}
+                    title={t("create.giftFinderTitle")}
+                    description={t("create.giftFinderDesc")}
                   >
                     <GiftFinder />
                   </ToolShell>

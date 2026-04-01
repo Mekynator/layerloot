@@ -789,7 +789,8 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
             const cardBody = (
               <motion.div
                 whileHover={{ y: -4 }}
-                className={`group flex h-full flex-col rounded-lg border border-border bg-card p-8 transition-all duration-300 hover:border-primary hover:shadow-xl ${alignmentClass(card.alignment || align)}`}
+                className={`group flex h-full flex-col rounded-2xl bg-card/60 p-8 backdrop-blur-md transition-all duration-500 hover:shadow-[0_24px_80px_-12px_hsl(217_91%_60%/0.18)] ${alignmentClass(card.alignment || align)}`}
+                style={{ boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)' }}
               >
                 <div
                   className={`mb-5 flex h-16 w-16 items-center justify-center rounded-xl ${hasImage ? "overflow-hidden" : "bg-primary/10 transition-colors group-hover:bg-primary/20"} ${card.alignment === "center" || (!card.alignment && align === "center") ? "mx-auto" : ""}`}

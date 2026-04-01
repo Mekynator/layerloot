@@ -136,7 +136,7 @@ const Products = () => {
                       placeholder={t("products.searchPlaceholder")}
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      className="h-11 rounded-xl border-border/70 bg-background/80 pl-10"
+                      className="h-11 rounded-xl bg-background/80 pl-10"
                     />
                   </div>
                   <motion.div

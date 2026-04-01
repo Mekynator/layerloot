@@ -441,7 +441,7 @@ const ProductDetail = () => {
                     disabled={submitting}
                     className="font-display uppercase tracking-wider"
                   >
-                    {submitting ? "Submitting..." : "Submit Review"}
+                    {submitting ? t("products.submitting") : t("products.submitReview")}
                   </Button>
                 </div>
               </CardContent>

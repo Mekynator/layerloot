@@ -360,14 +360,14 @@ const ProductDetail = () => {
                 {justAdded ? (
                   <>
                     <Check className="mr-2 h-5 w-5" />
-                    Added to Cart
+                    {t("products.addedToCart")}
                   </>
                 ) : (
                   <>
                     <ShoppingCart className="mr-2 h-5 w-5" />
                     {variants.length > 0 && !selectedVariant && !hasConfiguratorAttrs
-                      ? "Select an option"
-                      : "Add to Cart"}
+                      ? t("products.selectOption")
+                      : t("products.addToCart")}
                   </>
                 )}
               </Button>

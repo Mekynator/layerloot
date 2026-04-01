@@ -1420,7 +1420,7 @@ const CustomPrintOrder = () => {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <Label>Quantity</Label>
+              <Label>{t("create.quantity")}</Label>
               <Input
                 type="number"
                 min={1}

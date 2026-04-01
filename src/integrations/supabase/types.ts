@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_translations: {
+        Row: {
+          content_id: string
+          content_type: string
+          created_at: string
+          field_name: string
+          id: string
+          source_hash: string
+          source_lang: string
+          source_text: string
+          target_lang: string
+          translated_text: string
+          updated_at: string
+        }
+        Insert: {
+          content_id: string
+          content_type: string
+          created_at?: string
+          field_name: string
+          id?: string
+          source_hash: string
+          source_lang?: string
+          source_text: string
+          target_lang: string
+          translated_text: string
+          updated_at?: string
+        }
+        Update: {
+          content_id?: string
+          content_type?: string
+          created_at?: string
+          field_name?: string
+          id?: string
+          source_hash?: string
+          source_lang?: string
+          source_text?: string
+          target_lang?: string
+          translated_text?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -1187,6 +1229,65 @@ export type Database = {
         }
         Relationships: []
       }
+      user_gift_notifications: {
+        Row: {
+          claimed_at: string | null
+          created_at: string
+          gift_message: string | null
+          gift_status: string
+          id: string
+          is_read: boolean
+          message: string | null
+          recipient_user_id: string | null
+          sender_name: string | null
+          sender_user_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          user_voucher_id: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          created_at?: string
+          gift_message?: string | null
+          gift_status?: string
+          id?: string
+          is_read?: boolean
+          message?: string | null
+          recipient_user_id?: string | null
+          sender_name?: string | null
+          sender_user_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id: string
+          user_voucher_id: string
+        }
+        Update: {
+          claimed_at?: string | null
+          created_at?: string
+          gift_message?: string | null
+          gift_status?: string
+          id?: string
+          is_read?: boolean
+          message?: string | null
+          recipient_user_id?: string | null
+          sender_name?: string | null
+          sender_user_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          user_voucher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_gift_notifications_user_voucher_id_fkey"
+            columns: ["user_voucher_id"]
+            isOneToOne: false
+            referencedRelation: "user_vouchers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -1208,36 +1309,60 @@ export type Database = {
       user_vouchers: {
         Row: {
           balance: number | null
+          claimed_at: string | null
           code: string
+          gift_message: string | null
+          gift_status: string | null
+          gifted_at: string | null
           id: string
           is_used: boolean
           recipient_email: string | null
           recipient_name: string | null
+          recipient_user_id: string | null
           redeemed_at: string
+          sender_email: string | null
+          sender_name: string | null
+          sender_user_id: string | null
           used_at: string | null
           user_id: string
           voucher_id: string
         }
         Insert: {
           balance?: number | null
+          claimed_at?: string | null
           code: string
+          gift_message?: string | null
+          gift_status?: string | null
+          gifted_at?: string | null
           id?: string
           is_used?: boolean
           recipient_email?: string | null
           recipient_name?: string | null
+          recipient_user_id?: string | null
           redeemed_at?: string
+          sender_email?: string | null
+          sender_name?: string | null
+          sender_user_id?: string | null
           used_at?: string | null
           user_id: string
           voucher_id: string
         }
         Update: {
           balance?: number | null
+          claimed_at?: string | null
           code?: string
+          gift_message?: string | null
+          gift_status?: string | null
+          gifted_at?: string | null
           id?: string
           is_used?: boolean
           recipient_email?: string | null
           recipient_name?: string | null
+          recipient_user_id?: string | null
           redeemed_at?: string
+          sender_email?: string | null
+          sender_name?: string | null
+          sender_user_id?: string | null
           used_at?: string | null
           user_id?: string
           voucher_id?: string

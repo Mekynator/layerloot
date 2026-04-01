@@ -582,6 +582,20 @@ export default function CartPage() {
                   </span>
                 </div>
 
+                {giftFee > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">🎁 Gift packaging ({totalItemCount} {totalItemCount === 1 ? "item" : "items"})</span>
+                    <span className="font-display font-bold text-foreground">{formatPrice(giftFee)}</span>
+                  </div>
+                )}
+
+                {giftWrapFee > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">✨ Gift wrapping</span>
+                    <span className="font-display font-bold text-foreground">{formatPrice(giftWrapFee)}</span>
+                  </div>
+                )}
+
                 <div className="rounded-xl border border-border bg-background/50 p-3">
                   <label className="mb-2 block text-sm font-medium text-foreground">{t("cart.discount")}</label>
 

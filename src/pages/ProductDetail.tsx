@@ -101,7 +101,7 @@ const ProductDetail = () => {
     );
 
     setJustAdded(true);
-    toast({ title: "Added to cart!", description: name });
+    toast({ title: t("common.addedToCart"), description: name });
   };
 
   const handleSubmitReview = async () => {

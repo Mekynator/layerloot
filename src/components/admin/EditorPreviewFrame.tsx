@@ -213,14 +213,14 @@ export default function EditorPreviewFrame({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-card px-4 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/30 bg-card/95 px-4 py-2 backdrop-blur-xl">
         <div>
           <p className="font-display text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Live preview</p>
           <p className="text-sm font-medium text-foreground">{labelForPage(page)}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="hidden items-center gap-2 rounded-md border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground md:flex">
+          <div className="hidden items-center gap-2 rounded-lg border border-border/30 bg-background-secondary/50 px-3 py-1.5 text-xs text-muted-foreground md:flex">
             <MonitorSmartphone className="h-3.5 w-3.5" />
             <span>{totalBlocks} blocks</span>
             <span>•</span>

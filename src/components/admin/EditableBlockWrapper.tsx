@@ -87,7 +87,7 @@ const ToolBtn = ({ children, onClick, disabled, destructive }: {
     onClick={(e) => { e.stopPropagation(); onClick(); }}
     disabled={disabled}
     className={`rounded p-0.5 transition-colors ${
-      destructive ? "text-background/70 hover:text-red-400" : "text-background/70 hover:text-background"
+      destructive ? "text-muted-foreground hover:text-destructive" : "text-muted-foreground hover:text-foreground"
     } disabled:opacity-30`}
   >
     {children}

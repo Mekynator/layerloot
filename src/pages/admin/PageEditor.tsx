@@ -969,7 +969,7 @@ const PageEditor = () => {
                 <span className="font-display text-[10px] uppercase tracking-wider">Add Section</span>
               </button>
 
-              <div className="mt-4 rounded-md border border-border bg-muted/30 p-3">
+              <div className="mt-4 rounded-xl border border-border/30 bg-card/60 p-3 backdrop-blur-xl" style={{ boxShadow: '0 4px 20px -4px hsl(228 33% 2% / 0.3)' }}>
                 <h3 className="mb-2 font-display text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                   Summary
                 </h3>

@@ -1056,8 +1056,8 @@ const CustomPrintOrder = () => {
   const openPaymentDialog = () => {
     if (!user) {
       toast({
-        title: "Please sign in",
-        description: "You need to sign in to submit a custom order.",
+        title: t("create.pleaseSignIn"),
+        description: t("create.signInToSubmit"),
         variant: "destructive",
       });
       return;
@@ -1065,8 +1065,8 @@ const CustomPrintOrder = () => {
 
     if (!file && !referenceImage) {
       toast({
-        title: "Missing file",
-        description: "Please upload either a 3D model or a reference image.",
+        title: t("create.missingFile"),
+        description: t("create.missingFileDesc"),
         variant: "destructive",
       });
       return;

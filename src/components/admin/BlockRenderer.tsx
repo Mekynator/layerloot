@@ -1414,7 +1414,7 @@ const VideoBlock = ({ block }: { block: SiteBlock }) => {
 
   return withSection(
     block,
-    "bg-secondary py-16 lg:py-24",
+    "py-16 lg:py-24",
     <div className="container max-w-4xl">
       {block.title && (
         <h2 className="mb-8 text-center font-display text-3xl font-bold uppercase text-secondary-foreground">

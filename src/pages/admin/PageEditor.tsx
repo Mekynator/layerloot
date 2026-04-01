@@ -817,7 +817,7 @@ const PageEditor = () => {
 
       <div className="flex flex-1 overflow-hidden">
         <aside
-          className={`shrink-0 overflow-y-auto border-r border-border bg-card transition-all duration-300 ${
+          className={`shrink-0 overflow-y-auto border-r border-border/30 bg-card/80 backdrop-blur-xl transition-all duration-300 ${
             panelCollapsed ? "w-0 overflow-hidden" : "w-72 lg:w-80"
           }`}
         >

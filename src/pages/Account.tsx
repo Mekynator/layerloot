@@ -1278,7 +1278,6 @@ const Account = () => {
                   </div>
                 )}
               </div>
-            </div>
           </div>
         </motion.div>
 

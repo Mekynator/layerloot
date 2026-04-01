@@ -926,6 +926,7 @@ const FeaturedProductsBlock = ({
   block: SiteBlock;
   disableAnimations?: boolean;
 }) => {
+  useTranslation();
   const c = block.content || {};
   const { data: products = [], isLoading } = useFeaturedProducts(c.limit || 8);
   const align = c.alignment || "left";

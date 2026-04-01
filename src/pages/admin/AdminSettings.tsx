@@ -177,6 +177,7 @@ const AdminSettings = () => {
   const [footerContact, setFooterContact] = useState<FooterContactConfig>(defaultFooterContact);
   const [branding, setBranding] = useState<BrandingConfig>(defaultBranding);
   const [saving, setSaving] = useState(false);
+  const [policies, setPolicies] = useState<Record<string, { title: string; body: string }>>({});
 
   useEffect(() => {
     const load = async () => {

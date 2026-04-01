@@ -433,7 +433,7 @@ const ChatWidget = () => {
             initial={{ opacity: 0, y: 12, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.96 }}
-            className="fixed bottom-24 right-6 z-50 max-w-[260px] rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-xl"
+            className="fixed bottom-24 right-6 z-50 max-w-[260px] rounded-2xl border border-border/30 bg-card/70 px-4 py-3 text-left shadow-[0_16px_48px_hsl(217_91%_60%/0.12)] backdrop-blur-xl"
           >
             <button
               type="button"

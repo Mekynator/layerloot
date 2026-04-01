@@ -20,7 +20,7 @@ import SizePreview from "@/components/SizePreview";
 import { ProductDetailSkeleton } from "@/components/shared/loading-states";
 import RatingStars from "@/components/social/RatingStars";
 import { formatPrice } from "@/lib/currency";
-import ProductTrustBadges from "@/components/social/ProductTrustBadges";
+
 import ReviewCard from "@/components/social/ReviewCard";
 import ProductCard from "@/components/ProductCard";
 

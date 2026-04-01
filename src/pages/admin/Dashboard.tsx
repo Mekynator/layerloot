@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { DollarSign, Package, ShoppingCart, Users, Download, Calendar, Star, MessageSquareMore } from "lucide-react";
+import { DollarSign, Package, ShoppingCart, Users, Download, Calendar, Star, MessageSquareMore, Palette, TicketPercent, Truck, Tags, FileText, Settings } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -34,11 +34,13 @@ const Dashboard = () => {
     clients: 0,
     customOrders: 0,
     reviews: 0,
+    showcases: 0,
   });
   const [alerts, setAlerts] = useState({
     orders: 0,
     customOrders: 0,
     reviews: 0,
+    showcases: 0,
   });
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [revenueByPeriod, setRevenueByPeriod] = useState<any[]>([]);
@@ -73,6 +75,7 @@ const Dashboard = () => {
         pendingOrdersRes,
         activeCustomOrdersRes,
         pendingReviewsRes,
+        pendingShowcasesRes,
       ] = await Promise.all([
         supabase.from("products").select("id", { count: "exact", head: true }),
         supabase.from("profiles").select("id", { count: "exact", head: true }),
@@ -87,6 +90,7 @@ const Dashboard = () => {
           .select("id", { count: "exact", head: true })
           .in("status", ["pending", "reviewing", "quoted", "accepted"]),
         supabase.from("product_reviews").select("id", { count: "exact", head: true }).eq("is_approved", false),
+        supabase.from("custom_order_showcases").select("id", { count: "exact", head: true }).eq("visibility_status", "shared").eq("approved_by_admin", false),
       ]);
 
       const revenue = allOrders.reduce((s, o) => s + Number(o.total), 0);
@@ -97,12 +101,14 @@ const Dashboard = () => {
         clients: profilesRes.count ?? 0,
         customOrders: customOrdersRes.count ?? 0,
         reviews: reviewsRes.count ?? 0,
+        showcases: pendingShowcasesRes.count ?? 0,
       });
 
       setAlerts({
         orders: pendingOrdersRes.count ?? 0,
         customOrders: activeCustomOrdersRes.count ?? 0,
         reviews: pendingReviewsRes.count ?? 0,
+        showcases: pendingShowcasesRes.count ?? 0,
       });
 
       const dayMap: Record<string, { revenue: number; orders: number }> = {};
@@ -200,6 +206,19 @@ const Dashboard = () => {
       to: "/admin/reviews",
       alert: alerts.reviews,
     },
+    {
+      label: "Showcases",
+      value: stats.showcases,
+      icon: Palette,
+      sub: `Pending: ${alerts.showcases}`,
+      to: "/admin/showcases",
+      alert: alerts.showcases,
+    },
+    { label: "Discounts", value: "—", icon: TicketPercent, sub: "Manage codes", to: "/admin/discounts", alert: 0 },
+    { label: "Categories", value: "—", icon: Tags, sub: "Organize products", to: "/admin/categories", alert: 0 },
+    { label: "Shipping", value: "—", icon: Truck, sub: "Rates & providers", to: "/admin/shipping", alert: 0 },
+    { label: "Page Editor", value: "—", icon: FileText, sub: "Edit site content", to: "/admin/editor", alert: 0 },
+    { label: "Settings", value: "—", icon: Settings, sub: "Site configuration", to: "/admin/settings", alert: 0 },
   ];
 
   return (
@@ -225,7 +244,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
         {cards.map(({ label, value, icon: Icon, sub, to, alert }) => {
           const content = (
             <Card className="relative h-full transition-all hover:border-primary/40">

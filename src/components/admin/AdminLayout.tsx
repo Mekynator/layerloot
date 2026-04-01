@@ -16,6 +16,7 @@ import {
   X,
   Box,
   TicketPercent,
+  Palette,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ const sidebarLinks = [
   { to: "/admin/discounts", label: "Discounts", icon: TicketPercent, notificationKey: null },
   { to: "/admin/clients", label: "Users", icon: Users, notificationKey: null },
   { to: "/admin/reviews", label: "Reviews", icon: Star, notificationKey: "reviews" },
+  { to: "/admin/showcases", label: "Showcases", icon: Palette, notificationKey: "showcases" },
   { to: "/admin/editor", label: "Page Editor", icon: FileText, notificationKey: null },
   { to: "/admin/shipping", label: "Shipping", icon: Truck, notificationKey: null },
   { to: "/admin/settings", label: "Settings", icon: Settings, notificationKey: null },
@@ -39,12 +41,14 @@ type NotificationState = {
   orders: number;
   customOrders: number;
   reviews: number;
+  showcases: number;
 };
 
 const EMPTY_NOTIFICATIONS: NotificationState = {
   orders: 0,
   customOrders: 0,
   reviews: 0,
+  showcases: 0,
 };
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
@@ -71,13 +75,14 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
     let mounted = true;
 
     const fetchNotifications = async () => {
-      const [ordersRes, customOrdersRes, reviewsRes] = await Promise.all([
+      const [ordersRes, customOrdersRes, reviewsRes, showcasesRes] = await Promise.all([
         supabase.from("orders").select("id", { count: "exact", head: true }).in("status", ["pending", "processing"]),
         supabase
           .from("custom_orders")
           .select("id", { count: "exact", head: true })
           .in("status", ["pending", "reviewing", "quoted", "accepted"]),
         supabase.from("product_reviews").select("id", { count: "exact", head: true }).eq("is_approved", false),
+        supabase.from("custom_order_showcases").select("id", { count: "exact", head: true }).eq("visibility_status", "shared").eq("approved_by_admin", false),
       ]);
 
       if (!mounted) return;
@@ -86,6 +91,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         orders: ordersRes.count ?? 0,
         customOrders: customOrdersRes.count ?? 0,
         reviews: reviewsRes.count ?? 0,
+        showcases: showcasesRes.count ?? 0,
       });
     };
 

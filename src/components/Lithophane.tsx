@@ -57,6 +57,7 @@ export interface LithophaneProps {
   onDraftChange?: (payload: Partial<LithophaneSubmitPayload>) => void;
   submitLabel?: string;
   initialNotes?: string;
+  preloadedImageFile?: File | null;
 }
 
 type UploadProgressState = {
@@ -254,6 +255,7 @@ export default function Lithophane({
   onDraftChange,
   submitLabel = "Submit Lithophane Design",
   initialNotes = "",
+  preloadedImageFile,
 }: LithophaneProps) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [shape, setShape] = useState<LithophaneShape>(DEFAULTS.shape);
@@ -332,6 +334,12 @@ export default function Lithophane({
     estimatedPrintHours,
     onDraftChange,
   ]);
+
+  // Auto-load preloaded image file (from showcase reorder/modify)
+  useEffect(() => {
+    if (!preloadedImageFile) return;
+    void runUploadProgress(preloadedImageFile);
+  }, [preloadedImageFile]);
 
   const runUploadProgress = async (selectedFile: File) => {
     setUploadProgress({ active: true, progress: 8, status: "Reading image..." });

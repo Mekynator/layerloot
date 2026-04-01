@@ -81,8 +81,12 @@ export default function CreationDetail() {
   const isOwner = user.id === showcase.owner_user_id;
   const hasReviewed = reviews.some((r) => r.user_id === user.id);
 
+  const isLithophane = showcase.category?.toLowerCase().includes("lithophane") ||
+    showcase.tags?.some((t) => t.toLowerCase().includes("lithophane"));
+
   const handleReorder = () => {
-    navigate(`/create?reorderShowcase=${showcase.id}`);
+    const param = isLithophane ? "reorderLithophane" : "reorderShowcase";
+    navigate(`/create?${param}=${showcase.id}`);
   };
 
   return (
@@ -151,7 +155,10 @@ export default function CreationDetail() {
             )}
 
             {showcase.reorder_enabled && showcase.approved_by_admin && (
-              <Button onClick={() => navigate(`/create?modifyShowcase=${showcase.id}`)} variant="secondary" className="gap-2">
+              <Button onClick={() => {
+                const param = isLithophane ? "modifyLithophane" : "modifyShowcase";
+                navigate(`/create?${param}=${showcase.id}`);
+              }} variant="secondary" className="gap-2">
                 <Pencil className="h-4 w-4" /> Request Modification
               </Button>
             )}

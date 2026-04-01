@@ -513,11 +513,71 @@ const LithophaneOrderSection = () => {
   const userName = getUserDisplayName(user);
   const userEmail = user?.email || "";
   const [submittingLithophane, setSubmittingLithophane] = useState(false);
+  const [showcaseSource, setShowcaseSource] = useState<{ id: string; title: string; type: "reorder" | "modify" } | null>(null);
+  const [initialLithophaneNotes, setInitialLithophaneNotes] = useState("");
+  const [preloadedImageFile, setPreloadedImageFile] = useState<File | null>(null);
   const [lithophaneProgress, setLithophaneProgress] = useState<ProgressState>({
     open: false,
     progress: 0,
     status: "",
   });
+
+  // Auto-fill from showcase (reorder or modify)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reorderId = params.get("reorderLithophane");
+    const modifyId = params.get("modifyLithophane");
+    const showcaseId = reorderId || modifyId;
+    if (!showcaseId || !user) return;
+
+    const fetchShowcase = async () => {
+      const { data, error } = await supabase
+        .from("custom_order_showcases" as any)
+        .select("*")
+        .eq("id", showcaseId)
+        .maybeSingle();
+
+      if (error || !data) return;
+      const s = data as any;
+
+      setShowcaseSource({
+        id: s.id,
+        title: s.title,
+        type: reorderId ? "reorder" : "modify",
+      });
+
+      // Build initial notes from showcase data
+      const notesParts: string[] = [];
+      if (reorderId) {
+        notesParts.push(`Reorder of "${s.title}"`);
+      } else {
+        notesParts.push(`Modification request based on "${s.title}"`);
+        notesParts.push("\nModifications requested:\n");
+      }
+      if (s.description) notesParts.push(`\nOriginal description: ${s.description}`);
+      if (s.materials) notesParts.push(`Material: ${s.materials}`);
+      if (s.dimensions) notesParts.push(`Dimensions: ${s.dimensions}`);
+      setInitialLithophaneNotes(notesParts.join("\n"));
+
+      // Auto-load the source image from the showcase
+      const imageUrl = s.thumbnail_url || s.preview_image_urls?.[0];
+      if (imageUrl) {
+        try {
+          const response = await fetch(imageUrl);
+          if (response.ok) {
+            const blob = await response.blob();
+            const ext = imageUrl.split(".").pop()?.split("?")[0] || "jpg";
+            const imageFile = new File([blob], `lithophane-source.${ext}`, { type: blob.type || "image/jpeg" });
+            setPreloadedImageFile(imageFile);
+          }
+        } catch (err) {
+          console.error("Failed to load showcase image for lithophane:", err);
+        }
+      }
+    };
+
+    void fetchShowcase();
+  }, [user]);
 
   const dataUrlToBlob = (dataUrl: string) => {
     const [meta, base64] = dataUrl.split(",");
@@ -650,6 +710,11 @@ const LithophaneOrderSection = () => {
           estimated_price: payload.estimatedPrice,
           estimated_print_hours: payload.estimatedPrintHours,
           lithophane_config: payload.designJson,
+          ...(showcaseSource ? {
+            source_showcase_id: showcaseSource.id,
+            source_showcase_title: showcaseSource.title,
+            showcase_request_type: showcaseSource.type,
+          } : {}),
         },
       } as any;
 
@@ -701,10 +766,30 @@ const LithophaneOrderSection = () => {
         </div>
       )}
 
+      {showcaseSource && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm"
+        >
+          <p className="font-medium text-foreground">
+            {showcaseSource.type === "reorder" ? "🔁 Reordering" : "✏️ Requesting modification of"}:{" "}
+            <span className="text-primary">{showcaseSource.title}</span>
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {showcaseSource.type === "reorder"
+              ? "Source image and settings have been pre-loaded. Review and submit when ready."
+              : "Source image is pre-loaded. Adjust settings and describe your desired changes, then submit."}
+          </p>
+        </motion.div>
+      )}
+
       <div className={submittingLithophane ? "pointer-events-none opacity-80" : ""}>
         <Lithophane
           onSubmitDesign={handleLithophaneSubmit}
           submitLabel={submittingLithophane ? t("create.preparing") : t("create.orderLithophane")}
+          initialNotes={initialLithophaneNotes}
+          preloadedImageFile={preloadedImageFile}
         />
       </div>
 
@@ -1593,7 +1678,11 @@ const CreateYourOwn = () => {
   const { t } = useTranslation();
   const [pageBlocks, setPageBlocks] = useState<SiteBlock[]>([]);
   const [blocksLoading, setBlocksLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<CreateTabValue>("custom-print");
+  const [activeTab, setActiveTab] = useState<CreateTabValue>(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("reorderLithophane") || params.get("modifyLithophane")) return "lithophane";
+    return "custom-print";
+  });
 
   useEffect(() => {
     const fetchBlocks = async () => {

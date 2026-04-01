@@ -1500,9 +1500,6 @@ const Account = () => {
                                 <span className="font-display text-2xl font-bold text-primary">
                                   {tt("account.rewards.freeDelivery", "Free delivery")}
                                 </span>
-                                <span className="ml-1 text-sm text-muted-foreground">
-                                  {tt("account.rewards.discount", "discount")}
-                                </span>
                               </>
                             ) : (
                               <>
@@ -1511,8 +1508,7 @@ const Account = () => {
                                 </span>
                                 <span className="ml-1 text-sm text-muted-foreground">
                                   {reward.discountType === "gift_card"
-                                    ? tt("account.rewards.giftCard", "gift card")
-                                    : tt("account.rewards.discount", "discount")}
+                                    {tt("account.rewards.giftCard", "gift card")}
                                 </span>
                               </>
                             )}

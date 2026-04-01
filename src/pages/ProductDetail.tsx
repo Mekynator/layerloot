@@ -138,9 +138,9 @@ const ProductDetail = () => {
   if (!product) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
-        <h1 className="mb-4 font-display text-2xl font-bold uppercase text-foreground">Product Not Found</h1>
+        <h1 className="mb-4 font-display text-2xl font-bold uppercase text-foreground">{t("products.productNotFound")}</h1>
         <Link to="/products">
-          <Button>Back to Products</Button>
+          <Button>{t("products.backToProducts")}</Button>
         </Link>
       </div>
     );

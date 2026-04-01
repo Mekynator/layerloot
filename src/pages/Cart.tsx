@@ -386,7 +386,7 @@ export default function CartPage() {
                                 className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
                               >
                                 <Bookmark className="h-4 w-4" />
-                                Save for later
+                                {t("cart.saveForLater")}
                               </button>
                             </div>
                           </div>

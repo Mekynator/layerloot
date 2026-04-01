@@ -1057,6 +1057,13 @@ const CustomPrintOrder = () => {
     void fetchShowcase();
   }, [user]);
 
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      if (referenceImagePreviewUrl) URL.revokeObjectURL(referenceImagePreviewUrl);
+    };
+  }, [previewUrl, referenceImagePreviewUrl]);
+
   const selectedColorHex = COLORS.find((c) => c.value === form.color)?.hex || "#f5f5f5";
   const uploadBusy = modelProgress.open || referenceProgress.open;
   const submitDisabled = submitting || uploadBusy || (!file && !referenceImage) || !user;

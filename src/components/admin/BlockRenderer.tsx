@@ -622,7 +622,7 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
 
   return withSection(
     block,
-    "relative overflow-hidden bg-secondary py-20 lg:py-32",
+    "relative overflow-hidden py-20 lg:py-32",
     <>
       {c.bg_image && (
         <motion.div
@@ -635,14 +635,10 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
         </motion.div>
       )}
 
-      <div className="absolute inset-0 opacity-5">
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(45deg, transparent, transparent 35px, currentColor 35px, currentColor 36px)",
-          }}
-        />
+      {/* Ambient glow behind hero */}
+      <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+        <div className="absolute -top-1/4 -left-1/4 h-[600px] w-[600px] rounded-full bg-primary/10 blur-[120px]" />
+        <div className="absolute -bottom-1/4 -right-1/4 h-[500px] w-[500px] rounded-full bg-accent/8 blur-[100px]" />
       </div>
 
       <div className="container relative">

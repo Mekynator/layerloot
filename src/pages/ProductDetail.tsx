@@ -309,10 +309,6 @@ const ProductDetail = () => {
             )}
 
             <motion.div whileHover={{ y: -2 }} className="section-surface p-4">
-              <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
-                <ShieldCheck className="h-4 w-4 text-primary" />
-                {t("products.socialProofNote")}
-              </div>
 
               {hasConfiguratorAttrs && (
                 <ProductConfigurator

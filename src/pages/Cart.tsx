@@ -582,8 +582,8 @@ export default function CartPage() {
                 <div className="border-t border-border pt-4">
                   {discountAmount > 0 && (
                     <div className="mb-2 flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Discount</span>
-                      <span className="font-display font-bold text-primary">-{discountAmount.toFixed(2)} kr</span>
+                      <span className="text-muted-foreground">{t("cart.discount")}</span>
+                      <span className="font-display font-bold text-primary">-{formatPrice(discountAmount)}</span>
                     </div>
                   )}
 

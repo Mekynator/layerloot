@@ -942,6 +942,7 @@ const CustomPrintOrder = () => {
 
   const [submitting, setSubmitting] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [showcaseSource, setShowcaseSource] = useState<{ id: string; title: string; type: "reorder" | "modify" } | null>(null);
 
   const [modelProgress, setModelProgress] = useState<ProgressState>({
     open: false,
@@ -961,6 +962,100 @@ const CustomPrintOrder = () => {
 
   const [modelDragActive, setModelDragActive] = useState(false);
   const [referenceDragActive, setReferenceDragActive] = useState(false);
+
+  // Auto-fill from showcase (reorder or modify)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reorderId = params.get("reorderShowcase");
+    const modifyId = params.get("modifyShowcase");
+    const showcaseId = reorderId || modifyId;
+    if (!showcaseId || !user) return;
+
+    const fetchShowcase = async () => {
+      const { data, error } = await supabase
+        .from("custom_order_showcases" as any)
+        .select("*")
+        .eq("id", showcaseId)
+        .maybeSingle();
+
+      if (error || !data) return;
+      const s = data as any;
+
+      setShowcaseSource({
+        id: s.id,
+        title: s.title,
+        type: reorderId ? "reorder" : "modify",
+      });
+
+      // Auto-fill form fields from showcase metadata
+      const materialMatch = MATERIALS.find((m) =>
+        s.materials?.toLowerCase().includes(m.value) || s.materials?.toLowerCase().includes(m.label.toLowerCase())
+      );
+      const colorMatch = COLORS.find((c) =>
+        s.colors?.toLowerCase().includes(c.value) || s.colors?.toLowerCase().includes(c.label.toLowerCase())
+      );
+
+      setForm((prev) => ({
+        ...prev,
+        description: reorderId
+          ? `Reorder of "${s.title}"${s.description ? `\n\n${s.description}` : ""}`
+          : `Modification request based on "${s.title}"${s.description ? `\n\nOriginal description: ${s.description}` : ""}\n\nModifications requested:\n`,
+        material: materialMatch?.value ?? prev.material,
+        color: colorMatch?.value ?? prev.color,
+      }));
+
+      // Auto-load model file
+      if (s.source_model_url) {
+        try {
+          setProgressInstant(setModelProgress, 10, "Loading model from showcase...");
+          const response = await fetch(s.source_model_url);
+          if (response.ok) {
+            const blob = await response.blob();
+            const filename = s.source_model_filename || "model.stl";
+            const modelFile = new File([blob], filename, { type: blob.type || "application/octet-stream" });
+
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+            const objectUrl = URL.createObjectURL(modelFile);
+            setFile(modelFile);
+            setPreviewUrl(objectUrl);
+
+            await animateProgress(setModelProgress, 100, "Model loaded", 300);
+            await resetProgress(setModelProgress);
+          }
+        } catch (err) {
+          console.error("Failed to load showcase model:", err);
+          await resetProgress(setModelProgress);
+        }
+      }
+
+      // Auto-load reference image from preview images
+      const imageUrl = s.thumbnail_url || s.preview_image_urls?.[0];
+      if (imageUrl) {
+        try {
+          setProgressInstant(setReferenceProgress, 10, "Loading reference image...");
+          const response = await fetch(imageUrl);
+          if (response.ok) {
+            const blob = await response.blob();
+            const ext = imageUrl.split(".").pop()?.split("?")[0] || "jpg";
+            const imageFile = new File([blob], `reference.${ext}`, { type: blob.type || "image/jpeg" });
+
+            if (referenceImagePreviewUrl) URL.revokeObjectURL(referenceImagePreviewUrl);
+            const objectUrl = URL.createObjectURL(imageFile);
+            setReferenceImage(imageFile);
+            setReferenceImagePreviewUrl(objectUrl);
+
+            await animateProgress(setReferenceProgress, 100, "Image loaded", 300);
+            await resetProgress(setReferenceProgress);
+          }
+        } catch (err) {
+          console.error("Failed to load showcase image:", err);
+          await resetProgress(setReferenceProgress);
+        }
+      }
+    };
+
+    void fetchShowcase();
+  }, [user]);
 
   useEffect(() => {
     return () => {
@@ -1164,6 +1259,11 @@ const CustomPrintOrder = () => {
             reference_image_filename: referenceImage?.name ?? null,
             uploaded_model_url: modelUrl,
             uploaded_model_filename: modelFilename,
+            ...(showcaseSource ? {
+              source_showcase_id: showcaseSource.id,
+              source_showcase_title: showcaseSource.title,
+              showcase_request_type: showcaseSource.type,
+            } : {}),
           },
         })
         .select("id")
@@ -1239,6 +1339,24 @@ const CustomPrintOrder = () => {
           </Trans>
           {userEmail ? <> · {userEmail}</> : null}
         </div>
+      )}
+
+      {showcaseSource && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm"
+        >
+          <p className="font-medium text-foreground">
+            {showcaseSource.type === "reorder" ? "🔁 Reordering" : "✏️ Requesting modification of"}:{" "}
+            <span className="text-primary">{showcaseSource.title}</span>
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {showcaseSource.type === "reorder"
+              ? "Model, image, and settings have been pre-loaded. Review and submit when ready."
+              : "Model and image are pre-loaded. Describe your desired changes below, then submit."}
+          </p>
+        </motion.div>
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">

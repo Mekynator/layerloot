@@ -370,7 +370,7 @@ const ProductDetail = () => {
               {socialProof?.reviewCount ? <span className="text-muted-foreground">{t("products.lovedByBuyers")}</span> : null}
             </div>
 
-            <div className="relative">
+            <div className="relative" ref={addToCartSectionRef}>
               <Button
                 size="lg"
                 className={`w-full font-display uppercase tracking-wider transition-all duration-300 ${justAdded ? "shadow-[0_0_28px_hsl(var(--primary)/0.35)]" : ""}`}

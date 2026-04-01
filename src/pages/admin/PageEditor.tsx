@@ -833,7 +833,7 @@ const PageEditor = () => {
             </Badge>
           </div>
 
-          <div className="border-b border-border bg-muted/30 px-4 py-3">
+          <div className="border-b border-border/30 bg-background-secondary/50 px-4 py-3">
             <p className="font-display text-[10px] uppercase tracking-widest text-muted-foreground">Editing</p>
             <p className="mt-1 text-sm font-medium text-foreground">
               {selectedPage ? pageDisplayTitle(selectedPage) : prettyLabel(activePage)}

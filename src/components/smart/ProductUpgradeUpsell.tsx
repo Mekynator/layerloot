@@ -25,9 +25,10 @@ export default function ProductUpgradeUpsell({ currentProduct, allProducts, onSe
   const upgrades = useMemo<UpgradeOption[]>(() => {
     const options: UpgradeOption[] = [];
     const price = currentProduct.price;
+    const productAny = currentProduct as any;
 
     // Premium finish
-    if (currentProduct.finish_type !== "painted") {
+    if (productAny.finish_type !== "painted") {
       options.push({
         id: "premium-finish",
         label: "Premium Painted Finish",

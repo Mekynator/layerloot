@@ -600,6 +600,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
 };
 
 const HeroBlock = ({ block }: { block: SiteBlock }) => {
+  useTranslation();
   const c = block.content || {};
   const buttons = resolveButtons(c, [
     {

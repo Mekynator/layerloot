@@ -118,6 +118,41 @@ interface AdminUser {
   loyaltyHistory: LoyaltyRow[];
   vouchers: VoucherRow[];
   activity: ActivityItem[];
+  tier: "new" | "active" | "loyal" | "vip" | "dormant" | "at_risk";
+  daysSinceLastActivity: number | null;
+  recommendedAction: string | null;
+}
+
+const TIER_STYLES: Record<AdminUser["tier"], string> = {
+  new: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  active: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  loyal: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+  vip: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  dormant: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
+  at_risk: "bg-red-500/10 text-red-400 border-red-500/20",
+};
+
+const TIER_LABELS: Record<AdminUser["tier"], string> = {
+  new: "New", active: "Active", loyal: "Loyal", vip: "VIP", dormant: "Dormant", at_risk: "At Risk",
+};
+
+function classifyTier(orderCount: number, totalSpent: number, daysSince: number | null): AdminUser["tier"] {
+  if (daysSince !== null && daysSince > 90) return "dormant";
+  if (daysSince !== null && daysSince > 60 && totalSpent > 500) return "at_risk";
+  if (totalSpent > 3000 || orderCount > 8) return "vip";
+  if (orderCount >= 3 || totalSpent > 1000) return "loyal";
+  if (orderCount >= 1) return "active";
+  return "new";
+}
+
+function getRecommendedAction(user: { tier: AdminUser["tier"]; unusedVouchers: number; customOrderCount: number; pointsBalance: number }): string | null {
+  if (user.tier === "at_risk") return "Send personalized win-back offer";
+  if (user.tier === "dormant") return "Re-engage with discount campaign";
+  if (user.tier === "vip" && user.unusedVouchers === 0) return "Reward with exclusive voucher";
+  if (user.unusedVouchers > 0) return "Remind about unused vouchers";
+  if (user.pointsBalance > 200) return "Encourage reward redemption";
+  if (user.customOrderCount > 0 && user.tier === "active") return "Follow up on custom orders";
+  return null;
 }
 
 const currency = new Intl.NumberFormat("da-DK", {

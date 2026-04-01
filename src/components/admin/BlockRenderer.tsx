@@ -881,13 +881,14 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
         {categories.map((cat, index) => {
           const catName = getLocalizedValue(cat.name, cat.name || "");
           const content = (
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.04 }}
-              whileHover={{ y: -4 }}
-              className="group relative flex h-40 items-end overflow-hidden rounded-lg border border-border p-6 transition-all duration-300 hover:border-primary"
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.04 }}
+                whileHover={{ y: -6 }}
+                className="group relative flex h-40 items-end overflow-hidden rounded-2xl bg-card/60 p-6 backdrop-blur-md transition-all duration-500"
+                style={{ boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)' }}
             >
               {cat.image_url && (
                 <img

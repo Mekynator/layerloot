@@ -250,10 +250,10 @@ const ProductDetail = () => {
                     setCurrentImage(i);
                     setShow3D(false);
                   }}
-                  className={`h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-200 ${
+                  className={`h-16 w-16 shrink-0 overflow-hidden rounded-xl transition-all duration-200 ${
                     !show3D && i === currentImage
-                      ? "border-primary ring-2 ring-primary/20"
-                      : "border-border hover:border-muted-foreground"
+                      ? "ring-2 ring-primary shadow-lg shadow-primary/20"
+                      : "opacity-70 hover:opacity-100"
                   }`}
                 >
                   <img src={img} alt="" className="h-full w-full object-cover" />

@@ -1244,7 +1244,7 @@ const CustomPrintOrder = () => {
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           <div>
-            <Label>Upload 3D Model</Label>
+            <Label>{t("create.upload3DModel")}</Label>
 
             <div
               className="relative"

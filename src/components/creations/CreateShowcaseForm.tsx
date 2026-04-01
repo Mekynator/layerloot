@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useShowcaseMutations } from "@/hooks/use-showcases";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Upload, Loader2 } from "lucide-react";
+import { Upload, Loader2, FileBox, X as XIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const CATEGORIES = [

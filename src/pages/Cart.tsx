@@ -214,6 +214,15 @@ export default function CartPage() {
           })),
           discountCode: selectedDiscountCode || manualDiscountCode || null,
           shippingCost,
+          giftMode: giftSettings.enabled
+            ? {
+                personalMessage: giftSettings.personalMessage,
+                giftWrap: giftSettings.giftWrap,
+                recipientAgeGroup: giftSettings.recipientAgeGroup,
+                recipientInterests: giftSettings.recipientInterests,
+                occasion: giftSettings.occasion,
+              }
+            : null,
           success_url: `${window.location.origin}/checkout/success`,
           cancel_url: `${window.location.origin}/cart`,
         },

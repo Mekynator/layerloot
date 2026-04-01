@@ -41,12 +41,14 @@ type NotificationState = {
   orders: number;
   customOrders: number;
   reviews: number;
+  showcases: number;
 };
 
 const EMPTY_NOTIFICATIONS: NotificationState = {
   orders: 0,
   customOrders: 0,
   reviews: 0,
+  showcases: 0,
 };
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {

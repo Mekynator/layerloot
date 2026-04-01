@@ -1114,6 +1114,7 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
 };
 
 const FaqBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) => {
+  useTranslation();
   const c = block.content || {};
   const items = (
     c.items || [

@@ -380,6 +380,7 @@ const Account = () => {
     refetch: refetchOverview,
   } = useAccountOverview(user?.id);
 
+  const { reorder, reorderingId } = useReorder();
   const [showHistory, setShowHistory] = useState(false);
   const [tab, setTab] = useState<AccountTab>("orders");
   const [customRequestsView, setCustomRequestsView] = useState<CustomRequestsView>("ongoing");

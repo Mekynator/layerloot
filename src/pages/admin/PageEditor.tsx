@@ -821,7 +821,7 @@ const PageEditor = () => {
             panelCollapsed ? "w-0 overflow-hidden" : "w-72 lg:w-80"
           }`}
         >
-          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-4 py-3">
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/30 bg-card/95 px-4 py-3 backdrop-blur-xl">
             <div className="flex items-center gap-2">
               <LayoutGrid className="h-4 w-4 text-primary" />
               <span className="font-display text-xs font-bold uppercase tracking-widest text-foreground">

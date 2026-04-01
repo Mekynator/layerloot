@@ -35,6 +35,7 @@ import { ProductGridSkeleton } from "@/components/shared/loading-states";
 import { fadeUp } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import i18n from "@/lib/i18n";
+import { useTranslation } from "react-i18next";
 
 type ActionType = "none" | "internal_link" | "external_link";
 
@@ -599,6 +600,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
 };
 
 const HeroBlock = ({ block }: { block: SiteBlock }) => {
+  useTranslation();
   const c = block.content || {};
   const buttons = resolveButtons(c, [
     {
@@ -712,6 +714,7 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
 };
 
 const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boolean }) => {
+  useTranslation();
   const c = block.content || {};
   const cards = c.cards || [
     {
@@ -835,6 +838,7 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
 };
 
 const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) => {
+  useTranslation();
   const [categories, setCategories] = useState<any[]>([]);
   const c = block.content || {};
 
@@ -922,6 +926,7 @@ const FeaturedProductsBlock = ({
   block: SiteBlock;
   disableAnimations?: boolean;
 }) => {
+  useTranslation();
   const c = block.content || {};
   const { data: products = [], isLoading } = useFeaturedProducts(c.limit || 8);
   const align = c.alignment || "left";
@@ -993,6 +998,7 @@ const FeaturedProductsBlock = ({
 };
 
 const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) => {
+  useTranslation();
   const c = block.content || {};
   const steps = c.steps || [
     {
@@ -1108,6 +1114,7 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
 };
 
 const FaqBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) => {
+  useTranslation();
   const c = block.content || {};
   const items = (
     c.items || [
@@ -1158,6 +1165,7 @@ const FaqBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) 
 };
 
 const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) => {
+  useTranslation();
   const c = block.content || {};
   const badges = c.badges || [
     {
@@ -1267,6 +1275,7 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
 };
 
 const CarouselBlock = ({ block }: { block: SiteBlock }) => {
+  useTranslation();
   const [current, setCurrent] = useState(0);
   const slides = Array.isArray(block.content?.slides)
     ? block.content.slides.filter((slide: any) => slide?.visible !== false && slide?.image)
@@ -1275,13 +1284,13 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
   const hasSlides = slides.length > 0;
   const imageCount = hasSlides ? slides.length : legacyImages.length;
 
-  if (imageCount === 0) return null;
-
   useEffect(() => {
     if (imageCount <= 1) return;
     const timer = window.setInterval(() => setCurrent((p) => (p + 1) % imageCount), 6500);
     return () => window.clearInterval(timer);
   }, [imageCount]);
+
+  if (imageCount === 0) return null;
 
   const currentSlide = hasSlides ? slides[current] : null;
   const currentImage = hasSlides ? currentSlide?.image : legacyImages[current];
@@ -1393,6 +1402,7 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
 };
 
 const VideoBlock = ({ block }: { block: SiteBlock }) => {
+  useTranslation();
   const url = block.content?.video_url;
   if (!url) return null;
 
@@ -1447,6 +1457,7 @@ const VideoBlock = ({ block }: { block: SiteBlock }) => {
 };
 
 const CtaBlock = ({ block }: { block: SiteBlock }) => {
+  useTranslation();
   const c = block.content || {};
   const align = c.alignment || "center";
   const buttons = resolveButtons(c, [
@@ -1480,6 +1491,7 @@ const CtaBlock = ({ block }: { block: SiteBlock }) => {
 };
 
 const SingleButtonBlock = ({ block }: { block: SiteBlock }) => {
+  useTranslation();
   const c = block.content || {};
   const buttons = resolveButtons(c, [
     {
@@ -1506,6 +1518,7 @@ const SingleButtonBlock = ({ block }: { block: SiteBlock }) => {
 };
 
 const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
+  useTranslation();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const c = block.content || {};
@@ -1566,6 +1579,7 @@ const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
 };
 
 const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
+  useTranslation();
   const c = block.content || {};
   const [items, setItems] = useState<InstagramMediaItem[]>([]);
   const [loading, setLoading] = useState(true);

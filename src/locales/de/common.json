@@ -170,10 +170,103 @@
     "languagePreference": "Spracheinstellung",
     "languageHint": "Wähle deine bevorzugte Sprache für die Website.",
     "languageSaved": "Sprache gespeichert!",
-    "orders": "Bestellungen",
-    "customRequests": "Sonderbestellungen",
-    "rewards": "Belohnungen",
-    "vouchers": "Gutscheine"
+    "orders": {
+      "empty": "Noch keine Bestellungen.",
+      "startShopping": "Jetzt einkaufen!",
+      "order": "Bestellung",
+      "closeReview": "Bewertung schließen",
+      "leaveReview": "Bewertung schreiben"
+    },
+    "customRequests": {
+      "empty": "Noch keine Sonderanfragen.",
+      "submitFirst": "Reichen Sie Ihre erste 3D-Druck Sonderanfrage ein.",
+      "ongoing": "Laufend",
+      "done": "Abgeschlossen",
+      "request": "Sonderanfrage",
+      "typeLithophane": "Lithophane",
+      "typeCustomPrint": "3D-Druck",
+      "feeUnpaid": "Gebühr unbezahlt",
+      "submittedOn": "Eingereicht am",
+      "material": "Material",
+      "color": "Farbe",
+      "quality": "Qualität",
+      "quantity": "Menge",
+      "scale": "Skalierung",
+      "payment": "Zahlung",
+      "production": "Produktion",
+      "quote": "Angebot",
+      "viewDetails": "Details anzeigen",
+      "hideDetails": "Details verbergen",
+      "payFee": "Bezahlen",
+      "fee": "Gebühr",
+      "requestFeeRequired": "Anfragegebühr erforderlich",
+      "requestFeeDescription": "Eine einmalige Anfragegebühr von",
+      "requestFeeDescriptionEnd": "ist erforderlich, bevor Ihre Sonderanfrage geprüft werden kann. Die Gebühr wird von Ihrer endgültigen Bestellsumme abgezogen.",
+      "originalRequest": "Ihre ursprüngliche Anfrage",
+      "adminNotes": "Admin-Notizen",
+      "noAdminNotes": "Noch keine Admin-Notizen.",
+      "negotiationState": "Aktueller Verhandlungsstand",
+      "quotedPrice": "Angebotspreis",
+      "finalAgreed": "Endgültig vereinbart",
+      "yourResponse": "Ihre Antwort",
+      "conversationHistory": "Gesprächsverlauf",
+      "noConversation": "Noch kein Gespräch.",
+      "quoteActionRequired": "Angebotsaktion erforderlich",
+      "quoteActionText": "Admin hat diese Anfrage mit einem Preis von",
+      "quoteActionTextEnd": "angeboten. Bitte akzeptieren oder lehnen Sie das Angebot ab.",
+      "acceptQuote": "Angebot akzeptieren",
+      "declineQuote": "Angebot ablehnen",
+      "replyToAdmin": "An Admin antworten",
+      "replyPlaceholder": "Nachricht an Admin schreiben...",
+      "sendReply": "Antwort senden",
+      "replySent": "Antwort gesendet",
+      "paymentPending": "Zahlung ausstehend",
+      "finalAgreedAmount": "Endgültig vereinbarter Betrag",
+      "payNow": "Jetzt bezahlen",
+      "paymentError": "Zahlungsfehler",
+      "couldNotOpenCheckout": "Checkout konnte nicht geöffnet werden.",
+      "quoteAcceptedPaymentNotStarted": "Angebot akzeptiert, Zahlung nicht gestartet",
+      "clickPayNow": "Bitte klicken Sie auf Jetzt bezahlen.",
+      "quoteDeclined": "Angebot abgelehnt",
+      "requestMarkedDeclined": "Die Anfrage wurde als abgelehnt markiert.",
+      "customerAcceptedQuote": "Kunde hat den angebotenen Preis von akzeptiert",
+      "customerDeclinedQuote": "Kunde hat das aktuelle Angebot abgelehnt.",
+      "feeAlreadyPaid": "Gebühr bereits bezahlt",
+      "couldNotStartPayment": "Zahlung konnte nicht gestartet werden",
+      "noneInSection": "Keine Anfragen in diesem Bereich.",
+      "customPrintFeeNote": "Die 100 kr Anfragegebühr wird bei der Kasse von der endgültigen Bestellsumme abgezogen.",
+      "lithophaneFeeNote": "Lithophane-Bestellungen beinhalten keine Anfragegebühr."
+    },
+    "rewards": {
+      "notEnoughPoints": "Nicht genügend Punkte",
+      "createVoucherError": "Gutschein konnte nicht erstellt werden"
+    },
+    "vouchers": {
+      "redeemed": "Gutschein eingelöst",
+      "code": "Ihr Code",
+      "enterRecipientEmail": "Empfänger-E-Mail eingeben",
+      "giftCardSent": "Geschenkkarte gesendet",
+      "giftCardSentTo": "Geschenkkarte gesendet an",
+      "recipientNotified": "Der Empfänger hat auch eine Kontobenachrichtigung erhalten."
+    },
+    "title": "Mein Konto",
+    "tabs": {
+      "orders": "Bestellungen",
+      "customRequests": "Sonderanfragen",
+      "rewards": "Belohnungsladen",
+      "vouchers": "Meine Gutscheine",
+      "settings": "Einstellungen"
+    },
+    "points": {
+      "balance": "Treuepunkte-Guthaben",
+      "rate": "1 Punkt wird pro 4 kr Ausgabe verdient",
+      "earnedTotal": "Insgesamt verdient",
+      "spentTotal": "Insgesamt ausgegeben",
+      "recentActivity": "Letzte Punkteaktivität",
+      "recentActivityHint": "Tippen Sie, um eingelöste Rabatte und verdiente Punkte anzuzeigen",
+      "noActivity": "Noch keine Treueaktivität.",
+      "pointsUpdate": "Punkteaktualisierung"
+    }
   },
   "gallery": {
     "community": "Community",
@@ -322,6 +415,139 @@
     "save": "Speichern",
     "cancel": "Abbrechen",
     "addedToCart": "In den Warenkorb gelegt!",
-    "kr": "kr"
+    "kr": "kr",
+    "redirecting": "Weiterleitung...",
+    "signInAgain": "Bitte melden Sie sich erneut an"
+  },
+  "blocks": {
+    "shippingBanner": {
+      "text": "Kostenloser Versand ab 500 kr"
+    },
+    "hero": {
+      "eyebrow": "3D-Druck Essentials",
+      "heading": "Rüste dein Drucklabor aus",
+      "subheading": "Premium-Filamente, Werkzeuge, Miniaturen und Sonderdrucke. Alles, was ein Maker braucht.",
+      "buttonPrimary": "Jetzt shoppen",
+      "buttonSecondary": "Sonderbestellung"
+    },
+    "entryCards": {
+      "default": {
+        "shop": {
+          "title": "Produkte kaufen",
+          "desc": "Durchstöbere unsere kuratierte Sammlung von 3D-gedruckten Artikeln, Filamenten und Zubehör.",
+          "cta": "Shop durchstöbern"
+        },
+        "customize": {
+          "title": "Anpassen",
+          "desc": "Wähle Material, Farbe und Finish. Mach jedes Produkt zu deinem eigenen.",
+          "cta": "Anpassung starten"
+        },
+        "upload": {
+          "title": "Idee hochladen",
+          "desc": "Hast du ein 3D-Modell? Lade es hoch und wir drucken es in professioneller Qualität.",
+          "cta": "Modell hochladen"
+        }
+      }
+    },
+    "categories": {
+      "heading": "Nach Kategorie shoppen",
+      "subheading": "Finde genau was du brauchst",
+      "empty": "Keine Kategorien verfügbar."
+    },
+    "featuredProducts": {
+      "heading": "Bestseller",
+      "subheading": "Unsere beliebtesten 3D-gedruckten Artikel",
+      "viewAll": "Alle anzeigen",
+      "empty": "Keine hervorgehobenen Produkte verfügbar."
+    },
+    "howItWorks": {
+      "heading": "So funktioniert's",
+      "subheading": "Von der Idee bis zur Haustür in 4 einfachen Schritten",
+      "step1": {
+        "title": "Wählen",
+        "desc": "Produkte durchstöbern oder eigenes 3D-Modell hochladen"
+      },
+      "step2": {
+        "title": "Anpassen",
+        "desc": "Material, Farbe, Größe und Finish wählen"
+      },
+      "step3": {
+        "title": "Wir drucken",
+        "desc": "Dein Artikel wird präzise 3D-gedruckt"
+      },
+      "step4": {
+        "title": "Geliefert",
+        "desc": "Sicher verpackt und an deine Tür geliefert"
+      }
+    },
+    "faq": {
+      "heading": "Häufig gestellte Fragen",
+      "default1": {
+        "q": "Welche Materialien bieten Sie an?",
+        "a": "Wir bieten PLA, PLA Silk, PETG und Resin an. Jedes Material hat einzigartige Eigenschaften."
+      },
+      "default2": {
+        "q": "Wie lange dauert der Druck?",
+        "a": "Je nach Größe und Komplexität dauern Drucke typischerweise 2-24 Stunden. Sonderbestellungen werden normalerweise innerhalb von 3-5 Werktagen versendet."
+      }
+    },
+    "trustBadges": {
+      "default1": {
+        "title": "Kostenloser Versand",
+        "desc": "Ab 500 kr Bestellwert"
+      },
+      "default2": {
+        "title": "Sicherer Checkout",
+        "desc": "Stripe & PayPal geschützt"
+      },
+      "default3": {
+        "title": "Treueprämien",
+        "desc": "Bei jedem Kauf Punkte sammeln"
+      }
+    },
+    "cta": {
+      "heading": "Bereit loszulegen?",
+      "button": "Mehr erfahren"
+    },
+    "button": {
+      "default": "Klick mich"
+    },
+    "image": {
+      "noImage": "Kein Bild gesetzt"
+    },
+    "banner": {
+      "title": "Banner"
+    },
+    "embed": {
+      "noUrl": "Keine Embed-URL gesetzt"
+    },
+    "newsletter": {
+      "heading": "Bleib auf dem Laufenden",
+      "subheading": "Abonniere unseren Newsletter für die neuesten Updates.",
+      "placeholder": "deine@email.de",
+      "submit": "Abonnieren",
+      "success": "Danke für dein Abonnement!",
+      "error": "Bereits abonniert oder Fehler aufgetreten."
+    },
+    "instagram": {
+      "title": "Folge uns auf Instagram",
+      "subtitle": "Neueste Beiträge und Reels",
+      "loading": "Lade Instagram-Feed...",
+      "empty": "Keine Instagram-Beiträge gefunden.",
+      "usernameMissing": "Füge einen Instagram-Benutzernamen hinzu.",
+      "postAlt": "Instagram-Beitrag",
+      "noImage": "Kein Bild",
+      "goToItem": "Zum Instagram-Element"
+    },
+    "imageCollection": {
+      "alt": "Galeriebild"
+    },
+    "unknown": "Unbekannter Block"
+  },
+  "header": {
+    "addedToCartNamed": "{{name}} zum Warenkorb hinzugefügt",
+    "addedToCart": "Zum Warenkorb hinzugefügt",
+    "closeMenu": "Menü schließen",
+    "openMenu": "Menü öffnen"
   }
 }

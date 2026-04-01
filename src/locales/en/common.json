@@ -178,10 +178,103 @@
     "languagePreference": "Language Preference",
     "languageHint": "Choose your preferred language for the website.",
     "languageSaved": "Language saved!",
-    "orders": "Orders",
-    "customRequests": "Custom Requests",
-    "rewards": "Rewards",
-    "vouchers": "Vouchers"
+    "orders": {
+      "empty": "No orders yet.",
+      "startShopping": "Start shopping!",
+      "order": "Order",
+      "closeReview": "Close Review",
+      "leaveReview": "Leave Review"
+    },
+    "customRequests": {
+      "empty": "No custom requests yet.",
+      "submitFirst": "Submit your first custom 3D print request.",
+      "ongoing": "Ongoing",
+      "done": "Done",
+      "request": "Custom Request",
+      "typeLithophane": "Lithophane",
+      "typeCustomPrint": "Custom 3D Print",
+      "feeUnpaid": "Fee Unpaid",
+      "submittedOn": "Submitted on",
+      "material": "Material",
+      "color": "Color",
+      "quality": "Quality",
+      "quantity": "Qty",
+      "scale": "Scale",
+      "payment": "Payment",
+      "production": "Production",
+      "quote": "Quote",
+      "viewDetails": "View Details",
+      "hideDetails": "Hide Details",
+      "payFee": "Pay",
+      "fee": "Fee",
+      "requestFeeRequired": "Request Fee Required",
+      "requestFeeDescription": "A one-time request fee of",
+      "requestFeeDescriptionEnd": "is required before your custom order can be reviewed. This fee will be deducted from your final order total.",
+      "originalRequest": "Your Original Request",
+      "adminNotes": "Admin Notes",
+      "noAdminNotes": "No admin notes yet.",
+      "negotiationState": "Current Negotiation State",
+      "quotedPrice": "Quoted Price",
+      "finalAgreed": "Final Agreed",
+      "yourResponse": "Your Response",
+      "conversationHistory": "Conversation History",
+      "noConversation": "No conversation yet.",
+      "quoteActionRequired": "Quote Action Required",
+      "quoteActionText": "Admin has quoted this request at",
+      "quoteActionTextEnd": "Please accept or decline the quote.",
+      "acceptQuote": "Accept Quote",
+      "declineQuote": "Decline Quote",
+      "replyToAdmin": "Reply to Admin",
+      "replyPlaceholder": "Write a message to admin...",
+      "sendReply": "Send Reply",
+      "replySent": "Reply sent",
+      "paymentPending": "Payment Pending",
+      "finalAgreedAmount": "Final agreed amount",
+      "payNow": "Pay Now",
+      "paymentError": "Payment error",
+      "couldNotOpenCheckout": "Could not open checkout.",
+      "quoteAcceptedPaymentNotStarted": "Quote accepted, payment not started",
+      "clickPayNow": "Please click Pay Now to complete payment.",
+      "quoteDeclined": "Quote declined",
+      "requestMarkedDeclined": "The request has been marked as declined.",
+      "customerAcceptedQuote": "Customer accepted the quoted price of",
+      "customerDeclinedQuote": "Customer declined the current quote.",
+      "feeAlreadyPaid": "Fee already paid",
+      "couldNotStartPayment": "Could not start payment",
+      "noneInSection": "No requests in this section.",
+      "customPrintFeeNote": "The 100 kr custom request fee should be deducted from the final order total at checkout.",
+      "lithophaneFeeNote": "Lithophane orders do not include a request fee."
+    },
+    "rewards": {
+      "notEnoughPoints": "Not enough points",
+      "createVoucherError": "Could not create voucher"
+    },
+    "vouchers": {
+      "redeemed": "Voucher redeemed",
+      "code": "Your code",
+      "enterRecipientEmail": "Enter recipient email",
+      "giftCardSent": "Gift card sent",
+      "giftCardSentTo": "Gift card sent to",
+      "recipientNotified": "The recipient also has an account notification."
+    },
+    "title": "My Account",
+    "tabs": {
+      "orders": "Orders",
+      "customRequests": "Custom Requests",
+      "rewards": "Rewards Store",
+      "vouchers": "My Vouchers",
+      "settings": "Settings"
+    },
+    "points": {
+      "balance": "Loyalty Points Balance",
+      "rate": "1 point is earned for every 4 kr spent",
+      "earnedTotal": "Earned total",
+      "spentTotal": "Spent total",
+      "recentActivity": "Recent points activity",
+      "recentActivityHint": "Press to show redeemed discounts and earned points",
+      "noActivity": "No loyalty activity yet.",
+      "pointsUpdate": "Points update"
+    }
   },
   "gallery": {
     "community": "Community",
@@ -330,6 +423,139 @@
     "save": "Save",
     "cancel": "Cancel",
     "addedToCart": "Added to cart!",
-    "kr": "kr"
+    "kr": "kr",
+    "redirecting": "Redirecting...",
+    "signInAgain": "Please sign in again"
+  },
+  "blocks": {
+    "shippingBanner": {
+      "text": "Free shipping on orders over 500 kr"
+    },
+    "hero": {
+      "eyebrow": "3D Printing Essentials",
+      "heading": "Gear Up Your Print Lab",
+      "subheading": "Premium filaments, tools, miniatures, and custom prints. Everything a maker needs, delivered to your workshop.",
+      "buttonPrimary": "Shop Now",
+      "buttonSecondary": "Custom Order"
+    },
+    "entryCards": {
+      "default": {
+        "shop": {
+          "title": "Shop Products",
+          "desc": "Browse our curated collection of 3D printed items, filaments, and accessories.",
+          "cta": "Browse Shop"
+        },
+        "customize": {
+          "title": "Customize",
+          "desc": "Choose your material, color, and finish. Make any product truly yours.",
+          "cta": "Start Customizing"
+        },
+        "upload": {
+          "title": "Upload Your Idea",
+          "desc": "Got a 3D model? Upload it and we'll print it for you with professional quality.",
+          "cta": "Upload Model"
+        }
+      }
+    },
+    "categories": {
+      "heading": "Shop by Category",
+      "subheading": "Find exactly what you need",
+      "empty": "No categories available."
+    },
+    "featuredProducts": {
+      "heading": "Best Sellers",
+      "subheading": "Our most popular 3D printed items",
+      "viewAll": "View All",
+      "empty": "No featured products available."
+    },
+    "howItWorks": {
+      "heading": "How It Works",
+      "subheading": "From idea to your doorstep in 4 simple steps",
+      "step1": {
+        "title": "Choose",
+        "desc": "Browse products or upload your own 3D model"
+      },
+      "step2": {
+        "title": "Customize",
+        "desc": "Select material, color, size, and finish"
+      },
+      "step3": {
+        "title": "We Print",
+        "desc": "Your item is 3D printed with precision"
+      },
+      "step4": {
+        "title": "Delivered",
+        "desc": "Packed safely and shipped to your door"
+      }
+    },
+    "faq": {
+      "heading": "Frequently Asked Questions",
+      "default1": {
+        "q": "What materials do you offer?",
+        "a": "We offer PLA, PLA Silk, PETG, and Resin. Each material has unique properties suited for different applications."
+      },
+      "default2": {
+        "q": "How long does printing take?",
+        "a": "Depending on size and complexity, prints typically take 2-24 hours. Custom orders usually ship within 3-5 business days."
+      }
+    },
+    "trustBadges": {
+      "default1": {
+        "title": "Free Shipping",
+        "desc": "On orders over 500 kr"
+      },
+      "default2": {
+        "title": "Secure Checkout",
+        "desc": "Stripe & PayPal protected"
+      },
+      "default3": {
+        "title": "Loyalty Rewards",
+        "desc": "Earn points on every purchase"
+      }
+    },
+    "cta": {
+      "heading": "Ready to get started?",
+      "button": "Learn more"
+    },
+    "button": {
+      "default": "Click Me"
+    },
+    "image": {
+      "noImage": "No image set"
+    },
+    "banner": {
+      "title": "Banner"
+    },
+    "embed": {
+      "noUrl": "No embed URL set"
+    },
+    "newsletter": {
+      "heading": "Stay Updated",
+      "subheading": "Subscribe to our newsletter for the latest updates.",
+      "placeholder": "your@email.com",
+      "submit": "Subscribe",
+      "success": "Thanks for subscribing!",
+      "error": "Already subscribed or error occurred."
+    },
+    "instagram": {
+      "title": "Follow us on Instagram",
+      "subtitle": "Latest posts and reels",
+      "loading": "Loading Instagram feed...",
+      "empty": "No Instagram posts found.",
+      "usernameMissing": "Add an Instagram username to show the auto feed.",
+      "postAlt": "Instagram post",
+      "noImage": "No image",
+      "goToItem": "Go to Instagram item"
+    },
+    "imageCollection": {
+      "alt": "Gallery image"
+    },
+    "unknown": "Unknown block"
+  },
+  "header": {
+    "addedToCartNamed": "{{name}} added to cart",
+    "addedToCart": "Added to cart",
+    "closeMenu": "Close menu",
+    "openMenu": "Open menu"
   }
 }

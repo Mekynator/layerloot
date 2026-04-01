@@ -170,10 +170,103 @@
     "languagePreference": "Sprogpræference",
     "languageHint": "Vælg dit foretrukne sprog for websiden.",
     "languageSaved": "Sprog gemt!",
-    "orders": "Ordrer",
-    "customRequests": "Specialbestillinger",
-    "rewards": "Belønninger",
-    "vouchers": "Gavekort"
+    "orders": {
+      "empty": "Ingen ordrer endnu.",
+      "startShopping": "Begynd at handle!",
+      "order": "Ordre",
+      "closeReview": "Luk anmeldelse",
+      "leaveReview": "Skriv anmeldelse"
+    },
+    "customRequests": {
+      "empty": "Ingen specialbestillinger endnu.",
+      "submitFirst": "Indsend din første 3D-print specialbestilling.",
+      "ongoing": "Igangværende",
+      "done": "Afsluttede",
+      "request": "Specialbestilling",
+      "typeLithophane": "Litofan",
+      "typeCustomPrint": "3D-print",
+      "feeUnpaid": "Gebyr ubetalt",
+      "submittedOn": "Indsendt den",
+      "material": "Materiale",
+      "color": "Farve",
+      "quality": "Kvalitet",
+      "quantity": "Antal",
+      "scale": "Skala",
+      "payment": "Betaling",
+      "production": "Produktion",
+      "quote": "Tilbud",
+      "viewDetails": "Vis detaljer",
+      "hideDetails": "Skjul detaljer",
+      "payFee": "Betal",
+      "fee": "Gebyr",
+      "requestFeeRequired": "Anmodningsgebyr påkrævet",
+      "requestFeeDescription": "Et engangsgebyr på",
+      "requestFeeDescriptionEnd": "er påkrævet, før din specialbestilling kan gennemgås. Gebyret fratrækkes din endelige ordretotal.",
+      "originalRequest": "Din oprindelige anmodning",
+      "adminNotes": "Admin-noter",
+      "noAdminNotes": "Ingen admin-noter endnu.",
+      "negotiationState": "Aktuel forhandlingstilstand",
+      "quotedPrice": "Tilbudspris",
+      "finalAgreed": "Endelig aftalt",
+      "yourResponse": "Dit svar",
+      "conversationHistory": "Samtalehistorik",
+      "noConversation": "Ingen samtale endnu.",
+      "quoteActionRequired": "Tilbudshandling påkrævet",
+      "quoteActionText": "Admin har tilbudt denne anmodning til",
+      "quoteActionTextEnd": "Venligst accepter eller afvis tilbuddet.",
+      "acceptQuote": "Accepter tilbud",
+      "declineQuote": "Afvis tilbud",
+      "replyToAdmin": "Svar til admin",
+      "replyPlaceholder": "Skriv en besked til admin...",
+      "sendReply": "Send svar",
+      "replySent": "Svar sendt",
+      "paymentPending": "Betaling afventer",
+      "finalAgreedAmount": "Endelig aftalt beløb",
+      "payNow": "Betal nu",
+      "paymentError": "Betalingsfejl",
+      "couldNotOpenCheckout": "Kunne ikke åbne checkout.",
+      "quoteAcceptedPaymentNotStarted": "Tilbud accepteret, betaling ikke startet",
+      "clickPayNow": "Klik venligst Betal nu for at fuldføre betaling.",
+      "quoteDeclined": "Tilbud afvist",
+      "requestMarkedDeclined": "Anmodningen er markeret som afvist.",
+      "customerAcceptedQuote": "Kunde accepterede den tilbudte pris på",
+      "customerDeclinedQuote": "Kunde afviste det nuværende tilbud.",
+      "feeAlreadyPaid": "Gebyr allerede betalt",
+      "couldNotStartPayment": "Kunne ikke starte betaling",
+      "noneInSection": "Ingen anmodninger i denne sektion.",
+      "customPrintFeeNote": "100 kr anmodningsgebyret fratrækkes den endelige ordretotal ved checkout.",
+      "lithophaneFeeNote": "Litofan-ordrer inkluderer ikke et anmodningsgebyr."
+    },
+    "rewards": {
+      "notEnoughPoints": "Ikke nok point",
+      "createVoucherError": "Kunne ikke oprette kupon"
+    },
+    "vouchers": {
+      "redeemed": "Kupon indløst",
+      "code": "Din kode",
+      "enterRecipientEmail": "Indtast modtagers e-mail",
+      "giftCardSent": "Gavekort sendt",
+      "giftCardSentTo": "Gavekort sendt til",
+      "recipientNotified": "Modtageren har også fået en kontonotifikation."
+    },
+    "title": "Min Konto",
+    "tabs": {
+      "orders": "Ordrer",
+      "customRequests": "Specialbestillinger",
+      "rewards": "Belønningsbutik",
+      "vouchers": "Mine Kuponer",
+      "settings": "Indstillinger"
+    },
+    "points": {
+      "balance": "Loyalitetspoint Saldo",
+      "rate": "1 point optjenes for hver 4 kr brugt",
+      "earnedTotal": "Optjent i alt",
+      "spentTotal": "Brugt i alt",
+      "recentActivity": "Seneste pointaktivitet",
+      "recentActivityHint": "Tryk for at se indløste rabatter og optjente point",
+      "noActivity": "Ingen loyalitetsaktivitet endnu.",
+      "pointsUpdate": "Pointopdatering"
+    }
   },
   "gallery": {
     "community": "Fællesskab",
@@ -322,6 +415,139 @@
     "save": "Gem",
     "cancel": "Annuller",
     "addedToCart": "Lagt i kurven!",
-    "kr": "kr"
+    "kr": "kr",
+    "redirecting": "Omdirigerer...",
+    "signInAgain": "Log venligst ind igen"
+  },
+  "blocks": {
+    "shippingBanner": {
+      "text": "Gratis fragt på ordrer over 500 kr"
+    },
+    "hero": {
+      "eyebrow": "3D Print Essentials",
+      "heading": "Udstyr dit printlab",
+      "subheading": "Premium filamenter, værktøj, miniaturer og specialprint. Alt hvad en maker har brug for, leveret til dit værksted.",
+      "buttonPrimary": "Shop nu",
+      "buttonSecondary": "Specialbestilling"
+    },
+    "entryCards": {
+      "default": {
+        "shop": {
+          "title": "Shop Produkter",
+          "desc": "Gennemse vores kuraterede samling af 3D-printede genstande, filamenter og tilbehør.",
+          "cta": "Gennemse shop"
+        },
+        "customize": {
+          "title": "Tilpas",
+          "desc": "Vælg dit materiale, farve og finish. Gør ethvert produkt til dit eget.",
+          "cta": "Start tilpasning"
+        },
+        "upload": {
+          "title": "Upload din idé",
+          "desc": "Har du en 3D-model? Upload den, og vi printer den for dig i professionel kvalitet.",
+          "cta": "Upload model"
+        }
+      }
+    },
+    "categories": {
+      "heading": "Shop efter kategori",
+      "subheading": "Find præcis hvad du har brug for",
+      "empty": "Ingen kategorier tilgængelige."
+    },
+    "featuredProducts": {
+      "heading": "Bestsellere",
+      "subheading": "Vores mest populære 3D-printede produkter",
+      "viewAll": "Se alle",
+      "empty": "Ingen fremhævede produkter tilgængelige."
+    },
+    "howItWorks": {
+      "heading": "Sådan fungerer det",
+      "subheading": "Fra idé til din dør i 4 enkle trin",
+      "step1": {
+        "title": "Vælg",
+        "desc": "Gennemse produkter eller upload din egen 3D-model"
+      },
+      "step2": {
+        "title": "Tilpas",
+        "desc": "Vælg materiale, farve, størrelse og finish"
+      },
+      "step3": {
+        "title": "Vi printer",
+        "desc": "Din genstand 3D-printes med præcision"
+      },
+      "step4": {
+        "title": "Leveret",
+        "desc": "Pakket sikkert og sendt til din dør"
+      }
+    },
+    "faq": {
+      "heading": "Ofte stillede spørgsmål",
+      "default1": {
+        "q": "Hvilke materialer tilbyder I?",
+        "a": "Vi tilbyder PLA, PLA Silk, PETG og Resin. Hvert materiale har unikke egenskaber."
+      },
+      "default2": {
+        "q": "Hvor lang tid tager printning?",
+        "a": "Afhængigt af størrelse og kompleksitet tager print typisk 2-24 timer. Specialbestillinger sendes normalt inden for 3-5 hverdage."
+      }
+    },
+    "trustBadges": {
+      "default1": {
+        "title": "Gratis fragt",
+        "desc": "På ordrer over 500 kr"
+      },
+      "default2": {
+        "title": "Sikker betaling",
+        "desc": "Stripe & PayPal beskyttet"
+      },
+      "default3": {
+        "title": "Loyalitetsbelønninger",
+        "desc": "Optjen point ved hvert køb"
+      }
+    },
+    "cta": {
+      "heading": "Klar til at komme i gang?",
+      "button": "Læs mere"
+    },
+    "button": {
+      "default": "Klik her"
+    },
+    "image": {
+      "noImage": "Intet billede sat"
+    },
+    "banner": {
+      "title": "Banner"
+    },
+    "embed": {
+      "noUrl": "Ingen embed-URL sat"
+    },
+    "newsletter": {
+      "heading": "Hold dig opdateret",
+      "subheading": "Tilmeld dig vores nyhedsbrev for de seneste opdateringer.",
+      "placeholder": "din@email.dk",
+      "submit": "Tilmeld",
+      "success": "Tak for din tilmelding!",
+      "error": "Allerede tilmeldt eller fejl opstod."
+    },
+    "instagram": {
+      "title": "Følg os på Instagram",
+      "subtitle": "Seneste opslag og reels",
+      "loading": "Indlæser Instagram-feed...",
+      "empty": "Ingen Instagram-opslag fundet.",
+      "usernameMissing": "Tilføj et Instagram-brugernavn for at vise auto-feed.",
+      "postAlt": "Instagram-opslag",
+      "noImage": "Intet billede",
+      "goToItem": "Gå til Instagram-element"
+    },
+    "imageCollection": {
+      "alt": "Galleribillede"
+    },
+    "unknown": "Ukendt blok"
+  },
+  "header": {
+    "addedToCartNamed": "{{name}} tilføjet til kurv",
+    "addedToCart": "Tilføjet til kurv",
+    "closeMenu": "Luk menu",
+    "openMenu": "Åbn menu"
   }
 }

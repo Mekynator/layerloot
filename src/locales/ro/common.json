@@ -170,10 +170,103 @@
     "languagePreference": "Preferință de limbă",
     "languageHint": "Alege limba preferată pentru site.",
     "languageSaved": "Limbă salvată!",
-    "orders": "Comenzi",
-    "customRequests": "Cereri speciale",
-    "rewards": "Recompense",
-    "vouchers": "Vouchere"
+    "orders": {
+      "empty": "Nicio comandă încă.",
+      "startShopping": "Începe cumpărăturile!",
+      "order": "Comandă",
+      "closeReview": "Închide recenzia",
+      "leaveReview": "Lasă o recenzie"
+    },
+    "customRequests": {
+      "empty": "Nicio cerere specială încă.",
+      "submitFirst": "Trimite prima ta cerere de imprimare 3D personalizată.",
+      "ongoing": "În curs",
+      "done": "Finalizate",
+      "request": "Cerere Specială",
+      "typeLithophane": "Litofanie",
+      "typeCustomPrint": "Imprimare 3D",
+      "feeUnpaid": "Taxă neplătită",
+      "submittedOn": "Trimis pe",
+      "material": "Material",
+      "color": "Culoare",
+      "quality": "Calitate",
+      "quantity": "Cant.",
+      "scale": "Scară",
+      "payment": "Plată",
+      "production": "Producție",
+      "quote": "Cotație",
+      "viewDetails": "Vezi detalii",
+      "hideDetails": "Ascunde detalii",
+      "payFee": "Plătește",
+      "fee": "Taxă",
+      "requestFeeRequired": "Taxă de cerere necesară",
+      "requestFeeDescription": "O taxă unică de",
+      "requestFeeDescriptionEnd": "este necesară înainte ca cererea ta specială să poată fi revizuită. Această taxă va fi dedusă din totalul final al comenzii.",
+      "originalRequest": "Cererea ta originală",
+      "adminNotes": "Note admin",
+      "noAdminNotes": "Nicio notă admin încă.",
+      "negotiationState": "Starea curentă a negocierii",
+      "quotedPrice": "Preț cotat",
+      "finalAgreed": "Acordat final",
+      "yourResponse": "Răspunsul tău",
+      "conversationHistory": "Istoric conversație",
+      "noConversation": "Nicio conversație încă.",
+      "quoteActionRequired": "Acțiune cotație necesară",
+      "quoteActionText": "Adminul a cotat această cerere la",
+      "quoteActionTextEnd": "Te rugăm acceptă sau refuză cotația.",
+      "acceptQuote": "Acceptă cotația",
+      "declineQuote": "Refuză cotația",
+      "replyToAdmin": "Răspunde adminului",
+      "replyPlaceholder": "Scrie un mesaj pentru admin...",
+      "sendReply": "Trimite răspuns",
+      "replySent": "Răspuns trimis",
+      "paymentPending": "Plată în așteptare",
+      "finalAgreedAmount": "Suma finală acordată",
+      "payNow": "Plătește acum",
+      "paymentError": "Eroare plată",
+      "couldNotOpenCheckout": "Nu s-a putut deschide checkout-ul.",
+      "quoteAcceptedPaymentNotStarted": "Cotație acceptată, plata nu a fost inițiată",
+      "clickPayNow": "Te rugăm apasă Plătește acum pentru a finaliza plata.",
+      "quoteDeclined": "Cotație refuzată",
+      "requestMarkedDeclined": "Cererea a fost marcată ca refuzată.",
+      "customerAcceptedQuote": "Clientul a acceptat prețul cotat de",
+      "customerDeclinedQuote": "Clientul a refuzat cotația curentă.",
+      "feeAlreadyPaid": "Taxă deja plătită",
+      "couldNotStartPayment": "Nu s-a putut iniția plata",
+      "noneInSection": "Nicio cerere în această secțiune.",
+      "customPrintFeeNote": "Taxa de cerere de 100 kr va fi dedusă din totalul final al comenzii la checkout.",
+      "lithophaneFeeNote": "Comenzile de litofanie nu includ o taxă de cerere."
+    },
+    "rewards": {
+      "notEnoughPoints": "Puncte insuficiente",
+      "createVoucherError": "Nu s-a putut crea voucherul"
+    },
+    "vouchers": {
+      "redeemed": "Voucher răscumpărat",
+      "code": "Codul tău",
+      "enterRecipientEmail": "Introdu emailul destinatarului",
+      "giftCardSent": "Card cadou trimis",
+      "giftCardSentTo": "Card cadou trimis la",
+      "recipientNotified": "Destinatarul are de asemenea o notificare în cont."
+    },
+    "title": "Contul Meu",
+    "tabs": {
+      "orders": "Comenzi",
+      "customRequests": "Cereri Speciale",
+      "rewards": "Magazin Recompense",
+      "vouchers": "Voucherele Mele",
+      "settings": "Setări"
+    },
+    "points": {
+      "balance": "Sold Puncte de Fidelitate",
+      "rate": "1 punct se câștigă la fiecare 4 kr cheltuiți",
+      "earnedTotal": "Total câștigat",
+      "spentTotal": "Total cheltuit",
+      "recentActivity": "Activitate recentă puncte",
+      "recentActivityHint": "Apasă pentru a vedea reducerile răscumpărate și punctele câștigate",
+      "noActivity": "Nicio activitate de fidelitate încă.",
+      "pointsUpdate": "Actualizare puncte"
+    }
   },
   "gallery": {
     "community": "Comunitate",
@@ -322,6 +415,139 @@
     "save": "Salvează",
     "cancel": "Anulează",
     "addedToCart": "Adăugat în coș!",
-    "kr": "kr"
+    "kr": "kr",
+    "redirecting": "Redirecționare...",
+    "signInAgain": "Te rugăm autentifică-te din nou"
+  },
+  "blocks": {
+    "shippingBanner": {
+      "text": "Livrare gratuită la comenzi peste 500 kr"
+    },
+    "hero": {
+      "eyebrow": "Esențiale Imprimare 3D",
+      "heading": "Echipează-ți laboratorul de printare",
+      "subheading": "Filamente premium, unelte, miniaturi și printuri personalizate. Tot ce are nevoie un maker.",
+      "buttonPrimary": "Cumpără acum",
+      "buttonSecondary": "Comandă specială"
+    },
+    "entryCards": {
+      "default": {
+        "shop": {
+          "title": "Cumpără Produse",
+          "desc": "Explorează colecția noastră curată de articole printate 3D, filamente și accesorii.",
+          "cta": "Explorează magazinul"
+        },
+        "customize": {
+          "title": "Personalizează",
+          "desc": "Alege materialul, culoarea și finisajul. Fă orice produs cu adevărat al tău.",
+          "cta": "Începe personalizarea"
+        },
+        "upload": {
+          "title": "Încarcă ideea ta",
+          "desc": "Ai un model 3D? Încarcă-l și îl printăm cu calitate profesională.",
+          "cta": "Încarcă model"
+        }
+      }
+    },
+    "categories": {
+      "heading": "Cumpără pe categorii",
+      "subheading": "Găsește exact ce ai nevoie",
+      "empty": "Nicio categorie disponibilă."
+    },
+    "featuredProducts": {
+      "heading": "Cele mai vândute",
+      "subheading": "Cele mai populare articole printate 3D",
+      "viewAll": "Vezi toate",
+      "empty": "Niciun produs recomandat disponibil."
+    },
+    "howItWorks": {
+      "heading": "Cum funcționează",
+      "subheading": "De la idee la ușa ta în 4 pași simpli",
+      "step1": {
+        "title": "Alege",
+        "desc": "Explorează produse sau încarcă propriul model 3D"
+      },
+      "step2": {
+        "title": "Personalizează",
+        "desc": "Selectează material, culoare, dimensiune și finisaj"
+      },
+      "step3": {
+        "title": "Printăm",
+        "desc": "Articolul tău este printat 3D cu precizie"
+      },
+      "step4": {
+        "title": "Livrat",
+        "desc": "Ambalat în siguranță și livrat la ușa ta"
+      }
+    },
+    "faq": {
+      "heading": "Întrebări Frecvente",
+      "default1": {
+        "q": "Ce materiale oferiți?",
+        "a": "Oferim PLA, PLA Silk, PETG și Rășină. Fiecare material are proprietăți unice."
+      },
+      "default2": {
+        "q": "Cât durează printarea?",
+        "a": "În funcție de dimensiune și complexitate, printurile durează de obicei 2-24 ore. Comenzile speciale se expediază în 3-5 zile lucrătoare."
+      }
+    },
+    "trustBadges": {
+      "default1": {
+        "title": "Livrare gratuită",
+        "desc": "La comenzi peste 500 kr"
+      },
+      "default2": {
+        "title": "Plată securizată",
+        "desc": "Protejat de Stripe și PayPal"
+      },
+      "default3": {
+        "title": "Recompense de fidelitate",
+        "desc": "Câștigă puncte la fiecare achiziție"
+      }
+    },
+    "cta": {
+      "heading": "Gata să începi?",
+      "button": "Află mai multe"
+    },
+    "button": {
+      "default": "Click aici"
+    },
+    "image": {
+      "noImage": "Nicio imagine setată"
+    },
+    "banner": {
+      "title": "Banner"
+    },
+    "embed": {
+      "noUrl": "Niciun URL embed setat"
+    },
+    "newsletter": {
+      "heading": "Rămâi la curent",
+      "subheading": "Abonează-te la newsletter pentru cele mai recente noutăți.",
+      "placeholder": "email@exemplu.ro",
+      "submit": "Abonează-te",
+      "success": "Mulțumim pentru abonare!",
+      "error": "Deja abonat sau a apărut o eroare."
+    },
+    "instagram": {
+      "title": "Urmărește-ne pe Instagram",
+      "subtitle": "Ultimele postări și reels",
+      "loading": "Se încarcă feed-ul Instagram...",
+      "empty": "Nicio postare Instagram găsită.",
+      "usernameMissing": "Adaugă un nume de utilizator Instagram.",
+      "postAlt": "Postare Instagram",
+      "noImage": "Nicio imagine",
+      "goToItem": "Mergi la elementul Instagram"
+    },
+    "imageCollection": {
+      "alt": "Imagine galerie"
+    },
+    "unknown": "Bloc necunoscut"
+  },
+  "header": {
+    "addedToCartNamed": "{{name}} adăugat în coș",
+    "addedToCart": "Adăugat în coș",
+    "closeMenu": "Închide meniul",
+    "openMenu": "Deschide meniul"
   }
 }

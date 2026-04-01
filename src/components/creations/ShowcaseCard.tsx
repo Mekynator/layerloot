@@ -30,7 +30,8 @@ export default function ShowcaseCard({ item, onQuickView }: ShowcaseCardProps) {
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -4 }}
       transition={{ duration: 0.25 }}
-      className="group relative rounded-2xl border border-border/60 bg-card overflow-hidden shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300"
+      className="group relative rounded-2xl bg-card/60 overflow-hidden backdrop-blur-md transition-all duration-500"
+      style={{ boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)' }}
     >
       {/* Image area */}
       <div className="relative aspect-[4/5] overflow-hidden bg-muted">

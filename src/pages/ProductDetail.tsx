@@ -429,7 +429,7 @@ const ProductDetail = () => {
                     onChange={(e) => setReviewForm({ ...reviewForm, title: e.target.value })}
                   />
                   <Textarea
-                    placeholder="Your review..."
+                    placeholder={t("products.yourReview")}
                     value={reviewForm.comment}
                     onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
                     rows={3}

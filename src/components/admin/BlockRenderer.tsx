@@ -1518,6 +1518,7 @@ const SingleButtonBlock = ({ block }: { block: SiteBlock }) => {
 };
 
 const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
+  useTranslation();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const c = block.content || {};

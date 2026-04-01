@@ -1035,7 +1035,7 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
 
   return withSection(
     block,
-    "bg-muted/50 py-16 lg:py-24",
+    "py-16 lg:py-24",
     <div className="container">
       <div className={`mb-12 ${alignmentClass(align)}`}>
         <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">

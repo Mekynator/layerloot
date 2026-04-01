@@ -1410,7 +1410,7 @@ const CustomPrintOrder = () => {
                   <RadioGroupItem value={quality.value} />
                   <div>
                     <p className="text-sm font-medium text-foreground">{quality.label}</p>
-                    <p className="text-xs text-muted-foreground">{quality.desc}</p>
+                    <p className="text-xs text-muted-foreground">{t(quality.descKey)}</p>
                   </div>
                 </motion.label>
               ))}

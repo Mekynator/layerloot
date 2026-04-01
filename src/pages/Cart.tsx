@@ -504,7 +504,7 @@ export default function CartPage() {
                         />
                       </div>
                       <p className="font-display text-sm font-bold uppercase text-foreground">{product.name}</p>
-                      <p className="mt-1 text-sm font-semibold text-primary">{product.price.toFixed(2)} kr</p>
+                      <p className="mt-1 text-sm font-semibold text-primary">{formatPrice(product.price)}</p>
                     </Link>
                   ))}
                 </div>

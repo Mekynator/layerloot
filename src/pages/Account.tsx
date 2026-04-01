@@ -238,13 +238,11 @@ function detectCustomOrderType(order: CustomOrder): "custom-print" | "lithophane
   return "custom-print";
 }
 
-function isVoucherUsedOrArchived(voucher: UserVoucher, currentUserId: string, currentUserEmail?: string | null) {
+function isVoucherUsedOrArchived(voucher: UserVoucher) {
   const remainingBalance = voucher.balance !== null ? Number(voucher.balance) : null;
-  const normalizedEmail = (currentUserEmail || "").trim().toLowerCase();
-  const recipientEmail = (voucher.recipient_email || "").trim().toLowerCase();
-  const giftedAway = Boolean(recipientEmail) && voucher.user_id === currentUserId && recipientEmail !== normalizedEmail;
+  const gs = voucher.gift_status;
 
-  return voucher.is_used || !!voucher.used_at || giftedAway || (remainingBalance !== null && remainingBalance <= 0);
+  return voucher.is_used || !!voucher.used_at || gs === "pending_claim" || gs === "cancelled" || (remainingBalance !== null && remainingBalance <= 0);
 }
 
 function parseCustomOrderDescription(description: string) {

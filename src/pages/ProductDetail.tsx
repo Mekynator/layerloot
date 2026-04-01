@@ -451,9 +451,9 @@ const ProductDetail = () => {
               <CardContent className="p-6 text-center">
                 <p className="text-muted-foreground">
                   <Link to="/auth" className="text-primary hover:underline">
-                    Sign in
+                    {t("auth.signIn")}
                   </Link>{" "}
-                  to leave a review.
+                  {t("auth.signInToReview")}
                 </p>
               </CardContent>
             </Card>

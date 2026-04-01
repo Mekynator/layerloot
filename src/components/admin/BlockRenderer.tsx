@@ -1402,6 +1402,7 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
 };
 
 const VideoBlock = ({ block }: { block: SiteBlock }) => {
+  useTranslation();
   const url = block.content?.video_url;
   if (!url) return null;
 

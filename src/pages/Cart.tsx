@@ -656,7 +656,7 @@ export default function CartPage() {
               to="/products"
               className="inline-flex items-center gap-2 text-sm font-medium text-primary transition-opacity hover:opacity-80"
             >
-              Continue shopping
+              {t("cart.continueShopping")}
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>

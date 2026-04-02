@@ -479,21 +479,35 @@ const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNo
   const props = sectionProps(block, defaultClasses);
   const action = resolveSectionAction(c);
   const clickable = applySectionAction(action);
+  const hasSlideshow = c._slideshow?.enabled && c._slideshow?.images?.length > 0;
+
+  // Hover border CSS
+  const hoverStyle = (c.borderHoverColor || c.borderHoverWidth)
+    ? `[data-editor-block-id="${block.id}"]:hover { ${c.borderHoverColor ? `border-color: ${c.borderHoverColor} !important;` : ""} ${c.borderHoverWidth ? `border-width: ${c.borderHoverWidth}px !important;` : ""} }`
+    : "";
 
   return (
-    <motion.section
-      {...props}
-      initial={{ opacity: 0, y: 18 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.12 }}
-      transition={{ duration: 0.36 }}
-      className={`${props.className} ${clickable.className}`.trim()}
-      onClick={clickable.onClick}
-      data-editor-block-id={block.id}
-      data-editor-block-type={block.title || block.block_type}
-    >
-      {children}
-    </motion.section>
+    <>
+      {hoverStyle && <style>{hoverStyle}</style>}
+      <motion.section
+        {...props}
+        initial={{ opacity: 0, y: 18 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.12 }}
+        transition={{ duration: 0.36 }}
+        className={`${hasSlideshow ? "relative overflow-hidden" : ""} ${props.className} ${clickable.className}`.trim()}
+        onClick={clickable.onClick}
+        data-editor-block-id={block.id}
+        data-editor-block-type={block.title || block.block_type}
+      >
+        {hasSlideshow && <BlockBackgroundSlideshow slideshow={c._slideshow} />}
+        {/* Overlay color */}
+        {c.overlayColor && (
+          <div className="pointer-events-none absolute inset-0" style={{ backgroundColor: c.overlayColor, opacity: (c.overlayOpacity ?? 50) / 100 }} aria-hidden="true" />
+        )}
+        {hasSlideshow ? <div className="relative">{children}</div> : children}
+      </motion.section>
+    </>
   );
 };
 

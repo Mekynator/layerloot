@@ -886,8 +886,8 @@ export default function AdminChat() {
             </Card>
             <Card><CardHeader><CardTitle className="font-display text-sm uppercase">User Messages</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <div><Label className="text-xs">BG Color</Label><Input value={config.bubbles.user.bgColor ?? ""} onChange={e => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, user: { ...p.bubbles.user, bgColor: e.target.value } } }))} /></div>
-                <div><Label className="text-xs">Text Color</Label><Input value={config.bubbles.user.textColor ?? ""} onChange={e => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, user: { ...p.bubbles.user, textColor: e.target.value } } }))} /></div>
+                <ColorPickerField label="BG Color" value={config.bubbles.user.bgColor ?? ""} onChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, user: { ...p.bubbles.user, bgColor: v } } }))} />
+                <ColorPickerField label="Text Color" value={config.bubbles.user.textColor ?? ""} onChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, user: { ...p.bubbles.user, textColor: v } } }))} />
                 <div><Label className="text-xs">Border Radius: {config.bubbles.user.borderRadius}px</Label><Slider value={[config.bubbles.user.borderRadius]} onValueChange={([v]) => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, user: { ...p.bubbles.user, borderRadius: v } } }))} min={0} max={24} step={2} /></div>
                 <div className="flex flex-wrap gap-4">
                   <div className="flex items-center gap-2"><Switch checked={config.bubbles.user.showAvatar} onCheckedChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, user: { ...p.bubbles.user, showAvatar: v } } }))} /><Label className="text-xs">Avatar</Label></div>

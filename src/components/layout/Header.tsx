@@ -255,6 +255,7 @@ const Header = () => {
           ...link,
           to: normalizePath(link.to),
           localizedLabel: getLocalizedValue(link.label, typeof link.label === "string" ? link.label : ""),
+          megaMenu: (link as NavItem).megaMenu,
         })),
     [navLinks, i18n.resolvedLanguage, i18n.language, user],
   );

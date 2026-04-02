@@ -728,6 +728,7 @@ export type Database = {
       orders: {
         Row: {
           created_at: string
+          discount_metadata: Json | null
           id: string
           notes: string | null
           shipping_address: Json | null
@@ -743,6 +744,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          discount_metadata?: Json | null
           id?: string
           notes?: string | null
           shipping_address?: Json | null
@@ -758,6 +760,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          discount_metadata?: Json | null
           id?: string
           notes?: string | null
           shipping_address?: Json | null

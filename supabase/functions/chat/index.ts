@@ -47,6 +47,13 @@ async function fetchChatConfig() {
   } catch { return {}; }
 }
 
+async function fetchKnowledgeBase() {
+  try {
+    const { data } = await serviceSupabase.from("chat_knowledge_base").select("question,answer,category").eq("is_active", true).order("priority", { ascending: false }).limit(50);
+    return data ?? [];
+  } catch { return []; }
+}
+
 async function fetchContext(userId: string | null) {
   const ctx: Record<string, any> = {};
 
@@ -268,11 +275,16 @@ serve(async (req) => {
     const cart = body?.cart ?? {};
     const page = body?.page ?? null;
 
-    const [token, chatConfig] = [extractBearerToken(req), await fetchChatConfig()];
+    const [token, chatConfig, knowledgeBase] = [extractBearerToken(req), await fetchChatConfig(), await fetchKnowledgeBase()];
     const user = await resolveUser(token);
     const ctx = await fetchContext(user?.id ?? null);
 
-    const systemPrompt = buildSystemPrompt(user, ctx, cart, page, chatConfig);
+    // Inject knowledge base into context
+    const kbSection = knowledgeBase.length > 0
+      ? "\n## Preferred Q&A (use these answers when matching)\n" + knowledgeBase.map((kb: any) => `Q: ${kb.question}\nA: ${kb.answer}`).join("\n\n")
+      : "";
+
+    const systemPrompt = buildSystemPrompt(user, ctx, cart, page, chatConfig) + kbSection;
 
     const aiMessages = [
       { role: "system", content: systemPrompt },

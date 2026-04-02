@@ -247,6 +247,126 @@ export type Database = {
           },
         ]
       }
+      chat_analytics_events: {
+        Row: {
+          campaign_id: string | null
+          created_at: string
+          event_data: Json
+          event_type: string
+          id: string
+          page: string | null
+          session_id: string
+          user_id: string | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string
+          event_data?: Json
+          event_type: string
+          id?: string
+          page?: string | null
+          session_id: string
+          user_id?: string | null
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string
+          event_data?: Json
+          event_type?: string
+          id?: string
+          page?: string | null
+          session_id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      chat_conversations: {
+        Row: {
+          admin_flags: Json
+          campaign_id: string | null
+          created_at: string
+          ended_at: string | null
+          id: string
+          language: string | null
+          message_count: number
+          messages: Json
+          metadata: Json
+          outcome: string
+          page: string | null
+          session_id: string
+          started_at: string
+          user_id: string | null
+        }
+        Insert: {
+          admin_flags?: Json
+          campaign_id?: string | null
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          language?: string | null
+          message_count?: number
+          messages?: Json
+          metadata?: Json
+          outcome?: string
+          page?: string | null
+          session_id: string
+          started_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          admin_flags?: Json
+          campaign_id?: string | null
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          language?: string | null
+          message_count?: number
+          messages?: Json
+          metadata?: Json
+          outcome?: string
+          page?: string | null
+          session_id?: string
+          started_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      chat_knowledge_base: {
+        Row: {
+          answer: string
+          category: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          priority: number
+          question: string
+          updated_at: string
+        }
+        Insert: {
+          answer: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          priority?: number
+          question: string
+          updated_at?: string
+        }
+        Update: {
+          answer?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          priority?: number
+          question?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       content_revisions: {
         Row: {
           action: string

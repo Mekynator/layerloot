@@ -269,6 +269,40 @@ async function streamChat({
   onDone();
 }
 
+const SESSION_ID_KEY = "layerloot-chat-session-id";
+
+function getChatSessionId() {
+  let id = sessionStorage.getItem(SESSION_ID_KEY);
+  if (!id) { id = uid(); sessionStorage.setItem(SESSION_ID_KEY, id); }
+  return id;
+}
+
+function trackChatEvent(eventType: string, eventData: any = {}, page?: string, userId?: string | null) {
+  const sessionId = getChatSessionId();
+  supabase.from("chat_analytics_events").insert({
+    session_id: sessionId,
+    event_type: eventType,
+    event_data: eventData,
+    page: page || window.location.pathname,
+    user_id: userId || null,
+  } as any).then(() => {});
+}
+
+function saveConversation(messages: Msg[], page: string, userId: string | null, outcome = "unknown") {
+  const sessionId = getChatSessionId();
+  const payload = {
+    session_id: sessionId,
+    user_id: userId,
+    messages: messages.map(m => ({ role: m.role, content: m.content })),
+    page,
+    language: navigator.language?.slice(0, 2) || "en",
+    message_count: messages.length,
+    outcome,
+    metadata: { cart: getCartSnapshot() },
+  };
+  supabase.from("chat_conversations").upsert(payload as any, { onConflict: "session_id" }).then(() => {});
+}
+
 const ChatWidget = () => {
   const location = useLocation();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -371,6 +405,7 @@ const ChatWidget = () => {
     setOpen(true);
     setShowPromptBubble(false);
     setPromptBubbleDismissed(false);
+    trackChatEvent("open", {}, location.pathname, userId);
   };
 
   const requestLocation = () => {
@@ -389,6 +424,7 @@ const ChatWidget = () => {
     const userMsg: Msg = { id: uid(), role: "user", content: text };
     const assistantMsgId = uid();
     const nextMessages = [...messages, userMsg];
+    trackChatEvent(forcedText ? "quick_reply_click" : "message", { text }, location.pathname, userId);
 
     setMessages([...nextMessages, { id: assistantMsgId, role: "assistant", content: "" }]);
     setInput("");
@@ -557,7 +593,7 @@ const ChatWidget = () => {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-primary-foreground hover:bg-primary/80"
-                  onClick={() => setOpen(false)}
+                  onClick={() => { setOpen(false); trackChatEvent("close", {}, location.pathname, userId); saveConversation(messages, location.pathname, userId); }}
                   title="Close"
                 >
                   <X className="h-4 w-4" />

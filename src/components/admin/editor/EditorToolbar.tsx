@@ -48,6 +48,8 @@ export default function EditorToolbar({ onAddBlock, onPageSettings, onDeletePage
           value={activePage}
           onValueChange={(value) => {
             if (value === "__new__") { onPageSettings(); return; }
+            if (value === "__header__") { setActivePage("global_header"); return; }
+            if (value === "__footer__") { setActivePage("global_footer"); return; }
             setActivePage(value);
           }}
         >
@@ -63,6 +65,11 @@ export default function EditorToolbar({ onAddBlock, onPageSettings, onDeletePage
                 ))}
               </SelectGroup>
             )}
+            <SelectGroup>
+              <SelectLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Site Sections</SelectLabel>
+              <SelectItem value="__header__">🔝 Header</SelectItem>
+              <SelectItem value="__footer__">📄 Footer</SelectItem>
+            </SelectGroup>
             {globalPages.length > 0 && (
               <SelectGroup>
                 <SelectLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Global Sections</SelectLabel>

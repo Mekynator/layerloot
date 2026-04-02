@@ -229,11 +229,27 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     setUndoVersion(0);
   }, []);
 
-  const setActivePage = useCallback((page: string) => {
+  const setActivePage = useCallback(async (page: string) => {
+    // Auto-create global_header / global_footer pages if they don't exist yet
+    if ((page === "global_header" || page === "global_footer") && !pages.find(p => p.slug === page)) {
+      const label = page === "global_header" ? "Header" : "Footer";
+      const { error } = await supabase.from("site_pages").insert({
+        slug: page,
+        name: label,
+        title: label,
+        full_path: `/${page}`,
+        page_type: "global",
+        is_published: true,
+        is_system: true,
+        show_in_header: false,
+        show_in_footer: false,
+      });
+      if (!error) await loadPages();
+    }
     setActivePageRaw(page);
     setSelectedBlockId(null);
     setHoveredBlockId(null);
-  }, []);
+  }, [pages, loadPages]);
 
   useEffect(() => { void loadPages(); }, [loadPages]);
   useEffect(() => { if (activePage) void fetchBlocks(activePage); }, [activePage, fetchBlocks]);

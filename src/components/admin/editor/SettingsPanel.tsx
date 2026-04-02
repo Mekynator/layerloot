@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trash2, Plus, ArrowUp, ArrowDown, X, Palette, Type, Settings2, Layers, Monitor, Tablet, Smartphone, MousePointerClick } from "lucide-react";
+import { Trash2, Plus, ArrowUp, ArrowDown, X, Palette, Type, Settings2, Layers, Monitor, Tablet, Smartphone, MousePointerClick, Square } from "lucide-react";
 import { useVisualEditor, type SelectedElement } from "@/contexts/VisualEditorContext";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
 import SliderField from "./controls/SliderField";
@@ -16,6 +16,8 @@ import ColorPickerField from "./controls/ColorPickerField";
 import ImageUploadField from "./controls/ImageUploadField";
 import IconPickerField from "./controls/IconPickerField";
 import TypographyControls from "./controls/TypographyControls";
+import BorderControls from "./controls/BorderControls";
+import BackgroundSlideshowControls from "./controls/BackgroundSlideshowControls";
 import { getBlockSchema, type EditableNode } from "./editable-schema";
 
 const getRepeaterKey = (blockType?: string) => {
@@ -172,12 +174,15 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
       <ScrollArea className="flex-1">
         <div className="p-3">
           <Tabs defaultValue="content" className="w-full">
-            <TabsList className="w-full grid grid-cols-4">
+            <TabsList className="w-full grid grid-cols-5">
               <TabsTrigger value="content" className="gap-1 text-[10px]">
                 <Type className="h-3 w-3" /> Content
               </TabsTrigger>
               <TabsTrigger value="style" className="gap-1 text-[10px]">
                 <Palette className="h-3 w-3" /> Style
+              </TabsTrigger>
+              <TabsTrigger value="border" className="gap-1 text-[10px]">
+                <Square className="h-3 w-3" /> Border
               </TabsTrigger>
               <TabsTrigger value="responsive" className="gap-1 text-[10px]">
                 <Monitor className="h-3 w-3" /> Device
@@ -250,6 +255,8 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
 
             <TabsContent value="style" className="space-y-3 mt-3">
               <AdvancedStyleEditor content={localContent} patchContent={patchContent} />
+              {/* Background Slideshow Controls */}
+              <BackgroundSlideshowControls content={localContent} patchContent={patchContent} />
               {/* Per-element typography when an element is selected */}
               {isElementSelected && selectedNodeKey && selectedNodeType === "text" && (
                 <div className="rounded-lg border border-primary/30 bg-primary/5 p-2">
@@ -260,6 +267,10 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
                   />
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="border" className="space-y-3 mt-3">
+              <BorderControls content={localContent} patchContent={patchContent} />
             </TabsContent>
 
             <TabsContent value="responsive" className="space-y-3 mt-3">
@@ -809,13 +820,7 @@ function AdvancedStyleEditor({ content, patchContent }: { content: Record<string
         </div>
       </div>
 
-      {/* Border Radius */}
-      <SliderField
-        label="Border Radius"
-        value={content.borderRadius ?? 0}
-        onChange={(v) => patchContent("borderRadius", v)}
-        min={0} max={32} step={2}
-      />
+      {/* Border Radius (moved to Border tab) */}
 
       {/* Gap */}
       <SliderField
@@ -871,13 +876,7 @@ function AdvancedStyleEditor({ content, patchContent }: { content: Record<string
         min={0} max={100} step={5} unit="%"
       />
 
-      {/* Border Color */}
-      <ColorPickerField
-        label="Border Color"
-        value={content.borderColor || ""}
-        onChange={(v) => patchContent("borderColor", v)}
-      />
-
+      {/* Border Color (moved to Border tab) */}
       {/* Overlay Color (for blocks with overlays) */}
       <ColorPickerField
         label="Overlay Color"

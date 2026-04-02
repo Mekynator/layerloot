@@ -6,6 +6,7 @@ import {
   ChevronDown, ChevronRight, Search, RefreshCw, Send, Bot, User,
   Activity, Zap, Target, HelpCircle, BookOpen, X,
   Settings2, Palette, Volume2, FileText, Sparkles, Megaphone,
+  Gauge, Wand2, LayoutTemplate, Check, Copy, ArrowRight,
 } from "lucide-react";
 import ChatLivePreview from "@/components/admin/ChatLivePreview";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { DEFAULT_CHAT_CONFIG, type ChatConfig, type ChatQuickReply, type ChatPageRule } from "@/hooks/use-chat-settings";
+import { DEFAULT_CHAT_CONFIG, BUILT_IN_PRESETS, type ChatConfig, type ChatQuickReply, type ChatPageRule, type ChatPreset } from "@/hooks/use-chat-settings";
 import { format } from "date-fns";
 
 /* ─── Helpers ─── */

@@ -40,6 +40,13 @@ async function resolveUser(token: string | null) {
   }
 }
 
+async function fetchChatConfig() {
+  try {
+    const { data } = await serviceSupabase.from("site_settings").select("value").eq("key", "chat_widget").maybeSingle();
+    return (data?.value as Record<string, any>) ?? {};
+  } catch { return {}; }
+}
+
 async function fetchContext(userId: string | null) {
   const ctx: Record<string, any> = {};
 
@@ -68,10 +75,7 @@ async function fetchContext(userId: string | null) {
   try {
     const { data } = await serviceSupabase.from("loyalty_points").select("points,reason,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(5);
     const rows = data ?? [];
-    ctx.points = {
-      balance: rows.reduce((s: number, r: any) => s + Number(r.points ?? 0), 0),
-      recent: rows,
-    };
+    ctx.points = { balance: rows.reduce((s: number, r: any) => s + Number(r.points ?? 0), 0), recent: rows };
   } catch { ctx.points = { balance: 0, recent: [] }; }
 
   try {
@@ -92,14 +96,33 @@ async function fetchContext(userId: string | null) {
   return ctx;
 }
 
-function buildSystemPrompt(user: any, ctx: Record<string, any>, cart: any, page: string | null) {
+function getStr(val: any): string {
+  if (!val) return "";
+  if (typeof val === "string") return val;
+  return val.en ?? Object.values(val)[0] ?? "";
+}
+
+function buildSystemPrompt(user: any, ctx: Record<string, any>, cart: any, page: string | null, chatConfig: Record<string, any>) {
+  const prompts = chatConfig.prompts ?? {};
+  const tone = chatConfig.tone ?? {};
+  const behavior = chatConfig.behavior ?? {};
+  const pageRules = chatConfig.pageRules ?? [];
+
   const name = ctx.profile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "there";
   const cartTotal = Number(cart?.total ?? 0);
   const cartCount = Number(cart?.item_count ?? 0);
-  const freeShipGap = Math.max(0, FREE_SHIPPING_THRESHOLD - cartTotal);
+  const freeShipGap = Math.max(0, (ctx.shipping?.free_shipping_threshold ?? FREE_SHIPPING_THRESHOLD) - cartTotal);
 
   const productList = (ctx.products ?? []).slice(0, 12).map((p: any) => `- ${p.name} (${p.price} kr) → ${p.url}`).join("\n");
   const categoryList = (ctx.categories ?? []).map((c: any) => `- ${c.name} → /products?category=${c.slug}`).join("\n");
+
+  // Find matching page rule
+  const matchedRule = pageRules.find((r: any) => {
+    if (!r.enabled) return false;
+    const pattern = r.page.replace(/\*/g, ".*");
+    return new RegExp(`^${pattern}$`).test(page ?? "/");
+  });
+  const focusArea = matchedRule?.focusArea ?? "general";
 
   let userSection = "";
   if (user) {
@@ -115,14 +138,69 @@ function buildSystemPrompt(user: any, ctx: Record<string, any>, cart: any, page:
 `;
   }
 
-  return `You are LayerLoot's AI assistant — a friendly, knowledgeable helper for a 3D printing e-commerce store.
+  // Build tone instructions from admin config
+  const personalityMap: Record<string, string> = {
+    friendly: "Be warm, approachable, and helpful.",
+    professional: "Be professional, clear, and authoritative.",
+    playful: "Be fun, light-hearted, and engaging.",
+    premium: "Use a refined, premium brand voice.",
+    warm: "Be warm, empathetic, and conversational.",
+    concise: "Be direct and to the point.",
+  };
 
-## Your Capabilities
-- Answer questions about products, materials, shipping, custom orders, loyalty points, and account features
-- Provide clickable links to pages when users ask where something is
-- Help users understand the custom order process
-- Give product recommendations from the catalog
-- Help with cart and shipping questions
+  const lengthMap: Record<string, string> = {
+    short: "Keep responses to 2-3 sentences unless asked for detail.",
+    medium: "Keep responses to 3-5 sentences.",
+    long: "Give thorough, detailed responses.",
+  };
+
+  const focusMap: Record<string, string> = {
+    product_help: "Focus on helping with product questions, materials, sizing, and comparisons.",
+    checkout_assist: "Focus on checkout help, discounts, shipping, and encouraging purchase completion.",
+    account_support: "Focus on orders, rewards, vouchers, and account management.",
+    custom_order_help: "Focus on the custom order process, file uploads, pricing, and production guidance.",
+    general: "Provide general assistance across all topics.",
+  };
+
+  const assistantRole = prompts.assistantRole || "You are LayerLoot's AI assistant — a friendly, knowledgeable helper for a 3D printing e-commerce store.";
+  const brandDesc = prompts.brandDescription ? `\n## Brand\n${prompts.brandDescription}` : "";
+  const toneInst = prompts.toneInstructions || personalityMap[tone.personality ?? "friendly"] || "";
+  const lengthInst = lengthMap[tone.responseLength ?? "short"] || "";
+  const focusInst = focusMap[focusArea] || "";
+  const productGuidance = prompts.productGuidance || "";
+  const supportInst = prompts.supportInstructions || "";
+  const avoidInst = prompts.thingsToAvoid ? `\n## Things to Avoid\n${prompts.thingsToAvoid}` : "";
+  const campaignInst = prompts.campaignInstructions ? `\n## Campaign Instructions\n${prompts.campaignInstructions}` : "";
+  const escalation = prompts.escalationRules ? `\n## Escalation\n${prompts.escalationRules}` : "";
+  const customSuffix = prompts.customSystemPromptSuffix || "";
+
+  // Behavior flags
+  const behaviorNotes: string[] = [];
+  if (behavior.autoRecommendProducts) behaviorNotes.push("- Proactively recommend relevant products when appropriate.");
+  if (behavior.includeLinks) behaviorNotes.push("- Include markdown links to pages when mentioning them.");
+  if (behavior.showLoyaltyPrompts && user) behaviorNotes.push("- Mention loyalty points balance when relevant.");
+  if (behavior.showCheckoutEncouragement && cartCount > 0) behaviorNotes.push("- Gently encourage checkout completion.");
+  if (behavior.showDeliveryPrompts) behaviorNotes.push("- Mention delivery/shipping info when relevant.");
+  if (tone.useEmoji) behaviorNotes.push("- Use emoji sparingly for warmth.");
+  else behaviorNotes.push("- Do NOT use emoji.");
+
+  const upsellMap: Record<string, string> = {
+    none: "",
+    light: "- If natural, suggest complementary products.",
+    moderate: "- Actively suggest upgrades and complementary products.",
+    aggressive: "- Push upsells and cross-sells in most responses.",
+  };
+  if (upsellMap[tone.upsellIntensity ?? "light"]) behaviorNotes.push(upsellMap[tone.upsellIntensity ?? "light"]);
+
+  return `${assistantRole}
+${brandDesc}
+
+## Tone & Style
+${toneInst}
+${lengthInst}
+${focusInst}
+${productGuidance ? `\n## Product Guidance\n${productGuidance}` : ""}
+${supportInst ? `\n## Support\n${supportInst}` : ""}
 
 ## Site Navigation
 - Home: /
@@ -154,34 +232,28 @@ ${freeShipGap > 0 ? `- ${freeShipGap} kr away from free shipping` : "- Qualifies
 ${userSection}
 
 ## Materials Knowledge
-- PLA: Most common, biodegradable, good for decorative items. Easy to print.
+- PLA: Most common, biodegradable, good for decorative items.
 - PETG: Stronger than PLA, food-safe variants, good chemical resistance.
-- Resin (SLA): Ultra-detailed, smooth finish, great for miniatures and jewelry.
+- Resin (SLA): Ultra-detailed, smooth finish, great for miniatures.
 - TPU: Flexible material for phone cases, gaskets, etc.
 
-## Print Quality Levels
-- Ultra (0.1mm layer height): Maximum detail
-- High (0.2mm): Great quality, good speed balance
-- Standard (0.4mm): Fast, good for prototypes
-- Draft (0.6mm): Fastest, rougher finish
-
 ## Custom Order Process
-1. User uploads a 3D model file (STL, OBJ, 3MF) at /create
-2. Pays a 100 kr request fee
+1. Upload a 3D model file at /create
+2. Pay a 100 kr request fee
 3. Admin reviews and sends a quote
-4. User accepts/declines the quote
-5. If accepted, user pays the quoted amount (minus the 100 kr fee)
-6. Production begins → shipping
+4. User accepts/declines
+5. If accepted, pay quoted amount (minus fee)
+6. Production → shipping
 
-## Rules
-- Always be helpful, friendly, and concise
-- Use DKK as currency, format like "150 kr"
-- When mentioning pages, include markdown links like [Products](/products)
-- If user asks about their points, orders, or account — use the data above
+## Behavior Rules
+${behaviorNotes.join("\n")}
 - Current page: ${page || "unknown"}
-- Do NOT make up data. If you don't have info, say so.
-- Keep responses short (2-4 sentences) unless user asks for detail.
-- Use markdown formatting for better readability.
+- Do NOT make up data.
+- Use markdown formatting.
+${avoidInst}
+${campaignInst}
+${escalation}
+${customSuffix ? `\n## Additional Instructions\n${customSuffix}` : ""}
 `;
 }
 
@@ -196,11 +268,11 @@ serve(async (req) => {
     const cart = body?.cart ?? {};
     const page = body?.page ?? null;
 
-    const token = extractBearerToken(req);
+    const [token, chatConfig] = [extractBearerToken(req), await fetchChatConfig()];
     const user = await resolveUser(token);
     const ctx = await fetchContext(user?.id ?? null);
 
-    const systemPrompt = buildSystemPrompt(user, ctx, cart, page);
+    const systemPrompt = buildSystemPrompt(user, ctx, cart, page, chatConfig);
 
     const aiMessages = [
       { role: "system", content: systemPrompt },
@@ -225,32 +297,17 @@ serve(async (req) => {
       console.error("AI gateway error:", response.status, errText);
 
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limited. Please try again in a moment." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(JSON.stringify({ error: "Rate limited. Please try again in a moment." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(JSON.stringify({ error: "AI credits exhausted." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-
-      return new Response(JSON.stringify({ error: "AI service unavailable" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({ error: "AI service unavailable" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    return new Response(response.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-    });
+    return new Response(response.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
   } catch (error) {
     console.error("chat error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

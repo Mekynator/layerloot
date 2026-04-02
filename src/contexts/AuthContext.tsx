@@ -3,10 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import i18n, { resolveLanguage, LANGUAGE_STORAGE_KEY } from "@/lib/i18n";
 
+type AdminRole = "super_admin" | "admin" | "editor" | "support" | null;
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   isAdmin: boolean;
+  adminRole: AdminRole;
   loading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;

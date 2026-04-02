@@ -164,18 +164,6 @@ const Header = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  useEffect(() => {
-    const fetchAdminAlerts = async () => {
-      if (!isAdmin) { setAdminAlerts(0); return; }
-      const [ordersRes, customRes, reviewsRes] = await Promise.all([
-        supabase.from("orders").select("id", { count: "exact", head: true }).in("status", ["pending", "processing"]),
-        supabase.from("custom_orders").select("id", { count: "exact", head: true }).in("status", ["pending", "reviewing", "quoted", "accepted"]),
-        supabase.from("product_reviews").select("id", { count: "exact", head: true }).eq("is_approved", false),
-      ]);
-      setAdminAlerts((ordersRes.count ?? 0) + (customRes.count ?? 0) + (reviewsRes.count ?? 0));
-    };
-    void fetchAdminAlerts();
-  }, [isAdmin, user]);
 
   useEffect(() => {
     const fetchAccountNotifications = async () => {

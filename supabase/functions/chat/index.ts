@@ -47,6 +47,13 @@ async function fetchChatConfig() {
   } catch { return {}; }
 }
 
+async function fetchKnowledgeBase() {
+  try {
+    const { data } = await serviceSupabase.from("chat_knowledge_base").select("question,answer,category").eq("is_active", true).order("priority", { ascending: false }).limit(50);
+    return data ?? [];
+  } catch { return []; }
+}
+
 async function fetchContext(userId: string | null) {
   const ctx: Record<string, any> = {};
 

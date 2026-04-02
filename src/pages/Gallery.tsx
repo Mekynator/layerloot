@@ -109,18 +109,7 @@ const Gallery = () => {
             animate={{ opacity: 1, y: 0 }}
             className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
           >
-            <div>
-              <div className="mb-2 flex items-center gap-2">
-                <Camera className="h-5 w-5 text-primary" />
-                <span className="font-display text-sm uppercase tracking-widest text-primary">
-                  {t("gallery.community")}
-                </span>
-              </div>
-              <h1 className="font-display text-3xl font-bold uppercase text-foreground lg:text-5xl">
-                {t("gallery.title")}
-              </h1>
-              <p className="mt-2 max-w-lg text-muted-foreground">{t("gallery.subtitle")}</p>
-            </div>
+            <div />
 
             {user && (
               <Dialog open={open} onOpenChange={setOpen}>

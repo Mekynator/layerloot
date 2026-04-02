@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
-import { ArrowDown, ArrowUp, ImagePlus, Trash2, Play, Pause, Copy, RotateCcw } from "lucide-react";
+import { ArrowDown, ArrowUp, ImagePlus, Trash2, Play, Pause, Copy, RotateCcw, Save, Upload, CheckCircle2, Eye, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

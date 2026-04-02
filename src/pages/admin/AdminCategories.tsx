@@ -226,6 +226,9 @@ const AdminCategories = () => {
       icon_key: tag.icon_key ?? "",
       sort_order: tag.sort_order ?? 0,
       is_active: tag.is_active,
+      image_url: tag.image_url ?? "",
+      image_opacity: Math.round((tag.image_opacity ?? 0.3) * 100),
+      image_fit: tag.image_fit ?? "cover",
     });
     setGiftTagDialogOpen(true);
   };

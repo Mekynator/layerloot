@@ -129,6 +129,14 @@ const SavedPreferencesModule = ({ tt }: Pick<AccountModuleProps, "tt">) => {
     toast({ title: tt("account.preferences.cleared", "Preferences cleared") });
   };
 
+  const resetAllPersonalization = () => {
+    clearAll();
+    localStorage.removeItem("layerloot_user_behavior");
+    localStorage.removeItem("layerloot_remembered_choices");
+    toast({ title: tt("account.preferences.personalizationReset", "All personalization data cleared") });
+    setTimeout(() => window.location.reload(), 500);
+  };
+
   const hasSaved = materials.length > 0 || colors.length > 0 || finishes.length > 0 || categories.length > 0;
 
   const sections = [

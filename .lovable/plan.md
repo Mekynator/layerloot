@@ -1,66 +1,75 @@
 
 
-# Fix & Upgrade Account Dashboard — Loyalty, Gift Cards, Vouchers
+# Redesign User Custom Order Page (Customer View)
 
-## Problems
-1. **Wrong Gift Card Balance**: `AccountOverviewPanel` line 25-27 filters gift cards only by `is_used` and `balance > 0` — doesn't exclude gifted/expired cards
-2. **Wrong Active Vouchers count**: line 23 only checks `!is_used && !used_at` — doesn't exclude gifted/expired
-3. **Dashboard Rewards Progress**: `AccountDashboard` line 32 has same wrong active vouchers logic; line 35 uses hardcoded `[50, 100, 200, 500, 1000]` milestones instead of the real `REWARD_TIERS` from `use-loyalty-progress.ts`
-4. **No interactive reward markers** on the progress bar — just a plain bar with no tier visualization
+## Current State
+Custom orders are displayed inside `CustomOrdersModule.tsx` (269 lines) as expandable cards within the Account page. The current UX shows raw parsed fields, a flat message list, and basic badges. No progress timeline, no conversation state awareness, no media links support, and no "next steps" guidance.
 
 ## Plan
 
-### 1. Fix `AccountOverviewPanel.tsx` — Use `classifyVoucher`
+### 1. Rewrite `src/components/account/CustomOrdersModule.tsx`
 
-Import `classifyVoucher` from `./types` and rewrite the tile calculations:
+**A. Order Header + Progress Timeline**
+- Add a custom order timeline (similar to `OrderTimeline` but for custom order statuses):
+  - Steps: Received → Reviewing → Quoted → In Production → Completed → Shipped
+  - Map `order.status` + `order.production_status` to the correct step
+  - Reuse the horizontal timeline pattern from `OrderTimeline.tsx` with the same glow/animation styling
+- Show order type badge, status badge, and date in the header
 
-- **Active Vouchers count**: `userVouchers.filter(v => classifyVoucher(v) === "active").length`
-- **Gift Card Balance**: filter to `classifyVoucher(v) === "active" && v.vouchers?.discount_type === "gift_card"`, then sum balances
+**B. Request Details (clean version)**
+- Reuse the `parseCustomOrderDescription` utility already in types.ts
+- Render as clean label/value grid (material, color, quality, quantity, scale, customer notes)
+- Remove raw `<pre>` block (line 164) — replace with formatted fields
+- Add collapsible "Your Files / Attachments" section:
+  - Show `model_filename` + link to `model_url`
+  - Image preview from metadata `reference_image_url` if available
+  - Collapsed by default using `Collapsible` component
 
-This syncs with the Vouchers Module tabs exactly.
+**C. Quoting Section (prominent card)**
+- Show quoted price, request fee status, final agreed price
+- Display dynamic status messages: "Waiting for admin quote", "Quote available — action required", "Quote accepted", "In production"
+- Keep Accept/Decline quote buttons (existing logic lines 205-213)
+- Keep Pay Now flow (existing logic lines 224-238)
+- Remove raw "Negotiation State" sub-section — replace with clean summary
 
-### 2. Fix `AccountDashboard.tsx` — Use `classifyVoucher` + real reward tiers
+**D. Communication (core redesign)**
+- Chat-style layout with proper message bubbles:
+  - Admin messages: right-aligned or left with branded avatar (Sparkles icon like admin page)
+  - User messages: opposite side
+  - System messages: centered, italic, muted
+- Timestamps on each message
+- Support media links in messages:
+  - Detect video links (youtube, vimeo, or `📹` prefix from admin) → show "View Model Video" button
+  - Detect image URLs → show inline preview thumbnail
+- Respect conversation status:
+  - If `metadata.conversation_status === "closed"`: disable input, show "Conversation closed" message
+  - If open: show compose area with send button
+- Auto-scroll to latest message
 
-- **Active vouchers** (line 32): same fix as above
-- **Rewards Progress card**: replace hardcoded milestones with `computeLoyaltyProgress()` from `use-loyalty-progress.ts`
-- Replace the simple Progress bar with an **interactive rewards bar** showing tier markers
+**E. "Next Steps" Guidance Banner**
+- Dynamic contextual message based on order state:
+  - `pending` + fee unpaid → "Pay the request fee to get started"
+  - `pending`/`reviewing` → "Your request is being reviewed by our team"
+  - `quoted` + pending response → "You have a quote waiting — review and accept"
+  - `accepted` + awaiting_payment → "Complete payment to start production"
+  - `in_production` → "Your order is being crafted"
+  - `completed`/`shipped` → "Your order is on its way!"
+- Styled as a highlighted info banner at the top of each expanded order
 
-### 3. Build interactive Rewards Progress in `AccountDashboard.tsx`
+**F. Status Badges (simplified)**
+- Show Order Status, Payment Status, Production Status as color-coded badges
+- Use existing `customStatusBadgeColors` mapping
 
-Replace the current Rewards Progress card content with:
-
-**A. Reward tier markers on progress bar:**
-- Show all tiers from `REWARD_TIERS` (imported via `computeLoyaltyProgress`)
-- Each tier rendered as a small labeled marker positioned along the bar
-- Labels: "25 kr", "50 kr", "Free Delivery", "100 kr", "150 kr", "250 kr", "500 kr Gift Card"
-- Visual states:
-  - **Locked**: dimmed, `opacity-40`
-  - **Available** (can redeem): glowing primary color, subtle pulse animation
-  - **Next target**: highlighted with "Next reward in X pts" text
-
-**B. Clickable tier markers:**
-- On click, show a small popover/tooltip with:
-  - Reward name
-  - Cost in points
-  - "Redeem" button if available (links to rewards tab via `onSwitchTab("rewards")`)
-
-**C. "Rewards Available" CTA:**
-- When `canRedeem` is true, show animated badge with count of redeemable rewards
-- Clicking navigates to rewards store tab
-
-**D. "Next reward in X points" text** below bar
-
-### 4. Improve Recent Activity in `AccountOverviewPanel.tsx`
-
-- Add earned/spent icons (green up arrow / red down arrow) per history row
-- Slightly increase spacing
-
-### Files Changed
+### 2. Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/account/AccountOverviewPanel.tsx` | Fix gift card balance + active vouchers using `classifyVoucher` |
-| `src/components/account/AccountDashboard.tsx` | Fix active vouchers, replace rewards progress with interactive tier bar using `computeLoyaltyProgress` |
+| `src/components/account/CustomOrdersModule.tsx` | Full redesign — timeline, clean details, chat UI, media support, conversation state, next-steps guidance |
 
-No database changes needed.
+### 3. No Database Changes
+All needed fields (`metadata.conversation_status`, `metadata.video_link`, `metadata.picture_link`) are already stored as JSONB. Message detection for media links is done client-side by pattern matching.
+
+### 4. Scope Boundaries
+- **Included**: Timeline, clean details, chat redesign, media link support, conversation closed state, next-steps banner, collapsible attachments
+- **Deferred**: Real-time updates (requires Supabase realtime subscription), email notifications for new messages, file upload in chat, AI chat assistance
 

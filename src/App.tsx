@@ -37,6 +37,8 @@ import VisualEditor from "./pages/admin/VisualEditor";
 import AdminBackgrounds from "./pages/admin/AdminBackgrounds";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminActivity from "./pages/admin/AdminActivity";
+import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
+import AdminCustomOrderDetail from "./pages/admin/AdminCustomOrderDetail";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminMedia from "./pages/admin/AdminMedia";
 import AdminReusableBlocks from "./pages/admin/AdminReusableBlocks";
@@ -96,7 +98,10 @@ const AppShell = () => {
           <Route path="/admin/products/:productId/preview" element={<AdminRoute requiredPermission="products.manage"><AdminProductPreview /></AdminRoute>} />
           <Route path="/admin/categories" element={<AdminRoute requiredPermission="categories.manage"><AdminCategories /></AdminRoute>} />
           <Route path="/admin/orders" element={<AdminRoute requiredPermission="orders.manage"><AdminOrders /></AdminRoute>} />
+          <Route path="/admin/orders/:orderId" element={<AdminRoute requiredPermission="orders.manage"><AdminOrderDetail /></AdminRoute>} />
           <Route path="/admin/clients" element={<AdminRoute requiredPermission="customers.view"><AdminClients /></AdminRoute>} />
+          <Route path="/admin/custom-orders" element={<AdminRoute requiredPermission="custom_orders.manage"><AdminCustomOrders /></AdminRoute>} />
+          <Route path="/admin/custom-orders/:orderId" element={<AdminRoute requiredPermission="custom_orders.manage"><AdminCustomOrderDetail /></AdminRoute>} />
           <Route path="/admin/shipping" element={<AdminRoute requiredPermission="shipping.manage"><AdminShipping /></AdminRoute>} />
           <Route path="/admin/custom-orders" element={<AdminRoute requiredPermission="custom_orders.manage"><AdminCustomOrders /></AdminRoute>} />
           <Route path="/admin/discounts" element={<AdminRoute requiredPermission="discounts.manage"><AdminDiscounts /></AdminRoute>} />

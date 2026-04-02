@@ -1,24 +1,18 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+import { Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { logAdminActivity } from "@/lib/activity-log";
 import AdminLayout from "@/components/admin/AdminLayout";
-
-interface OrderItem {
-  id: string;
-  product_name: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-}
+import { formatPrice } from "@/lib/currency";
 
 interface StoreOrder {
   id: string;
@@ -34,224 +28,108 @@ interface StoreOrder {
   profiles: { full_name: string | null } | null;
 }
 
-interface CustomOrderInOrders {
-  id: string;
-  name: string;
-  email: string;
-  status: string;
-  created_at: string;
-  final_agreed_price: number | null;
-  quoted_price: number | null;
-  customer_offer_price: number | null;
-  payment_status: string;
-  production_status: string;
-  model_filename: string;
-  admin_notes: string | null;
-}
-
-type AdminOrderRow =
-  | {
-      source: "store";
-      id: string;
-      customerName: string;
-      total: number;
-      status: string;
-      tracking_number: string | null;
-      created_at: string;
-      raw: StoreOrder;
-    }
-  | {
-      source: "custom";
-      id: string;
-      customerName: string;
-      total: number;
-      status: string;
-      tracking_number: null;
-      created_at: string;
-      raw: CustomOrderInOrders;
-    };
-
-const storeStatuses = ["pending", "processing", "shipped", "completed", "cancelled"];
-const customProductionStatuses = ["queued", "in_production", "completed", "shipped", "cancelled"];
-
-const statusColors: Record<string, string> = {
-  pending: "bg-yellow-500/10 text-yellow-600",
-  processing: "bg-blue-500/10 text-blue-600",
-  queued: "bg-sky-500/10 text-sky-600",
-  in_production: "bg-orange-500/10 text-orange-600",
-  shipped: "bg-purple-500/10 text-purple-600",
-  completed: "bg-green-500/10 text-green-600",
-  cancelled: "bg-red-500/10 text-red-600",
-};
+const ORDER_STATUSES = [
+  { value: "pending", label: "Pending", color: "bg-yellow-500/10 text-yellow-600 border-yellow-500/30" },
+  { value: "paid", label: "Paid", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" },
+  { value: "processing", label: "Processing", color: "bg-blue-500/10 text-blue-600 border-blue-500/30" },
+  { value: "printing", label: "Printing", color: "bg-orange-500/10 text-orange-600 border-orange-500/30" },
+  { value: "finishing", label: "Finishing", color: "bg-amber-500/10 text-amber-600 border-amber-500/30" },
+  { value: "packed", label: "Packed", color: "bg-indigo-500/10 text-indigo-600 border-indigo-500/30" },
+  { value: "shipped", label: "Shipped", color: "bg-purple-500/10 text-purple-600 border-purple-500/30" },
+  { value: "delivered", label: "Delivered", color: "bg-green-500/10 text-green-600 border-green-500/30" },
+  { value: "completed", label: "Completed", color: "bg-green-600/10 text-green-700 border-green-600/30" },
+  { value: "cancelled", label: "Cancelled", color: "bg-red-500/10 text-red-600 border-red-500/30" },
+  { value: "refunded", label: "Refunded", color: "bg-rose-500/10 text-rose-600 border-rose-500/30" },
+  { value: "on_hold", label: "On Hold", color: "bg-gray-500/10 text-gray-600 border-gray-500/30" },
+];
 
 const AdminOrders = () => {
-  const [orders, setOrders] = useState<AdminOrderRow[]>([]);
+  const [orders, setOrders] = useState<StoreOrder[]>([]);
   const [filterStatus, setFilterStatus] = useState("all");
-  const [detailOrder, setDetailOrder] = useState<AdminOrderRow | null>(null);
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-  const [trackingNumber, setTrackingNumber] = useState("");
-  const [trackingUrl, setTrackingUrl] = useState("");
-  const [editNotes, setEditNotes] = useState("");
-  const [editShipping, setEditShipping] = useState("");
-  const [editTotal, setEditTotal] = useState("");
-  const [editProductionStatus, setEditProductionStatus] = useState("in_production");
-  const [editPaymentStatus, setEditPaymentStatus] = useState("paid");
+  const [search, setSearch] = useState("");
   const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const fetchOrders = async () => {
-    const [storeRes, customRes] = await Promise.all([
-      supabase
-        .from("orders")
-        .select(
-          "id, user_id, status, subtotal, shipping_cost, total, created_at, tracking_number, tracking_url, notes, profiles!orders_user_id_fkey(full_name)",
-        )
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("custom_orders")
-        .select(
-          "id, name, email, status, created_at, final_agreed_price, quoted_price, customer_offer_price, payment_status, production_status, model_filename, admin_notes",
-        )
-        .in("status", ["in_production", "completed"])
-        .order("created_at", { ascending: false }),
-    ]);
+    const { data, error } = await supabase
+      .from("orders")
+      .select("id, user_id, status, subtotal, shipping_cost, total, created_at, tracking_number, tracking_url, notes, profiles!orders_user_id_fkey(full_name)" as any)
+      .order("created_at", { ascending: false });
 
-    const storeOrders: AdminOrderRow[] = ((storeRes.data as any[]) ?? []).map((o) => ({
-      source: "store",
-      id: o.id,
-      customerName: o.profiles?.full_name || "Guest",
-      total: Number(o.total),
-      status: o.status,
-      tracking_number: o.tracking_number,
-      created_at: o.created_at,
-      raw: o,
-    }));
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+    setOrders((data as any as StoreOrder[]) ?? []);
+  };
 
-    const customOrders: AdminOrderRow[] = ((customRes.data as any[]) ?? []).map((o) => ({
-      source: "custom",
-      id: o.id,
-      customerName: o.name || o.email || "Custom Customer",
-      total: Number(o.final_agreed_price ?? o.quoted_price ?? o.customer_offer_price ?? 0),
-      status: o.production_status || o.status,
-      tracking_number: null,
-      created_at: o.created_at,
-      raw: o,
-    }));
+  useEffect(() => { fetchOrders(); }, []);
 
-    const merged = [...storeOrders, ...customOrders].sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  const updateStatus = async (id: string, newStatus: string, oldStatus: string) => {
+    const { error } = await supabase.from("orders").update({ status: newStatus }).eq("id", id);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+    await supabase.from("order_status_history").insert({ order_id: id, status: newStatus, note: null });
+    logAdminActivity({
+      userId: user?.id ?? "",
+      userEmail: user?.email ?? undefined,
+      action: "order_status_changed",
+      entityType: "order",
+      entityId: id,
+      summary: `Order status: ${oldStatus} → ${newStatus}`,
+      metadata: { old_status: oldStatus, new_status: newStatus },
+    });
+    toast({ title: `Order updated to ${newStatus}` });
+    fetchOrders();
+  };
+
+  const getStatusBadge = (status: string) => {
+    const s = ORDER_STATUSES.find((st) => st.value === status);
+    return (
+      <Badge variant="outline" className={`text-xs capitalize ${s?.color ?? ""}`}>
+        {s?.label ?? status.replace(/_/g, " ")}
+      </Badge>
     );
-
-    setOrders(merged);
   };
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
-
-  const updateStoreStatus = async (id: string, status: string) => {
-    const { error } = await supabase.from("orders").update({ status }).eq("id", id);
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-      return;
-    }
-    await supabase.from("order_status_history").insert({ order_id: id, status, note: null });
-    toast({ title: `Order updated to ${status}` });
-    fetchOrders();
-  };
-
-  const updateCustomStatus = async (id: string, production_status: string) => {
-    const mappedStatus =
-      production_status === "completed" || production_status === "shipped" ? "completed" : "in_production";
-    const { error } = await supabase
-      .from("custom_orders")
-      .update({ production_status, status: mappedStatus })
-      .eq("id", id);
-
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-      return;
-    }
-
-    toast({ title: `Custom order updated to ${production_status}` });
-    fetchOrders();
-  };
-
-  const openDetail = async (o: AdminOrderRow) => {
-    setDetailOrder(o);
-    setOrderItems([]);
-
-    if (o.source === "store") {
-      setTrackingNumber(o.raw.tracking_number ?? "");
-      setTrackingUrl(o.raw.tracking_url ?? "");
-      setEditNotes(o.raw.notes ?? "");
-      setEditShipping(String(o.raw.shipping_cost));
-      setEditTotal(String(o.raw.total));
-      const { data } = await supabase.from("order_items").select("*").eq("order_id", o.id);
-      setOrderItems((data as OrderItem[]) ?? []);
-    } else {
-      setTrackingNumber("");
-      setTrackingUrl("");
-      setEditNotes(o.raw.admin_notes ?? "");
-      setEditShipping("0");
-      setEditTotal(String(o.total));
-      setEditProductionStatus(o.raw.production_status || "in_production");
-      setEditPaymentStatus(o.raw.payment_status || "paid");
-    }
-  };
-
-  const saveOrderDetails = async () => {
-    if (!detailOrder) return;
-
-    if (detailOrder.source === "store") {
-      await supabase
-        .from("orders")
-        .update({
-          tracking_number: trackingNumber || null,
-          tracking_url: trackingUrl || null,
-          notes: editNotes || null,
-          shipping_cost: parseFloat(editShipping) || 0,
-          total: parseFloat(editTotal) || detailOrder.total,
-        })
-        .eq("id", detailOrder.id);
-      toast({ title: "Order details saved" });
-    } else {
-      await supabase
-        .from("custom_orders")
-        .update({
-          admin_notes: editNotes || null,
-          final_agreed_price: parseFloat(editTotal) || detailOrder.total,
-          payment_status: editPaymentStatus,
-          production_status: editProductionStatus,
-          status:
-            editProductionStatus === "completed" || editProductionStatus === "shipped" ? "completed" : "in_production",
-        })
-        .eq("id", detailOrder.id);
-      toast({ title: "Custom order details saved" });
-    }
-
-    setDetailOrder(null);
-    fetchOrders();
-  };
-
-  const filtered = filterStatus === "all" ? orders : orders.filter((o) => o.status === filterStatus);
+  let filtered = filterStatus === "all" ? orders : orders.filter((o) => o.status === filterStatus);
+  if (search.trim()) {
+    const q = search.toLowerCase();
+    filtered = filtered.filter((o) =>
+      o.id.toLowerCase().includes(q) ||
+      ((o.profiles as any)?.full_name ?? "").toLowerCase().includes(q)
+    );
+  }
 
   return (
     <AdminLayout>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="font-display text-3xl font-bold uppercase text-foreground">Orders</h1>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            {[...new Set([...storeStatuses, ...customProductionStatuses])].map((s) => (
-              <SelectItem key={s} value={s} className="capitalize">
-                {s.replace(/_/g, " ")}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search order ID or customer…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-56 pl-9"
+            />
+          </div>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              {ORDER_STATUSES.map((s) => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <Card>
@@ -260,7 +138,6 @@ const AdminOrders = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Order</TableHead>
-                <TableHead>Type</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Status</TableHead>
@@ -271,47 +148,25 @@ const AdminOrders = () => {
             </TableHeader>
             <TableBody>
               {filtered.map((o) => (
-                <TableRow key={`${o.source}-${o.id}`}>
+                <TableRow key={o.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/admin/orders/${o.id}`)}>
                   <TableCell className="font-display text-sm font-semibold uppercase">#{o.id.slice(0, 8)}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{o.source === "store" ? "Store" : "Custom"}</Badge>
-                  </TableCell>
-                  <TableCell className="text-sm">{o.customerName}</TableCell>
-                  <TableCell className="font-display font-bold text-primary">{Number(o.total).toFixed(2)} kr</TableCell>
-                  <TableCell>
-                    {o.source === "store" ? (
-                      <Select value={o.status} onValueChange={(v) => updateStoreStatus(o.id, v)}>
-                        <SelectTrigger className="h-8 w-36 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {storeStatuses.map((s) => (
-                            <SelectItem key={s} value={s} className="capitalize">
-                              {s}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Select value={o.status} onValueChange={(v) => updateCustomStatus(o.id, v)}>
-                        <SelectTrigger className="h-8 w-36 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {customProductionStatuses.map((s) => (
-                            <SelectItem key={s} value={s} className="capitalize">
-                              {s.replace(/_/g, " ")}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
+                  <TableCell className="text-sm">{(o.profiles as any)?.full_name || "Guest"}</TableCell>
+                  <TableCell className="font-display font-bold text-primary">{formatPrice(o.total)}</TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Select value={o.status} onValueChange={(v) => updateStatus(o.id, v, o.status)}>
+                      <SelectTrigger className="h-8 w-36 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ORDER_STATUSES.map((s) => (
+                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </TableCell>
                   <TableCell>
                     {o.tracking_number ? (
-                      <Badge variant="outline" className="font-mono text-xs">
-                        {o.tracking_number}
-                      </Badge>
+                      <Badge variant="outline" className="font-mono text-xs">{o.tracking_number}</Badge>
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
@@ -320,7 +175,7 @@ const AdminOrders = () => {
                     {new Date(o.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => openDetail(o)} className="text-xs">
+                    <Button variant="ghost" size="sm" className="text-xs" onClick={(e) => { e.stopPropagation(); navigate(`/admin/orders/${o.id}`); }}>
                       Details
                     </Button>
                   </TableCell>
@@ -328,134 +183,13 @@ const AdminOrders = () => {
               ))}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
-                    No orders found.
-                  </TableCell>
+                  <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">No orders found.</TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
-
-      <Dialog open={!!detailOrder} onOpenChange={(v) => !v && setDetailOrder(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="font-display uppercase">Order #{detailOrder?.id.slice(0, 8)}</DialogTitle>
-          </DialogHeader>
-          {detailOrder && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Customer:</span>{" "}
-                  <span className="font-semibold">{detailOrder.customerName}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Type:</span>{" "}
-                  <Badge variant="outline">{detailOrder.source === "store" ? "Store" : "Custom Print"}</Badge>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Date:</span>{" "}
-                  {new Date(detailOrder.created_at).toLocaleDateString()}
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Total:</span> {Number(detailOrder.total).toFixed(2)} kr
-                </div>
-              </div>
-
-              {detailOrder.source === "store" && orderItems.length > 0 && (
-                <div className="border-t border-border pt-3">
-                  <p className="mb-2 font-display text-sm font-semibold uppercase">Items</p>
-                  <div className="space-y-1 text-sm">
-                    {orderItems.map((item) => (
-                      <div key={item.id} className="flex justify-between">
-                        <span>
-                          {item.product_name} × {item.quantity}
-                        </span>
-                        <span className="font-bold">{Number(item.total_price).toFixed(2)} kr</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {detailOrder.source === "store" ? (
-                <div className="border-t border-border pt-4 space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label>Shipping Cost</Label>
-                      <Input value={editShipping} onChange={(e) => setEditShipping(e.target.value)} />
-                    </div>
-                    <div>
-                      <Label>Total</Label>
-                      <Input value={editTotal} onChange={(e) => setEditTotal(e.target.value)} />
-                    </div>
-                  </div>
-                  <div>
-                    <Label>Tracking Number</Label>
-                    <Input value={trackingNumber} onChange={(e) => setTrackingNumber(e.target.value)} />
-                  </div>
-                  <div>
-                    <Label>Tracking URL</Label>
-                    <Input value={trackingUrl} onChange={(e) => setTrackingUrl(e.target.value)} />
-                  </div>
-                  <div>
-                    <Label>Notes</Label>
-                    <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={2} />
-                  </div>
-                  <Button onClick={saveOrderDetails} className="w-full font-display uppercase tracking-wider text-xs">
-                    Save All Changes
-                  </Button>
-                </div>
-              ) : (
-                <div className="border-t border-border pt-4 space-y-3">
-                  <div>
-                    <Label>Final Agreed Price</Label>
-                    <Input value={editTotal} onChange={(e) => setEditTotal(e.target.value)} />
-                  </div>
-                  <div>
-                    <Label>Payment Status</Label>
-                    <Select value={editPaymentStatus} onValueChange={setEditPaymentStatus}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {["unpaid", "awaiting_payment", "paid", "refunded", "cancelled"].map((s) => (
-                          <SelectItem key={s} value={s}>
-                            {s.replace(/_/g, " ")}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Production Status</Label>
-                    <Select value={editProductionStatus} onValueChange={setEditProductionStatus}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {customProductionStatuses.map((s) => (
-                          <SelectItem key={s} value={s}>
-                            {s.replace(/_/g, " ")}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Admin Notes</Label>
-                    <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={3} />
-                  </div>
-                  <Button onClick={saveOrderDetails} className="w-full font-display uppercase tracking-wider text-xs">
-                    Save Custom Order
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </AdminLayout>
   );
 };

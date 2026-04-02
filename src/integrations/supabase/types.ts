@@ -53,6 +53,36 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_internal_notes: {
+        Row: {
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          is_pinned: boolean
+          note: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          is_pinned?: boolean
+          note: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          is_pinned?: boolean
+          note?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       admin_permissions: {
         Row: {
           created_at: string

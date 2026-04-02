@@ -18,6 +18,16 @@ const STEP_DEFINITIONS = [
   { key: "shipped", label: "Shipped", icon: <Truck className="h-4 w-4" /> },
 ];
 
+const ADMIN_STEP_DEFINITIONS = [
+  { key: "received", label: "Received", icon: <Package className="h-4 w-4" /> },
+  { key: "review", label: "Review", icon: <Clock className="h-4 w-4" /> },
+  { key: "printing", label: "Printing", icon: <Printer className="h-4 w-4" /> },
+  { key: "finishing", label: "Finishing", icon: <Paintbrush className="h-4 w-4" /> },
+  { key: "quality_check", label: "QC", icon: <Check className="h-4 w-4" /> },
+  { key: "packed", label: "Packed", icon: <Package className="h-4 w-4" /> },
+  { key: "shipped", label: "Shipped", icon: <Truck className="h-4 w-4" /> },
+];
+
 const STATUS_TO_STEP_INDEX: Record<string, number> = {
   pending: 0,
   confirmed: 0,
@@ -32,15 +42,38 @@ const STATUS_TO_STEP_INDEX: Record<string, number> = {
   delivered: 3,
 };
 
+const ADMIN_STATUS_TO_STEP_INDEX: Record<string, number> = {
+  pending: 0,
+  confirmed: 0,
+  received: 0,
+  paid: 0,
+  reviewing: 1,
+  review: 1,
+  processing: 2,
+  printing: 2,
+  in_production: 2,
+  queued: 2,
+  finishing: 3,
+  quality_check: 4,
+  packed: 5,
+  shipped: 6,
+  delivered: 6,
+  completed: 6,
+  on_hold: 0,
+};
+
 export function mapOrderToTimelineSteps(
   status: string,
   productionStatus?: string,
   timestamps?: Record<string, string | null>,
+  adminMode?: boolean,
 ): TimelineStep[] {
   const effectiveStatus = productionStatus || status || "pending";
-  const activeIdx = STATUS_TO_STEP_INDEX[effectiveStatus.toLowerCase()] ?? 0;
+  const steps = adminMode ? ADMIN_STEP_DEFINITIONS : STEP_DEFINITIONS;
+  const indexMap = adminMode ? ADMIN_STATUS_TO_STEP_INDEX : STATUS_TO_STEP_INDEX;
+  const activeIdx = indexMap[effectiveStatus.toLowerCase()] ?? 0;
 
-  return STEP_DEFINITIONS.map((step, idx) => ({
+  return steps.map((step, idx) => ({
     ...step,
     completed: idx < activeIdx || effectiveStatus.toLowerCase() === "delivered",
     active: idx === activeIdx,
@@ -58,15 +91,17 @@ export default function OrderTimeline({
   productionStatus,
   timestamps,
   variant = "horizontal",
+  adminMode = false,
 }: {
   status: string;
   productionStatus?: string;
   timestamps?: Record<string, string | null>;
   variant?: "horizontal" | "vertical";
+  adminMode?: boolean;
 }) {
   const steps = useMemo(
-    () => mapOrderToTimelineSteps(status, productionStatus, timestamps),
-    [status, productionStatus, timestamps],
+    () => mapOrderToTimelineSteps(status, productionStatus, timestamps, adminMode),
+    [status, productionStatus, timestamps, adminMode],
   );
 
   if (variant === "vertical") {

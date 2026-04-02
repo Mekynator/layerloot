@@ -33,10 +33,9 @@ export interface SidebarConfig {
 const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
   groups: [
     {
-      name: "Core",
+      name: "Content",
       items: [
         { id: "dashboard", to: "/admin", label: "Dashboard", icon: "LayoutDashboard", visible: true },
-        { id: "categories", to: "/admin/categories", label: "Categories & Tags", icon: "Tags", visible: true, permission: "categories.manage" },
         { id: "editor", to: "/admin/editor", label: "Page Editor", icon: "FileText", visible: true, permission: "content.edit" },
         { id: "media", to: "/admin/media", label: "Media Library", icon: "ImageIcon", visible: true, permission: "media.manage" },
         { id: "reusable", to: "/admin/reusable-blocks", label: "Reusable Blocks", icon: "Box", visible: true, permission: "content.edit" },
@@ -46,11 +45,27 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
       ],
     },
     {
+      name: "Commerce",
+      items: [
+        { id: "products", to: "/admin/products", label: "Products", icon: "Package", visible: true, permission: "products.manage" },
+        { id: "categories", to: "/admin/categories", label: "Categories & Tags", icon: "Tags", visible: true, permission: "categories.manage" },
+        { id: "discounts", to: "/admin/discounts", label: "Discounts", icon: "TicketPercent", visible: true, permission: "discounts.manage" },
+        { id: "pricing", to: "/admin/pricing", label: "Pricing", icon: "Calculator", visible: true, permission: "pricing.manage" },
+        { id: "showcases", to: "/admin/showcases", label: "Showcases", icon: "Layers", visible: true, permission: "showcases.manage" },
+      ],
+    },
+    {
+      name: "Operations",
+      items: [
+        { id: "orders", to: "/admin/orders", label: "Orders", icon: "ShoppingCart", visible: true, permission: "orders.manage" },
+        { id: "custom-orders", to: "/admin/custom-orders", label: "Custom Orders", icon: "Package", visible: true, permission: "custom_orders.manage" },
+        { id: "clients", to: "/admin/clients", label: "Clients", icon: "Users", visible: true, permission: "customers.view" },
+      ],
+    },
+    {
       name: "Tools",
       items: [
-        { id: "discounts", to: "/admin/discounts", label: "Discounts", icon: "TicketPercent", visible: true, permission: "discounts.manage" },
         { id: "shipping", to: "/admin/shipping", label: "Shipping", icon: "Truck", visible: true, permission: "shipping.manage" },
-        { id: "pricing", to: "/admin/pricing", label: "Pricing", icon: "Calculator", visible: true, permission: "pricing.manage" },
         { id: "growth", to: "/admin/growth", label: "Growth", icon: "TrendingUp", visible: true, permission: "campaigns.manage" },
         { id: "campaigns", to: "/admin/campaigns", label: "Campaigns", icon: "Megaphone", visible: true, permission: "campaigns.manage" },
         { id: "revenue", to: "/admin/revenue", label: "Revenue Engine", icon: "Wallet", visible: true, permission: "revenue.view" },

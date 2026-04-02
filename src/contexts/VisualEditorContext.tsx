@@ -59,10 +59,16 @@ interface EditorState {
   moveBlock: (fromIndex: number, toIndex: number) => void;
   toggleBlockActive: (id: string) => void;
 
-  // Save
+  // Save (draft)
   save: () => Promise<void>;
   saving: boolean;
   discardChanges: () => void;
+
+  // Publish
+  publish: () => Promise<void>;
+  publishing: boolean;
+  discardDraft: () => Promise<void>;
+  draftStatus: DraftStatus;
 
   // Undo/Redo
   undo: () => void;

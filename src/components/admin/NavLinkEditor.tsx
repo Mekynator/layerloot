@@ -45,6 +45,7 @@ type NavEditorItem = {
   pageId?: string;
   openInNewTab?: boolean;
   visible?: boolean;
+  megaMenu?: MegaMenuConfig;
 };
 
 type SitePageOption = {

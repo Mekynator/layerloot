@@ -1779,15 +1779,7 @@ const CreateYourOwn = () => {
                   </ToolShell>
                 )}
 
-                {activeTab === "gift-finder" && (
-                  <ToolShell
-                    eyebrow={t("create.giftFinderEyebrow")}
-                    title={t("create.giftFinderTitle")}
-                    description={t("create.giftFinderDesc")}
-                  >
-                    <GiftFinder />
-                  </ToolShell>
-                )}
+                {activeTab === "gift-finder" && <GiftFinderSection />}
               </motion.div>
             </AnimatePresence>
           </Tabs>

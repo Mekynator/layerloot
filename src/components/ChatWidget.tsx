@@ -405,6 +405,7 @@ const ChatWidget = () => {
     setOpen(true);
     setShowPromptBubble(false);
     setPromptBubbleDismissed(false);
+    trackChatEvent("open", {}, location.pathname, userId);
   };
 
   const requestLocation = () => {

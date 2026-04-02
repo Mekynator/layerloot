@@ -11,6 +11,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 export type BackgroundSizeMode = "cover" | "contain" | "fill" | "repeat" | "auto";
+export type TransitionType = "fade" | "slide" | "zoom" | "crossfade" | "kenBurns";
+export type MotionEffect = "none" | "slowZoom" | "kenBurns" | "drift";
+export type BlendMode = "normal" | "multiply" | "screen" | "overlay";
+export type AttachmentMode = "fixed" | "scroll";
+export type PageOverrideMode = "inherit" | "custom" | "disabled";
 
 export type PageBackgroundSettings = {
   enabled: boolean;
@@ -21,11 +26,32 @@ export type PageBackgroundSettings = {
   sizeMode: BackgroundSizeMode;
   position: string;
   overlayOpacity: number;
+  brightness: number;
+  contrast: number;
+  saturation: number;
+  transitionType: TransitionType;
+  transitionDurationMs: number;
+  attachment: AttachmentMode;
+  autoplay: boolean;
+  loop: boolean;
+  randomOrder: boolean;
+  colorOverlay: string;
+  colorOverlayOpacity: number;
+  gradientStart: string;
+  gradientEnd: string;
+  gradientOpacity: number;
+  blendMode: BlendMode;
+  motionEffect: MotionEffect;
+  motionSpeed: number;
 };
 
-const SETTING_KEY = "page_background_global";
+export type PageBackgroundOverride = {
+  mode: PageOverrideMode;
+} & PageBackgroundSettings;
 
-const DEFAULT_SETTINGS: PageBackgroundSettings = {
+export const SETTING_KEY = "page_background_global";
+
+export const DEFAULT_SETTINGS: PageBackgroundSettings = {
   enabled: false,
   images: [],
   opacity: 0.22,
@@ -34,27 +60,66 @@ const DEFAULT_SETTINGS: PageBackgroundSettings = {
   sizeMode: "cover",
   position: "center",
   overlayOpacity: 0.15,
+  brightness: 100,
+  contrast: 100,
+  saturation: 100,
+  transitionType: "fade",
+  transitionDurationMs: 1200,
+  attachment: "fixed",
+  autoplay: true,
+  loop: true,
+  randomOrder: false,
+  colorOverlay: "",
+  colorOverlayOpacity: 0,
+  gradientStart: "",
+  gradientEnd: "",
+  gradientOpacity: 0,
+  blendMode: "normal",
+  motionEffect: "slowZoom",
+  motionSpeed: 12,
 };
+
+const num = (v: any, fallback: number) => typeof v === "number" ? v : fallback;
+const str = (v: any, fallback: string) => typeof v === "string" && v ? v : fallback;
 
 export function normalizeSettings(value: any): PageBackgroundSettings {
   return {
     enabled: Boolean(value?.enabled),
     images: Array.isArray(value?.images) ? value.images.filter(Boolean) : [],
-    opacity: typeof value?.opacity === "number" ? value.opacity : DEFAULT_SETTINGS.opacity,
-    blur: typeof value?.blur === "number" ? value.blur : DEFAULT_SETTINGS.blur,
-    intervalMs:
-      typeof value?.intervalMs === "number" && value.intervalMs >= 1000
-        ? value.intervalMs
-        : DEFAULT_SETTINGS.intervalMs,
+    opacity: num(value?.opacity, DEFAULT_SETTINGS.opacity),
+    blur: num(value?.blur, DEFAULT_SETTINGS.blur),
+    intervalMs: num(value?.intervalMs, DEFAULT_SETTINGS.intervalMs) >= 1000
+      ? num(value?.intervalMs, DEFAULT_SETTINGS.intervalMs) : DEFAULT_SETTINGS.intervalMs,
     sizeMode: ["cover", "contain", "fill", "repeat", "auto"].includes(value?.sizeMode)
-      ? value.sizeMode
-      : DEFAULT_SETTINGS.sizeMode,
-    position: typeof value?.position === "string" && value.position
-      ? value.position
-      : DEFAULT_SETTINGS.position,
-    overlayOpacity:
-      typeof value?.overlayOpacity === "number" ? value.overlayOpacity : DEFAULT_SETTINGS.overlayOpacity,
+      ? value.sizeMode : DEFAULT_SETTINGS.sizeMode,
+    position: str(value?.position, DEFAULT_SETTINGS.position),
+    overlayOpacity: num(value?.overlayOpacity, DEFAULT_SETTINGS.overlayOpacity),
+    brightness: num(value?.brightness, DEFAULT_SETTINGS.brightness),
+    contrast: num(value?.contrast, DEFAULT_SETTINGS.contrast),
+    saturation: num(value?.saturation, DEFAULT_SETTINGS.saturation),
+    transitionType: ["fade","slide","zoom","crossfade","kenBurns"].includes(value?.transitionType)
+      ? value.transitionType : DEFAULT_SETTINGS.transitionType,
+    transitionDurationMs: num(value?.transitionDurationMs, DEFAULT_SETTINGS.transitionDurationMs),
+    attachment: value?.attachment === "scroll" ? "scroll" : "fixed",
+    autoplay: value?.autoplay === false ? false : true,
+    loop: value?.loop === false ? false : true,
+    randomOrder: Boolean(value?.randomOrder),
+    colorOverlay: str(value?.colorOverlay, ""),
+    colorOverlayOpacity: num(value?.colorOverlayOpacity, 0),
+    gradientStart: str(value?.gradientStart, ""),
+    gradientEnd: str(value?.gradientEnd, ""),
+    gradientOpacity: num(value?.gradientOpacity, 0),
+    blendMode: ["normal","multiply","screen","overlay"].includes(value?.blendMode)
+      ? value.blendMode : "normal",
+    motionEffect: ["none","slowZoom","kenBurns","drift"].includes(value?.motionEffect)
+      ? value.motionEffect : "slowZoom",
+    motionSpeed: num(value?.motionSpeed, 12),
   };
+}
+
+export function pageKeyFromPath(pathname: string): string {
+  const clean = pathname.replace(/^\//, "").split("/")[0] || "home";
+  return clean;
 }
 
 const SIZE_MODE_OPTIONS: { value: BackgroundSizeMode; label: string; desc: string }[] = [

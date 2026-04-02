@@ -22,6 +22,7 @@ const Index = () => {
           <SmartHomeSections
             products={catalog.products}
             socialProofMap={catalog.socialProofMap}
+            categories={catalog.categories}
           />
         </div>
       )}

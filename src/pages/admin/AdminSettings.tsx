@@ -492,6 +492,11 @@ const AdminSettings = () => {
           </div>
         </TabsContent>
 
+        {/* ─── PERSONALIZATION ─── */}
+        <TabsContent value="personalization" className="space-y-6">
+          <PersonalizationSettings />
+        </TabsContent>
+
         {/* ─── AUTOMATIONS ─── */}
         <TabsContent value="automations" className="space-y-6">
           <Suspense fallback={<p className="text-sm text-muted-foreground py-4">Loading...</p>}>

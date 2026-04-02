@@ -2,9 +2,10 @@ import { useState, useRef, useCallback } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Upload, X, Image as ImageIcon, ChevronDown, ChevronUp } from "lucide-react";
+import { Upload, X, Image as ImageIcon, ChevronDown, ChevronUp, FolderOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import MediaPickerDialog from "@/components/admin/media/MediaPickerDialog";
 
 interface ImageUploadFieldProps {
   label: string;

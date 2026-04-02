@@ -393,14 +393,7 @@ const Header = () => {
 
             <LanguageSwitcher />
 
-            {isAdmin && headerSettings.show_admin_icon && (
-              <Link to="/admin">
-                <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground" aria-label={getLocalizedValue(headerSettings.admin_label, t("nav.admin", "Admin"))}>
-                  <Shield className="h-5 w-5" />
-                  {adminAlerts > 0 && <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-primary animate-pulse" />}
-                </Button>
-              </Link>
-            )}
+            {/* Admin icon removed — admin access is via /admin/login */}
 
             {headerSettings.show_account_icon && (
               <>

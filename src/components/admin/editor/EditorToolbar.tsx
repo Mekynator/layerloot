@@ -17,6 +17,7 @@ import { useVisualEditor, pageToEditorKey, pageDisplayTitle, pageToRealPath } fr
 import { useAdminPermissions } from "@/hooks/use-admin-permissions";
 import RevisionHistoryPanel from "@/components/admin/RevisionHistoryPanel";
 import SchedulePublishDialog from "@/components/admin/SchedulePublishDialog";
+import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, type SupportedLanguage } from "@/lib/i18n";
 
 interface EditorToolbarProps {
   onAddBlock: () => void;

@@ -68,6 +68,7 @@ const AdminSettings = () => {
   const [policies, setPolicies] = useState<Record<string, { title: string; body: string }>>({});
   const [shortcuts, setShortcuts] = useState<DashboardShortcut[]>(DEFAULT_SHORTCUTS);
   const [sidebarConfig, setSidebarConfig] = useState<SidebarConfig>(DEFAULT_SIDEBAR_CONFIG);
+  const [accountConfig, setAccountConfig] = useState<AccountPageConfig>(DEFAULT_ACCOUNT_CONFIG);
 
   useEffect(() => {
     const load = async () => {

@@ -149,6 +149,10 @@ type InstagramMediaItem = {
   permalink?: string;
   thumbnail_url?: string;
   username?: string;
+  is_reel?: boolean;
+  is_story?: boolean;
+  timestamp?: string;
+  expires_at?: string;
 };
 
 export interface SiteBlock {
@@ -1886,6 +1890,7 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
   const [items, setItems] = useState<InstagramMediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState(0);
+  const [displayCfg, setDisplayCfg] = useState<Record<string, any>>({});
 
   const rawInstagramInput = String(c.instagramUsername || "").trim();
   const username = rawInstagramInput
@@ -1893,45 +1898,26 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
     .replace(/[/?#].*$/, "")
     .replace(/^@/, "")
     .replace(/^\/+|\/+$/g, "");
-  const itemsToShow = Math.max(1, Math.min(20, Number(c.itemsToShow) || 10));
-  const layout = c.layout === "grid" ? "grid" : "slider";
-  const autoplay = c.autoplay !== false;
-  const showCaptions = Boolean(c.showCaptions);
-  const showProfileButton = c.showProfileButton !== false;
-  const intervalMs = Math.max(1500, Number(c.intervalMs) || 3000);
-  const functionName = String(c.functionName || "instagram-feed").trim() || "instagram-feed";
+
   const profileUrl = "https://www.instagram.com/layerloot3d?igsh=cmhjMHc4NjVjMmdk";
 
   useEffect(() => {
     let mounted = true;
-
     const loadFeed = async () => {
-      if (!username) {
-        setItems([]);
-        setLoading(false);
-        return;
-      }
-
       try {
         setLoading(true);
-        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${functionName}?username=${encodeURIComponent(username)}&limit=${itemsToShow}`;
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json",
-        };
-
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/instagram-feed?limit=24`;
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
         if (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) {
           headers.apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
           headers.Authorization = `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`;
         }
-
         const res = await fetch(url, { headers });
         if (!res.ok) throw new Error(`Instagram feed request failed: ${res.status}`);
-
         const data = await res.json();
         if (!mounted) return;
-
-        const nextItems = Array.isArray(data?.items) ? data.items : [];
-        setItems(nextItems.slice(0, itemsToShow));
+        setItems(Array.isArray(data?.items) ? data.items : []);
+        if (data?.settings?.display_config) setDisplayCfg(data.settings.display_config);
         setCurrent(0);
       } catch (error) {
         console.error("Failed to load Instagram feed", error);
@@ -1940,39 +1926,122 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
         if (mounted) setLoading(false);
       }
     };
-
     void loadFeed();
+    return () => { mounted = false; };
+  }, []);
 
-    return () => {
-      mounted = false;
-    };
-  }, [username, itemsToShow, functionName]);
+  // Use display config from DB, allow block content overrides
+  const itemsToShow = Math.max(1, Math.min(24, Number(c.itemsToShow) || displayCfg.items_to_show || 12));
+  const layout = c.layout || displayCfg.layout || "grid";
+  const showCaptions = c.showCaptions ?? displayCfg.show_captions ?? false;
+  const showProfileButton = c.showProfileButton ?? displayCfg.show_cta ?? true;
+  const showReelBadge = displayCfg.show_reel_badge ?? true;
+  const showDates = displayCfg.show_dates ?? false;
+  const autoplay = c.autoplay !== false;
+  const intervalMs = Math.max(1500, Number(c.intervalMs) || 3000);
+  const displayUsername = username || displayCfg.username || items[0]?.username || "layerloot3d";
+
+  const visibleItems = items.slice(0, itemsToShow);
 
   useEffect(() => {
-    if (!autoplay || layout !== "slider" || items.length <= 1) return;
-    const timer = window.setInterval(() => setCurrent((prev) => (prev + 1) % items.length), intervalMs);
+    if (!autoplay || layout !== "slider" || visibleItems.length <= 1) return;
+    const timer = window.setInterval(() => setCurrent((prev) => (prev + 1) % visibleItems.length), intervalMs);
     return () => window.clearInterval(timer);
-  }, [autoplay, intervalMs, items.length, layout]);
+  }, [autoplay, intervalMs, visibleItems.length, layout]);
 
-  if (!username) {
+  if (visibleItems.length === 0 && !loading) {
     return withSection(
       block,
       "py-16 lg:py-24",
       <div className="container">
         <div className="rounded-3xl border border-dashed border-border bg-card/50 p-8 text-center text-muted-foreground">
-          {tr("blocks.instagram.usernameMissing", "Add an Instagram username to show the auto feed.")}
+          {tr("blocks.instagram.usernameMissing", "No Instagram content available. Connect your account in admin settings.")}
         </div>
       </div>,
     );
   }
 
-  const activeItem = items[current];
+  const activeItem = visibleItems[current >= visibleItems.length ? 0 : current];
+
+  const aspectClass = displayCfg.aspect_ratio === "portrait"
+    ? "aspect-[4/5]"
+    : displayCfg.aspect_ratio === "landscape"
+      ? "aspect-video"
+      : "aspect-square";
+
+  const renderMediaCard = (item: InstagramMediaItem, index: number) => {
+    const imageSrc = item.media_type === "VIDEO" ? item.thumbnail_url || item.media_url : item.media_url;
+    const card = (
+      <>
+        {imageSrc ? (
+          <img
+            src={imageSrc}
+            alt={item.caption || tr("blocks.instagram.postAlt", "Instagram post")}
+            className={`${aspectClass} w-full object-cover`}
+            loading="lazy"
+          />
+        ) : (
+          <div className={`flex ${aspectClass} items-center justify-center bg-muted text-sm text-muted-foreground`}>
+            {tr("blocks.instagram.noImage", "No image")}
+          </div>
+        )}
+        {/* Reel badge */}
+        {showReelBadge && item.is_reel && (
+          <div className="absolute left-2 top-2 flex items-center gap-1 rounded-md bg-background/80 px-1.5 py-0.5 text-xs font-medium backdrop-blur">
+            <svg viewBox="0 0 24 24" className="h-3 w-3 fill-current"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+            Reel
+          </div>
+        )}
+        {/* Caption & date */}
+        {(showCaptions || showDates) && (
+          <div className="p-3">
+            {showCaptions && item.caption && <p className="line-clamp-2 text-sm text-muted-foreground">{item.caption}</p>}
+            {showDates && item.timestamp && <p className="mt-1 text-xs text-muted-foreground/60">{new Date(item.timestamp).toLocaleDateString()}</p>}
+          </div>
+        )}
+      </>
+    );
+
+    if (isEditorPreviewMode()) {
+      return (
+        <motion.div
+          key={item.id}
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: index * 0.04 }}
+          className="relative overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md"
+          style={{ boxShadow: '0 4px 24px -4px hsl(var(--primary) / 0.15)' }}
+        >
+          {card}
+        </motion.div>
+      );
+    }
+
+    return (
+      <motion.a
+        key={item.id}
+        href={item.permalink || profileUrl}
+        target="_blank"
+        rel="noreferrer"
+        initial={{ opacity: 0, y: 12 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ delay: index * 0.04 }}
+        whileHover={{ y: -3 }}
+        className="relative overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md transition-all duration-500 hover:shadow-lg"
+        style={{ boxShadow: '0 4px 24px -4px hsl(var(--primary) / 0.15)' }}
+      >
+        {card}
+      </motion.a>
+    );
+  };
 
   return withSection(
     block,
     "py-16 lg:py-24",
     <div className="container">
-      <div className="rounded-3xl bg-card/60 p-5 backdrop-blur-md md:p-6" style={{ boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)' }}>
+      <div className="rounded-3xl bg-card/60 p-5 backdrop-blur-md md:p-6" style={{ boxShadow: '0 8px 40px -8px hsl(var(--primary) / 0.1)' }}>
         <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-2xl font-bold">
@@ -1987,11 +2056,11 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
             <Button asChild={!isEditorPreviewMode()}>
               {isEditorPreviewMode() ? (
                 <span>
-                  <Instagram className="mr-2 h-4 w-4" />@{username}
+                  <Instagram className="mr-2 h-4 w-4" />@{displayUsername}
                 </span>
               ) : (
                 <a href={profileUrl} target="_blank" rel="noreferrer">
-                  <Instagram className="mr-2 h-4 w-4" />@{username}
+                  <Instagram className="mr-2 h-4 w-4" />@{displayUsername}
                 </a>
               )}
             </Button>
@@ -1999,124 +2068,38 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
         </div>
 
         {loading ? (
-          <div className="text-sm text-muted-foreground">
-            {tr("blocks.instagram.loading", "Loading Instagram feed...")}
-          </div>
-        ) : items.length === 0 ? (
-          <div className="text-sm text-muted-foreground">
-            {tr("blocks.instagram.empty", "No Instagram posts found.")}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className={`${aspectClass} animate-pulse rounded-2xl bg-muted`} />
+            ))}
           </div>
         ) : layout === "grid" ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {items.map((item, index) => {
-              const imageSrc = item.media_type === "VIDEO" ? item.thumbnail_url || item.media_url : item.media_url;
-              const card = (
-                <>
-                  {imageSrc ? (
-                    <img
-                      src={imageSrc}
-                      alt={item.caption || tr("blocks.instagram.postAlt", "Instagram post")}
-                      className="aspect-square w-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="flex aspect-square items-center justify-center bg-muted text-sm text-muted-foreground">
-                      {tr("blocks.instagram.noImage", "No image")}
-                    </div>
-                  )}
-                  {showCaptions && item.caption && (
-                    <div className="line-clamp-3 p-3 text-sm text-muted-foreground">{item.caption}</div>
-                  )}
-                </>
-              );
-
-              if (isEditorPreviewMode()) {
-                return (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, y: 12 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: index * 0.04 }}
-                    className="overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md" style={{ boxShadow: '0 4px 24px -4px hsl(225 44% 4% / 0.4)' }}
-                  >
-                    {card}
-                  </motion.div>
-                );
-              }
-
-              return (
-                <motion.a
-                  key={item.id}
-                  href={item.permalink || profileUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  initial={{ opacity: 0, y: 12 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.04 }}
-                  whileHover={{ y: -3 }}
-                  className="overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md transition-all duration-500 hover:shadow-[0_24px_80px_-12px_hsl(217_91%_60%/0.18)]"
-                  style={{ boxShadow: '0 4px 24px -4px hsl(225 44% 4% / 0.4)' }}
-                >
-                  {card}
-                </motion.a>
-              );
-            })}
+            {visibleItems.map((item, index) => renderMediaCard(item, index))}
           </div>
         ) : (
           <div className="space-y-4">
             <div className="overflow-hidden rounded-2xl border bg-background">
               {activeItem ? (
-                isEditorPreviewMode() ? (
-                  (() => {
-                    const activeSrc =
-                      activeItem.media_type === "VIDEO"
-                        ? activeItem.thumbnail_url || activeItem.media_url
-                        : activeItem.media_url;
-                    return activeSrc ? (
-                      <img
-                        src={activeSrc}
-                        alt={activeItem.caption || tr("blocks.instagram.postAlt", "Instagram post")}
-                        className="aspect-square w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex aspect-square items-center justify-center bg-muted text-sm text-muted-foreground">
-                        {tr("blocks.instagram.noImage", "No image")}
-                      </div>
-                    );
-                  })()
-                ) : (
-                  <a href={activeItem.permalink || profileUrl} target="_blank" rel="noreferrer">
-                    {(() => {
-                      const activeSrc =
-                        activeItem.media_type === "VIDEO"
-                          ? activeItem.thumbnail_url || activeItem.media_url
-                          : activeItem.media_url;
-                      return activeSrc ? (
-                        <img
-                          src={activeSrc}
-                          alt={activeItem.caption || tr("blocks.instagram.postAlt", "Instagram post")}
-                          className="aspect-square w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex aspect-square items-center justify-center bg-muted text-sm text-muted-foreground">
-                          {tr("blocks.instagram.noImage", "No image")}
-                        </div>
-                      );
-                    })()}
-                  </a>
-                )
+                (() => {
+                  const activeSrc = activeItem.media_type === "VIDEO"
+                    ? activeItem.thumbnail_url || activeItem.media_url
+                    : activeItem.media_url;
+                  const img = activeSrc ? (
+                    <img src={activeSrc} alt={activeItem.caption || "Instagram post"} className={`${aspectClass} w-full object-cover`} />
+                  ) : (
+                    <div className={`flex ${aspectClass} items-center justify-center bg-muted text-sm text-muted-foreground`}>No image</div>
+                  );
+                  return isEditorPreviewMode() ? img : <a href={activeItem.permalink || profileUrl} target="_blank" rel="noreferrer">{img}</a>;
+                })()
               ) : null}
             </div>
 
-            {showCaptions && activeItem?.caption && (
-              <p className="text-sm text-muted-foreground">{activeItem.caption}</p>
-            )}
+            {showCaptions && activeItem?.caption && <p className="text-sm text-muted-foreground">{activeItem.caption}</p>}
 
-            {items.length > 1 && (
+            {visibleItems.length > 1 && (
               <div className="flex flex-wrap gap-2">
-                {items.map((item, index) => (
+                {visibleItems.map((item, index) => (
                   <button
                     key={item.id}
                     onClick={() => setCurrent(index)}

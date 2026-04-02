@@ -1115,6 +1115,99 @@ export type Database = {
         }
         Relationships: []
       }
+      instagram_media: {
+        Row: {
+          caption: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          instagram_media_id: string
+          is_reel: boolean
+          is_story: boolean
+          media_type: string
+          media_url: string | null
+          permalink: string | null
+          sync_status: string
+          thumbnail_url: string | null
+          timestamp: string | null
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          instagram_media_id: string
+          is_reel?: boolean
+          is_story?: boolean
+          media_type?: string
+          media_url?: string | null
+          permalink?: string | null
+          sync_status?: string
+          thumbnail_url?: string | null
+          timestamp?: string | null
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          instagram_media_id?: string
+          is_reel?: boolean
+          is_story?: boolean
+          media_type?: string
+          media_url?: string | null
+          permalink?: string | null
+          sync_status?: string
+          thumbnail_url?: string | null
+          timestamp?: string | null
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      instagram_settings: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          display_config: Json
+          id: string
+          is_connected: boolean
+          last_sync_at: string | null
+          sync_error: string | null
+          sync_status: string
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          display_config?: Json
+          id?: string
+          is_connected?: boolean
+          last_sync_at?: string | null
+          sync_error?: string | null
+          sync_status?: string
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          display_config?: Json
+          id?: string
+          is_connected?: boolean
+          last_sync_at?: string | null
+          sync_error?: string | null
+          sync_status?: string
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
       loyalty_points: {
         Row: {
           created_at: string

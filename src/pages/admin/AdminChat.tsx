@@ -874,8 +874,8 @@ export default function AdminChat() {
           <div className="grid gap-4 lg:grid-cols-2">
             <Card><CardHeader><CardTitle className="font-display text-sm uppercase">AI Messages</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <div><Label className="text-xs">BG Color</Label><Input value={config.bubbles.ai.bgColor ?? ""} onChange={e => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, ai: { ...p.bubbles.ai, bgColor: e.target.value } } }))} /></div>
-                <div><Label className="text-xs">Text Color</Label><Input value={config.bubbles.ai.textColor ?? ""} onChange={e => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, ai: { ...p.bubbles.ai, textColor: e.target.value } } }))} /></div>
+                <ColorPickerField label="BG Color" value={config.bubbles.ai.bgColor ?? ""} onChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, ai: { ...p.bubbles.ai, bgColor: v } } }))} />
+                <ColorPickerField label="Text Color" value={config.bubbles.ai.textColor ?? ""} onChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, ai: { ...p.bubbles.ai, textColor: v } } }))} />
                 <div><Label className="text-xs">Border Radius: {config.bubbles.ai.borderRadius}px</Label><Slider value={[config.bubbles.ai.borderRadius]} onValueChange={([v]) => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, ai: { ...p.bubbles.ai, borderRadius: v } } }))} min={0} max={24} step={2} /></div>
                 <div className="flex flex-wrap gap-4">
                   <div className="flex items-center gap-2"><Switch checked={config.bubbles.ai.showAvatar} onCheckedChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, ai: { ...p.bubbles.ai, showAvatar: v } } }))} /><Label className="text-xs">Avatar</Label></div>

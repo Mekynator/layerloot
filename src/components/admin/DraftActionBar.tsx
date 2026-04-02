@@ -63,7 +63,8 @@ export default function DraftActionBar({
         </Button>
 
         <Button size="sm" onClick={onPublish}
-          disabled={disabled || publishing || (!dirty && !hasDraft)}
+          disabled={disabled || publishing || !canPublish || (!dirty && !hasDraft)}
+          title={!canPublish ? "You don't have publishing permission" : undefined}
           className="font-display text-xs uppercase tracking-wider">
           <Upload className="mr-1 h-3.5 w-3.5" />
           {publishing ? "Publishing..." : "Publish"}

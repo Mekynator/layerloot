@@ -806,7 +806,7 @@ export default function AdminChat() {
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3"><Switch checked={config.enabled} onCheckedChange={v => set("enabled", v)} /><Label>Enable AI Chat Widget</Label></div>
               <div><Label className="text-xs">Brand Name</Label><Input value={getStr(config.window.brandName)} onChange={e => setNested("window", "brandName", setStr(config.window.brandName, e.target.value))} /></div>
-              <div><Label className="text-xs">Avatar URL</Label><Input value={config.window.avatarUrl ?? ""} onChange={e => setNested("window", "avatarUrl", e.target.value)} placeholder="https://..." /></div>
+              <ImageUploadPlaceholder label="Avatar" value={config.window.avatarUrl ?? ""} onChange={v => setNested("window", "avatarUrl", v)} />
               <div><Label className="text-xs">Disabled Pages</Label><Input value={config.disabledPages.join(", ")} onChange={e => set("disabledPages", e.target.value.split(",").map(s => s.trim()).filter(Boolean))} placeholder="/admin, /auth" /></div>
             </CardContent>
           </Card>

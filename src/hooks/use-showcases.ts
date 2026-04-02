@@ -68,7 +68,7 @@ export function useCommunityShowcases(filters?: {
     queryFn: async () => {
       let q = supabase
         .from("custom_order_showcases" as any)
-        .select("*")
+        .select("id,owner_user_id,custom_order_id,title,slug,description,visibility_status,approved_by_admin,reorder_enabled,featured,thumbnail_url,preview_image_urls,finished_image_urls,source_model_url,source_model_filename,quoted_price,final_price,currency,materials,colors,dimensions,size_notes,tags,category,production_settings_json,reorder_count,rating_avg,rating_count,created_at,updated_at")
         .eq("visibility_status", "shared")
         .eq("approved_by_admin", true);
 

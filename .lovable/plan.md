@@ -1,155 +1,129 @@
 
 
-# Admin Operations Workflow: Orders, Custom Orders & Communications
+# Role-Based, Action-Focused Admin Dashboard
 
 ## Summary
-Restructure the admin portal to clearly separate **operations** (orders, custom orders, fulfillment, communications) from **content/CMS** and **commerce/catalog**. Improve order detail workspaces, add internal notes separation, richer status workflows, production timelines, and activity logging.
-
-## Current State
-- `AdminOrders.tsx` (463 lines): merges store + custom orders in one table, basic dialog for details
-- `AdminCustomOrders.tsx` (1473 lines): extensive custom order workflow with messages, quoting, 3D preview — already quite capable
-- `custom_order_messages` table exists with `sender_role` (user/admin/system) and `message_type` (note/quote/counter_offer/status_update/system)
-- `order_status_history` table exists for store orders
-- `OrderTimeline` component shows 4 public stages (Received, Printing, Finishing, Shipped)
-- Sidebar has no "Operations" group — orders/custom orders are not in the default sidebar config
-- `logAdminActivity()` helper exists but is not called from order workflows
-- No internal notes table separate from customer messages
-- No dedicated order detail page (uses dialog)
+Rebuild the dashboard into a modular, role-aware control center that shows each admin user only what's relevant to their role, prioritizing actionable items over static reporting.
 
 ## Architecture
 
-### Sidebar Reorganization
-Restructure `DEFAULT_SIDEBAR_CONFIG` into 4 groups:
+### Widget System
+Each dashboard section becomes a self-contained widget component. A configuration map defines which widgets appear for which roles:
 
 ```text
-Content:     Dashboard, Page Editor, Media, Reusable Blocks, Translations, Backgrounds, Settings
-Commerce:    Products, Categories, Discounts, Pricing, Showcases
-Operations:  Orders, Custom Orders, Clients
-Tools:       Shipping, Growth, Campaigns, Revenue, Reports
-System:      Activity Log, Admin Users
+Widget                  | super_admin | admin | editor | support
+─────────────────────────────────────────────────────────────────
+ActionCenter (queues)   |     ✓       |   ✓   |   ✗    |   ✓
+KPI tiles               |     ✓       |   ✓   |   ✗    |   ✗
+ContentStatus           |     ✓       |   ✓   |   ✓    |   ✗
+OperationsQueue         |     ✓       |   ✓   |   ✗    |   ✓
+QuickShortcuts          |     ✓       |   ✓   |   ✓    |   ✓
+RecentActivity          |     ✓       |   ✓   |   ✓    |   ✓
+TranslationStatus       |     ✓       |   ✓   |   ✓    |   ✗
+ProductAttention        |     ✓       |   ✓   |   ✗    |   ✗
+Charts                  |     ✓       |   ✓   |   ✗    |   ✗
 ```
 
-### Database Changes
+### Data Hook Enhancement
+Extend `use-admin-dashboard.ts` to also fetch:
+- Draft content counts (site_blocks with `has_draft = true`)
+- Scheduled publishes (site_blocks + products with `scheduled_publish_at` set)
+- Products with `status = 'draft'` (unpublished)
+- Unanswered custom order messages (messages where last message is from customer)
+- Translation stats (missing/outdated from `translation_entries`)
+- Admin activity log entries (recent from `admin_activity_log`)
+- Orders on hold, awaiting shipment counts
 
-**New table: `admin_internal_notes`** — for staff-only notes on any entity:
-- `id` uuid PK
-- `entity_type` text (order, custom_order, product, customer)
-- `entity_id` text
-- `user_id` uuid (author)
-- `note` text
-- `is_pinned` boolean default false
-- `created_at` timestamptz
-- RLS: admin-only (read/write)
+## New Files
 
-**Seed permissions:**
-- `orders.manage` for super_admin, admin, support
-- `custom_orders.manage` for super_admin, admin, support
+### `src/components/admin/dashboard/DashboardWidget.tsx`
+Wrapper component providing consistent card styling, title, optional link, and role-visibility check. All widgets use this wrapper.
 
-No schema changes to `orders` or `custom_orders` tables — the existing columns and statuses are sufficient. The richer status set will be handled in the UI layer using the existing `status` text column.
+### `src/components/admin/dashboard/ActionCenterWidget.tsx`
+Top-priority queue widget showing urgent items:
+- Pending orders, quotes awaiting, customer replies, reviews pending, showcases pending, low stock, on-hold orders
+- Each item links to filtered admin page
+- Color-coded severity
 
-### New Files
+### `src/components/admin/dashboard/ContentStatusWidget.tsx`
+For editor/admin roles:
+- Draft blocks pending publish (count + link)
+- Scheduled publishes upcoming
+- Recently published content
+- Draft products not yet published
 
-**1. `src/pages/admin/AdminOrderDetail.tsx`**
-Full-page order detail workspace (replaces dialog) for store orders:
-- Customer info, items list, totals
-- Status management with expanded statuses: new, paid, processing, printing, finishing, packed, shipped, delivered, completed, cancelled, refunded, on_hold
-- Tracking number/URL editing
-- Internal notes panel (from `admin_internal_notes`)
-- Order status history timeline (from `order_status_history`)
-- Activity log integration (calls `logAdminActivity` on status changes)
-- Payment state display
-- Notes visible vs internal separation
+### `src/components/admin/dashboard/OperationsWidget.tsx`
+For support/admin/super_admin:
+- Orders needing shipment
+- Orders on hold
+- Custom orders needing quote
+- Unanswered customer messages
+- Production queue summary
 
-**2. `src/pages/admin/AdminCustomOrderDetail.tsx`**
-Full-page custom order detail workspace (extracts from current dialog):
-- All current custom order detail functionality moved from dialog to dedicated page
-- Customer info, uploaded files, 3D preview
-- Quote workflow (prepare, send, accept/decline counter)
-- Communication thread with clear visual separation:
-  - Customer messages (left-aligned)
-  - Admin messages (right-aligned)
-  - System/status updates (centered, muted)
-  - Internal notes (separate tab/section, never shown to customer)
-- Production timeline with expanded stages
-- Payment status panel
-- File attachments view
-- Activity log integration
+### `src/components/admin/dashboard/TranslationWidget.tsx`
+For editor/admin:
+- Missing translations by locale
+- Outdated translations count
+- Link to translation manager
 
-**3. `src/hooks/use-admin-notes.ts`**
-Hook for internal notes CRUD:
-- `useAdminNotes(entityType, entityId)` — fetch notes
-- `addNote(text)` — insert note + log activity
-- `deleteNote(noteId)` — soft indication only
-- `togglePin(noteId)` — pin/unpin
+### `src/components/admin/dashboard/ProductAttentionWidget.tsx`
+For admin/super_admin:
+- Draft products
+- Low stock products
+- Hidden/unpublished products count
 
-### Modified Files
+### `src/components/admin/dashboard/QuickActionsWidget.tsx`
+Role-filtered shortcut grid. Each shortcut has a `permission` field; only shortcuts the user has permission for are shown. Replaces current flat grid with role-aware filtering.
 
-**`src/components/admin/AdminLayout.tsx`**
-- Restructure sidebar groups: Content, Commerce, Operations, Tools, System
-- Add Orders (ShoppingCart icon) and Custom Orders (Package icon) under Operations
-- Add Clients under Operations
-- Move Products, Categories, Discounts, Pricing, Showcases under Commerce
+### `src/components/admin/dashboard/RecentActivityWidget.tsx`
+Reads from `admin_activity_log` instead of fabricating events from orders/reviews. Shows real admin actions with role-based filtering.
 
-**`src/pages/admin/AdminOrders.tsx`**
-Major refactor:
-- Remove custom orders from this page (they have their own section)
-- Add search (by order ID, customer name/email)
-- Add date range filter
-- Add payment status filter
-- Expand status set in UI
-- Replace detail dialog with navigation to `/admin/orders/:orderId`
-- Add status badges with colors
-- Add activity logging on status changes
-- Add bulk quick-action buttons (mark shipped, mark completed)
+## Modified Files
 
-**`src/pages/admin/AdminCustomOrders.tsx`**
-Refactor:
-- Keep list view but simplify
-- Move detail view to `/admin/custom-orders/:orderId` (new page)
-- Add search by name/email/ID
-- Add status filter
-- Navigate to detail page instead of opening dialog
+### `src/hooks/use-admin-dashboard.ts`
+Add to `DashboardData`:
+- `draftBlocksCount`, `scheduledPublishCount`, `draftProductsCount`
+- `ordersAwaitingShipment`, `ordersOnHold`
+- `unansweredCustomMessages`
+- `missingTranslations`, `outdatedTranslations`
 
-**`src/App.tsx`**
-- Add routes: `/admin/orders/:orderId` → `AdminOrderDetail`
-- Add routes: `/admin/custom-orders/:orderId` → `AdminCustomOrderDetail`
+Add parallel queries for these counts using lightweight `head: true` count queries.
 
-**`src/components/orders/OrderTimeline.tsx`**
-- Add more internal stages for admin view (review, quality check, packed)
-- Add `adminMode` prop that shows all stages vs customer-safe subset
-- Customer view remains: Received → Printing → Finishing → Shipped
+### `src/pages/admin/Dashboard.tsx`
+Complete rewrite:
+- Import `useAdminPermissions` to get `adminRole` and `hasPermission`
+- Compose dashboard from widget components based on role config
+- Remove inline chart/tile definitions (moved to widget components)
+- Layout: action center → KPIs → content/operations row → charts → activity → shortcuts
+- Greeting header with role label
+- Keep period selector for KPI/chart widgets
 
-### Activity Logging Integration
-Add `logAdminActivity()` calls for:
-- Order status changed
-- Custom order status changed
-- Quote sent
-- Customer message sent
-- Internal note added
-- Production stage updated
-- Payment status changed
-- Tracking info updated
+## Widget Rendering Logic
 
-### Permission Mapping
-| Action | Permission |
-|---|---|
-| View/manage orders | `orders.manage` |
-| View/manage custom orders | `custom_orders.manage` |
-| View customers | `customers.view` |
+```typescript
+const ROLE_WIDGETS: Record<AdminRole, string[]> = {
+  super_admin: ["action", "kpi", "content", "operations", "product", "translation", "charts", "activity", "shortcuts"],
+  admin: ["action", "kpi", "content", "operations", "product", "translation", "charts", "activity", "shortcuts"],
+  editor: ["content", "translation", "activity", "shortcuts"],
+  support: ["action", "operations", "activity", "shortcuts"],
+};
+```
+
+Dashboard renders widgets in order, skipping any not in the role's list.
 
 ## Files Summary
 | Action | File |
 |---|---|
-| Create | `src/pages/admin/AdminOrderDetail.tsx` |
-| Create | `src/pages/admin/AdminCustomOrderDetail.tsx` |
-| Create | `src/hooks/use-admin-notes.ts` |
-| Modify | `src/components/admin/AdminLayout.tsx` (reorganize sidebar) |
-| Modify | `src/pages/admin/AdminOrders.tsx` (store-only, search, link to detail) |
-| Modify | `src/pages/admin/AdminCustomOrders.tsx` (simplify, link to detail) |
-| Modify | `src/App.tsx` (add detail routes) |
-| Modify | `src/components/orders/OrderTimeline.tsx` (admin mode stages) |
+| Create | `src/components/admin/dashboard/DashboardWidget.tsx` |
+| Create | `src/components/admin/dashboard/ActionCenterWidget.tsx` |
+| Create | `src/components/admin/dashboard/ContentStatusWidget.tsx` |
+| Create | `src/components/admin/dashboard/OperationsWidget.tsx` |
+| Create | `src/components/admin/dashboard/TranslationWidget.tsx` |
+| Create | `src/components/admin/dashboard/ProductAttentionWidget.tsx` |
+| Create | `src/components/admin/dashboard/QuickActionsWidget.tsx` |
+| Create | `src/components/admin/dashboard/RecentActivityWidget.tsx` |
+| Modify | `src/hooks/use-admin-dashboard.ts` (add draft/scheduled/ops counts) |
+| Modify | `src/pages/admin/Dashboard.tsx` (role-based widget composition) |
 
-## Database Changes Summary
-- **Create** `admin_internal_notes` table with admin-only RLS
-- **Seed** `orders.manage` and `custom_orders.manage` permissions
+No database changes required — all data comes from existing tables.
 

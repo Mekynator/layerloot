@@ -406,8 +406,11 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   const publish = useCallback(async () => {
     setPublishing(true);
     try {
+      // First save any unsaved draft content
       const currentPageBlocks = sortBlocks(draftBlocks.filter(b => b.page === activePage));
-      const ok = await publishDraftBlocks(activePage, currentPageBlocks);
+      await saveDraftBlocks(activePage, currentPageBlocks, user?.id);
+      
+      const ok = await publishDraftBlocks(activePage, user?.id);
       if (!ok) throw new Error("Publish failed");
 
       // Refresh from DB to get real IDs
@@ -419,7 +422,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     } finally {
       setPublishing(false);
     }
-  }, [draftBlocks, activePage, fetchBlocks]);
+  }, [draftBlocks, activePage, fetchBlocks, user]);
 
   // Discard draft: delete draft from site_settings, reload live blocks
   const discardDraft = useCallback(async () => {

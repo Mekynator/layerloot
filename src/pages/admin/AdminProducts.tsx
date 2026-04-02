@@ -488,7 +488,7 @@ const AdminProducts = () => {
 
                         {(status === "draft" || product.has_draft) && (
                           <Button variant="ghost" size="icon" title="Publish" onClick={() => setConfirmAction({ type: "publish", productId: product.id, name: product.name })}>
-                            <CheckCircle className="h-4 w-4 text-emerald-500" />
+                            <CheckCircle className="h-4 w-4 text-primary" />
                           </Button>
                         )}
 

@@ -564,6 +564,9 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
       return <VideoBlock block={block} />;
     case "banner": {
       const BnrIcon = c.icon ? iconForName(c.icon, null) : null;
+      const bannerButtons = resolveButtons(c, [
+        ...(c.button_text ? [{ text: getLocalizedValue(c.button_text), link: c.button_link || "", icon: "", variant: "outline" }] : []),
+      ]);
       return withSection(
         block,
         "py-3 border-y border-border/20",
@@ -581,11 +584,13 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
           <span className="font-display text-sm uppercase tracking-widest text-foreground/90">
             {getLocalizedValue(c.heading || c.title, tr("blocks.banner.title", "Banner"))}
           </span>
-          {c.button_text && (
-            <Button variant="outline" size="sm" className="ml-2 h-7 text-[10px] font-display uppercase">
-              {getLocalizedValue(c.button_text)}
-            </Button>
-          )}
+          {bannerButtons.map((button, index) => (
+            <ActionButton
+              key={`banner-btn-${index}`}
+              button={button}
+              className="ml-2 h-7 text-[10px] font-display uppercase"
+            />
+          ))}
         </div>,
       );
     }

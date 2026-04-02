@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Save, Send, Download, Pin, Trash2,
-  DollarSign, CheckCircle2, XCircle, Image as ImageIcon,
+  DollarSign, ChevronDown, ChevronRight, Paperclip,
+  Video, Image as ImageIcon, Lock, Unlock, MessageSquare,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,13 +15,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { logAdminActivity } from "@/lib/activity-log";
 import { useAdminNotes } from "@/hooks/use-admin-notes";
 import AdminLayout from "@/components/admin/AdminLayout";
-import OrderTimeline from "@/components/orders/OrderTimeline";
 import ModelViewer from "@/components/ModelViewer";
 import { formatPrice } from "@/lib/currency";
 
@@ -35,6 +37,9 @@ const STATUSES = [
 
 const PAYMENT_STATUSES = ["unpaid", "awaiting_payment", "paid", "refunded", "cancelled"];
 const PRODUCTION_STATUSES = ["pending", "queued", "in_production", "completed", "shipped", "cancelled"];
+
+const CONVERSATION_STATUSES = ["open", "closed"] as const;
+type ConversationStatus = typeof CONVERSATION_STATUSES[number];
 
 interface CustomOrderMessage {
   id: string;
@@ -58,6 +63,50 @@ function stripImageUrl(message: string | null): string {
   return message.replace(/https?:\/\/\S+\.(?:png|jpg|jpeg|webp)(?:\?\S*)?/gi, "").trim() || "Image attachment";
 }
 
+/* ── Metadata helpers ─────────────────────────────────────── */
+
+interface ParsedDetails {
+  orderType?: string;
+  dimensions?: string;
+  material?: string;
+  finish?: string;
+  color?: string;
+  quantity?: string;
+  printTime?: string;
+  estimatedPrice?: string;
+  customerNotes?: string;
+  options?: Record<string, string>;
+}
+
+function parseMetadata(meta: any): ParsedDetails {
+  if (!meta || typeof meta !== "object") return {};
+  const d: ParsedDetails = {};
+  if (meta.order_type || meta.orderType) d.orderType = meta.order_type || meta.orderType;
+  if (meta.dimensions) d.dimensions = typeof meta.dimensions === "object" ? JSON.stringify(meta.dimensions) : String(meta.dimensions);
+  if (meta.material) d.material = String(meta.material);
+  if (meta.finish) d.finish = String(meta.finish);
+  if (meta.color || meta.colour) d.color = String(meta.color || meta.colour);
+  if (meta.quantity) d.quantity = String(meta.quantity);
+  if (meta.print_time || meta.printTime) d.printTime = String(meta.print_time || meta.printTime);
+  if (meta.estimated_price || meta.estimatedPrice) d.estimatedPrice = String(meta.estimated_price || meta.estimatedPrice);
+  if (meta.customer_notes || meta.customerNotes || meta.notes) d.customerNotes = String(meta.customer_notes || meta.customerNotes || meta.notes);
+
+  // Collect remaining simple key-value pairs as options
+  const knownKeys = new Set(["order_type", "orderType", "dimensions", "material", "finish", "color", "colour", "quantity", "print_time", "printTime", "estimated_price", "estimatedPrice", "customer_notes", "customerNotes", "notes", "reference_image_url", "referenceImageUrl"]);
+  const opts: Record<string, string> = {};
+  for (const [k, v] of Object.entries(meta)) {
+    if (knownKeys.has(k)) continue;
+    if (v === null || v === undefined || v === "") continue;
+    if (typeof v === "object") continue; // skip nested objects
+    opts[k.replace(/_/g, " ")] = String(v);
+  }
+  if (Object.keys(opts).length > 0) d.options = opts;
+
+  return d;
+}
+
+/* ── Component ────────────────────────────────────────────── */
+
 const AdminCustomOrderDetail = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
@@ -66,7 +115,6 @@ const AdminCustomOrderDetail = () => {
 
   const [order, setOrder] = useState<any>(null);
   const [messages, setMessages] = useState<CustomOrderMessage[]>([]);
-  const [adminNotes, setAdminNotes] = useState("");
   const [statusUpdate, setStatusUpdate] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("unpaid");
   const [productionStatus, setProductionStatus] = useState("pending");
@@ -74,6 +122,11 @@ const AdminCustomOrderDetail = () => {
   const [threadMessage, setThreadMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [newNote, setNewNote] = useState("");
+  const [mediaOpen, setMediaOpen] = useState(false);
+  const [conversationStatus, setConversationStatus] = useState<ConversationStatus>("open");
+  const [videoLink, setVideoLink] = useState("");
+  const [pictureLink, setPictureLink] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { notes: internalNotes, addNote, togglePin, deleteNote } = useAdminNotes("custom_order", orderId);
 
@@ -83,10 +136,13 @@ const AdminCustomOrderDetail = () => {
     if (data) {
       setOrder(data);
       setStatusUpdate(data.status);
-      setAdminNotes(data.admin_notes ?? "");
       setPaymentStatus(data.payment_status);
       setProductionStatus(data.production_status);
       setQuoteAmount(data.quoted_price ? String(data.quoted_price) : "");
+      const meta = data.metadata as any;
+      if (meta?.conversation_status) setConversationStatus(meta.conversation_status);
+      if (meta?.video_link) setVideoLink(meta.video_link);
+      if (meta?.picture_link) setPictureLink(meta.picture_link);
     }
   };
 
@@ -105,16 +161,26 @@ const AdminCustomOrderDetail = () => {
     loadMessages();
   }, [orderId]);
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   const handleSave = async () => {
     if (!orderId || !order) return;
     setSaving(true);
 
     const oldStatus = order.status;
+    const existingMeta = (order.metadata as any) || {};
     const { error } = await supabase.from("custom_orders").update({
       status: statusUpdate,
-      admin_notes: adminNotes || null,
       payment_status: paymentStatus,
       production_status: productionStatus,
+      metadata: {
+        ...existingMeta,
+        conversation_status: conversationStatus,
+        video_link: videoLink || null,
+        picture_link: pictureLink || null,
+      },
     }).eq("id", orderId);
 
     if (error) {
@@ -187,6 +253,10 @@ const AdminCustomOrderDetail = () => {
 
   const sendAdminMessage = async () => {
     if (!threadMessage.trim() || !orderId) return;
+    if (conversationStatus === "closed") {
+      toast({ title: "Conversation is closed", description: "Reopen the conversation before sending messages.", variant: "destructive" });
+      return;
+    }
     setSaving(true);
 
     await supabase.from("custom_order_messages").insert({
@@ -211,27 +281,37 @@ const AdminCustomOrderDetail = () => {
     await loadMessages();
   };
 
-  const respondToOffer = async (accept: boolean) => {
-    if (!orderId || !order?.customer_offer_price) return;
-    setSaving(true);
-    const update = accept
-      ? { final_agreed_price: order.customer_offer_price, status: "accepted", customer_response_status: "accepted", payment_status: "awaiting_payment" }
-      : { status: "reviewing" };
+  const toggleConversation = async () => {
+    const next: ConversationStatus = conversationStatus === "open" ? "closed" : "open";
+    setConversationStatus(next);
+    if (!orderId) return;
 
-    await supabase.from("custom_orders").update(update).eq("id", orderId);
+    const existingMeta = (order?.metadata as any) || {};
+    await supabase.from("custom_orders").update({
+      metadata: { ...existingMeta, conversation_status: next },
+    }).eq("id", orderId);
+
+    await supabase.from("custom_order_messages").insert({
+      custom_order_id: orderId,
+      sender_role: "system",
+      message: next === "closed" ? "Conversation closed by admin" : "Conversation reopened by admin",
+      message_type: "status_update",
+    });
+
+    toast({ title: next === "closed" ? "Conversation closed" : "Conversation reopened" });
+    await loadMessages();
+  };
+
+  const sendQuickLink = async (type: "video" | "picture", url: string) => {
+    if (!url.trim() || !orderId) return;
+    const label = type === "video" ? "📹 Model Video" : "🖼️ Reference Picture";
     await supabase.from("custom_order_messages").insert({
       custom_order_id: orderId,
       sender_role: "admin",
-      message: accept
-        ? `Accepted customer offer of ${formatPrice(order.customer_offer_price)}`
-        : `Declined customer offer of ${formatPrice(order.customer_offer_price)}`,
-      message_type: "status_update",
-      proposed_price: accept ? order.customer_offer_price : null,
+      message: `${label}: ${url.trim()}`,
+      message_type: "note",
     });
-
-    toast({ title: accept ? "Offer accepted" : "Offer declined" });
-    setSaving(false);
-    await loadOrder();
+    toast({ title: `${type === "video" ? "Video" : "Picture"} link shared` });
     await loadMessages();
   };
 
@@ -251,82 +331,69 @@ const AdminCustomOrderDetail = () => {
 
   const statusDef = STATUSES.find((s) => s.value === statusUpdate);
   const metadata = order.metadata as any;
+  const details = parseMetadata(metadata);
+  const isClosed = conversationStatus === "closed";
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="space-y-5">
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/admin/custom-orders")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h1 className="font-display text-2xl font-bold uppercase">
               Custom Order #{orderId?.slice(0, 8)}
             </h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground truncate">
               {order.name} · {order.email} · {new Date(order.created_at).toLocaleDateString()}
             </p>
           </div>
-          <Badge variant="outline" className={statusDef?.color ?? ""}>
-            {statusDef?.label ?? statusUpdate}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className={isClosed ? "bg-muted text-muted-foreground" : ""}>
+              <MessageSquare className="mr-1 h-3 w-3" />
+              {isClosed ? "Closed" : "Open"}
+            </Badge>
+            <Badge variant="outline" className={statusDef?.color ?? ""}>
+              {statusDef?.label ?? statusUpdate}
+            </Badge>
+          </div>
         </div>
 
-        {/* Timeline */}
-        <Card>
-          <CardContent className="pt-6">
-            <OrderTimeline status={statusUpdate} productionStatus={productionStatus} adminMode />
-          </CardContent>
-        </Card>
+        <div className="grid gap-5 lg:grid-cols-3">
+          {/* ── Main Column ──────────────────────────── */}
+          <div className="space-y-5 lg:col-span-2">
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Main */}
-          <div className="space-y-6 lg:col-span-2">
-            {/* Description & Files */}
+            {/* Communication — PRIMARY */}
             <Card>
-              <CardHeader><CardTitle className="font-display text-sm uppercase">Request Details</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm whitespace-pre-wrap">{order.description}</p>
-                <Separator />
-                <div className="flex flex-wrap gap-2">
-                  {order.model_url && (
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={order.model_url} target="_blank" rel="noreferrer">
-                        <Download className="mr-2 h-3.5 w-3.5" />
-                        {order.model_filename || "Download Model"}
-                      </a>
-                    </Button>
-                  )}
-                  {metadata?.reference_image_url && (
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={metadata.reference_image_url} target="_blank" rel="noreferrer">
-                        <ImageIcon className="mr-2 h-3.5 w-3.5" />
-                        Reference Image
-                      </a>
-                    </Button>
-                  )}
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="font-display text-sm uppercase flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4 text-primary" />
+                    Communication
+                  </CardTitle>
+                  <Button
+                    variant={isClosed ? "outline" : "ghost"}
+                    size="sm"
+                    onClick={toggleConversation}
+                    className="text-xs"
+                  >
+                    {isClosed ? <Unlock className="mr-1 h-3 w-3" /> : <Lock className="mr-1 h-3 w-3" />}
+                    {isClosed ? "Reopen" : "Close"}
+                  </Button>
                 </div>
-                {order.model_url && (
-                  <div className="h-48 rounded-lg overflow-hidden border border-border">
-                    <ModelViewer url={order.model_url} />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Communication */}
-            <Card>
-              <CardHeader><CardTitle className="font-display text-sm uppercase">Communication</CardTitle></CardHeader>
+              </CardHeader>
               <CardContent>
                 <Tabs defaultValue="messages">
-                  <TabsList className="mb-4">
+                  <TabsList className="mb-3">
                     <TabsTrigger value="messages">Messages</TabsTrigger>
                     <TabsTrigger value="internal">Internal Notes</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="messages" className="space-y-3">
-                    <div className="max-h-80 space-y-3 overflow-y-auto">
+                    {/* Message thread */}
+                    <div className="max-h-96 space-y-3 overflow-y-auto pr-1">
                       {messages.filter(m => m.message_type !== "internal").map((msg) => {
                         const imgUrl = extractImageUrl(msg.message);
                         const isAdmin = msg.sender_role === "admin";
@@ -334,68 +401,115 @@ const AdminCustomOrderDetail = () => {
                         return (
                           <div
                             key={msg.id}
-                            className={`text-sm rounded-lg p-3 ${
+                            className={`text-sm rounded-xl p-3 ${
                               isSystem
-                                ? "bg-muted/50 text-muted-foreground text-center text-xs"
+                                ? "bg-muted/50 text-muted-foreground text-center text-xs italic"
                                 : isAdmin
-                                  ? "bg-primary/5 border border-primary/10 ml-8"
-                                  : "bg-muted mr-8"
+                                  ? "bg-primary/5 border border-primary/20 ml-8"
+                                  : "bg-muted/80 mr-8"
                             }`}
                           >
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="font-semibold text-xs capitalize">
-                                {isSystem ? "System" : msg.sender_role}
-                              </span>
-                              <span className="text-[10px] text-muted-foreground">
+                            {!isSystem && (
+                              <div className="flex items-center gap-2 mb-1.5">
+                                {isAdmin ? (
+                                  <div className="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center">
+                                    <Sparkles className="h-3 w-3 text-primary" />
+                                  </div>
+                                ) : (
+                                  <div className="h-5 w-5 rounded-full bg-muted-foreground/20 flex items-center justify-center text-[10px] font-bold text-muted-foreground">
+                                    {order.name?.[0]?.toUpperCase() || "U"}
+                                  </div>
+                                )}
+                                <span className="font-semibold text-xs capitalize">
+                                  {isAdmin ? "LayerLoot" : order.name || "Customer"}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground ml-auto">
+                                  {new Date(msg.created_at).toLocaleString()}
+                                </span>
+                              </div>
+                            )}
+                            {isSystem && (
+                              <span className="text-[10px] text-muted-foreground block mb-0.5">
                                 {new Date(msg.created_at).toLocaleString()}
                               </span>
-                            </div>
+                            )}
                             <p className="whitespace-pre-wrap">{stripImageUrl(msg.message)}</p>
                             {imgUrl && (
-                              <img src={imgUrl} alt="" className="mt-2 max-h-32 rounded border border-border" />
+                              <img src={imgUrl} alt="" className="mt-2 max-h-32 rounded-lg border border-border" />
                             )}
                             {msg.proposed_price != null && (
-                              <Badge variant="secondary" className="mt-1">{formatPrice(msg.proposed_price)}</Badge>
+                              <Badge variant="secondary" className="mt-1.5">
+                                <DollarSign className="mr-1 h-3 w-3" />
+                                {formatPrice(msg.proposed_price)}
+                              </Badge>
                             )}
                           </div>
                         );
                       })}
                       {messages.length === 0 && (
-                        <p className="text-sm text-muted-foreground text-center py-4">No messages yet</p>
+                        <p className="text-sm text-muted-foreground text-center py-6">No messages yet — start the conversation below.</p>
                       )}
+                      <div ref={messagesEndRef} />
                     </div>
 
-                    <Separator />
-
-                    <div className="flex gap-2">
-                      <Textarea
-                        placeholder="Write a message to customer…"
-                        value={threadMessage}
-                        onChange={(e) => setThreadMessage(e.target.value)}
-                        rows={2}
-                        className="flex-1"
-                      />
-                      <div className="flex flex-col gap-1">
-                        <Button size="sm" onClick={sendAdminMessage} disabled={saving || !threadMessage.trim()}>
-                          <Send className="h-3.5 w-3.5" />
+                    {/* Quick links */}
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <div className="flex items-center gap-1.5 flex-1 min-w-[200px]">
+                        <Input
+                          placeholder="Video link…"
+                          value={videoLink}
+                          onChange={(e) => setVideoLink(e.target.value)}
+                          className="h-8 text-xs"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 shrink-0"
+                          disabled={!videoLink.trim()}
+                          onClick={() => sendQuickLink("video", videoLink)}
+                        >
+                          <Video className="h-3.5 w-3.5 mr-1" /> Share
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-1 min-w-[200px]">
+                        <Input
+                          placeholder="Picture link…"
+                          value={pictureLink}
+                          onChange={(e) => setPictureLink(e.target.value)}
+                          className="h-8 text-xs"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 shrink-0"
+                          disabled={!pictureLink.trim()}
+                          onClick={() => sendQuickLink("picture", pictureLink)}
+                        >
+                          <ImageIcon className="h-3.5 w-3.5 mr-1" /> Share
                         </Button>
                       </div>
                     </div>
 
-                    {/* Customer offer response */}
-                    {order.customer_response_status === "countered" && order.customer_offer_price && (
-                      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
-                        <p className="text-sm font-medium mb-2">
-                          Customer counter-offer: <span className="text-primary font-bold">{formatPrice(order.customer_offer_price)}</span>
-                        </p>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="default" onClick={() => respondToOffer(true)} disabled={saving}>
-                            <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Accept
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => respondToOffer(false)} disabled={saving}>
-                            <XCircle className="mr-1.5 h-3.5 w-3.5" /> Decline
-                          </Button>
-                        </div>
+                    <Separator />
+
+                    {/* Compose */}
+                    {isClosed ? (
+                      <div className="text-center py-3 text-sm text-muted-foreground bg-muted/30 rounded-lg">
+                        <Lock className="inline h-3.5 w-3.5 mr-1.5" />
+                        Conversation closed · Replies disabled
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Textarea
+                          placeholder="Write a message to customer…"
+                          value={threadMessage}
+                          onChange={(e) => setThreadMessage(e.target.value)}
+                          rows={2}
+                          className="flex-1"
+                        />
+                        <Button size="sm" onClick={sendAdminMessage} disabled={saving || !threadMessage.trim()} className="self-end h-10 px-4">
+                          <Send className="h-4 w-4" />
+                        </Button>
                       </div>
                     )}
                   </TabsContent>
@@ -432,16 +546,148 @@ const AdminCustomOrderDetail = () => {
                 </Tabs>
               </CardContent>
             </Card>
+
+            {/* Request Details — COMPACT */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="font-display text-sm uppercase">Request Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {/* Description */}
+                <p className="text-sm whitespace-pre-wrap text-muted-foreground">{order.description}</p>
+
+                {/* Parsed metadata fields */}
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
+                  {details.orderType && (
+                    <>
+                      <span className="text-muted-foreground">Type</span>
+                      <span className="font-medium capitalize">{details.orderType}</span>
+                    </>
+                  )}
+                  {details.dimensions && (
+                    <>
+                      <span className="text-muted-foreground">Dimensions</span>
+                      <span className="font-medium">{details.dimensions}</span>
+                    </>
+                  )}
+                  {details.material && (
+                    <>
+                      <span className="text-muted-foreground">Material</span>
+                      <span className="font-medium capitalize">{details.material}</span>
+                    </>
+                  )}
+                  {details.finish && (
+                    <>
+                      <span className="text-muted-foreground">Finish</span>
+                      <span className="font-medium capitalize">{details.finish}</span>
+                    </>
+                  )}
+                  {details.color && (
+                    <>
+                      <span className="text-muted-foreground">Color</span>
+                      <span className="font-medium capitalize">{details.color}</span>
+                    </>
+                  )}
+                  {details.quantity && (
+                    <>
+                      <span className="text-muted-foreground">Quantity</span>
+                      <span className="font-medium">{details.quantity}</span>
+                    </>
+                  )}
+                  {details.printTime && (
+                    <>
+                      <span className="text-muted-foreground">Est. Print Time</span>
+                      <span className="font-medium">{details.printTime}</span>
+                    </>
+                  )}
+                  {details.estimatedPrice && (
+                    <>
+                      <span className="text-muted-foreground">Est. Price</span>
+                      <span className="font-medium">{details.estimatedPrice}</span>
+                    </>
+                  )}
+                  {/* Additional options */}
+                  {details.options && Object.entries(details.options).map(([k, v]) => (
+                    <React.Fragment key={k}>
+                      <span className="text-muted-foreground capitalize">{k}</span>
+                      <span className="font-medium">{v}</span>
+                    </React.Fragment>
+                  ))}
+                </div>
+
+                {/* Customer notes */}
+                {details.customerNotes && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground text-xs uppercase tracking-wide">Customer Notes</span>
+                    <p className="mt-0.5">{details.customerNotes}</p>
+                  </div>
+                )}
+
+                {/* Model file info */}
+                {order.model_filename && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground text-xs uppercase tracking-wide">Uploaded File</span>
+                    <p className="mt-0.5 font-medium">{order.model_filename}</p>
+                  </div>
+                )}
+
+                {/* Collapsible Media & Attachments */}
+                {(order.model_url || metadata?.reference_image_url) && (
+                  <Collapsible open={mediaOpen} onOpenChange={setMediaOpen}>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" size="sm" className="w-full justify-start text-xs text-muted-foreground hover:text-foreground -mx-1">
+                        {mediaOpen ? <ChevronDown className="mr-1.5 h-3.5 w-3.5" /> : <ChevronRight className="mr-1.5 h-3.5 w-3.5" />}
+                        <Paperclip className="mr-1.5 h-3.5 w-3.5" />
+                        Media & Attachments
+                        <Badge variant="secondary" className="ml-2 text-[10px]">
+                          {(order.model_url ? 1 : 0) + (metadata?.reference_image_url ? 1 : 0)}
+                        </Badge>
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-3 pt-2">
+                      {order.model_url && (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" asChild>
+                              <a href={order.model_url} target="_blank" rel="noreferrer">
+                                <Download className="mr-2 h-3.5 w-3.5" />
+                                {order.model_filename || "Download Model"}
+                              </a>
+                            </Button>
+                          </div>
+                          <div className="h-48 rounded-lg overflow-hidden border border-border">
+                            <ModelViewer url={order.model_url} />
+                          </div>
+                        </>
+                      )}
+                      {metadata?.reference_image_url && (
+                        <div>
+                          <a href={metadata.reference_image_url} target="_blank" rel="noreferrer" className="block">
+                            <img
+                              src={metadata.reference_image_url}
+                              alt="Reference"
+                              className="max-h-48 rounded-lg border border-border object-contain"
+                            />
+                          </a>
+                        </div>
+                      )}
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Status controls */}
+          {/* ── Sidebar ──────────────────────────────── */}
+          <div className="space-y-5">
+            {/* Status & Actions — no Admin Notes */}
             <Card>
-              <CardHeader><CardTitle className="font-display text-sm uppercase">Status & Actions</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
+              <CardHeader className="pb-3">
+                <CardTitle className="font-display text-sm uppercase">Status & Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
                 <div>
-                  <Label>Order Status</Label>
+                  <Label className="text-xs">Order Status</Label>
                   <Select value={statusUpdate} onValueChange={setStatusUpdate}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -452,7 +698,7 @@ const AdminCustomOrderDetail = () => {
                   </Select>
                 </div>
                 <div>
-                  <Label>Payment Status</Label>
+                  <Label className="text-xs">Payment Status</Label>
                   <Select value={paymentStatus} onValueChange={setPaymentStatus}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -463,7 +709,7 @@ const AdminCustomOrderDetail = () => {
                   </Select>
                 </div>
                 <div>
-                  <Label>Production Status</Label>
+                  <Label className="text-xs">Production Status</Label>
                   <Select value={productionStatus} onValueChange={setProductionStatus}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -473,35 +719,34 @@ const AdminCustomOrderDetail = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label>Admin Notes</Label>
-                  <Textarea value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} rows={3} />
-                </div>
                 <Button onClick={handleSave} disabled={saving} className="w-full font-display uppercase tracking-wider text-xs">
                   <Save className="mr-2 h-4 w-4" /> Save Changes
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Quote */}
+            {/* Quoting — no Customer Offer */}
             <Card>
-              <CardHeader><CardTitle className="font-display text-sm uppercase">Quoting</CardTitle></CardHeader>
+              <CardHeader className="pb-3">
+                <CardTitle className="font-display text-sm uppercase flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-primary" />
+                  Quoting
+                </CardTitle>
+              </CardHeader>
               <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <span className="text-muted-foreground">Quoted:</span>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+                  <span className="text-muted-foreground">Quoted</span>
                   <span className="font-semibold">{order.quoted_price ? formatPrice(order.quoted_price) : "—"}</span>
-                  <span className="text-muted-foreground">Customer offer:</span>
-                  <span className="font-semibold">{order.customer_offer_price ? formatPrice(order.customer_offer_price) : "—"}</span>
-                  <span className="text-muted-foreground">Agreed:</span>
+                  <span className="text-muted-foreground">Agreed</span>
                   <span className="font-semibold text-primary">{order.final_agreed_price ? formatPrice(order.final_agreed_price) : "—"}</span>
-                  <span className="text-muted-foreground">Request fee:</span>
+                  <span className="text-muted-foreground">Request Fee</span>
                   <Badge variant="outline" className={`text-xs ${order.request_fee_status === "paid" ? "border-green-500/30 text-green-600" : "border-yellow-500/30 text-yellow-600"}`}>
                     {order.request_fee_status} ({formatPrice(order.request_fee_amount)})
                   </Badge>
                 </div>
                 <Separator />
                 <div>
-                  <Label>New Quote (DKK)</Label>
+                  <Label className="text-xs">New Quote (DKK)</Label>
                   <Input
                     type="number"
                     value={quoteAmount}
@@ -512,6 +757,27 @@ const AdminCustomOrderDetail = () => {
                 <Button onClick={sendQuote} disabled={saving} variant="secondary" className="w-full text-xs font-display uppercase">
                   <DollarSign className="mr-2 h-3.5 w-3.5" /> Send Quote
                 </Button>
+              </CardContent>
+            </Card>
+
+            {/* Customer Info */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="font-display text-sm uppercase">Customer</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Name</span>
+                  <span className="font-medium">{order.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Email</span>
+                  <span className="font-medium truncate max-w-[180px]">{order.email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Submitted</span>
+                  <span className="font-medium">{new Date(order.created_at).toLocaleDateString()}</span>
+                </div>
               </CardContent>
             </Card>
           </div>

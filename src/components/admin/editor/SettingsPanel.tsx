@@ -800,6 +800,14 @@ function AdvancedStyleEditor({ content, patchContent }: { content: Record<string
         value={content.backgroundImage || ""}
         onChange={(v) => patchContent("backgroundImage", v)}
       />
+      {(content.backgroundImage || content.bg_image) && (
+        <SliderField
+          label="Image Opacity"
+          value={content.bgImageOpacity ?? 100}
+          onChange={(v) => patchContent("bgImageOpacity", v)}
+          min={0} max={100} step={5} unit="%"
+        />
+      )}
 
       {/* Spacing */}
       <div className="space-y-2">

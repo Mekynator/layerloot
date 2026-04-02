@@ -195,6 +195,9 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
                       <button onClick={(e) => { e.stopPropagation(); duplicateBlock(block.id); }} className="rounded p-0.5 text-muted-foreground hover:text-foreground" title="Duplicate">
                         <Copy className="h-2.5 w-2.5" />
                       </button>
+                      <button onClick={(e) => { e.stopPropagation(); saveAsReusable(block.id); }} className="rounded p-0.5 text-muted-foreground hover:text-foreground" title="Save as reusable">
+                        <BookmarkPlus className="h-2.5 w-2.5" />
+                      </button>
                       <button onClick={(e) => { e.stopPropagation(); deleteBlock(block.id); }} className="rounded p-0.5 text-muted-foreground hover:text-destructive" title="Delete">
                         <Trash2 className="h-2.5 w-2.5" />
                       </button>

@@ -47,6 +47,7 @@ export default function Creations() {
     return (
       <div>
         {!blocksLoading && topBlocks.map((block) => <div key={block.id}>{renderBlock(block)}</div>)}
+
         <div className="container mx-auto flex flex-col items-center justify-center gap-6 py-24 px-4 text-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/10">
@@ -63,6 +64,7 @@ export default function Creations() {
             </Button>
           </motion.div>
         </div>
+
         {!blocksLoading && bottomBlocks.map((block) => <div key={block.id}>{renderBlock(block)}</div>)}
       </div>
     );
@@ -70,32 +72,20 @@ export default function Creations() {
 
   return (
     <div>
+      {/* Editor-managed blocks above the functional content */}
       {!blocksLoading && topBlocks.map((block) => <div key={block.id}>{renderBlock(block)}</div>)}
 
+      {/* Functional core – showcase tabs */}
       <div className="container mx-auto px-4 py-8 space-y-6">
-        {/* Page header */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
-        >
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              <p className="text-[11px] font-display uppercase tracking-[0.24em] text-primary font-semibold">Creator Gallery</p>
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight lg:text-3xl">Community Creations</h1>
-            <p className="text-sm text-muted-foreground">
-              Explore, share, and reorder custom 3D printed creations
-            </p>
-          </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div />
           <Button
             onClick={() => { setTab("create"); setShowForm(true); }}
             className="gap-2 rounded-xl shrink-0"
           >
             <Plus className="h-4 w-4" /> New Creation
           </Button>
-        </motion.div>
+        </div>
 
         <Tabs value={tab} onValueChange={(v) => { setTab(v); if (v !== "create") setShowForm(false); }}>
           <TabsList className="w-full sm:w-auto rounded-xl bg-muted/50 p-1">
@@ -128,6 +118,7 @@ export default function Creations() {
         </Tabs>
       </div>
 
+      {/* Editor-managed blocks below the functional content */}
       {!blocksLoading && bottomBlocks.map((block) => <div key={block.id}>{renderBlock(block)}</div>)}
     </div>
   );

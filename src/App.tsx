@@ -44,6 +44,7 @@ import AdminMedia from "./pages/admin/AdminMedia";
 import AdminReusableBlocks from "./pages/admin/AdminReusableBlocks";
 import AdminTranslations from "./pages/admin/AdminTranslations";
 import AdminRoute from "./components/admin/AdminRoute";
+import AdminChatSettings from "./pages/admin/AdminChatSettings";
 import DynamicPage from "./pages/DynamicPage";
 import CreateYourOwn from "./pages/CreateYourOwn";
 import Policies from "./pages/Policies";

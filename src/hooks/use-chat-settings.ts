@@ -189,7 +189,7 @@ export interface ChatConfig {
   quickReplies: ChatQuickReply[];
   pageRules: ChatPageRule[];
   campaignOverrides: Record<string, ChatCampaignOverrides>;
-  responsive: ChatResponsiveConfig;
+  responsive: Omit<ChatResponsiveConfig, 'avoidOverlap'> & { avoidOverlap?: string[] };
   analytics: ChatAnalyticsConfig;
   disabledPages: string[];
   enabledLanguages: string[];

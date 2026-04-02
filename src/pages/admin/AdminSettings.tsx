@@ -21,6 +21,99 @@ import DraftActionBar from "@/components/admin/DraftActionBar";
 import { useAuth } from "@/contexts/AuthContext";
 import CustomOrderAutomationRulesEditor from "@/components/admin/CustomOrderAutomationRulesEditor";
 import CustomOrderTemplatesEditor from "@/components/admin/CustomOrderTemplatesEditor";
+import { Slider } from "@/components/ui/slider";
+import { parsePersonalizationWeights, type PersonalizationWeights } from "@/hooks/use-personalization-engine";
+
+/* ─── Personalization Settings Component ─── */
+const PersonalizationSettings = () => {
+  const { toast } = useToast();
+  const [weights, setWeights] = useState<PersonalizationWeights>({ behavior: 1, preference: 1, popularity: 1, recency: 1, adminBoostIds: [], enabled: true });
+  const [boostInput, setBoostInput] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase.from("site_settings").select("value").eq("key", "personalization_weights").maybeSingle();
+      if (data?.value) {
+        const parsed = parsePersonalizationWeights(data.value);
+        setWeights(parsed);
+        setBoostInput(parsed.adminBoostIds.join(", "));
+      }
+    };
+    load();
+  }, []);
+
+  const save = async () => {
+    setSaving(true);
+    const toSave = { ...weights, adminBoostIds: boostInput.split(",").map((s) => s.trim()).filter(Boolean) };
+    const { data: existing } = await supabase.from("site_settings").select("id").eq("key", "personalization_weights").maybeSingle();
+    if (existing) {
+      await supabase.from("site_settings").update({ value: toSave as any }).eq("key", "personalization_weights");
+    } else {
+      await supabase.from("site_settings").insert({ key: "personalization_weights", value: toSave as any });
+    }
+    setSaving(false);
+    toast({ title: "Personalization settings saved" });
+  };
+
+  const sliders: { key: keyof Pick<PersonalizationWeights, "behavior" | "preference" | "popularity" | "recency">; label: string; desc: string }[] = [
+    { key: "behavior", label: "Behavior Weight", desc: "How much browsing history affects recommendations" },
+    { key: "preference", label: "Preference Weight", desc: "How much saved preferences affect recommendations" },
+    { key: "popularity", label: "Popularity Weight", desc: "How much ratings and featured status affect ranking" },
+    { key: "recency", label: "Recency Weight", desc: "How much new arrivals are boosted" },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">Control how the AI personalization engine ranks products across the site.</p>
+        <Button onClick={save} disabled={saving} size="sm" className="font-display text-xs uppercase tracking-wider">
+          <Save className="mr-1 h-4 w-4" /> {saving ? "Saving..." : "Save"}
+        </Button>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-display text-sm uppercase">Engine Settings</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="flex items-center gap-3">
+            <Switch checked={weights.enabled} onCheckedChange={(v) => setWeights((p) => ({ ...p, enabled: v }))} />
+            <Label className="text-xs">Enable personalization globally</Label>
+          </div>
+
+          {sliders.map((s) => (
+            <div key={s.key} className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium">{s.label}</Label>
+                <span className="text-xs text-muted-foreground">{weights[s.key].toFixed(1)}×</span>
+              </div>
+              <Slider
+                min={0}
+                max={3}
+                step={0.1}
+                value={[weights[s.key]]}
+                onValueChange={([v]) => setWeights((p) => ({ ...p, [s.key]: v }))}
+              />
+              <p className="text-[10px] text-muted-foreground">{s.desc}</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-display text-sm uppercase">Admin Boost Products</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <p className="text-[10px] text-muted-foreground">Enter product IDs (comma-separated) to boost in all recommendation sections.</p>
+          <Input value={boostInput} onChange={(e) => setBoostInput(e.target.value)} placeholder="product-id-1, product-id-2" className="font-mono text-xs" />
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+import CustomOrderTemplatesEditor from "@/components/admin/CustomOrderTemplatesEditor";
 
 /* ─── Types ─── */
 interface PromoConfig {

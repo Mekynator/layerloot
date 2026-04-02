@@ -492,7 +492,7 @@ const ChatWidget = () => {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.85, opacity: 0 }}
             whileHover={{ y: -4, scale: 1.04 }}
-            className="fixed bottom-6 right-6 z-50"
+            className={`fixed bottom-6 ${posClass} z-50`}
           >
             <Button onClick={openChat} size="lg" className="relative h-14 w-14 rounded-full shadow-2xl">
               <MessageCircle className="h-6 w-6" />

@@ -536,7 +536,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     frontendPages,
     globalPages,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [pages, activePage, selectedPage, pageBlocks, savedBlocks, isDirty, selectedBlockId, selectedBlock, hoveredBlockId, saving, publishing, draftStatus, viewport, frontendPages, globalPages, undoVersion, selectedElement, inlineEditingKey]);
+  }), [pages, activePage, selectedPage, pageBlocks, savedBlocks, isDirty, selectedBlockId, selectedBlock, hoveredBlockId, saving, publishing, draftStatus, scheduledAt, viewport, frontendPages, globalPages, undoVersion, selectedElement, inlineEditingKey]);
 
   return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;
 }

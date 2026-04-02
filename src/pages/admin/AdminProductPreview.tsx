@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDKK } from "@/lib/currency";
+import { formatPrice } from "@/lib/currency";
 
 const AdminProductPreview = () => {
   const { productId } = useParams<{ productId: string }>();

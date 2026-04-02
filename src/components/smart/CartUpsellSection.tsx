@@ -2,9 +2,9 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Zap, TrendingUp, Package } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/currency";
+import { usePersonalizationEngine } from "@/hooks/use-personalization-engine";
 import type { CatalogProduct } from "@/hooks/use-storefront";
 
 interface Props {
@@ -15,25 +15,24 @@ interface Props {
 }
 
 export default function CartUpsellSection({ cartProductIds, allProducts, freeShippingGap, onQuickAdd }: Props) {
+  const engine = usePersonalizationEngine();
+
   const upsells = useMemo(() => {
     const cartSet = new Set(cartProductIds);
     const candidates = allProducts.filter((p) => !cartSet.has(p.id));
 
-    // If close to free shipping, prioritize products that fill the gap
+    // If close to free shipping, prioritize products that fill the gap, ranked by personalization
     if (freeShippingGap > 0 && freeShippingGap <= 200) {
       const fillers = candidates
-        .filter((p) => p.price <= freeShippingGap + 50 && p.price >= freeShippingGap * 0.5)
-        .sort((a, b) => Math.abs(a.price - freeShippingGap) - Math.abs(b.price - freeShippingGap))
-        .slice(0, 3);
-      if (fillers.length > 0) return { type: "shipping" as const, products: fillers };
+        .filter((p) => p.price <= freeShippingGap + 50 && p.price >= freeShippingGap * 0.5);
+      const ranked = engine.rankProducts(fillers, undefined, 3);
+      if (ranked.length > 0) return { type: "shipping" as const, products: ranked };
     }
 
-    // Otherwise show popular / featured items
-    const popular = candidates
-      .filter((p) => p.is_featured)
-      .slice(0, 3);
-    return { type: "popular" as const, products: popular.length ? popular : candidates.slice(0, 3) };
-  }, [cartProductIds, allProducts, freeShippingGap]);
+    // Otherwise rank all candidates by personalization score
+    const ranked = engine.rankProducts(candidates, undefined, 3);
+    return { type: "popular" as const, products: ranked };
+  }, [cartProductIds, allProducts, freeShippingGap, engine.rankProducts]);
 
   if (upsells.products.length === 0) return null;
 

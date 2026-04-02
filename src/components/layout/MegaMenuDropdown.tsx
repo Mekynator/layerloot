@@ -131,7 +131,26 @@ const MegaMenuDropdown = ({ config, children, linkTo }: MegaMenuDropdownProps) =
     enabled: open && !!hoveredCategoryId,
   });
 
-  const parentCategories = useMemo(() => categories.filter((c) => !c.parent_id), [categories]);
+  // Reorder categories: user's top categories first
+  const parentCategories = useMemo(() => {
+    const parents = categories.filter((c) => !c.parent_id);
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("layerloot_user_behavior");
+        if (raw) {
+          const behavior = JSON.parse(raw);
+          const catCounts = new Map<string, number>();
+          (behavior.viewedProducts || []).forEach((p: any) => {
+            if (p.categoryId) catCounts.set(p.categoryId, (catCounts.get(p.categoryId) || 0) + p.count);
+          });
+          if (catCounts.size > 0) {
+            return [...parents].sort((a, b) => (catCounts.get(b.id) || 0) - (catCounts.get(a.id) || 0));
+          }
+        }
+      } catch {}
+    }
+    return parents;
+  }, [categories]);
   const getChildren = useCallback(
     (parentId: string) => categories.filter((c) => c.parent_id === parentId),
     [categories],

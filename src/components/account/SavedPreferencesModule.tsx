@@ -129,6 +129,14 @@ const SavedPreferencesModule = ({ tt }: Pick<AccountModuleProps, "tt">) => {
     toast({ title: tt("account.preferences.cleared", "Preferences cleared") });
   };
 
+  const resetAllPersonalization = () => {
+    clearAll();
+    localStorage.removeItem("layerloot_user_behavior");
+    localStorage.removeItem("layerloot_remembered_choices");
+    toast({ title: tt("account.preferences.personalizationReset", "All personalization data cleared") });
+    setTimeout(() => window.location.reload(), 500);
+  };
+
   const hasSaved = materials.length > 0 || colors.length > 0 || finishes.length > 0 || categories.length > 0;
 
   const sections = [
@@ -273,6 +281,19 @@ const SavedPreferencesModule = ({ tt }: Pick<AccountModuleProps, "tt">) => {
           </CardContent>
         </Card>
       )}
+
+      {/* Reset all personalization */}
+      <Card className="border-destructive/20">
+        <CardContent className="flex items-center justify-between p-4">
+          <div>
+            <p className="text-xs font-medium text-foreground">{tt("account.preferences.resetPersonalization", "Reset All Personalization")}</p>
+            <p className="text-[10px] text-muted-foreground">{tt("account.preferences.resetHint", "Clears all browsing history, preferences, and recommendation data")}</p>
+          </div>
+          <Button variant="destructive" size="sm" className="text-xs" onClick={resetAllPersonalization}>
+            <Trash2 className="mr-1 h-3 w-3" /> {tt("account.preferences.resetAll", "Reset Everything")}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 };

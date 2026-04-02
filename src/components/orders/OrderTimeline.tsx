@@ -66,11 +66,14 @@ export function mapOrderToTimelineSteps(
   status: string,
   productionStatus?: string,
   timestamps?: Record<string, string | null>,
+  adminMode?: boolean,
 ): TimelineStep[] {
   const effectiveStatus = productionStatus || status || "pending";
-  const activeIdx = STATUS_TO_STEP_INDEX[effectiveStatus.toLowerCase()] ?? 0;
+  const steps = adminMode ? ADMIN_STEP_DEFINITIONS : STEP_DEFINITIONS;
+  const indexMap = adminMode ? ADMIN_STATUS_TO_STEP_INDEX : STATUS_TO_STEP_INDEX;
+  const activeIdx = indexMap[effectiveStatus.toLowerCase()] ?? 0;
 
-  return STEP_DEFINITIONS.map((step, idx) => ({
+  return steps.map((step, idx) => ({
     ...step,
     completed: idx < activeIdx || effectiveStatus.toLowerCase() === "delivered",
     active: idx === activeIdx,

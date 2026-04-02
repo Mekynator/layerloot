@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Save, Undo2, Redo2, Plus, Monitor, Tablet, Smartphone,
   X, AlertCircle, Settings2, Trash2, ExternalLink, Eye, Upload, RotateCcw, CheckCircle2,
-  History, Clock, ChevronDown,
+  History, Clock, ChevronDown, Globe,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { useVisualEditor, pageToEditorKey, pageDisplayTitle, pageToRealPath } fr
 import { useAdminPermissions } from "@/hooks/use-admin-permissions";
 import RevisionHistoryPanel from "@/components/admin/RevisionHistoryPanel";
 import SchedulePublishDialog from "@/components/admin/SchedulePublishDialog";
+import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, type SupportedLanguage } from "@/lib/i18n";
 
 interface EditorToolbarProps {
   onAddBlock: () => void;
@@ -166,6 +167,19 @@ export default function EditorToolbar({ onAddBlock, onPageSettings, onDeletePage
             </Tooltip>
           ))}
         </div>
+
+        {/* Locale preview switcher */}
+        <Select defaultValue="en">
+          <SelectTrigger className="h-8 w-32 border-border/30 bg-background/50 text-xs gap-1">
+            <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SUPPORTED_LANGUAGES.map(l => (
+              <SelectItem key={l} value={l}>{LANGUAGE_LABELS[l]}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         {/* Right section */}
         <div className="flex items-center gap-1.5">

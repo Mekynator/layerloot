@@ -1749,6 +1749,60 @@ export type Database = {
         }
         Relationships: []
       }
+      translation_entries: {
+        Row: {
+          created_at: string
+          draft_value: string | null
+          has_draft: boolean
+          id: string
+          is_published: boolean
+          key: string
+          locale: string
+          namespace: string
+          published_at: string | null
+          published_by: string | null
+          source_hash: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          draft_value?: string | null
+          has_draft?: boolean
+          id?: string
+          is_published?: boolean
+          key: string
+          locale: string
+          namespace?: string
+          published_at?: string | null
+          published_by?: string | null
+          source_hash?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: string
+        }
+        Update: {
+          created_at?: string
+          draft_value?: string | null
+          has_draft?: boolean
+          id?: string
+          is_published?: boolean
+          key?: string
+          locale?: string
+          namespace?: string
+          published_at?: string | null
+          published_by?: string | null
+          source_hash?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
       user_gift_notifications: {
         Row: {
           claimed_at: string | null

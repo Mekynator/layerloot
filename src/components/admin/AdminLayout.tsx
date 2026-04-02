@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Tags, ArrowLeft, Layers, Menu, X,
   Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
   Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone,
-  BarChart3, Wallet, ImageIcon, Shield, Activity,
+  BarChart3, Wallet, ImageIcon, Shield, Activity, Globe,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminPermissions } from "@/hooks/use-admin-permissions";
@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 const ICON_MAP: Record<string, typeof Package> = {
   LayoutDashboard, Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
   Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone, BarChart3,
-  Wallet, Tags, Layers, ImageIcon, Shield, Activity,
+  Wallet, Tags, Layers, ImageIcon, Shield, Activity, Globe,
 };
 
 export interface SidebarItem {
@@ -40,6 +40,7 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
         { id: "editor", to: "/admin/editor", label: "Page Editor", icon: "FileText", visible: true, permission: "content.edit" },
         { id: "media", to: "/admin/media", label: "Media Library", icon: "ImageIcon", visible: true, permission: "media.manage" },
         { id: "reusable", to: "/admin/reusable-blocks", label: "Reusable Blocks", icon: "Box", visible: true, permission: "content.edit" },
+        { id: "translations", to: "/admin/translations", label: "Translations", icon: "Globe", visible: true, permission: "translations.manage" },
         { id: "backgrounds", to: "/admin/backgrounds", label: "Backgrounds", icon: "ImageIcon", visible: true, permission: "backgrounds.manage" },
         { id: "settings", to: "/admin/settings", label: "Settings", icon: "Settings", visible: true, permission: "settings.view" },
       ],

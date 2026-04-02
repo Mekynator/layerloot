@@ -39,6 +39,7 @@ import AdminActivity from "./pages/admin/AdminActivity";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminMedia from "./pages/admin/AdminMedia";
 import AdminReusableBlocks from "./pages/admin/AdminReusableBlocks";
+import AdminTranslations from "./pages/admin/AdminTranslations";
 import AdminRoute from "./components/admin/AdminRoute";
 import DynamicPage from "./pages/DynamicPage";
 import CreateYourOwn from "./pages/CreateYourOwn";
@@ -110,6 +111,7 @@ const AppShell = () => {
           <Route path="/admin/backgrounds" element={<AdminRoute requiredPermission="backgrounds.manage"><AdminBackgrounds /></AdminRoute>} />
           <Route path="/admin/media" element={<AdminRoute requiredPermission="media.manage"><AdminMedia /></AdminRoute>} />
           <Route path="/admin/reusable-blocks" element={<AdminRoute requiredPermission="content.edit"><AdminReusableBlocks /></AdminRoute>} />
+          <Route path="/admin/translations" element={<AdminRoute requiredPermission="translations.manage"><AdminTranslations /></AdminRoute>} />
           <Route path="/admin/activity" element={<AdminRoute requiredPermission="reports.view"><AdminActivity /></AdminRoute>} />
           <Route path="/admin/users" element={<AdminRoute requiredPermission="*"><AdminUsers /></AdminRoute>} />
           <Route path="/policies/:slug" element={<Policies />} />

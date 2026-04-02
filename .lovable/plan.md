@@ -1,108 +1,185 @@
 
 
-# Connect All Admin Editors to Draft/Preview/Publish Architecture
+# Admin Roles, Permissions & Activity Tracking System
 
 ## Current State
-The draft/publish system is already working for:
-- **Visual Editor** (blocks) — via `VisualEditorContext.tsx` + `use-draft-publish.ts`
-- **Backgrounds** — via `AdminBackgrounds.tsx` using `saveDraftSetting`/`publishDraftSetting`
-
-Still writing **directly to live `site_settings.value`** (bypassing draft):
-- **AdminSettings.tsx** — `upsertSetting()` writes directly to `value` for: contact, store, promo popup, footer, branding, policies, account page config, dashboard shortcuts, sidebar config
-- **NavLinkEditor.tsx** — saves header/footer nav links directly via `.upsert()` to `value`
-- **PageBackgroundEditor.tsx** (dialog version) — still writes directly to `value`
-- **RewardsStoreEditor.tsx** — writes directly to `vouchers` table (not site_settings, lower priority)
+- Single `app_role` enum with values `admin`, `moderator`, `user`
+- `user_roles` table links users to roles
+- `has_role()` security definer function checks role membership
+- `AdminRoute` component checks binary `isAdmin` (admin or not)
+- No granular permissions, no activity logging, no multi-tier admin access
 
 ## Architecture
 
-### Strategy: Unified `useDraftSettings` hook + per-editor integration
+### Database Changes
 
-Create a reusable React hook `useDraftSettings(key)` that wraps the existing `loadDraftSetting`/`saveDraftSetting`/`publishDraftSetting`/`discardDraftSetting` functions and exposes a clean API for any settings editor. Then connect each admin editor to use it.
+**Migration 1: Extend `app_role` enum + create permissions & activity tables**
 
-### Scope classification
+```sql
+-- Add new admin role levels
+ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'super_admin';
+ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'editor';
+ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'support';
 
-**Storefront-affecting settings (must use draft/publish):**
-- `contact` — contact info shown in footer
-- `store` — store name, currency
-- `branding` — logo config
-- `footer_settings` — footer layout/labels
-- `promotion_popup` — promo popup config
-- `policy_*` — legal pages content
-- `account_page_config` — account page layout
-- `header_nav_links` / `footer_nav_links` — navigation
-- `page_background_global` — already connected
+-- Permission definitions per role
+CREATE TABLE public.admin_permissions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  role app_role NOT NULL,
+  permission text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (role, permission)
+);
+ALTER TABLE public.admin_permissions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Admins read permissions" ON public.admin_permissions
+  FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Super admins manage permissions" ON public.admin_permissions
+  FOR ALL TO authenticated USING (has_role(auth.uid(), 'super_admin'));
 
-**Admin-only settings (keep saving directly, not public-facing):**
-- `admin_dashboard_shortcuts` — admin internal
-- `admin_sidebar_config` — admin internal
+-- Seed default permissions
+INSERT INTO public.admin_permissions (role, permission) VALUES
+  ('super_admin','*'),
+  ('admin','products.manage'),('admin','orders.manage'),('admin','customers.view'),
+  ('admin','reviews.manage'),('admin','showcases.manage'),('admin','discounts.manage'),
+  ('admin','shipping.manage'),('admin','content.edit'),('admin','content.publish'),
+  ('admin','categories.manage'),('admin','pricing.manage'),('admin','campaigns.manage'),
+  ('admin','reports.view'),('admin','revenue.view'),('admin','backgrounds.manage'),
+  ('admin','settings.view'),
+  ('editor','content.edit'),('editor','content.preview'),('editor','backgrounds.manage'),
+  ('editor','categories.manage'),
+  ('support','orders.manage'),('support','customers.view'),('support','reviews.manage');
 
-## Implementation Plan
-
-### 1. Create `useDraftSettings` hook
-New file: `src/hooks/use-draft-settings.ts`
-
-A reusable hook that takes a settings key and returns:
-```typescript
-{
-  value: T,           // draft if exists, else live
-  liveValue: T,       // always live
-  hasDraft: boolean,
-  draftStatus: DraftStatus,
-  loading: boolean,
-  setValue: (v: T) => void,       // update local state
-  saveDraft: () => Promise<void>, // persist to draft_value column
-  publish: () => Promise<void>,   // promote draft_value → value
-  discard: () => Promise<void>,   // clear draft_value, reload live
-}
+-- Activity log
+CREATE TABLE public.admin_activity_log (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  user_email text,
+  user_role text,
+  action text NOT NULL,
+  entity_type text,
+  entity_id text,
+  summary text,
+  metadata jsonb DEFAULT '{}',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.admin_activity_log ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Admin roles can view activity" ON public.admin_activity_log
+  FOR SELECT TO authenticated
+  USING (has_role(auth.uid(), 'admin') OR has_role(auth.uid(), 'super_admin'));
+CREATE POLICY "Any admin can insert activity" ON public.admin_activity_log
+  FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() = user_id);
+CREATE INDEX idx_activity_created ON public.admin_activity_log (created_at DESC);
+CREATE INDEX idx_activity_user ON public.admin_activity_log (user_id);
 ```
 
-This eliminates repeated draft logic in every editor.
+**Migration 2: Create `has_permission` security definer function**
 
-### 2. Create `DraftActionBar` component
-New file: `src/components/admin/DraftActionBar.tsx`
+```sql
+CREATE OR REPLACE FUNCTION public.has_permission(_user_id uuid, _permission text)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.admin_permissions ap
+    JOIN public.user_roles ur ON ur.role = ap.role
+    WHERE ur.user_id = _user_id
+      AND (ap.permission = _permission OR ap.permission = '*')
+  )
+$$;
+```
 
-A shared UI bar with Save Draft / Publish / Discard Draft / status badge. Used by all settings editors for visual consistency.
+### Code Changes
 
-### 3. Refactor AdminSettings.tsx
-- Replace `upsertSetting()` with draft-based saves for storefront settings
-- Use multiple `useDraftSettings` instances for each config key
-- Keep `admin_dashboard_shortcuts` and `admin_sidebar_config` saving directly (admin-internal)
-- Add `DraftActionBar` with Save Draft / Publish / Discard buttons
-- Split save into "Save Draft" (all storefront settings to draft_value) and "Publish" (promote all to value)
+**1. New: `src/hooks/use-admin-permissions.ts`**
+- Hook that loads the current user's admin role and resolved permissions list
+- Exposes `{ adminRole, permissions, hasPermission(p), loading }`
+- Queries `user_roles` + `admin_permissions` on mount
+- Caches in state; provides `can('content.publish')` style checks
 
-### 4. Refactor NavLinkEditor.tsx
-- Replace direct `.upsert()` with `saveDraftSetting` / `publishDraftSetting`
-- Add draft status badge and Publish button
-- Load from draft_value when available
+**2. New: `src/lib/activity-log.ts`**
+- Helper `logAdminActivity({ userId, userEmail, userRole, action, entityType, entityId, summary, metadata })`
+- Inserts into `admin_activity_log`
+- Used across editors: publish, save draft, order status change, role change, etc.
 
-### 5. Update PageBackgroundEditor.tsx (dialog)
-- Replace direct `.upsert()` to `value` with `saveDraftSetting`
-- Or deprecate the dialog in favor of the AdminBackgrounds page (which is already connected)
+**3. New: `src/pages/admin/AdminActivity.tsx`**
+- Activity log viewer page with table of recent actions
+- Filters by user, action type, date range, entity type
+- Pagination support
 
-### 6. Preview frame consistency
-- `EditorPreviewFrame` already loads via iframe with `?editorPreview=1`
-- The iframe renders blocks from `site_blocks` where the public query reads `content` column
-- For settings-based preview, the iframe currently reads live `value` — update `GlobalSectionRenderer` and `PageBackgroundSlideshow` to check for `draft_value` when `editorPreview=1` param is present
-- This ensures preview reflects draft settings too
+**4. New: `src/pages/admin/AdminUsers.tsx`**
+- Admin user management page (super_admin only)
+- Lists users with their roles from `admin-users` edge function
+- Assign/change roles via `user_roles` table
+- Shows last login, role badge
 
-### 7. Public query safety
-- Public pages already read only `content` (blocks) and `value` (settings) — no changes needed
-- The `draft_value` / `draft_content` columns are never read by public components
-- Verify `GlobalSectionRenderer.tsx`, `use-page-blocks.ts`, `PageBackgroundSlideshow.tsx`, `use-storefront.ts` all read `value`/`content` only — confirmed, no changes needed
+**5. Modify: `src/components/admin/AdminRoute.tsx`**
+- Accept optional `requiredPermission` prop
+- Check `has_permission` in addition to basic admin check
+- Redirect to dashboard with toast if insufficient permission
 
-## Files to create
-| File | Purpose |
+**6. Modify: `src/contexts/AuthContext.tsx`**
+- Expand `isAdmin` to also recognize `super_admin`, `editor`, `support` roles
+- Add `adminRole: string | null` to context
+- Add `permissions: string[]` to context
+
+**7. Modify: `src/components/admin/AdminLayout.tsx`**
+- Filter sidebar items based on user permissions
+- Add "Activity Log" and "Admin Users" sidebar items
+- Map each sidebar item `id` to a required permission
+
+**8. Modify: `src/App.tsx`**
+- Add routes for `/admin/activity` and `/admin/users`
+- Pass `requiredPermission` to `AdminRoute` for restricted pages:
+  - `/admin/settings` → `settings.view`
+  - `/admin/users` → `*` (super_admin only)
+  - `/admin/editor` → `content.edit`
+  - etc.
+
+**9. Modify: `src/components/admin/DraftActionBar.tsx`**
+- Accept `canPublish` prop; disable Publish button if false
+- Consumer components pass `hasPermission('content.publish')`
+
+**10. Sprinkle `logAdminActivity()` calls** into:
+- `use-draft-publish.ts` (publish, revert)
+- `AdminSettings.tsx` (publish settings)
+- `AdminOrders.tsx` (status changes)
+- `AdminRoute.tsx` (login tracking via auth state)
+
+### Permission-to-Route Map
+
+| Route | Permission |
 |---|---|
-| `src/hooks/use-draft-settings.ts` | Reusable hook wrapping draft setting operations |
-| `src/components/admin/DraftActionBar.tsx` | Shared Save Draft / Publish / Discard UI bar |
+| `/admin` | any admin role |
+| `/admin/products` | `products.manage` |
+| `/admin/orders` | `orders.manage` |
+| `/admin/clients` | `customers.view` |
+| `/admin/editor` | `content.edit` |
+| `/admin/backgrounds` | `backgrounds.manage` |
+| `/admin/settings` | `settings.view` |
+| `/admin/users` | `*` |
+| `/admin/activity` | `reports.view` |
+| `/admin/discounts` | `discounts.manage` |
+| `/admin/shipping` | `shipping.manage` |
+| `/admin/pricing` | `pricing.manage` |
+| `/admin/reviews` | `reviews.manage` |
+| `/admin/reports` | `reports.view` |
 
-## Files to modify
-| File | Change |
+### Files Summary
+
+| Action | File |
 |---|---|
-| `src/pages/admin/AdminSettings.tsx` | Replace `upsertSetting` with draft flow for storefront settings, add DraftActionBar |
-| `src/components/admin/NavLinkEditor.tsx` | Use draft save/publish instead of direct upsert |
-| `src/components/admin/PageBackgroundEditor.tsx` | Use draft save instead of direct upsert |
+| Create | `src/hooks/use-admin-permissions.ts` |
+| Create | `src/lib/activity-log.ts` |
+| Create | `src/pages/admin/AdminActivity.tsx` |
+| Create | `src/pages/admin/AdminUsers.tsx` |
+| Modify | `src/components/admin/AdminRoute.tsx` |
+| Modify | `src/contexts/AuthContext.tsx` |
+| Modify | `src/components/admin/AdminLayout.tsx` |
+| Modify | `src/components/admin/DraftActionBar.tsx` |
+| Modify | `src/App.tsx` |
+| Modify | `src/hooks/use-draft-publish.ts` (add activity logging on publish/revert) |
 
-## No database changes needed
-All draft columns already exist on `site_settings` from the previous migration.
+### Database Changes Summary
+- Extend `app_role` enum: +`super_admin`, +`editor`, +`support`
+- Create `admin_permissions` table with role-permission mapping + seed data
+- Create `admin_activity_log` table with admin-only RLS
+- Create `has_permission()` security definer function
 

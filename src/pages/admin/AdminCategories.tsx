@@ -157,6 +157,9 @@ const AdminCategories = () => {
       icon_key: giftTagForm.icon_key?.trim() || null,
       sort_order: Number(giftTagForm.sort_order) || 0,
       is_active: giftTagForm.is_active,
+      image_url: giftTagForm.image_url?.trim() || null,
+      image_opacity: (giftTagForm.image_opacity ?? 30) / 100,
+      image_fit: giftTagForm.image_fit || "cover",
     };
 
     if (!payload.name) {

@@ -176,6 +176,34 @@ export interface ChatAnalyticsConfig {
   trackConversions: boolean;
 }
 
+/* ─── Preset Template ─── */
+export interface ChatPreset {
+  id: string;
+  name: string;
+  description?: string;
+  tone: Partial<ChatToneConfig>;
+  behavior: Partial<ChatBehaviorConfig>;
+  prompts?: Partial<ChatPromptConfig>;
+  icon?: string;
+}
+
+/* ─── Self-Optimization Config ─── */
+export interface ChatOptimizationConfig {
+  enabled: boolean;
+  autoAdjustTone: boolean;
+  autoAdjustLength: boolean;
+  autoAdjustCta: boolean;
+  autoAdjustRecommendations: boolean;
+  requireApproval: boolean; // admin must approve changes
+  optimizationInterval: "daily" | "weekly" | "monthly";
+  metrics: {
+    trackEngagement: boolean;
+    trackConversions: boolean;
+    trackBounce: boolean;
+    trackFollowUps: boolean;
+  };
+}
+
 /* ─── Full Chat Config ─── */
 export interface ChatConfig {
   enabled: boolean;
@@ -193,6 +221,9 @@ export interface ChatConfig {
   analytics: ChatAnalyticsConfig;
   disabledPages: string[];
   enabledLanguages: string[];
+  activePreset?: string; // preset id or null for custom
+  presets: ChatPreset[];
+  optimization: ChatOptimizationConfig;
 }
 
 /* ─── Defaults ─── */

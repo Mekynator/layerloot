@@ -575,6 +575,7 @@ export default function AdminBackgrounds() {
               onSave={save}
               onPublish={publishBg}
               onDiscard={discardBgDraft}
+              settingsKey={settingKeyForPage(selectedPage)}
             />
           </div>
         ) : overrideMode === "disabled" ? (

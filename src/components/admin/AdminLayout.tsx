@@ -62,7 +62,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const [sidebarConfig, setSidebarConfig] = useState<SidebarConfig>(DEFAULT_SIDEBAR_CONFIG);
 
   useEffect(() => {
-    if (!loading && (!user || !isAdmin)) navigate("/");
+    if (!loading && (!user || !isAdmin)) navigate("/admin/login");
   }, [isAdmin, loading, user, navigate]);
 
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);

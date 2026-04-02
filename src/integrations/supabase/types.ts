@@ -100,6 +100,42 @@ export type Database = {
           },
         ]
       }
+      content_revisions: {
+        Row: {
+          action: string
+          content_id: string
+          content_type: string
+          created_at: string
+          created_by: string | null
+          id: string
+          page: string | null
+          revision_data: Json
+          revision_number: number
+        }
+        Insert: {
+          action?: string
+          content_id: string
+          content_type: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          page?: string | null
+          revision_data: Json
+          revision_number?: number
+        }
+        Update: {
+          action?: string
+          content_id?: string
+          content_type?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          page?: string | null
+          revision_data?: Json
+          revision_number?: number
+        }
+        Relationships: []
+      }
       creator_submissions: {
         Row: {
           admin_notes: string | null
@@ -1309,34 +1345,49 @@ export type Database = {
           block_type: string
           content: Json
           created_at: string
+          draft_content: Json | null
+          has_draft: boolean
           id: string
           is_active: boolean
           page: string
+          published_at: string | null
+          published_by: string | null
           sort_order: number
           title: string | null
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           block_type: string
           content?: Json
           created_at?: string
+          draft_content?: Json | null
+          has_draft?: boolean
           id?: string
           is_active?: boolean
           page?: string
+          published_at?: string | null
+          published_by?: string | null
           sort_order?: number
           title?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           block_type?: string
           content?: Json
           created_at?: string
+          draft_content?: Json | null
+          has_draft?: boolean
           id?: string
           is_active?: boolean
           page?: string
+          published_at?: string | null
+          published_by?: string | null
           sort_order?: number
           title?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -1410,21 +1461,36 @@ export type Database = {
       }
       site_settings: {
         Row: {
+          draft_value: Json | null
+          has_draft: boolean
           id: string
           key: string
+          published_at: string | null
+          published_by: string | null
           updated_at: string
+          updated_by: string | null
           value: Json
         }
         Insert: {
+          draft_value?: Json | null
+          has_draft?: boolean
           id?: string
           key: string
+          published_at?: string | null
+          published_by?: string | null
           updated_at?: string
+          updated_by?: string | null
           value?: Json
         }
         Update: {
+          draft_value?: Json | null
+          has_draft?: boolean
           id?: string
           key?: string
+          published_at?: string | null
+          published_by?: string | null
           updated_at?: string
+          updated_by?: string | null
           value?: Json
         }
         Relationships: []

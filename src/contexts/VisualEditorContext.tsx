@@ -4,9 +4,10 @@ import type { SiteBlock } from "@/components/admin/BlockRenderer";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import {
-  loadDraftBlocks, saveDraftBlocks, discardDraftBlocks, publishDraftBlocks,
+  loadAdminBlocks, saveDraftBlocks, discardDraftBlocks, publishDraftBlocks,
   type DraftStatus,
 } from "@/hooks/use-draft-publish";
+import { useAuth } from "@/contexts/AuthContext";
 
 type SitePage = Tables<"site_pages">;
 
@@ -194,6 +195,7 @@ const createDefaultContent = (type: string): Record<string, any> => {
 const MAX_UNDO = 50;
 
 export function VisualEditorProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [pages, setPages] = useState<SitePage[]>([]);
   const [activePage, setActivePageRaw] = useState("home");
   const [draftBlocks, setDraftBlocks] = useState<SiteBlock[]>([]);
@@ -231,18 +233,15 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const fetchBlocks = useCallback(async (page: string) => {
-    const { data, error } = await supabase.from("site_blocks").select("*").eq("page", page).order("sort_order");
-    if (error) { toast.error("Error loading blocks"); return; }
-    const liveBlocks = sortBlocks((data as SiteBlock[]) ?? []);
-    setSavedBlocks(liveBlocks);
+    const { blocks, hasDraft } = await loadAdminBlocks(page);
+    const sorted = sortBlocks(blocks);
+    setSavedBlocks(sorted);
 
-    // Check for existing draft
-    const draft = await loadDraftBlocks(page);
-    if (draft) {
-      setDraftBlocks(sortBlocks(draft));
+    if (hasDraft) {
+      setDraftBlocks(sorted);
       setDraftStatus("draft");
     } else {
-      setDraftBlocks(liveBlocks);
+      setDraftBlocks(sorted);
       setDraftStatus("published");
     }
 
@@ -392,7 +391,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     setSaving(true);
     try {
       const currentPageBlocks = sortBlocks(draftBlocks.filter(b => b.page === activePage));
-      const ok = await saveDraftBlocks(activePage, currentPageBlocks);
+      const ok = await saveDraftBlocks(activePage, currentPageBlocks, user?.id);
       if (!ok) throw new Error("Failed to save draft");
       setDraftStatus("draft");
       toast.success("Draft saved!");
@@ -401,14 +400,17 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     } finally {
       setSaving(false);
     }
-  }, [draftBlocks, activePage]);
+  }, [draftBlocks, activePage, user]);
 
   // Publish: apply draft to live site_blocks, then delete draft
   const publish = useCallback(async () => {
     setPublishing(true);
     try {
+      // First save any unsaved draft content
       const currentPageBlocks = sortBlocks(draftBlocks.filter(b => b.page === activePage));
-      const ok = await publishDraftBlocks(activePage, currentPageBlocks);
+      await saveDraftBlocks(activePage, currentPageBlocks, user?.id);
+      
+      const ok = await publishDraftBlocks(activePage, user?.id);
       if (!ok) throw new Error("Publish failed");
 
       // Refresh from DB to get real IDs
@@ -420,7 +422,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     } finally {
       setPublishing(false);
     }
-  }, [draftBlocks, activePage, fetchBlocks]);
+  }, [draftBlocks, activePage, fetchBlocks, user]);
 
   // Discard draft: delete draft from site_settings, reload live blocks
   const discardDraft = useCallback(async () => {

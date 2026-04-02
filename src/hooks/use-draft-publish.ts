@@ -4,107 +4,176 @@ import { toast } from "sonner";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
 
 /* ------------------------------------------------------------------ */
-/*  Key helpers                                                        */
+/*  Types                                                              */
 /* ------------------------------------------------------------------ */
-export const draftBlocksKey = (page: string) => `draft_blocks_${page}`;
-export const draftSettingKey = (key: string) => `draft_setting_${key}`;
-
 export type DraftStatus = "published" | "draft" | "unpublished_changes";
 
 /* ------------------------------------------------------------------ */
-/*  Block-level draft helpers                                          */
+/*  Revision helpers                                                   */
+/* ------------------------------------------------------------------ */
+async function getNextRevisionNumber(contentType: string, contentId: string): Promise<number> {
+  const { data } = await supabase
+    .from("content_revisions")
+    .select("revision_number")
+    .eq("content_type", contentType)
+    .eq("content_id", contentId)
+    .order("revision_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data?.revision_number ?? 0) + 1;
+}
+
+async function insertRevision(
+  contentType: string,
+  contentId: string,
+  revisionData: any,
+  action: string,
+  userId?: string,
+  page?: string,
+) {
+  const revNum = await getNextRevisionNumber(contentType, contentId);
+  await supabase.from("content_revisions").insert({
+    content_type: contentType,
+    content_id: contentId,
+    page: page ?? null,
+    revision_data: revisionData,
+    revision_number: revNum,
+    action,
+    created_by: userId ?? null,
+  } as any);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Block-level draft helpers (column-based)                           */
 /* ------------------------------------------------------------------ */
 
-/** Load draft blocks for a page (returns null if no draft exists) */
-export async function loadDraftBlocks(page: string): Promise<SiteBlock[] | null> {
-  const key = draftBlocksKey(page);
+/** Load blocks for admin view — returns draft_content where available, else content */
+export async function loadAdminBlocks(page: string): Promise<{ blocks: SiteBlock[]; hasDraft: boolean }> {
   const { data, error } = await supabase
-    .from("site_settings")
-    .select("value")
-    .eq("key", key)
-    .maybeSingle();
-  if (error || !data?.value) return null;
-  const val = data.value as any;
-  return Array.isArray(val?.blocks) ? (val.blocks as SiteBlock[]) : null;
+    .from("site_blocks")
+    .select("*")
+    .eq("page", page)
+    .order("sort_order");
+
+  if (error) { toast.error(`Load failed: ${error.message}`); return { blocks: [], hasDraft: false }; }
+
+  const rows = (data ?? []) as any[];
+  let hasDraft = false;
+
+  const blocks: SiteBlock[] = rows.map(row => {
+    const isDraft = row.has_draft === true && row.draft_content != null;
+    if (isDraft) hasDraft = true;
+    return {
+      id: row.id,
+      page: row.page,
+      block_type: row.block_type,
+      title: row.title,
+      content: isDraft ? row.draft_content : row.content,
+      sort_order: row.sort_order,
+      is_active: row.is_active,
+    } as SiteBlock;
+  });
+
+  return { blocks, hasDraft };
 }
 
-/** Save draft blocks for a page */
-export async function saveDraftBlocks(page: string, blocks: SiteBlock[]): Promise<boolean> {
-  const key = draftBlocksKey(page);
-  const payload = { key, value: { blocks, updatedAt: new Date().toISOString() } };
-  const { error } = await supabase
-    .from("site_settings")
-    .upsert(payload as any, { onConflict: "key" });
-  if (error) {
-    toast.error(`Draft save failed: ${error.message}`);
-    return false;
-  }
-  return true;
-}
-
-/** Delete draft for a page */
-export async function discardDraftBlocks(page: string): Promise<boolean> {
-  const key = draftBlocksKey(page);
-  const { error } = await supabase
-    .from("site_settings")
-    .delete()
-    .eq("key", key);
-  if (error) {
-    toast.error(`Discard failed: ${error.message}`);
-    return false;
-  }
-  return true;
-}
-
-/** Publish draft blocks: apply to site_blocks table, then delete draft */
-export async function publishDraftBlocks(page: string, draftBlocks: SiteBlock[]): Promise<boolean> {
+/** Save draft blocks — writes to draft_content column on each block */
+export async function saveDraftBlocks(page: string, blocks: SiteBlock[], userId?: string): Promise<boolean> {
   try {
-    // 1. Get current live block IDs for this page
-    const { data: liveBlocks } = await supabase
+    // Get current live block IDs
+    const { data: liveRows } = await supabase
       .from("site_blocks")
       .select("id")
       .eq("page", page);
-    const liveIds = new Set((liveBlocks ?? []).map(b => b.id));
-    const draftIds = new Set(draftBlocks.filter(b => !b.id.startsWith("draft-")).map(b => b.id));
+    const liveIds = new Set((liveRows ?? []).map(b => b.id));
 
-    // 2. Delete blocks that were removed in the draft
-    const deletedIds = [...liveIds].filter(id => !draftIds.has(id));
-    if (deletedIds.length > 0) {
-      await Promise.all(deletedIds.map(id =>
-        supabase.from("site_blocks").delete().eq("id", id),
-      ));
-    }
-
-    // 3. Upsert each block
-    const realIdMap = new Map<string, string>(); // draft-id → real-id
-    for (let i = 0; i < draftBlocks.length; i++) {
-      const block = draftBlocks[i];
+    for (let i = 0; i < blocks.length; i++) {
+      const block = blocks[i];
       const isDraftNew = block.id.startsWith("draft-");
 
       if (isDraftNew) {
+        // Insert new block with draft_content, content as empty default
         const { data, error } = await supabase.from("site_blocks").insert({
           page,
           block_type: block.block_type,
           title: block.title,
-          content: block.content as any,
+          content: {} as any,
+          draft_content: block.content as any,
           sort_order: i,
           is_active: block.is_active ?? true,
-        }).select("id").single();
+          has_draft: true,
+          updated_by: userId ?? null,
+        } as any).select("id").single();
         if (error) throw error;
-        realIdMap.set(block.id, data.id);
+        // Update the block ID in-place so caller gets real IDs
+        block.id = data.id;
       } else {
+        // Update existing block's draft_content
         const { error } = await supabase.from("site_blocks").update({
           title: block.title,
-          content: block.content as any,
+          draft_content: block.content as any,
           sort_order: i,
           is_active: block.is_active ?? true,
-        }).eq("id", block.id);
+          has_draft: true,
+          updated_by: userId ?? null,
+        } as any).eq("id", block.id);
         if (error) throw error;
       }
     }
 
-    // 4. Delete the draft
-    await discardDraftBlocks(page);
+    // Mark blocks removed in draft — we store removal info by setting draft_content to a sentinel
+    const draftIds = new Set(blocks.map(b => b.id));
+    const deletedIds = [...liveIds].filter(id => !draftIds.has(id));
+    for (const id of deletedIds) {
+      await supabase.from("site_blocks").update({
+        draft_content: { __deleted: true } as any,
+        has_draft: true,
+        updated_by: userId ?? null,
+      } as any).eq("id", id);
+    }
+
+    return true;
+  } catch (err: any) {
+    toast.error(`Draft save failed: ${err.message}`);
+    return false;
+  }
+}
+
+/** Publish draft blocks — promote draft_content to content, log revisions */
+export async function publishDraftBlocks(page: string, userId?: string): Promise<boolean> {
+  try {
+    // Get all blocks for this page
+    const { data: rows, error } = await supabase
+      .from("site_blocks")
+      .select("*")
+      .eq("page", page)
+      .order("sort_order");
+    if (error) throw error;
+
+    for (const row of (rows ?? []) as any[]) {
+      if (!row.has_draft) continue;
+
+      // Check if block was marked for deletion
+      if (row.draft_content?.__deleted === true) {
+        // Log revision before deleting
+        await insertRevision("site_block", row.id, row.content, "delete", userId, page);
+        await supabase.from("site_blocks").delete().eq("id", row.id);
+        continue;
+      }
+
+      // Log revision of the old published content
+      await insertRevision("site_block", row.id, row.content, "publish", userId, page);
+
+      // Promote draft_content → content
+      await supabase.from("site_blocks").update({
+        content: row.draft_content,
+        draft_content: null,
+        has_draft: false,
+        published_at: new Date().toISOString(),
+        published_by: userId ?? null,
+      } as any).eq("id", row.id);
+    }
+
     return true;
   } catch (err: any) {
     toast.error(`Publish failed: ${err.message}`);
@@ -112,25 +181,63 @@ export async function publishDraftBlocks(page: string, draftBlocks: SiteBlock[])
   }
 }
 
+/** Discard draft blocks — clear draft_content, delete draft-only blocks */
+export async function discardDraftBlocks(page: string): Promise<boolean> {
+  try {
+    const { data: rows } = await supabase
+      .from("site_blocks")
+      .select("id, content, has_draft, draft_content")
+      .eq("page", page)
+      .eq("has_draft", true);
+
+    for (const row of (rows ?? []) as any[]) {
+      // If content is empty (draft-only block), delete it
+      const contentEmpty = !row.content || Object.keys(row.content).length === 0;
+      if (contentEmpty) {
+        await supabase.from("site_blocks").delete().eq("id", row.id);
+      } else {
+        // Clear draft
+        await supabase.from("site_blocks").update({
+          draft_content: null,
+          has_draft: false,
+        } as any).eq("id", row.id);
+      }
+    }
+
+    return true;
+  } catch (err: any) {
+    toast.error(`Discard failed: ${err.message}`);
+    return false;
+  }
+}
+
 /* ------------------------------------------------------------------ */
-/*  Settings-level draft helpers (for backgrounds, etc.)               */
+/*  Settings-level draft helpers (column-based)                        */
 /* ------------------------------------------------------------------ */
 
 export async function loadDraftSetting(settingsKey: string): Promise<any | null> {
-  const key = draftSettingKey(settingsKey);
   const { data } = await supabase
     .from("site_settings")
-    .select("value")
-    .eq("key", key)
+    .select("value, draft_value, has_draft")
+    .eq("key", settingsKey)
     .maybeSingle();
-  return data?.value ?? null;
+  if (!data) return null;
+  if ((data as any).has_draft && (data as any).draft_value != null) {
+    return { draft: (data as any).draft_value, live: data.value, hasDraft: true };
+  }
+  return { draft: null, live: data.value, hasDraft: false };
 }
 
-export async function saveDraftSetting(settingsKey: string, value: any): Promise<boolean> {
-  const key = draftSettingKey(settingsKey);
+export async function saveDraftSetting(settingsKey: string, value: any, userId?: string): Promise<boolean> {
+  // Upsert — ensure the row exists, then set draft_value
   const { error } = await supabase
     .from("site_settings")
-    .upsert({ key, value } as any, { onConflict: "key" });
+    .upsert({
+      key: settingsKey,
+      draft_value: value,
+      has_draft: true,
+      updated_by: userId ?? null,
+    } as any, { onConflict: "key" });
   if (error) {
     toast.error(`Draft save failed: ${error.message}`);
     return false;
@@ -138,9 +245,42 @@ export async function saveDraftSetting(settingsKey: string, value: any): Promise
   return true;
 }
 
+export async function publishDraftSetting(settingsKey: string, draftValue: any, userId?: string): Promise<boolean> {
+  try {
+    // Get current live value for revision
+    const { data: current } = await supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", settingsKey)
+      .maybeSingle();
+
+    if (current?.value) {
+      await insertRevision("site_setting", settingsKey, current.value, "publish", userId);
+    }
+
+    const { error } = await supabase
+      .from("site_settings")
+      .upsert({
+        key: settingsKey,
+        value: draftValue,
+        draft_value: null,
+        has_draft: false,
+        published_at: new Date().toISOString(),
+        published_by: userId ?? null,
+      } as any, { onConflict: "key" });
+    if (error) throw error;
+    return true;
+  } catch (err: any) {
+    toast.error(`Publish failed: ${err.message}`);
+    return false;
+  }
+}
+
 export async function discardDraftSetting(settingsKey: string): Promise<boolean> {
-  const key = draftSettingKey(settingsKey);
-  const { error } = await supabase.from("site_settings").delete().eq("key", key);
+  const { error } = await supabase
+    .from("site_settings")
+    .update({ draft_value: null, has_draft: false } as any)
+    .eq("key", settingsKey);
   if (error) {
     toast.error(`Discard failed: ${error.message}`);
     return false;
@@ -148,18 +288,51 @@ export async function discardDraftSetting(settingsKey: string): Promise<boolean>
   return true;
 }
 
-export async function publishDraftSetting(settingsKey: string, draftValue: any): Promise<boolean> {
-  // Copy draft value to the real key
-  const { error } = await supabase
-    .from("site_settings")
-    .upsert({ key: settingsKey, value: draftValue } as any, { onConflict: "key" });
-  if (error) {
-    toast.error(`Publish failed: ${error.message}`);
+/* ------------------------------------------------------------------ */
+/*  Revert to a previous revision                                      */
+/* ------------------------------------------------------------------ */
+export async function revertToRevision(contentType: string, contentId: string, revisionNumber: number, userId?: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from("content_revisions")
+      .select("revision_data, page")
+      .eq("content_type", contentType)
+      .eq("content_id", contentId)
+      .eq("revision_number", revisionNumber)
+      .single();
+    if (error || !data) throw error || new Error("Revision not found");
+
+    if (contentType === "site_block") {
+      // Log current state as revision before reverting
+      const { data: current } = await supabase.from("site_blocks").select("content").eq("id", contentId).single();
+      if (current) await insertRevision("site_block", contentId, current.content, "revert", userId, data.page);
+
+      await supabase.from("site_blocks").update({
+        content: data.revision_data,
+        draft_content: null,
+        has_draft: false,
+        published_at: new Date().toISOString(),
+        published_by: userId ?? null,
+      } as any).eq("id", contentId);
+    } else if (contentType === "site_setting") {
+      const { data: current } = await supabase.from("site_settings").select("value").eq("key", contentId).single();
+      if (current) await insertRevision("site_setting", contentId, current.value, "revert", userId);
+
+      await supabase.from("site_settings").update({
+        value: data.revision_data,
+        draft_value: null,
+        has_draft: false,
+        published_at: new Date().toISOString(),
+        published_by: userId ?? null,
+      } as any).eq("key", contentId);
+    }
+
+    toast.success("Reverted successfully");
+    return true;
+  } catch (err: any) {
+    toast.error(`Revert failed: ${err.message}`);
     return false;
   }
-  // Delete the draft
-  await discardDraftSetting(settingsKey);
-  return true;
 }
 
 /* ------------------------------------------------------------------ */
@@ -170,13 +343,13 @@ export function usePageDraftStatus(page: string) {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const key = draftBlocksKey(page);
     const { data } = await supabase
-      .from("site_settings")
-      .select("value")
-      .eq("key", key)
-      .maybeSingle();
-    setStatus(data?.value ? "draft" : "published");
+      .from("site_blocks")
+      .select("id")
+      .eq("page", page)
+      .eq("has_draft", true)
+      .limit(1);
+    setStatus((data && data.length > 0) ? "draft" : "published");
     setLoading(false);
   }, [page]);
 

@@ -257,6 +257,8 @@ const CustomOrdersModule = ({ user, tt, customOrders, customOrderMessages, seenS
   };
 
   const hasUnreadActivityForOrder = (order: CustomOrder) => {
+    // Check the new unread_by_user flag first
+    if ((order as any).unread_by_user) return true;
     const seenAt = seenState.customRequestsLastSeenAt;
     const latestForOrder = getLatestDate([order.created_at, order.updated_at, ...(customOrderMessages[order.id] || []).map(msg => msg.created_at)]);
     return isAfter(latestForOrder, seenAt);

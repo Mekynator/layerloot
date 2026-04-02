@@ -86,9 +86,7 @@ export default function ChatLivePreview({ config }: ChatLivePreviewProps) {
 
   const toneSample = TONE_SAMPLES[config.tone.personality] || TONE_SAMPLES.friendly;
 
-  const headerBg = config.window.headerBgColor
-    ? `hsl(${config.window.headerBgColor})`
-    : undefined;
+  const headerBg = config.window.headerBgColor || undefined;
 
   const handleSimSend = (text?: string) => {
     const msg = (text ?? simInput).trim();
@@ -174,20 +172,20 @@ export default function ChatLivePreview({ config }: ChatLivePreviewProps) {
             <button
               onClick={() => setPreviewState("open")}
               className="relative flex items-center justify-center rounded-full text-primary-foreground shadow-xl transition-transform hover:scale-105"
-              style={{
-                width: launcherSize,
-                height: launcherSize,
-                backgroundColor: config.launcher.bgColor ? `hsl(${config.launcher.bgColor})` : "hsl(var(--primary))",
-                color: config.launcher.iconColor ? `hsl(${config.launcher.iconColor})` : undefined,
-                borderColor: config.launcher.borderColor ? `hsl(${config.launcher.borderColor})` : undefined,
-                borderWidth: config.launcher.borderColor ? 2 : 0,
-                boxShadow: config.launcher.shadow
-                  ? config.launcher.glowColor
-                    ? `0 8px 30px hsl(${config.launcher.glowColor} / 0.4)`
-                    : "0 8px 30px hsl(var(--primary) / 0.35)"
-                  : "none",
-                animation: config.launcher.pulseAnimation ? "pulse 2s infinite" : undefined,
-              }}
+                style={{
+                  width: launcherSize,
+                  height: launcherSize,
+                  backgroundColor: config.launcher.bgColor || "hsl(var(--primary))",
+                  color: config.launcher.iconColor || undefined,
+                  borderColor: config.launcher.borderColor || undefined,
+                  borderWidth: config.launcher.borderColor ? 2 : 0,
+                  boxShadow: config.launcher.shadow
+                    ? config.launcher.glowColor
+                      ? `0 8px 30px ${config.launcher.glowColor}40`
+                      : "0 8px 30px hsl(var(--primary) / 0.35)"
+                    : "none",
+                  animation: config.launcher.pulseAnimation ? "pulse 2s infinite" : undefined,
+                }}
             >
               <LauncherIcon icon={config.launcher.icon} customUrl={config.launcher.customIconUrl} size={launcherSize} />
               {config.launcher.showUnreadBadge && (
@@ -209,10 +207,12 @@ export default function ChatLivePreview({ config }: ChatLivePreviewProps) {
                 width: windowWidth,
                 height: windowHeight,
                 borderRadius: config.window.borderRadius,
-                backgroundColor: config.window.bgColor ? `hsl(${config.window.bgColor})` : "hsl(var(--card))",
+                backgroundColor: config.window.bgColor || "hsl(var(--card))",
                 opacity: config.window.opacity / 100,
                 backdropFilter: config.window.glassEffect ? "blur(24px)" : undefined,
                 boxShadow: config.window.shadow || "0 24px 80px hsl(217 91% 60% / 0.15)",
+                borderColor: (config.window as any).borderColor || undefined,
+                borderWidth: (config.window as any).borderColor ? 1 : undefined,
               }}
             >
               {/* Header */}
@@ -226,13 +226,13 @@ export default function ChatLivePreview({ config }: ChatLivePreviewProps) {
                   {config.window.avatarUrl ? (
                     <img src={config.window.avatarUrl} alt="" className="h-4 w-4 rounded-full object-cover" />
                   ) : (
-                    <Bot className="h-4 w-4 text-primary-foreground" />
+                    <Bot className="h-4 w-4" style={{ color: (config.window as any).headerTextColor || "hsl(var(--primary-foreground))" }} />
                   )}
-                  <span className="text-xs font-bold uppercase tracking-wider text-primary-foreground">
+                  <span className="text-xs font-bold uppercase tracking-wider" style={{ color: (config.window as any).headerTextColor || "hsl(var(--primary-foreground))" }}>
                     {getStr(config.window.brandName) || "Assistant"}
                   </span>
                 </div>
-                <button onClick={() => setPreviewState("closed")} className="text-primary-foreground/70 hover:text-primary-foreground">
+                <button onClick={() => setPreviewState("closed")} style={{ color: (config.window as any).headerTextColor ? `${(config.window as any).headerTextColor}B3` : undefined }} className="text-primary-foreground/70 hover:text-primary-foreground">
                   <X className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -268,14 +268,14 @@ export default function ChatLivePreview({ config }: ChatLivePreviewProps) {
                       style={{
                         borderRadius: msg.role === "user" ? config.bubbles.user.borderRadius : config.bubbles.ai.borderRadius,
                         backgroundColor: msg.role === "user"
-                          ? config.bubbles.user.bgColor ? `hsl(${config.bubbles.user.bgColor})` : "hsl(var(--primary))"
-                          : config.bubbles.ai.bgColor ? `hsl(${config.bubbles.ai.bgColor})` : "hsl(var(--muted))",
+                          ? config.bubbles.user.bgColor || "hsl(var(--primary))"
+                          : config.bubbles.ai.bgColor || "hsl(var(--muted))",
                         color: msg.role === "user"
-                          ? config.bubbles.user.textColor ? `hsl(${config.bubbles.user.textColor})` : "hsl(var(--primary-foreground))"
-                          : config.bubbles.ai.textColor ? `hsl(${config.bubbles.ai.textColor})` : "hsl(var(--foreground))",
+                          ? config.bubbles.user.textColor || "hsl(var(--primary-foreground))"
+                          : config.bubbles.ai.textColor || "hsl(var(--foreground))",
                         borderColor: msg.role === "user"
-                          ? config.bubbles.user.borderColor ? `hsl(${config.bubbles.user.borderColor})` : undefined
-                          : config.bubbles.ai.borderColor ? `hsl(${config.bubbles.ai.borderColor})` : undefined,
+                          ? config.bubbles.user.borderColor || undefined
+                          : config.bubbles.ai.borderColor || undefined,
                         borderWidth: (msg.role === "user" ? config.bubbles.user.borderColor : config.bubbles.ai.borderColor) ? 1 : 0,
                         boxShadow: (msg.role === "user" ? config.bubbles.user.shadow : config.bubbles.ai.shadow) ? "0 2px 8px hsl(0 0% 0% / 0.1)" : undefined,
                       }}
@@ -313,7 +313,7 @@ export default function ChatLivePreview({ config }: ChatLivePreviewProps) {
                   type="submit"
                   disabled={!simInput.trim()}
                   className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40 shrink-0"
-                  style={{ backgroundColor: config.window.sendButtonColor ? `hsl(${config.window.sendButtonColor})` : undefined }}
+                  style={{ backgroundColor: config.window.sendButtonColor || undefined }}
                 >
                   <Send className="h-3 w-3" />
                 </button>

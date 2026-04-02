@@ -4,15 +4,17 @@ import {
   LayoutDashboard, Tags, ArrowLeft, Layers, Menu, X,
   Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
   Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone,
-  BarChart3, Wallet, ImageIcon,
+  BarChart3, Wallet, ImageIcon, Shield, Activity,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdminPermissions } from "@/hooks/use-admin-permissions";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
 const ICON_MAP: Record<string, typeof Package> = {
   LayoutDashboard, Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
-  Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone, BarChart3, Wallet, Tags, Layers, ImageIcon,
+  Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone, BarChart3,
+  Wallet, Tags, Layers, ImageIcon, Shield, Activity,
 };
 
 export interface SidebarItem {

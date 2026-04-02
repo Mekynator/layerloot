@@ -1,76 +1,117 @@
 
 
-# Admin Dashboard & Customization System Upgrade
+# Rewards Store, Vouchers & Discounts — Admin-Controlled Visual System
 
-## Phase 1 — This Round (Core UI Changes + Settings Infrastructure)
+## Current State
+- **Rewards catalog is 100% hardcoded** as `REWARD_CATALOG` array in `Account.tsx` (8 items: fixed discounts, gift card, free shipping, gift wrap)
+- The `vouchers` DB table exists but only stores definitions matched by the hardcoded catalog during redemption
+- Admin can manage `discount_codes` via `AdminDiscounts.tsx` but cannot manage reward catalog items
+- No admin UI for voucher/reward tile styling, layout, or configuration
+- No analytics for reward usage beyond basic voucher report in AdminReports
 
-### 1. Dashboard Cleanup
-Remove from Dashboard UI only (keep backend data/hooks intact):
-- **Loyalty Points** KPI card (line 213)
-- **Vouchers Used** KPI card (line 214)
-- **Smart Insights** section (lines 378-394)
-- **Quick Navigation** section (lines 396-421) — replaced by configurable shortcuts
+## Architecture Decision
+Replace the hardcoded `REWARD_CATALOG` with DB-driven rewards from the existing `vouchers` table, and add a new `rewards_store_config` key in `site_settings` for visual/layout customization.
 
-### 2. Sidebar Cleanup
-Remove from `AdminLayout.tsx` sidebar `coreLinks` only:
-- Orders, Custom Orders, Products, Customers (from core)
-- Reviews, Showcases (from tools)
+---
 
-Keep: Dashboard, Categories & Tags, Page Editor, Settings in core. Keep remaining tools.
-All removed pages remain routable — just hidden from nav.
+## Phase 1 — Dynamic Rewards Catalog + Admin Editor (this round)
 
-### 3. Showcases Shortcut + Configurable Dashboard Shortcuts
-Replace hardcoded Quick Navigation with a dynamic shortcut grid that reads from `site_settings` key `admin_dashboard_shortcuts`. Default shortcuts include all current ones plus Showcases. Each shortcut: `{ id, label, icon, to, visible }`.
+### 1. Upgrade `vouchers` table schema
+Add columns to support full admin control per reward:
+- `badge_text` (text, nullable) — e.g. "Popular", "Best Value"
+- `icon_key` (text, nullable) — Lucide icon name
+- `image_url` (text, nullable) — optional card image
+- `sort_order` (integer, default 0)
+- `reward_type` (text, default 'fixed_discount') — enum-like: fixed_discount, percentage, gift_card, free_shipping, gift_wrap, custom
+- `usage_limit_per_user` (integer, nullable)
+- `global_usage_limit` (integer, nullable)
+- `expiry_days` (integer, nullable) — days until voucher expires after redemption
 
-### 4. Blue Borders on Dashboard Tiles
-Add a shared CSS class to all dashboard cards/tiles:
-- `border border-primary/20 shadow-[0_0_12px_-4px_hsl(var(--primary)/0.15)]`
-- Hover: `hover:border-primary/35 hover:shadow-[0_0_20px_-4px_hsl(var(--primary)/0.25)]`
-- Apply to: KpiCard, MiniChart, Activity stream, Recent Orders, Low Stock, Action Center, Shortcut tiles
+### 2. Admin Rewards Manager page
+New tab or section in AdminDiscounts (or separate page) with:
+- CRUD for voucher/reward catalog items
+- Editable fields: name, description, points_cost, discount_value, discount_type, reward_type, badge, icon, image, sort_order, active/inactive, usage limits, expiry
+- Preview card showing how the reward tile will look
+- Drag-to-reorder (up/down buttons)
 
-### 5. Dashboard Shortcuts Manager (Admin Settings tab)
-New "Dashboard" tab in AdminSettings with:
-- List of all available admin destinations
-- Toggle visible/hidden per shortcut
-- Editable label and icon (icon picker)
-- Drag-to-reorder (simple up/down buttons initially)
-- Persisted to `site_settings` key `admin_dashboard_shortcuts`
+### 3. Replace hardcoded `REWARD_CATALOG` in Account.tsx
+- Fetch active vouchers from `vouchers` table instead of using the static array
+- Render dynamically with all new fields (badge, icon, image, sort_order)
+- Keep existing `redeemReward` logic but adapt to use DB voucher rows directly
+- Remove the `REWARD_CATALOG` constant entirely
 
-### 6. Sidebar Editor (Admin Settings tab)
-New "Navigation" tab in AdminSettings with:
-- List of all admin pages grouped by section (Core / Tools)
-- Toggle visible/hidden per item
-- Editable labels
-- Move between groups
-- Persisted to `site_settings` key `admin_sidebar_config`
-- `AdminLayout` reads this config and renders dynamically
+### 4. Rewards Store visual config (site_settings)
+Store in `site_settings` key `rewards_store_config`:
+```json
+{
+  "columns": 2,
+  "layout": "grid",
+  "title": "Rewards Store",
+  "subtitle": "Redeem your points for exclusive rewards",
+  "emptyStateText": "No rewards available right now.",
+  "insufficientPointsText": "You need {needed} more points",
+  "cardStyle": {
+    "borderColor": "",
+    "borderRadius": 12,
+    "hoverAnimation": "lift",
+    "showBadge": true,
+    "ctaText": "Redeem"
+  }
+}
+```
+Add a "Rewards Store" sub-tab in AdminSettings (or AdminDiscounts) to edit these visual settings.
 
-## Phase 2 — Follow-up Rounds
-- **Item 7**: Rewards store / voucher admin editor (deep tile customization)
-- **Item 8**: Account page admin customization
-- **Item 9**: Custom order UI admin customization
-- **Item 10**: Broader admin customization system (widget manager, presets, drag-and-drop)
+### 5. Redemption UX improvements
+- Add confirmation dialog before redeem (with reward preview + points cost)
+- Success animation (confetti-like pulse or checkmark)
+- Toast notification on success/failure
+- Show "You need X more points" on insufficient balance
+- Points balance displayed prominently above reward grid
+
+### 6. Basic analytics in admin
+Add to AdminReports or as section in AdminDiscounts:
+- Most redeemed rewards (by voucher name)
+- Total points spent across all users
+- Active vs used reward count
+- Unused/expiring rewards count
 
 ---
 
 ## Technical Details
 
-### Files to modify
-| File | Changes |
+### Database migration
+```sql
+ALTER TABLE public.vouchers
+  ADD COLUMN IF NOT EXISTS badge_text text,
+  ADD COLUMN IF NOT EXISTS icon_key text,
+  ADD COLUMN IF NOT EXISTS image_url text,
+  ADD COLUMN IF NOT EXISTS sort_order integer DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS reward_type text DEFAULT 'fixed_discount',
+  ADD COLUMN IF NOT EXISTS usage_limit_per_user integer,
+  ADD COLUMN IF NOT EXISTS global_usage_limit integer,
+  ADD COLUMN IF NOT EXISTS expiry_days integer;
+```
+
+### Files to create
+| File | Purpose |
 |---|---|
-| `src/pages/admin/Dashboard.tsx` | Remove Loyalty/Vouchers KPIs, Smart Insights, Quick Nav; add dynamic shortcuts grid with blue borders; apply border classes to all cards |
-| `src/components/admin/AdminLayout.tsx` | Read sidebar config from `site_settings`; remove hardcoded entries for Orders/Custom Orders/Products/Customers/Reviews/Showcases; render dynamically |
-| `src/pages/admin/AdminSettings.tsx` | Add "Dashboard" and "Navigation" tabs with shortcut manager and sidebar editor |
+| `src/components/admin/RewardsStoreEditor.tsx` | Admin CRUD + visual config for reward catalog |
 
-### Data storage
-- `site_settings` key `admin_dashboard_shortcuts` — JSON array of shortcut objects
-- `site_settings` key `admin_sidebar_config` — JSON object with groups and items
-- No new tables needed
+### Files to modify
+| File | Change |
+|---|---|
+| `src/pages/Account.tsx` | Remove `REWARD_CATALOG`, fetch from `vouchers` table, use dynamic config from `site_settings` |
+| `src/pages/admin/AdminDiscounts.tsx` | Add "Rewards" tab linking to RewardsStoreEditor |
+| `src/pages/admin/AdminReports.tsx` | Add rewards analytics section |
 
-### Default shortcut list (when no config exists)
-Products, Orders, Custom Orders, Showcases, Discounts, Categories, Shipping, Page Editor, Reviews, Users, Reports, Settings, Growth, Campaigns, Revenue Engine, Pricing
+### No new tables needed
+- Uses existing `vouchers` table (extended with new columns)
+- Uses existing `site_settings` for visual config
+- Uses existing `user_vouchers` for redemption tracking
 
-### Default sidebar config (when no config exists)
-- Core: Dashboard, Categories & Tags, Page Editor, Settings
-- Tools: Discounts, Shipping, Pricing, Growth, Campaigns, Revenue Engine, Reports
+## Phase 2 (follow-up)
+- Full tile visual customization (gradients, shadows, glow, animations per card)
+- Gift card designer UI
+- Integration with checkout savings panel
+- Campaign/scheduling for rewards availability
 

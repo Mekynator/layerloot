@@ -5,6 +5,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import {
   loadAdminBlocks, saveDraftBlocks, discardDraftBlocks, publishDraftBlocks,
+  scheduleBlocksPublish, cancelBlocksSchedule,
   type DraftStatus,
 } from "@/hooks/use-draft-publish";
 import { useAuth } from "@/contexts/AuthContext";

@@ -317,6 +317,7 @@ const NavLinkEditor = () => {
     pageId: item.pageId,
     openInNewTab: Boolean(item.openInNewTab),
     visible: item.visible !== false,
+    megaMenu: item.megaMenu,
   }));
 
   const save = async () => {

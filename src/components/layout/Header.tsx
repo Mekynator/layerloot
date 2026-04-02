@@ -310,24 +310,40 @@ const Header = () => {
 
           {headerSettings.desktop_nav_enabled && (
             <nav className="hidden items-center gap-1 md:flex">
-              {desktopLinks.map((link) => (
-                <Link
-                  key={`${link.to}-${link.localizedLabel}`}
-                  to={link.to}
-                  className={`relative px-4 py-2 font-display text-sm uppercase tracking-widest transition-all duration-200 rounded-lg hover:bg-accent/10 ${
-                    isActiveLink(location.pathname, link.to) ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {link.localizedLabel}
-                  {isActiveLink(location.pathname, link.to) && (
-                    <motion.div
-                      layoutId="nav-indicator"
-                      className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full bg-primary"
-                      transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
-                    />
-                  )}
-                </Link>
-              ))}
+              {desktopLinks.map((link) => {
+                const linkEl = (
+                  <Link
+                    key={`${link.to}-${link.localizedLabel}`}
+                    to={link.to}
+                    className={`relative px-4 py-2 font-display text-sm uppercase tracking-widest transition-all duration-200 rounded-lg hover:bg-accent/10 ${
+                      isActiveLink(location.pathname, link.to) ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {link.localizedLabel}
+                    {isActiveLink(location.pathname, link.to) && (
+                      <motion.div
+                        layoutId="nav-indicator"
+                        className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full bg-primary"
+                        transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
+                      />
+                    )}
+                  </Link>
+                );
+
+                if (link.megaMenu?.enabled) {
+                  return (
+                    <MegaMenuDropdown
+                      key={`mega-${link.to}-${link.localizedLabel}`}
+                      config={link.megaMenu}
+                      linkTo={link.to}
+                    >
+                      {linkEl}
+                    </MegaMenuDropdown>
+                  );
+                }
+
+                return linkEl;
+              })}
             </nav>
           )}
 

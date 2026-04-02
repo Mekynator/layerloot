@@ -1277,13 +1277,16 @@ export type Database = {
       }
       products: {
         Row: {
+          archived_at: string | null
           category_id: string | null
           compare_at_price: number | null
           created_at: string
           description: string | null
           dimensions_cm: Json | null
+          draft_data: Json | null
           finish_type: string | null
           gift_finder_tag_id: string | null
+          has_draft: boolean
           id: string
           images: string[] | null
           is_active: boolean
@@ -1293,19 +1296,27 @@ export type Database = {
           name: string
           price: number
           print_time_hours: number | null
+          published_at: string | null
+          published_by: string | null
+          scheduled_publish_at: string | null
           slug: string
+          status: string
           stock: number
           updated_at: string
+          updated_by: string | null
           weight_grams: number | null
         }
         Insert: {
+          archived_at?: string | null
           category_id?: string | null
           compare_at_price?: number | null
           created_at?: string
           description?: string | null
           dimensions_cm?: Json | null
+          draft_data?: Json | null
           finish_type?: string | null
           gift_finder_tag_id?: string | null
+          has_draft?: boolean
           id?: string
           images?: string[] | null
           is_active?: boolean
@@ -1315,19 +1326,27 @@ export type Database = {
           name: string
           price?: number
           print_time_hours?: number | null
+          published_at?: string | null
+          published_by?: string | null
+          scheduled_publish_at?: string | null
           slug: string
+          status?: string
           stock?: number
           updated_at?: string
+          updated_by?: string | null
           weight_grams?: number | null
         }
         Update: {
+          archived_at?: string | null
           category_id?: string | null
           compare_at_price?: number | null
           created_at?: string
           description?: string | null
           dimensions_cm?: Json | null
+          draft_data?: Json | null
           finish_type?: string | null
           gift_finder_tag_id?: string | null
+          has_draft?: boolean
           id?: string
           images?: string[] | null
           is_active?: boolean
@@ -1337,9 +1356,14 @@ export type Database = {
           name?: string
           price?: number
           print_time_hours?: number | null
+          published_at?: string | null
+          published_by?: string | null
+          scheduled_publish_at?: string | null
           slug?: string
+          status?: string
           stock?: number
           updated_at?: string
+          updated_by?: string | null
           weight_grams?: number | null
         }
         Relationships: [

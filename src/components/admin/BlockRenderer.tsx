@@ -310,12 +310,8 @@ const sectionStyle = (content: any): CSSProperties => {
   if (content?.marginTop !== undefined) style.marginTop = `${Number(content.marginTop) || 0}px`;
   if (content?.marginBottom !== undefined) style.marginBottom = `${Number(content.marginBottom) || 0}px`;
 
-  // Background image (static, not slideshow)
-  if (!content?._slideshow?.enabled && (content?.backgroundImage || content?.bg_image)) {
-    style.backgroundImage = `url(${content.backgroundImage || content.bg_image})`;
-    style.backgroundSize = "cover";
-    style.backgroundPosition = "center";
-  }
+  // Background image is now rendered as a separate layer in withSection for opacity control
+  // Only set if no slideshow and no separate layer needed (fallback removed - always use layer)
 
   // Min height
   if (content?.minHeight) style.minHeight = `${Number(content.minHeight)}px`;
@@ -462,6 +458,10 @@ const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNo
     ? `[data-editor-block-id="${block.id}"]:hover { ${c.borderHoverColor ? `border-color: ${c.borderHoverColor} !important;` : ""} ${c.borderHoverWidth ? `border-width: ${c.borderHoverWidth}px !important;` : ""} }`
     : "";
 
+  const hasBgImage = !hasSlideshow && (c.backgroundImage || c.bg_image);
+  const bgImageOpacity = (c.bgImageOpacity ?? 100) / 100;
+  const needsRelative = hasSlideshow || hasBgImage || c.overlayColor;
+
   return (
     <>
       {hoverStyle && <style>{hoverStyle}</style>}
@@ -471,17 +471,30 @@ const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNo
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.12 }}
         transition={{ duration: 0.36 }}
-        className={`${hasSlideshow ? "relative overflow-hidden" : ""} ${props.className} ${clickable.className}`.trim()}
+        className={`${needsRelative ? "relative overflow-hidden" : ""} ${props.className} ${clickable.className}`.trim()}
         onClick={clickable.onClick}
         data-editor-block-id={block.id}
         data-editor-block-type={block.title || block.block_type}
       >
+        {/* Background image as separate layer for independent opacity */}
+        {hasBgImage && (
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              backgroundImage: `url(${c.backgroundImage || c.bg_image})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              opacity: bgImageOpacity,
+            }}
+            aria-hidden="true"
+          />
+        )}
         {hasSlideshow && <BlockBackgroundSlideshow slideshow={c._slideshow} />}
         {/* Overlay color */}
         {c.overlayColor && (
           <div className="pointer-events-none absolute inset-0" style={{ backgroundColor: c.overlayColor, opacity: (c.overlayOpacity ?? 50) / 100 }} aria-hidden="true" />
         )}
-        {hasSlideshow ? <div className="relative">{children}</div> : children}
+        {(hasSlideshow || hasBgImage || c.overlayColor) ? <div className="relative">{children}</div> : children}
       </motion.section>
     </>
   );
@@ -564,6 +577,9 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
       return <VideoBlock block={block} />;
     case "banner": {
       const BnrIcon = c.icon ? iconForName(c.icon, null) : null;
+      const bannerButtons = resolveButtons(c, [
+        ...(c.button_text ? [{ text: getLocalizedValue(c.button_text), link: c.button_link || "", icon: "", variant: "outline" }] : []),
+      ]);
       return withSection(
         block,
         "py-3 border-y border-border/20",
@@ -581,11 +597,13 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
           <span className="font-display text-sm uppercase tracking-widest text-foreground/90">
             {getLocalizedValue(c.heading || c.title, tr("blocks.banner.title", "Banner"))}
           </span>
-          {c.button_text && (
-            <Button variant="outline" size="sm" className="ml-2 h-7 text-[10px] font-display uppercase">
-              {getLocalizedValue(c.button_text)}
-            </Button>
-          )}
+          {bannerButtons.map((button, index) => (
+            <ActionButton
+              key={`banner-btn-${index}`}
+              button={button}
+              className="ml-2 h-7 text-[10px] font-display uppercase"
+            />
+          ))}
         </div>,
       );
     }

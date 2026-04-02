@@ -319,23 +319,65 @@ const verticalClass = (vertical?: string) => {
   }
 };
 
-const sectionStyle = (content: any): CSSProperties => ({
-  ...(content?.backgroundColor || content?.bg_color
-    ? { backgroundColor: content?.backgroundColor || content?.bg_color }
-    : {}),
-  ...(content?.textColor || content?.text_color ? { color: content?.textColor || content?.text_color } : {}),
-  ...(content?.paddingTop !== undefined ? { paddingTop: `${Number(content.paddingTop) || 0}px` } : {}),
-  ...(content?.paddingBottom !== undefined ? { paddingBottom: `${Number(content.paddingBottom) || 0}px` } : {}),
-  ...(content?.marginTop !== undefined ? { marginTop: `${Number(content.marginTop) || 0}px` } : {}),
-  ...(content?.marginBottom !== undefined ? { marginBottom: `${Number(content.marginBottom) || 0}px` } : {}),
-  ...(content?.backgroundImage || content?.bg_image
-    ? {
-        backgroundImage: `url(${content?.backgroundImage || content?.bg_image})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
+const sectionStyle = (content: any): CSSProperties => {
+  const style: CSSProperties = {};
+
+  // Colors
+  if (content?.backgroundColor || content?.bg_color) style.backgroundColor = content.backgroundColor || content.bg_color;
+  if (content?.textColor || content?.text_color) style.color = content.textColor || content.text_color;
+
+  // Spacing
+  if (content?.paddingTop !== undefined) style.paddingTop = `${Number(content.paddingTop) || 0}px`;
+  if (content?.paddingBottom !== undefined) style.paddingBottom = `${Number(content.paddingBottom) || 0}px`;
+  if (content?.paddingLeft !== undefined) style.paddingLeft = `${Number(content.paddingLeft) || 0}px`;
+  if (content?.paddingRight !== undefined) style.paddingRight = `${Number(content.paddingRight) || 0}px`;
+  if (content?.marginTop !== undefined) style.marginTop = `${Number(content.marginTop) || 0}px`;
+  if (content?.marginBottom !== undefined) style.marginBottom = `${Number(content.marginBottom) || 0}px`;
+
+  // Background image (static, not slideshow)
+  if (!content?._slideshow?.enabled && (content?.backgroundImage || content?.bg_image)) {
+    style.backgroundImage = `url(${content.backgroundImage || content.bg_image})`;
+    style.backgroundSize = "cover";
+    style.backgroundPosition = "center";
+  }
+
+  // Min height
+  if (content?.minHeight) style.minHeight = `${Number(content.minHeight)}px`;
+
+  // Opacity
+  if (content?.opacity !== undefined && content.opacity !== 100) style.opacity = Number(content.opacity) / 100;
+
+  // Gap
+  if (content?.gap) style.gap = `${Number(content.gap)}px`;
+
+  // Border (uniform)
+  if (content?.borderWidth && content.borderWidth > 0 && content?.borderStyle && content.borderStyle !== "none") {
+    const bOpacity = content.borderOpacity !== undefined ? Number(content.borderOpacity) / 100 : 1;
+    const bColor = content.borderColor || "hsl(var(--border))";
+    style.borderWidth = `${content.borderWidth}px`;
+    style.borderStyle = content.borderStyle;
+    style.borderColor = bOpacity < 1 ? `color-mix(in srgb, ${bColor} ${Math.round(bOpacity * 100)}%, transparent)` : bColor;
+  }
+
+  // Per-side borders
+  if (content?._borderPerSide) {
+    for (const side of ["Top", "Right", "Bottom", "Left"] as const) {
+      const w = content[`border${side}Width`];
+      const s = content[`border${side}Style`];
+      const c2 = content[`border${side}Color`];
+      if (w && w > 0 && s && s !== "none") {
+        (style as any)[`border${side}Width`] = `${w}px`;
+        (style as any)[`border${side}Style`] = s;
+        if (c2) (style as any)[`border${side}Color`] = c2;
       }
-    : {}),
-});
+    }
+  }
+
+  // Border radius
+  if (content?.borderRadius) style.borderRadius = `${content.borderRadius}px`;
+
+  return style;
+};
 
 const sectionProps = (block: SiteBlock, defaults: string) => {
   const c = block.content || {};

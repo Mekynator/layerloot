@@ -7,6 +7,7 @@ import {
   Activity, Zap, Target, HelpCircle, BookOpen, X,
   Settings2, Palette, Volume2, FileText, Sparkles, Megaphone,
 } from "lucide-react";
+import ChatLivePreview from "@/components/admin/ChatLivePreview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

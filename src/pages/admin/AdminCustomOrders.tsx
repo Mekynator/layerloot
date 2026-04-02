@@ -61,7 +61,7 @@ const AdminCustomOrders = () => {
   useEffect(() => {
     supabase
       .from("custom_orders")
-      .select("id, name, email, description, model_filename, status, created_at, quoted_price, customer_offer_price, final_agreed_price, payment_status, production_status, request_fee_status, metadata")
+      .select("id, name, email, description, model_filename, status, created_at, quoted_price, customer_offer_price, final_agreed_price, payment_status, production_status, request_fee_status, metadata, unread_by_admin")
       .order("created_at", { ascending: false })
       .then(({ data }) => setOrders((data as CustomOrder[]) ?? []));
   }, []);

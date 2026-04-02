@@ -578,6 +578,18 @@ const NavLinkEditor = () => {
                       New tab
                     </label>
                   </div>
+
+                  {/* Mega Menu Settings */}
+                  <MegaMenuSettings
+                    megaMenu={link.megaMenu}
+                    onChange={(config) => {
+                      setLinks((prev) => {
+                        const updated = [...prev];
+                        updated[i] = { ...updated[i], megaMenu: config };
+                        return updated;
+                      });
+                    }}
+                  />
                 </div>
 
                 <Button

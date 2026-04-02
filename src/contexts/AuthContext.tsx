@@ -41,6 +41,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, resolved);
   };
 
+  const ADMIN_ROLES = new Set(["super_admin", "admin", "editor", "support"]);
+
   const checkAdminRole = async (authUser: User) => {
     const roleFromMetadata = authUser.app_metadata?.role;
     const rolesFromMetadata = authUser.app_metadata?.roles;
@@ -50,22 +52,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (isMetadataAdmin) {
       setIsAdmin(true);
+      setAdminRole("admin");
       return;
     }
 
     const { data, error } = await supabase
       .from("user_roles")
       .select("role")
-      .eq("user_id", authUser.id)
-      .eq("role", "admin")
-      .maybeSingle();
+      .eq("user_id", authUser.id);
 
-    if (error) {
+    if (error || !data) {
       setIsAdmin(false);
+      setAdminRole(null);
       return;
     }
 
-    setIsAdmin(!!data);
+    const adminRoleRow = data.find((r: any) => ADMIN_ROLES.has(r.role));
+    if (adminRoleRow) {
+      setIsAdmin(true);
+      setAdminRole(adminRoleRow.role as AdminRole);
+    } else {
+      setIsAdmin(false);
+      setAdminRole(null);
+    }
   };
 
   useEffect(() => {

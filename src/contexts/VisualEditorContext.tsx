@@ -449,6 +449,22 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     toast.info("Draft discarded — reverted to published version");
   }, [activePage, fetchBlocks]);
 
+  // Schedule publish
+  const schedulePublishFn = useCallback(async (date: Date) => {
+    // Save draft first if dirty
+    const currentPageBlocks = sortBlocks(draftBlocks.filter(b => b.page === activePage));
+    await saveDraftBlocks(activePage, currentPageBlocks, user?.id);
+    await scheduleBlocksPublish(activePage, date, user?.id);
+    setScheduledAt(date.toISOString());
+    setDraftStatus("scheduled");
+  }, [draftBlocks, activePage, user]);
+
+  const cancelScheduleFn = useCallback(async () => {
+    await cancelBlocksSchedule(activePage);
+    setScheduledAt(null);
+    setDraftStatus("draft");
+  }, [activePage]);
+
   const discardChanges = useCallback(() => {
     setDraftBlocks(savedBlocks);
     undoStack.current = [];

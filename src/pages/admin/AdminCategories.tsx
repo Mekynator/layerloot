@@ -12,6 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import ImageUploadField from "@/components/admin/editor/controls/ImageUploadField";
+import SliderField from "@/components/admin/editor/controls/SliderField";
 
 interface Category {
   id: string;
@@ -27,6 +29,9 @@ interface GiftFinderTag {
   icon_key: string | null;
   sort_order: number | null;
   is_active: boolean;
+  image_url: string | null;
+  image_opacity: number | null;
+  image_fit: string | null;
 }
 
 const emptyCategory = {
@@ -41,6 +46,9 @@ const emptyGiftTag = {
   icon_key: "",
   sort_order: 0,
   is_active: true,
+  image_url: "",
+  image_opacity: 30,
+  image_fit: "cover",
 };
 
 const slugify = (value: string) =>
@@ -82,7 +90,7 @@ const AdminCategories = () => {
   const fetchGiftFinderTags = async () => {
     const { data, error } = await supabase
       .from("gift_finder_tags")
-      .select("id, name, slug, icon_key, sort_order, is_active")
+      .select("id, name, slug, icon_key, sort_order, is_active, image_url, image_opacity, image_fit")
       .order("sort_order", { ascending: true })
       .order("name", { ascending: true });
 
@@ -149,6 +157,9 @@ const AdminCategories = () => {
       icon_key: giftTagForm.icon_key?.trim() || null,
       sort_order: Number(giftTagForm.sort_order) || 0,
       is_active: giftTagForm.is_active,
+      image_url: giftTagForm.image_url?.trim() || null,
+      image_opacity: (giftTagForm.image_opacity ?? 30) / 100,
+      image_fit: giftTagForm.image_fit || "cover",
     };
 
     if (!payload.name) {
@@ -215,6 +226,9 @@ const AdminCategories = () => {
       icon_key: tag.icon_key ?? "",
       sort_order: tag.sort_order ?? 0,
       is_active: tag.is_active,
+      image_url: tag.image_url ?? "",
+      image_opacity: Math.round((tag.image_opacity ?? 0.3) * 100),
+      image_fit: tag.image_fit ?? "cover",
     });
     setGiftTagDialogOpen(true);
   };
@@ -428,6 +442,39 @@ const AdminCategories = () => {
                             })
                           }
                         />
+                      </div>
+
+                      <ImageUploadField
+                        label="Background Image"
+                        value={giftTagForm.image_url}
+                        onChange={(url) => setGiftTagForm({ ...giftTagForm, image_url: url })}
+                      />
+
+                      <SliderField
+                        label="Image Opacity"
+                        value={giftTagForm.image_opacity}
+                        onChange={(v) => setGiftTagForm({ ...giftTagForm, image_opacity: v })}
+                        min={5}
+                        max={100}
+                        step={5}
+                        unit="%"
+                      />
+
+                      <div>
+                        <Label>Image Fit</Label>
+                        <Select
+                          value={giftTagForm.image_fit}
+                          onValueChange={(value) => setGiftTagForm({ ...giftTagForm, image_fit: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="cover">Cover</SelectItem>
+                            <SelectItem value="contain">Contain</SelectItem>
+                            <SelectItem value="stretch">Stretch</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       <label className="flex items-center gap-2 text-sm">

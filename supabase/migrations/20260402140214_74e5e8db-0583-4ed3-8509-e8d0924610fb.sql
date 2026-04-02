@@ -1,0 +1,4 @@
+ALTER TABLE public.gift_finder_tags
+  ADD COLUMN IF NOT EXISTS image_url TEXT,
+  ADD COLUMN IF NOT EXISTS image_opacity NUMERIC NOT NULL DEFAULT 0.3,
+  ADD COLUMN IF NOT EXISTS image_fit TEXT NOT NULL DEFAULT 'cover';

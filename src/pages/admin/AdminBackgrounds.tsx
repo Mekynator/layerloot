@@ -90,10 +90,12 @@ export default function AdminBackgrounds() {
   const [overrideMode, setOverrideMode] = useState<PageOverrideMode>("inherit");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [publishingBg, setPublishingBg] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewPlaying, setPreviewPlaying] = useState(true);
   const previewTimerRef = useRef<number | null>(null);
+  const [bgDraftStatus, setBgDraftStatus] = useState<DraftStatus>("published");
 
   const isGlobal = selectedPage === "__global__";
 

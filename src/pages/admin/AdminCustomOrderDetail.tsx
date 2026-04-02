@@ -532,14 +532,32 @@ const AdminCustomOrderDetail = () => {
                         Conversation closed · Replies disabled
                       </div>
                     ) : (
-                      <div className="flex gap-2">
-                        <Textarea
-                          placeholder="Write a message to customer…"
-                          value={threadMessage}
-                          onChange={(e) => setThreadMessage(e.target.value)}
-                          rows={2}
-                          className="flex-1"
-                        />
+                      <div className="space-y-2">
+                        {/* Template selector */}
+                        {messageTemplates.length > 0 && (
+                          <Select onValueChange={(v) => {
+                            const tpl = messageTemplates.find(t => t.id === v);
+                            if (tpl) setThreadMessage(tpl.template);
+                          }}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <FileText className="mr-1.5 h-3 w-3" />
+                              <SelectValue placeholder="Use template…" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {messageTemplates.map(t => (
+                                <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        <div className="flex gap-2">
+                          <Textarea
+                            placeholder="Write a message to customer…"
+                            value={threadMessage}
+                            onChange={(e) => setThreadMessage(e.target.value)}
+                            rows={2}
+                            className="flex-1"
+                          />
                         <Button size="sm" onClick={sendAdminMessage} disabled={saving || !threadMessage.trim()} className="self-end h-10 px-4">
                           <Send className="h-4 w-4" />
                         </Button>

@@ -56,6 +56,7 @@ const DEFAULT_SHORTCUTS: DashboardShortcut[] = [
   { id: "campaigns", label: "Campaigns", icon: "Megaphone", to: "/admin/campaigns", visible: true },
   { id: "revenue", label: "Revenue Engine", icon: "Wallet", to: "/admin/revenue", visible: true },
   { id: "pricing", label: "Pricing", icon: "Calculator", to: "/admin/pricing", visible: true },
+  { id: "backgrounds", label: "Backgrounds", icon: "ImageIcon", to: "/admin/backgrounds", visible: true },
 ];
 
 /* ─── Activity Feed ─── */

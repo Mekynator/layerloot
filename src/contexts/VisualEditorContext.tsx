@@ -3,6 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
+import {
+  loadDraftBlocks, saveDraftBlocks, discardDraftBlocks, publishDraftBlocks,
+  type DraftStatus,
+} from "@/hooks/use-draft-publish";
 
 type SitePage = Tables<"site_pages">;
 

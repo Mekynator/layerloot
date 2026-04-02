@@ -146,6 +146,63 @@ export type Database = {
         }
         Relationships: []
       }
+      campaigns: {
+        Row: {
+          banner_config: Json
+          campaign_type: string
+          chat_overrides: Json
+          created_at: string
+          created_by: string | null
+          description: string | null
+          effects: Json
+          end_date: string | null
+          id: string
+          is_recurring: boolean
+          name: string
+          priority: number
+          start_date: string | null
+          status: string
+          theme_overrides: Json
+          updated_at: string
+        }
+        Insert: {
+          banner_config?: Json
+          campaign_type?: string
+          chat_overrides?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          effects?: Json
+          end_date?: string | null
+          id?: string
+          is_recurring?: boolean
+          name: string
+          priority?: number
+          start_date?: string | null
+          status?: string
+          theme_overrides?: Json
+          updated_at?: string
+        }
+        Update: {
+          banner_config?: Json
+          campaign_type?: string
+          chat_overrides?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          effects?: Json
+          end_date?: string | null
+          id?: string
+          is_recurring?: boolean
+          name?: string
+          priority?: number
+          start_date?: string | null
+          status?: string
+          theme_overrides?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string

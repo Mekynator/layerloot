@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
-
+import { useCampaign } from "@/components/campaign/CampaignThemeProvider";
+import { useChatSettings } from "@/hooks/use-chat-settings";
 type Msg = {
   id: string;
   role: "user" | "assistant";
@@ -272,6 +273,15 @@ const ChatWidget = () => {
   const location = useLocation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const promptBubbleTimerRef = useRef<number | null>(null);
+  const { campaign } = useCampaign();
+  const { settings: chatSettings } = useChatSettings();
+
+  const posClass = chatSettings.position === "bottom-left" ? "left-4 sm:left-6" : "right-4 sm:right-6";
+  const headerBg = campaign?.chat_overrides?.headerColor
+    ? `hsl(${campaign.chat_overrides.headerColor})`
+    : chatSettings.headerColor
+    ? `hsl(${chatSettings.headerColor})`
+    : undefined;
 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -451,7 +461,7 @@ const ChatWidget = () => {
             initial={{ opacity: 0, y: 12, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.96 }}
-            className="fixed bottom-24 right-6 z-50 max-w-[260px] rounded-2xl border border-border/30 bg-card/70 px-4 py-3 text-left shadow-[0_16px_48px_hsl(217_91%_60%/0.12)] backdrop-blur-xl"
+            className={`fixed bottom-24 ${posClass} z-50 max-w-[260px] rounded-2xl border border-border/30 bg-card/70 px-4 py-3 text-left shadow-[0_16px_48px_hsl(217_91%_60%/0.12)] backdrop-blur-xl`}
           >
             <button
               type="button"
@@ -482,7 +492,7 @@ const ChatWidget = () => {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.85, opacity: 0 }}
             whileHover={{ y: -4, scale: 1.04 }}
-            className="fixed bottom-6 right-6 z-50"
+            className={`fixed bottom-6 ${posClass} z-50`}
           >
             <Button onClick={openChat} size="lg" className="relative h-14 w-14 rounded-full shadow-2xl">
               <MessageCircle className="h-6 w-6" />
@@ -500,13 +510,23 @@ const ChatWidget = () => {
             initial={{ opacity: 0, y: 18, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 18, scale: 0.97 }}
-            className="fixed bottom-4 right-4 z-50 flex h-[46vh] min-h-[380px] w-[calc(100vw-2rem)] max-w-[430px] flex-col overflow-hidden rounded-3xl border border-border/30 bg-card/70 shadow-[0_24px_80px_hsl(217_91%_60%/0.15)] backdrop-blur-2xl sm:h-[52vh]"
+            className={`fixed bottom-4 ${posClass} z-50 flex h-[46vh] min-h-[380px] w-[calc(100vw-2rem)] max-w-[430px] flex-col overflow-hidden rounded-3xl border border-border/30 bg-card/70 shadow-[0_24px_80px_hsl(217_91%_60%/0.15)] backdrop-blur-2xl sm:h-[52vh]`}
           >
-            <div className="flex items-center justify-between border-b border-border/20 bg-gradient-to-r from-primary to-primary/80 px-4 py-2.5">
+            <div
+              className="flex items-center justify-between border-b border-border/20 px-4 py-2.5"
+              style={{
+                background: headerBg || undefined,
+                backgroundImage: !headerBg ? "linear-gradient(to right, hsl(var(--primary)), hsl(var(--primary) / 0.8))" : undefined,
+              }}
+            >
               <div className="flex items-center gap-2">
-                <Bot className="h-5 w-5 text-primary-foreground" />
+                {chatSettings.avatarUrl ? (
+                  <img src={chatSettings.avatarUrl} alt="" className="h-5 w-5 rounded-full object-cover" />
+                ) : (
+                  <Bot className="h-5 w-5 text-primary-foreground" />
+                )}
                 <div className="font-display text-sm font-bold uppercase tracking-wider text-primary-foreground">
-                  LayerLoot Assistant
+                  {chatSettings.brandName || "LayerLoot Assistant"}
                 </div>
               </div>
 

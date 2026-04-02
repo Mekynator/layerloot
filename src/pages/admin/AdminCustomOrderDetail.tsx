@@ -128,6 +128,7 @@ const AdminCustomOrderDetail = () => {
   const [conversationStatus, setConversationStatus] = useState<ConversationStatus>("open");
   const [videoLink, setVideoLink] = useState("");
   const [pictureLink, setPictureLink] = useState("");
+  const [messageTemplates, setMessageTemplates] = useState<{id: string; title: string; template: string; trigger_key: string}[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { notes: internalNotes, addNote, togglePin, deleteNote } = useAdminNotes("custom_order", orderId);
@@ -145,6 +146,10 @@ const AdminCustomOrderDetail = () => {
       if (meta?.conversation_status) setConversationStatus(meta.conversation_status);
       if (meta?.video_link) setVideoLink(meta.video_link);
       if (meta?.picture_link) setPictureLink(meta.picture_link);
+      // Mark as read by admin
+      if ((data as any).unread_by_admin) {
+        await supabase.from("custom_orders").update({ unread_by_admin: false } as any).eq("id", orderId);
+      }
     }
   };
 
@@ -158,9 +163,19 @@ const AdminCustomOrderDetail = () => {
     setMessages((data as CustomOrderMessage[]) ?? []);
   };
 
+  const loadTemplates = async () => {
+    const { data } = await supabase
+      .from("custom_order_message_templates" as any)
+      .select("id, title, template, trigger_key")
+      .eq("is_active", true)
+      .order("sort_order");
+    setMessageTemplates((data as any) ?? []);
+  };
+
   useEffect(() => {
     loadOrder();
     loadMessages();
+    loadTemplates();
   }, [orderId]);
 
   useEffect(() => {

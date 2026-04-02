@@ -1,67 +1,74 @@
 
 
-# Redesign Gift Finder — Premium Visual-First Experience
+# Redesign Gift Finder Results — Smart AI-Powered Results Section
 
 ## Current State
-The Gift Finder is a tab inside `CreateYourOwn.tsx` (lines 801–1003). It shows icon+label buttons in a grid, with inline product results below. The `gift_finder_tags` table has `name`, `slug`, `icon_key`, `sort_order`, `is_active`. No image support exists on tags.
+The results are rendered inline at the bottom of `GiftFinderSection.tsx` (lines 271–325) as a simple grid of product links with match score badges. No AI messaging, no filtering, no badges, no add-to-cart, no recommendations. The existing `ProductCard` component already has add-to-cart, hover effects, rating stars, and sale badges.
+
+## Scope for This Phase
+Given the scale of the request, this plan focuses on the **highest-impact deliverables** that can be built now using existing data. Admin-configurable ranking weights, analytics tracking, and bundle logic are deferred to future phases.
 
 ## Plan
 
-### 1. Database Migration — Add image fields to `gift_finder_tags`
-Add columns:
-- `image_url TEXT` — background image for card
-- `image_opacity NUMERIC DEFAULT 0.3` — overlay opacity
-- `image_fit TEXT DEFAULT 'cover'` — cover/contain/stretch
+### 1. Create `src/components/gift-finder/GiftFinderResults.tsx`
+A new component that replaces the inline results section in `GiftFinderSection.tsx`. Receives `selectedTagIds`, `selectedTagNames`, matched `products`, and `loading` as props.
 
-### 2. Extract GiftFinder to its own component
-Create `src/components/gift-finder/GiftFinderSection.tsx` — extracted from `CreateYourOwn.tsx` lines 801–1003, then redesigned.
+**Sections rendered:**
 
-### 3. Redesign the Gift Finder UI
+**A. Sticky Selection Summary Bar**
+- Horizontal bar showing selected tag names as chips
+- "Edit Selection" button (scrolls back to grid) + "Clear All"
+- Sticky on scroll (`sticky top-16 z-30`)
 
-**Layout:**
-- Center-aligned header: small "Gift Finder" label + "Find the Best Match" title
-- Subtle hint: "AI will recommend the best products for you"
-- Remove all helper/description text ("Pick one or more vibes", "Smarter matching…")
-- Max-width container, generous vertical spacing
+**B. AI Header**
+- Dynamic text: "We found X perfect matches based on your preferences"
+- Contextual subtitle generated from tag names: "These are perfect for a **Gamer** who loves **Fantasy** themes"
+- Sparkles icon, subtle fade-in animation
 
-**Tag Cards (core redesign):**
-- Responsive grid: 3–4 cols desktop, 2 mobile
-- Each card: icon (top-center), label (center), optional background image with gradient overlay
-- States:
-  - Default: dark surface, soft border, muted icon
-  - Hover: `scale(1.03)`, blue glow border, icon brightens
-  - Selected: strong glow border, filled background, checkmark top-right, subtle pulse
-- Images lazy-loaded with `loading="lazy"`
+**C. Smart Badges on Products**
+- "Best Match" badge on products matching ALL selected tags (`matchScore === selectedTagIds.length`)
+- "Top Pick" badge on featured products
+- Products already sorted by matchScore → featured → name (existing logic)
 
-**Selection UX:**
-- Multi-select with animated transitions
-- Selection counter: "3 selected" displayed above/below grid
-- Selected tag chips removed (replaced by in-card checkmarks)
+**D. Enhanced Product Cards**
+- Reuse the existing `ProductCard` component (already has add-to-cart, hover, ratings, sale badges)
+- Wrap each card with an additional overlay showing:
+  - Match explanation text: "Matches your Fantasy + Gamer selection"
+  - "Best Match" / "Top Pick" badge at top
+- Grid: 2 cols mobile, 3 tablet, 4 desktop
 
-**CTA System:**
-- "Find Matches (X selected)" button — hidden when 0 selected, slides in when ≥1
-- "Browse all products" secondary link below
-- Both animated with framer-motion fade/slide
+**E. Empty State**
+- Friendly illustration with "No exact matches" message
+- "Browse all products" CTA
+- Suggestion to try different vibes
 
-**Results inline** (kept as-is but polished) — products shown below with match scoring. This prepares for a future dedicated results page.
+**F. "You Might Also Like" Section**
+- Below main results, fetch 4–6 additional products NOT in results but sharing at least 1 tag
+- Uses same query pattern but excludes already-shown product IDs
+- Simple horizontal scroll or grid
 
-### 4. Admin — Image management for tags
-Update `AdminCategories.tsx` Gift Finder Tags form to add:
-- Image upload field (to `site-assets` bucket)
-- Image opacity slider
-- Image fit selector (cover/contain/stretch)
+### 2. Update `GiftFinderSection.tsx`
+- Extract results rendering (lines 271–325) into the new `GiftFinderResults` component
+- Pass tag names (not just IDs) to results for display
+- Add `onClear` and `onScrollToSelection` callbacks
+- Keep all data fetching in GiftFinderSection (single source of truth)
 
-### 5. Files Changed
+### 3. Fetch Social Proof for Results
+- After products are fetched, query `showcase_reviews` or use the existing `use-social-proof` hook to get rating data for result products
+- Pass `socialProof` to ProductCard for star ratings
+
+### Files Changed
 
 | File | Change |
 |------|--------|
-| `supabase migration` | Add `image_url`, `image_opacity`, `image_fit` to `gift_finder_tags` |
-| `src/components/gift-finder/GiftFinderSection.tsx` | **New** — extracted and redesigned Gift Finder component |
-| `src/pages/CreateYourOwn.tsx` | Replace inline `GiftFinder` with import of new component |
-| `src/pages/admin/AdminCategories.tsx` | Add image upload, opacity slider, fit selector to Gift Finder Tags form |
+| `src/components/gift-finder/GiftFinderResults.tsx` | **New** — full results UI with AI header, sticky summary, badges, recommendations |
+| `src/components/gift-finder/GiftFinderSection.tsx` | Replace inline results with `<GiftFinderResults />`, pass tag names + callbacks |
 
-### 6. Scope Boundaries
-- **Included:** Visual redesign, image support, selection UX, CTA, admin editing
-- **Deferred (next phase):** Occasion filters, smart preview tooltips on hover, dedicated results page, AI suggestion section ("People who chose this also liked…")
-- **Not changing:** Database query logic, product matching/scoring, product_gift_finder_tags table
+### What's Deferred (Future Phases)
+- Price range / category / material filters (requires product metadata not currently queried)
+- Admin-configurable ranking weights and badge rules
+- Bundle suggestions (requires bundle data model)
+- Analytics event tracking
+- "Why this result?" expandable info
+- AI chat integration
 

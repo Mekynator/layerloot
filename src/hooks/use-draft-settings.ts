@@ -13,10 +13,13 @@ interface UseDraftSettingsReturn<T> {
   draftStatus: DraftStatus;
   loading: boolean;
   dirty: boolean;
+  scheduledAt: string | null;
   setValue: (v: T | ((prev: T) => T)) => void;
   saveDraft: (userId?: string) => Promise<boolean>;
   publish: (userId?: string) => Promise<boolean>;
   discard: () => Promise<boolean>;
+  schedulePublish: (date: Date) => Promise<boolean>;
+  cancelSchedule: () => Promise<boolean>;
   reload: () => Promise<void>;
 }
 

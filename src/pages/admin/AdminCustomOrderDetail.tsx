@@ -309,7 +309,7 @@ const AdminCustomOrderDetail = () => {
                 </div>
                 {order.model_url && (
                   <div className="h-48 rounded-lg overflow-hidden border border-border">
-                    <ModelViewer modelUrl={order.model_url} />
+                    <ModelViewer url={order.model_url} />
                   </div>
                 )}
               </CardContent>

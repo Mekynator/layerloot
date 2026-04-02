@@ -91,15 +91,17 @@ export default function OrderTimeline({
   productionStatus,
   timestamps,
   variant = "horizontal",
+  adminMode = false,
 }: {
   status: string;
   productionStatus?: string;
   timestamps?: Record<string, string | null>;
   variant?: "horizontal" | "vertical";
+  adminMode?: boolean;
 }) {
   const steps = useMemo(
-    () => mapOrderToTimelineSteps(status, productionStatus, timestamps),
-    [status, productionStatus, timestamps],
+    () => mapOrderToTimelineSteps(status, productionStatus, timestamps, adminMode),
+    [status, productionStatus, timestamps, adminMode],
   );
 
   if (variant === "vertical") {

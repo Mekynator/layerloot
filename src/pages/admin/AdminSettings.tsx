@@ -16,6 +16,9 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import { DEFAULT_SIDEBAR_CONFIG, SIDEBAR_ICON_MAP, type SidebarConfig } from "@/components/admin/AdminLayout";
 import { DEFAULT_SHORTCUTS, ICON_MAP, type DashboardShortcut } from "@/pages/admin/Dashboard";
 import { POLICY_KEYS } from "@/pages/Policies";
+import { useDraftSettings } from "@/hooks/use-draft-settings";
+import DraftActionBar from "@/components/admin/DraftActionBar";
+import { useAuth } from "@/contexts/AuthContext";
 
 /* ─── Types ─── */
 interface PromoConfig {
@@ -45,7 +48,7 @@ const defaultBranding: BrandingConfig = { logo_text_left: "Layer", logo_text_rig
 
 const AVAILABLE_ICONS = Object.keys({ ...ICON_MAP, ...SIDEBAR_ICON_MAP });
 
-/* ─── Helper ─── */
+/* ─── Admin-only direct save helper ─── */
 const upsertSetting = async (key: string, value: any) => {
   const { data: existing } = await supabase.from("site_settings").select("id").eq("key", key).maybeSingle();
   if (existing) {
@@ -58,64 +61,71 @@ const upsertSetting = async (key: string, value: any) => {
 /* ─── Main ─── */
 const AdminSettings = () => {
   const { toast } = useToast();
-  const [contact, setContact] = useState({ email: "", phone: "", address: "", social: { instagram: "", facebook: "", youtube: "" } });
-  const [store, setStore] = useState({ name: "LayerLoot", currency: "DKK", currency_symbol: "kr" });
-  const [promo, setPromo] = useState<PromoConfig>(defaultPromo);
-  const [footer, setFooter] = useState<FooterConfig>(defaultFooter);
-  const [footerContact, setFooterContact] = useState<FooterContactConfig>(defaultFooterContact);
-  const [branding, setBranding] = useState<BrandingConfig>(defaultBranding);
-  const [saving, setSaving] = useState(false);
-  const [policies, setPolicies] = useState<Record<string, { title: string; body: string }>>({});
+  const { user } = useAuth();
+  const userId = user?.id;
+
+  /* Draft-managed storefront settings */
+  const contactDraft = useDraftSettings("contact", { email: "", phone: "", address: "", social: { instagram: "", facebook: "", youtube: "" } });
+  const storeDraft = useDraftSettings("store", { name: "LayerLoot", currency: "DKK", currency_symbol: "kr" });
+  const promoDraft = useDraftSettings<PromoConfig>("promotion_popup", defaultPromo);
+  const footerDraft = useDraftSettings<FooterConfig>("footer_settings", defaultFooter);
+  const brandingDraft = useDraftSettings<BrandingConfig>("branding", defaultBranding);
+  const accountDraft = useDraftSettings<AccountPageConfig>("account_page_config", DEFAULT_ACCOUNT_CONFIG);
+
+  /* Policy drafts — managed as individual keys */
+  const policyDrafts = POLICY_KEYS.map(p => useDraftSettings<{ title: string; body: string }>(p.settingKey, { title: p.title, body: "" }));
+
+  /* Admin-only settings (direct save, not draft) */
   const [shortcuts, setShortcuts] = useState<DashboardShortcut[]>(DEFAULT_SHORTCUTS);
   const [sidebarConfig, setSidebarConfig] = useState<SidebarConfig>(DEFAULT_SIDEBAR_CONFIG);
-  const [accountConfig, setAccountConfig] = useState<AccountPageConfig>(DEFAULT_ACCOUNT_CONFIG);
+  const [adminSaving, setAdminSaving] = useState(false);
+  const [draftSaving, setDraftSaving] = useState(false);
+  const [draftPublishing, setDraftPublishing] = useState(false);
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase.from("site_settings").select("*");
-      if (data) {
-        const policyData: Record<string, { title: string; body: string }> = {};
-        data.forEach((s: any) => {
-          if (s.key === "contact") { setContact(prev => ({ ...prev, ...(s.value as any) })); setFooterContact(prev => ({ ...prev, ...(s.value as any) })); }
-          if (s.key === "store") setStore(s.value as any);
-          if (s.key === "promotion_popup") setPromo({ ...defaultPromo, ...(s.value as any) });
-          if (s.key === "footer_settings") setFooter({ ...defaultFooter, ...(s.value as any) });
-          if (s.key === "branding") setBranding({ ...defaultBranding, ...(s.value as any) });
-          if (s.key === "admin_dashboard_shortcuts" && Array.isArray(s.value)) setShortcuts(s.value as unknown as DashboardShortcut[]);
-          if (s.key === "admin_sidebar_config" && (s.value as any)?.groups) setSidebarConfig(s.value as unknown as SidebarConfig);
-          if (s.key === "account_page_config" && s.value) setAccountConfig({ ...DEFAULT_ACCOUNT_CONFIG, ...(s.value as any) });
-          if (s.key.startsWith("policy_") && s.value) policyData[s.key] = s.value as { title: string; body: string };
-        });
-        setPolicies(policyData);
-      }
+      const { data } = await supabase.from("site_settings").select("key, value").in("key", ["admin_dashboard_shortcuts", "admin_sidebar_config"]);
+      data?.forEach((s: any) => {
+        if (s.key === "admin_dashboard_shortcuts" && Array.isArray(s.value)) setShortcuts(s.value as unknown as DashboardShortcut[]);
+        if (s.key === "admin_sidebar_config" && (s.value as any)?.groups) setSidebarConfig(s.value as unknown as SidebarConfig);
+      });
     };
     load();
   }, []);
 
-  const save = async () => {
-    setSaving(true);
-    const mergedContact = {
-      ...contact, email: footerContact.email, phone: footerContact.phone, address: footerContact.address,
-      contact_description: footerContact.contact_description, email_label: footerContact.email_label,
-      phone_label: footerContact.phone_label, address_label: footerContact.address_label,
-      instagram_url: footerContact.instagram_url, facebook_url: footerContact.facebook_url,
-      social_title: footerContact.social_title,
-      social: { ...(contact as any).social, instagram: footerContact.instagram_url, facebook: footerContact.facebook_url },
-    };
-    const policyUpserts = Object.entries(policies).map(([key, val]) => upsertSetting(key, val));
+  /* Compute combined draft status */
+  const allDrafts = [contactDraft, storeDraft, promoDraft, footerDraft, brandingDraft, accountDraft, ...policyDrafts];
+  const anyDirty = allDrafts.some(d => d.dirty);
+  const anyHasDraft = allDrafts.some(d => d.hasDraft);
+  const combinedStatus = anyDirty ? "draft" as const : anyHasDraft ? "draft" as const : "published" as const;
+
+  const saveAllDrafts = async () => {
+    setDraftSaving(true);
+    await Promise.all(allDrafts.map(d => d.saveDraft(userId)));
+    setDraftSaving(false);
+    toast({ title: "Drafts saved" });
+  };
+
+  const publishAll = async () => {
+    setDraftPublishing(true);
+    await Promise.all(allDrafts.map(d => d.publish(userId)));
+    setDraftPublishing(false);
+    toast({ title: "All storefront settings published!" });
+  };
+
+  const discardAll = async () => {
+    await Promise.all(allDrafts.map(d => d.discard()));
+    toast({ title: "Drafts discarded" });
+  };
+
+  const saveAdminSettings = async () => {
+    setAdminSaving(true);
     await Promise.all([
-      upsertSetting("contact", mergedContact),
-      upsertSetting("store", store),
-      upsertSetting("promotion_popup", promo),
-      upsertSetting("footer_settings", footer),
-      upsertSetting("branding", branding),
       upsertSetting("admin_dashboard_shortcuts", shortcuts),
       upsertSetting("admin_sidebar_config", sidebarConfig),
-      upsertSetting("account_page_config", accountConfig),
-      ...policyUpserts,
     ]);
-    setSaving(false);
-    toast({ title: "Settings saved!" });
+    setAdminSaving(false);
+    toast({ title: "Admin settings saved!" });
   };
 
   /* Shortcut helpers */
@@ -156,16 +166,34 @@ const AdminSettings = () => {
     setSidebarConfig({ groups });
   };
 
+  const loading = allDrafts.some(d => d.loading);
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center py-12 text-muted-foreground">Loading settings...</div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout>
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl font-bold uppercase text-foreground">Settings</h1>
-          <p className="text-xs text-muted-foreground">Store configuration, branding, dashboard & navigation</p>
+      <div className="mb-6 space-y-3">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="font-display text-2xl font-bold uppercase text-foreground">Settings</h1>
+            <p className="text-xs text-muted-foreground">Store configuration, branding, dashboard & navigation</p>
+          </div>
         </div>
-        <Button onClick={save} disabled={saving} size="sm" className="font-display text-xs uppercase tracking-wider">
-          <Save className="mr-1 h-4 w-4" /> {saving ? "Saving..." : "Save"}
-        </Button>
+        <DraftActionBar
+          status={combinedStatus}
+          dirty={anyDirty}
+          saving={draftSaving}
+          publishing={draftPublishing}
+          onSaveDraft={saveAllDrafts}
+          onPublish={publishAll}
+          onDiscard={discardAll}
+        />
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
@@ -182,36 +210,36 @@ const AdminSettings = () => {
           <div className="grid gap-4 lg:grid-cols-2">
             <Card><CardHeader><CardTitle className="font-display text-sm uppercase">Contact Information</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <div><Label className="text-xs">Email</Label><Input value={contact.email} onChange={e => setContact({ ...contact, email: e.target.value })} /></div>
-                <div><Label className="text-xs">Phone</Label><Input value={contact.phone} onChange={e => setContact({ ...contact, phone: e.target.value })} /></div>
-                <div><Label className="text-xs">Address</Label><Input value={contact.address} onChange={e => setContact({ ...contact, address: e.target.value })} /></div>
+                <div><Label className="text-xs">Email</Label><Input value={contactDraft.value.email} onChange={e => contactDraft.setValue(prev => ({ ...prev, email: e.target.value }))} /></div>
+                <div><Label className="text-xs">Phone</Label><Input value={contactDraft.value.phone} onChange={e => contactDraft.setValue(prev => ({ ...prev, phone: e.target.value }))} /></div>
+                <div><Label className="text-xs">Address</Label><Input value={contactDraft.value.address} onChange={e => contactDraft.setValue(prev => ({ ...prev, address: e.target.value }))} /></div>
               </CardContent>
             </Card>
             <Card><CardHeader><CardTitle className="font-display text-sm uppercase">Social Media</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <div><Label className="text-xs">Instagram URL</Label><Input value={contact.social?.instagram ?? ""} onChange={e => setContact({ ...contact, social: { ...contact.social, instagram: e.target.value } })} /></div>
-                <div><Label className="text-xs">Facebook URL</Label><Input value={contact.social?.facebook ?? ""} onChange={e => setContact({ ...contact, social: { ...contact.social, facebook: e.target.value } })} /></div>
-                <div><Label className="text-xs">YouTube URL</Label><Input value={contact.social?.youtube ?? ""} onChange={e => setContact({ ...contact, social: { ...contact.social, youtube: e.target.value } })} /></div>
+                <div><Label className="text-xs">Instagram URL</Label><Input value={contactDraft.value.social?.instagram ?? ""} onChange={e => contactDraft.setValue(prev => ({ ...prev, social: { ...prev.social, instagram: e.target.value } }))} /></div>
+                <div><Label className="text-xs">Facebook URL</Label><Input value={contactDraft.value.social?.facebook ?? ""} onChange={e => contactDraft.setValue(prev => ({ ...prev, social: { ...prev.social, facebook: e.target.value } }))} /></div>
+                <div><Label className="text-xs">YouTube URL</Label><Input value={contactDraft.value.social?.youtube ?? ""} onChange={e => contactDraft.setValue(prev => ({ ...prev, social: { ...prev.social, youtube: e.target.value } }))} /></div>
               </CardContent>
             </Card>
             <Card><CardHeader><CardTitle className="font-display text-sm uppercase">Store Settings</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <div><Label className="text-xs">Store Name</Label><Input value={store.name} onChange={e => setStore({ ...store, name: e.target.value })} /></div>
-                <div><Label className="text-xs">Currency</Label><Input value={store.currency} onChange={e => setStore({ ...store, currency: e.target.value })} /></div>
-                <div><Label className="text-xs">Currency Symbol</Label><Input value={store.currency_symbol} onChange={e => setStore({ ...store, currency_symbol: e.target.value })} /></div>
+                <div><Label className="text-xs">Store Name</Label><Input value={storeDraft.value.name} onChange={e => storeDraft.setValue(prev => ({ ...prev, name: e.target.value }))} /></div>
+                <div><Label className="text-xs">Currency</Label><Input value={storeDraft.value.currency} onChange={e => storeDraft.setValue(prev => ({ ...prev, currency: e.target.value }))} /></div>
+                <div><Label className="text-xs">Currency Symbol</Label><Input value={storeDraft.value.currency_symbol} onChange={e => storeDraft.setValue(prev => ({ ...prev, currency_symbol: e.target.value }))} /></div>
               </CardContent>
             </Card>
             <Card><CardHeader><CardTitle className="font-display text-sm uppercase">Promotion Popup</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex items-center gap-2"><Switch checked={promo.enabled} onCheckedChange={v => setPromo({ ...promo, enabled: v })} /><Label className="text-xs">Enable popup</Label></div>
-                <div><Label className="text-xs">Title</Label><Input value={promo.title} onChange={e => setPromo({ ...promo, title: e.target.value })} /></div>
-                <div><Label className="text-xs">Message</Label><Textarea value={promo.message} onChange={e => setPromo({ ...promo, message: e.target.value })} rows={2} /></div>
+                <div className="flex items-center gap-2"><Switch checked={promoDraft.value.enabled} onCheckedChange={v => promoDraft.setValue(prev => ({ ...prev, enabled: v }))} /><Label className="text-xs">Enable popup</Label></div>
+                <div><Label className="text-xs">Title</Label><Input value={promoDraft.value.title} onChange={e => promoDraft.setValue(prev => ({ ...prev, title: e.target.value }))} /></div>
+                <div><Label className="text-xs">Message</Label><Textarea value={promoDraft.value.message} onChange={e => promoDraft.setValue(prev => ({ ...prev, message: e.target.value }))} rows={2} /></div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div><Label className="text-xs">Button Text</Label><Input value={promo.button_text} onChange={e => setPromo({ ...promo, button_text: e.target.value })} /></div>
-                  <div><Label className="text-xs">Button Link</Label><Input value={promo.button_link} onChange={e => setPromo({ ...promo, button_link: e.target.value })} /></div>
+                  <div><Label className="text-xs">Button Text</Label><Input value={promoDraft.value.button_text} onChange={e => promoDraft.setValue(prev => ({ ...prev, button_text: e.target.value }))} /></div>
+                  <div><Label className="text-xs">Button Link</Label><Input value={promoDraft.value.button_link} onChange={e => promoDraft.setValue(prev => ({ ...prev, button_link: e.target.value }))} /></div>
                 </div>
-                <div><Label className="text-xs">Image URL</Label><Input value={promo.image_url} onChange={e => setPromo({ ...promo, image_url: e.target.value })} /></div>
-                <div><Label className="text-xs">Dismiss Key</Label><Input value={promo.dismiss_key} onChange={e => setPromo({ ...promo, dismiss_key: e.target.value })} /></div>
+                <div><Label className="text-xs">Image URL</Label><Input value={promoDraft.value.image_url} onChange={e => promoDraft.setValue(prev => ({ ...prev, image_url: e.target.value }))} /></div>
+                <div><Label className="text-xs">Dismiss Key</Label><Input value={promoDraft.value.dismiss_key} onChange={e => promoDraft.setValue(prev => ({ ...prev, dismiss_key: e.target.value }))} /></div>
               </CardContent>
             </Card>
           </div>
@@ -221,17 +249,17 @@ const AdminSettings = () => {
         <TabsContent value="policies" className="space-y-6">
           <p className="text-sm text-muted-foreground">Edit your store policies below. Content supports Markdown formatting.</p>
           <div className="grid gap-4">
-            {POLICY_KEYS.map(policy => {
-              const current = policies[policy.settingKey] || { title: policy.title, body: "" };
+            {POLICY_KEYS.map((policy, idx) => {
+              const draft = policyDrafts[idx];
               return (
                 <Card key={policy.settingKey}>
                   <CardHeader><CardTitle className="font-display text-sm uppercase">{policy.title}</CardTitle></CardHeader>
                   <CardContent className="space-y-3">
                     <div><Label className="text-xs">Page Title</Label>
-                      <Input value={current.title} onChange={e => setPolicies(prev => ({ ...prev, [policy.settingKey]: { ...current, title: e.target.value } }))} />
+                      <Input value={draft.value.title} onChange={e => draft.setValue(prev => ({ ...prev, title: e.target.value }))} />
                     </div>
                     <div><Label className="text-xs">Content (Markdown)</Label>
-                      <Textarea value={current.body} onChange={e => setPolicies(prev => ({ ...prev, [policy.settingKey]: { ...current, body: e.target.value } }))} rows={10} className="font-mono text-xs" />
+                      <Textarea value={draft.value.body} onChange={e => draft.setValue(prev => ({ ...prev, body: e.target.value }))} rows={10} className="font-mono text-xs" />
                     </div>
                     <p className="text-[10px] text-muted-foreground">Live at: <span className="font-mono text-primary">/policies/{policy.slug}</span></p>
                   </CardContent>
@@ -241,9 +269,14 @@ const AdminSettings = () => {
           </div>
         </TabsContent>
 
-        {/* ─── DASHBOARD SHORTCUTS ─── */}
+        {/* ─── DASHBOARD SHORTCUTS (admin-only, direct save) ─── */}
         <TabsContent value="dashboard" className="space-y-6">
-          <p className="text-sm text-muted-foreground">Manage shortcuts shown on the admin dashboard. Reorder, rename, change icons, or hide them.</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">Manage shortcuts shown on the admin dashboard.</p>
+            <Button onClick={saveAdminSettings} disabled={adminSaving} size="sm" className="font-display text-xs uppercase tracking-wider">
+              <Save className="mr-1 h-4 w-4" /> {adminSaving ? "Saving..." : "Save"}
+            </Button>
+          </div>
           <div className="space-y-2">
             {shortcuts.map((sc, idx) => {
               const Icon = ICON_MAP[sc.icon] || SIDEBAR_ICON_MAP[sc.icon] || Package;
@@ -277,9 +310,14 @@ const AdminSettings = () => {
           </Button>
         </TabsContent>
 
-        {/* ─── NAVIGATION (sidebar editor) ─── */}
+        {/* ─── NAVIGATION (sidebar editor, admin-only) ─── */}
         <TabsContent value="navigation" className="space-y-6">
-          <p className="text-sm text-muted-foreground">Manage the left admin sidebar. Reorder, rename, hide, or move items between groups.</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">Manage the left admin sidebar.</p>
+            <Button onClick={saveAdminSettings} disabled={adminSaving} size="sm" className="font-display text-xs uppercase tracking-wider">
+              <Save className="mr-1 h-4 w-4" /> {adminSaving ? "Saving..." : "Save"}
+            </Button>
+          </div>
           {sidebarConfig.groups.map((group, gi) => (
             <div key={group.name}>
               <h3 className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{group.name}</h3>
@@ -325,47 +363,57 @@ const AdminSettings = () => {
           <Card>
             <CardHeader><CardTitle className="font-display text-sm uppercase">Modules</CardTitle></CardHeader>
             <CardContent className="space-y-2">
-              {[...accountConfig.modules].sort((a, b) => a.order - b.order).map((mod, idx) => {
+              {[...accountDraft.value.modules].sort((a, b) => a.order - b.order).map((mod, idx) => {
                 const Icon = { ...ICON_MAP, ...SIDEBAR_ICON_MAP }[mod.icon] || Package;
                 return (
                   <div key={mod.id} className={`flex items-center gap-3 rounded-lg border border-border p-3 transition-opacity ${!mod.visible ? "opacity-50" : ""}`}>
                     <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 shrink-0"><Icon className="h-3.5 w-3.5 text-primary" /></div>
                     <Input value={mod.label} onChange={e => {
-                      const modules = [...accountConfig.modules];
-                      const i = modules.findIndex(m => m.id === mod.id);
-                      modules[i] = { ...modules[i], label: e.target.value };
-                      setAccountConfig({ ...accountConfig, modules });
+                      accountDraft.setValue(prev => {
+                        const modules = [...prev.modules];
+                        const i = modules.findIndex(m => m.id === mod.id);
+                        modules[i] = { ...modules[i], label: e.target.value };
+                        return { ...prev, modules };
+                      });
                     }} className="h-8 max-w-[160px] text-sm" />
                     <Select value={mod.icon} onValueChange={v => {
-                      const modules = [...accountConfig.modules];
-                      const i = modules.findIndex(m => m.id === mod.id);
-                      modules[i] = { ...modules[i], icon: v };
-                      setAccountConfig({ ...accountConfig, modules });
+                      accountDraft.setValue(prev => {
+                        const modules = [...prev.modules];
+                        const i = modules.findIndex(m => m.id === mod.id);
+                        modules[i] = { ...modules[i], icon: v };
+                        return { ...prev, modules };
+                      });
                     }}>
                       <SelectTrigger className="h-8 w-[130px] text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>{AVAILABLE_ICONS.map(ic => <SelectItem key={ic} value={ic}>{ic}</SelectItem>)}</SelectContent>
                     </Select>
                     <div className="ml-auto flex items-center gap-1">
                       <Button variant="ghost" size="icon" className="h-7 w-7" disabled={idx === 0} onClick={() => {
-                        const modules = [...accountConfig.modules].sort((a, b) => a.order - b.order);
-                        if (idx === 0) return;
-                        const temp = modules[idx].order;
-                        modules[idx] = { ...modules[idx], order: modules[idx - 1].order };
-                        modules[idx - 1] = { ...modules[idx - 1], order: temp };
-                        setAccountConfig({ ...accountConfig, modules });
+                        accountDraft.setValue(prev => {
+                          const modules = [...prev.modules].sort((a, b) => a.order - b.order);
+                          if (idx === 0) return prev;
+                          const temp = modules[idx].order;
+                          modules[idx] = { ...modules[idx], order: modules[idx - 1].order };
+                          modules[idx - 1] = { ...modules[idx - 1], order: temp };
+                          return { ...prev, modules };
+                        });
                       }}><ChevronUp className="h-3 w-3" /></Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" disabled={idx === accountConfig.modules.length - 1} onClick={() => {
-                        const modules = [...accountConfig.modules].sort((a, b) => a.order - b.order);
-                        if (idx >= modules.length - 1) return;
-                        const temp = modules[idx].order;
-                        modules[idx] = { ...modules[idx], order: modules[idx + 1].order };
-                        modules[idx + 1] = { ...modules[idx + 1], order: temp };
-                        setAccountConfig({ ...accountConfig, modules });
+                      <Button variant="ghost" size="icon" className="h-7 w-7" disabled={idx === accountDraft.value.modules.length - 1} onClick={() => {
+                        accountDraft.setValue(prev => {
+                          const modules = [...prev.modules].sort((a, b) => a.order - b.order);
+                          if (idx >= modules.length - 1) return prev;
+                          const temp = modules[idx].order;
+                          modules[idx] = { ...modules[idx], order: modules[idx + 1].order };
+                          modules[idx + 1] = { ...modules[idx + 1], order: temp };
+                          return { ...prev, modules };
+                        });
                       }}><ChevronDown className="h-3 w-3" /></Button>
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
-                        const modules = accountConfig.modules.map(m => m.id === mod.id ? { ...m, visible: !m.visible } : m);
-                        setAccountConfig({ ...accountConfig, modules });
+                        accountDraft.setValue(prev => ({
+                          ...prev,
+                          modules: prev.modules.map(m => m.id === mod.id ? { ...m, visible: !m.visible } : m),
+                        }));
                       }}>
                         {mod.visible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3 text-muted-foreground" />}
                       </Button>
@@ -382,13 +430,13 @@ const AdminSettings = () => {
               <CardContent className="space-y-3">
                 <div>
                   <Label className="text-xs">Default Tab</Label>
-                  <Select value={accountConfig.defaultTab} onValueChange={v => setAccountConfig({ ...accountConfig, defaultTab: v as any })}>
+                  <Select value={accountDraft.value.defaultTab} onValueChange={v => accountDraft.setValue(prev => ({ ...prev, defaultTab: v as any }))}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>{accountConfig.modules.map(m => <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>)}</SelectContent>
+                    <SelectContent>{accountDraft.value.modules.map(m => <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Switch checked={accountConfig.showLoyaltySummary} onCheckedChange={v => setAccountConfig({ ...accountConfig, showLoyaltySummary: v })} />
+                  <Switch checked={accountDraft.value.showLoyaltySummary} onCheckedChange={v => accountDraft.setValue(prev => ({ ...prev, showLoyaltySummary: v }))} />
                   <Label className="text-xs">Show Loyalty Summary</Label>
                 </div>
               </CardContent>
@@ -399,9 +447,11 @@ const AdminSettings = () => {
               <CardContent className="space-y-2">
                 {["points", "activeVouchers", "totalOrders", "giftCardBalance"].map(tile => (
                   <div key={tile} className="flex items-center gap-2">
-                    <Switch checked={accountConfig.overviewTiles.includes(tile)} onCheckedChange={v => {
-                      const tiles = v ? [...accountConfig.overviewTiles, tile] : accountConfig.overviewTiles.filter(t => t !== tile);
-                      setAccountConfig({ ...accountConfig, overviewTiles: tiles });
+                    <Switch checked={accountDraft.value.overviewTiles.includes(tile)} onCheckedChange={v => {
+                      accountDraft.setValue(prev => ({
+                        ...prev,
+                        overviewTiles: v ? [...prev.overviewTiles, tile] : prev.overviewTiles.filter(t => t !== tile),
+                      }));
                     }} />
                     <Label className="text-xs capitalize">{tile.replace(/([A-Z])/g, " $1").trim()}</Label>
                   </div>
@@ -414,7 +464,7 @@ const AdminSettings = () => {
               <CardContent className="space-y-3">
                 <div>
                   <Label className="text-xs">Hover Animation</Label>
-                  <Select value={accountConfig.style.hoverAnimation} onValueChange={v => setAccountConfig({ ...accountConfig, style: { ...accountConfig.style, hoverAnimation: v } })}>
+                  <Select value={accountDraft.value.style.hoverAnimation} onValueChange={v => accountDraft.setValue(prev => ({ ...prev, style: { ...prev.style, hoverAnimation: v } }))}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="lift">Lift</SelectItem>
@@ -425,7 +475,7 @@ const AdminSettings = () => {
                 </div>
                 <div>
                   <Label className="text-xs">Tab Style</Label>
-                  <Select value={accountConfig.style.tabStyle} onValueChange={v => setAccountConfig({ ...accountConfig, style: { ...accountConfig.style, tabStyle: v } })}>
+                  <Select value={accountDraft.value.style.tabStyle} onValueChange={v => accountDraft.setValue(prev => ({ ...prev, style: { ...prev.style, tabStyle: v } }))}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="pills">Pills</SelectItem>

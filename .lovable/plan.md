@@ -1,82 +1,114 @@
 
 
-# Mega Menu Navigation System
+# AI Personalization Engine
 
 ## Current State
-- Header renders flat nav links from `site_settings.nav_links` via `useNavLinks()` hook
-- Each nav item is a simple `{label, to, source, pageId, visible}` — no dropdown config
-- Categories table exists with `parent_id` for hierarchy, products have `category_id`
-- MiniCart already demonstrates the hover-open/delay-close pattern to reuse
-- No mega menu, no dropdown content, no featured products in nav
+- **Behavior tracking** exists in `use-behavior-tracking.ts` — tracks views, cart adds, searches, tool usage in localStorage
+- **Smart recommendations** exist in `use-smart-recommendations.ts` — generates sections based on category views and social proof
+- **Saved preferences** exist in `SavedPreferencesModule.tsx` + `use-remembered-choices.ts` — materials, colors, finishes, categories, price range stored in localStorage
+- **Product options** aggregated dynamically from DB in `use-product-options.ts`
+- **Cart upsells** exist but use simple featured/price logic, no personalization
+- **Gift finder** has tag-based filtering, no preference pre-selection
+- **Mega menu** shows categories/featured products, no personalization
+- **AI chat** has context via `useChatContext` hook but no preference/behavior data
+
+What's **missing**: a unified scoring system that combines preferences + behavior into a single ranking function usable across all touchpoints. Currently each component does its own ad-hoc logic.
 
 ## Plan
 
-### 1. Extend NavItem Data Model (No DB Migration)
-Nav items are stored as JSON in `site_settings.nav_links`. Extend the `NavItem` type to include optional mega menu config:
+### 1. New Hook: `src/hooks/use-personalization-engine.ts`
 
-```ts
-interface NavItem {
-  // existing fields...
-  megaMenu?: {
-    enabled: boolean;
-    layout: "categories" | "featured" | "full"; // which columns to show
-    featuredProductIds?: string[];  // admin-selected products (up to 4)
-    bannerImageUrl?: string;
-    bannerLink?: string;
-    bannerText?: string;
-    showCategories?: boolean;
-    showNewArrivals?: boolean;
-    showBestSellers?: boolean;
-  };
-}
-```
+Central personalization engine that merges all data sources into a unified product scoring function.
 
-No migration needed — this is JSONB stored in `site_settings`.
+**Inputs consumed:**
+- `useBehaviorTracking()` → category interest, recency, session count
+- `useRememberedChoices()` → explicit preferences (materials, colors, categories, price range)
+- Cart items (passed as parameter)
 
-### 2. New Component: `MegaMenuDropdown.tsx`
-Single component handling the hover mega menu panel for a nav item.
+**Outputs:**
+- `scoreProduct(product: CatalogProduct): number` — composite score (0–100)
+- `rankProducts(products: CatalogProduct[], limit?: number): CatalogProduct[]` — sorted by score
+- `getPersonalizedSections(products, socialProofMap): RecommendationSection[]` — replaces current `useSmartRecommendations` logic with preference-aware sections
+- `getTopCategories(): string[]` — merged from behavior + preferences
+- `getUserSegment(): "new" | "casual" | "engaged" | "loyal"` — based on session count + behavior depth
+- `resetPersonalization(): void` — clears behavior + preferences
 
-**Hover logic**: Same pattern as MiniCart — `onMouseEnter`/`onMouseLeave` with 250ms close delay, `AnimatePresence` fade+slide animation.
+**Scoring formula:**
+- Category match (behavior): +20 (weighted by view count)
+- Category match (preference): +15
+- Material match (preference): +10
+- Color match (preference): +5
+- Price in preferred range: +10
+- Recency (created in last 30 days): +5
+- Social proof (rating ≥ 4.5): +5
+- Featured/admin boost: +10
+- Already viewed penalty: -5
+- Total normalized to 0–100
 
-**Layout** (3-column grid inside a full-width dropdown below header):
-- **Left column**: Categories list from `categories` table (with subcategories indented). Hovering a category shows its products in the center column.
-- **Center column**: 2–4 product cards (image + name + price). Source: admin-selected `featuredProductIds`, or auto-populated from featured/newest products in that category.
-- **Right column**: Promotional banner (admin-uploaded image), CTA button, quick action links ("Shop All", "Best Sellers", "New Arrivals").
+Cached via `useMemo` with dependency on behavior + choices + products.
 
-**Campaign integration**: If an active campaign exists (from `useActiveCampaign`), apply campaign theme colors to the mega menu border/accent and optionally swap the banner.
+### 2. Update `src/hooks/use-smart-recommendations.ts`
 
-**Data fetching**: Use `useQuery` with `staleTime: 5min` to lazy-load categories + featured products. Only fetch when dropdown opens (enabled by `enabled: open` in query options).
+Replace the current ad-hoc logic with calls to the personalization engine:
+- "Recommended for you" section uses `rankProducts()` filtered to exclude recent views
+- "Based on your activity" section uses behavior-only scoring
+- "Trending for your interests" section combines social proof + preference match
+- Keep "New arrivals" and "Budget picks" as-is but apply preference filtering
 
-**Mobile**: On mobile, mega menu items render as accordion sections inside the existing mobile nav panel — categories expand/collapse, no hover behavior.
+### 3. Update `src/components/smart/SmartHomeSections.tsx`
 
-### 3. Modify `Header.tsx`
-- Replace the flat `<Link>` desktop nav loop with a new loop that wraps each link in a `MegaMenuDropdown` container (only if `megaMenu?.enabled`)
-- Non-mega items remain as plain links
-- Add a full-width dropdown container positioned below the header bar using `absolute` positioning
+- Use `usePersonalizationEngine` instead of separate `useBehaviorTracking` + `useSmartRecommendations`
+- Add user segment-aware greeting: "Welcome back" for returning, nothing for new
+- Show personalized category chips above recommendations (top 3-4 categories from engine)
 
-### 4. Extend `NavLinkEditor.tsx` (Admin Control)
-Add a collapsible "Mega Menu Settings" section per nav item when editing:
-- Toggle: "Enable Mega Menu"
-- Layout selector (categories / featured / full)
-- Product picker: search products, select up to 4 featured products
-- Banner image upload (using existing `ImageUploadField`)
-- Banner link + CTA text inputs
-- Toggles: show categories, show new arrivals, show best sellers
+### 4. Update `src/components/smart/CartUpsellSection.tsx`
 
-### 5. Product Preview on Category Hover
-Inside the mega menu left column, hovering a category name triggers a query (or filters pre-loaded products) to show 2–3 product thumbnails in the center column. Uses the same delayed-hover pattern.
+- Import `usePersonalizationEngine` and use `rankProducts()` to score upsell candidates instead of simple `is_featured` filter
+- Keep free-shipping-gap logic but rank gap-fillers by personalization score
+
+### 5. Update `src/components/gift-finder/GiftFinderSection.tsx`
+
+- Pre-select tags based on saved preferences (`lastGiftSettings.recipientInterests`) and behavior (top categories mapped to gift tags)
+- Sort results by personalization score when no explicit tag selection
+
+### 6. Update `src/components/layout/MegaMenuDropdown.tsx`
+
+- Use `getTopCategories()` from engine to reorder the category list — user's preferred categories appear first with a subtle indicator
+- No visual change to layout, just order priority
+
+### 7. Update AI Chat Context (`src/hooks/useChatContext.ts`)
+
+- Include user preferences (materials, colors, categories) and top behavior signals in the context sent to the chat edge function
+- Add `preferences` and `interests` fields to the context object
+
+### 8. Admin Controls — `src/pages/admin/AdminSettings.tsx`
+
+Add a "Personalization" section in admin settings (stored in `site_settings`):
+- Weight sliders: behavior weight, preference weight, popularity weight, recency weight (all default 1.0)
+- Admin boost product IDs (comma-separated)
+- Toggle: enable/disable personalization globally
+
+No new DB tables needed — weights stored in `site_settings` JSONB, fetched via existing `useStorefrontSettings`.
+
+### 9. Privacy Controls in `SavedPreferencesModule.tsx`
+
+- Add "Reset All Personalization" button that calls `resetPersonalization()` from engine (clears both behavior localStorage + preferences)
+- Already has "Reset All" for preferences — extend to also clear behavior data
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/layout/MegaMenuDropdown.tsx` | **New** — mega menu panel with 3-column layout, hover logic, lazy data loading |
-| `src/components/layout/Header.tsx` | Wrap desktop nav items with MegaMenuDropdown when enabled |
-| `src/components/admin/NavLinkEditor.tsx` | Add mega menu config fields per nav item |
-| `src/components/admin/NavLinkEditor.tsx` types | Extend `NavItem` / `NavEditorItem` with `megaMenu` field |
+| `src/hooks/use-personalization-engine.ts` | **New** — unified scoring + ranking engine |
+| `src/hooks/use-smart-recommendations.ts` | Refactor to use personalization engine |
+| `src/components/smart/SmartHomeSections.tsx` | Use engine, add category chips, segment greeting |
+| `src/components/smart/CartUpsellSection.tsx` | Rank upsells by personalization score |
+| `src/components/gift-finder/GiftFinderSection.tsx` | Pre-select tags, rank by score |
+| `src/components/layout/MegaMenuDropdown.tsx` | Reorder categories by user interest |
+| `src/hooks/useChatContext.ts` | Include preferences + behavior in chat context |
+| `src/components/account/SavedPreferencesModule.tsx` | Add full personalization reset |
+| `src/pages/admin/AdminSettings.tsx` | Add personalization weight controls |
 
-### Deferred
-- Campaign-specific nav banner swaps (requires campaign → nav mapping)
-- Analytics tracking on mega menu interactions
-- Keyboard navigation / accessibility for mega menu
+### No Database Changes
+Everything runs client-side using existing localStorage data + existing product queries. Admin weights stored in `site_settings` (already exists).
 

@@ -99,25 +99,35 @@ export default function ImageUploadField({ label, value, onChange }: ImageUpload
           </div>
         </div>
       ) : (
-        <div
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={handleDrop}
-          onClick={() => inputRef.current?.click()}
-          className={`flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed px-3 py-4 transition-colors ${
-            dragOver
-              ? "border-primary bg-primary/5"
-              : "border-border/40 hover:border-primary/30 hover:bg-muted/30"
-          }`}
-        >
-          {uploading ? (
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          ) : (
-            <Upload className="h-5 w-5 text-muted-foreground" />
-          )}
-          <span className="text-[10px] text-muted-foreground">
-            {uploading ? "Uploading..." : "Click or drag image"}
-          </span>
+        <div className="flex gap-1.5">
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+            onClick={() => inputRef.current?.click()}
+            className={`flex-1 flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed px-3 py-4 transition-colors ${
+              dragOver
+                ? "border-primary bg-primary/5"
+                : "border-border/40 hover:border-primary/30 hover:bg-muted/30"
+            }`}
+          >
+            {uploading ? (
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            ) : (
+              <Upload className="h-5 w-5 text-muted-foreground" />
+            )}
+            <span className="text-[10px] text-muted-foreground">
+              {uploading ? "Uploading..." : "Click or drag"}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setPickerOpen(true)}
+            className="flex flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-border/40 px-3 py-4 transition-colors hover:border-primary/30 hover:bg-muted/30 cursor-pointer"
+          >
+            <FolderOpen className="h-5 w-5 text-muted-foreground" />
+            <span className="text-[10px] text-muted-foreground">Library</span>
+          </button>
         </div>
       )}
 

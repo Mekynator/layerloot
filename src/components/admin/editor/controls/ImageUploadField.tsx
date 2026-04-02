@@ -17,6 +17,7 @@ export default function ImageUploadField({ label, value, onChange }: ImageUpload
   const [uploading, setUploading] = useState(false);
   const [showUrl, setShowUrl] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const upload = useCallback(async (file: File) => {

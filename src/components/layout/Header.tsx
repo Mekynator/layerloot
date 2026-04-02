@@ -409,11 +409,7 @@ const Header = () => {
                       <DropdownMenuItem asChild>
                         <Link to="/account" className="cursor-pointer">{getLocalizedValue(headerSettings.account_label, t("nav.account", "My Account"))}</Link>
                       </DropdownMenuItem>
-                      {isAdmin && (
-                        <DropdownMenuItem asChild>
-                          <Link to="/admin" className="cursor-pointer"><Shield className="mr-2 h-4 w-4" /> {getLocalizedValue(headerSettings.admin_label, t("nav.admin", "Admin"))}</Link>
-                        </DropdownMenuItem>
-                      )}
+                      {/* Admin dropdown link removed — admin access is via /admin/login */}
                       <DropdownMenuSeparator className="bg-border/20" />
                       <DropdownMenuItem onClick={signOut} className="cursor-pointer">
                         <LogOut className="mr-2 h-4 w-4" /> {getLocalizedValue(headerSettings.sign_out_label, t("nav.signOut", "Sign Out"))}

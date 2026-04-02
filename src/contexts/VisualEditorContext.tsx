@@ -233,9 +233,19 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   const fetchBlocks = useCallback(async (page: string) => {
     const { data, error } = await supabase.from("site_blocks").select("*").eq("page", page).order("sort_order");
     if (error) { toast.error("Error loading blocks"); return; }
-    const blocks = sortBlocks((data as SiteBlock[]) ?? []);
-    setSavedBlocks(blocks);
-    setDraftBlocks(blocks);
+    const liveBlocks = sortBlocks((data as SiteBlock[]) ?? []);
+    setSavedBlocks(liveBlocks);
+
+    // Check for existing draft
+    const draft = await loadDraftBlocks(page);
+    if (draft) {
+      setDraftBlocks(sortBlocks(draft));
+      setDraftStatus("draft");
+    } else {
+      setDraftBlocks(liveBlocks);
+      setDraftStatus("published");
+    }
+
     undoStack.current = [];
     redoStack.current = [];
     setUndoVersion(0);

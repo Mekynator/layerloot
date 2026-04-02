@@ -4,7 +4,7 @@ import {
   ArrowLeft, Save, Send, Download, Pin, Trash2,
   DollarSign, ChevronDown, ChevronRight, Paperclip,
   Video, Image as ImageIcon, Lock, Unlock, MessageSquare,
-  Sparkles,
+  Sparkles, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,8 @@ import { useAdminNotes } from "@/hooks/use-admin-notes";
 import AdminLayout from "@/components/admin/AdminLayout";
 import ModelViewer from "@/components/ModelViewer";
 import { formatPrice } from "@/lib/currency";
+import { executeAutomation, trackSlaStage, DEFAULT_SLA_HOURS } from "@/hooks/use-custom-order-automation";
+import CustomOrderSlaCard from "@/components/admin/CustomOrderSlaCard";
 
 const STATUSES = [
   { value: "pending", label: "Pending", color: "bg-yellow-500/10 text-yellow-600 border-yellow-500/30" },

@@ -241,7 +241,12 @@ const NavLinkEditor = () => {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [sitePages, setSitePages] = useState<SitePageOption[]>([]);
   const [editingLanguage, setEditingLanguage] = useState<SupportedLanguage>(currentLang());
+  const [hasDraft, setHasDraft] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const userId = user?.id;
 
   const storageKey = mode === "header" ? "nav_links" : "footer_nav_links";
   const fallbackLinks = mode === "header" ? defaultHeaderNav : defaultFooterNav;

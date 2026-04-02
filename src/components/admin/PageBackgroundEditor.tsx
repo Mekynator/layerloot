@@ -9,6 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { saveDraftSetting } from "@/hooks/use-draft-publish";
 
 export type BackgroundSizeMode = "cover" | "contain" | "fill" | "repeat" | "auto";
 export type TransitionType = "fade" | "slide" | "zoom" | "crossfade" | "kenBurns";

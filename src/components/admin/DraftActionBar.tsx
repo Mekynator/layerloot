@@ -13,6 +13,7 @@ interface DraftActionBarProps {
   onDiscard: () => void;
   onPreview?: () => void;
   disabled?: boolean;
+  canPublish?: boolean;
   className?: string;
 }
 

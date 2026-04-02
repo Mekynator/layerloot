@@ -213,14 +213,23 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
           )}
 
           {draftBlocks.length > 0 && (
-            <button
-              onClick={onAddBlock}
-              onDragOver={(e) => { e.preventDefault(); setDragOverIndex(draftBlocks.length); }}
-              className="flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border/50 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-            >
-              <Plus className="h-3 w-3" />
-              <span className="text-[10px] uppercase tracking-wider">Add Section</span>
-            </button>
+            <div className="space-y-1">
+              <button
+                onClick={onAddBlock}
+                onDragOver={(e) => { e.preventDefault(); setDragOverIndex(draftBlocks.length); }}
+                className="flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border/50 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                <Plus className="h-3 w-3" />
+                <span className="text-[10px] uppercase tracking-wider">Add Section</span>
+              </button>
+              <button
+                onClick={() => setReusableOpen(true)}
+                className="flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border/50 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                <Box className="h-3 w-3" />
+                <span className="text-[10px] uppercase tracking-wider">From Library</span>
+              </button>
+            </div>
           )}
         </div>
       </ScrollArea>
@@ -232,6 +241,12 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
           <span>{draftBlocks.filter(b => b.is_active !== false).length} visible</span>
         </div>
       </div>
+
+      <InsertReusableDialog
+        open={reusableOpen}
+        onOpenChange={setReusableOpen}
+        onInsert={handleInsertReusable}
+      />
     </div>
   );
 }

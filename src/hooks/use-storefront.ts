@@ -195,6 +195,7 @@ async function fetchProductDetail(slug: string): Promise<ProductDetailData | nul
     .from("products")
     .select("*")
     .eq("slug", slug)
+    .eq("status", "published")
     .maybeSingle();
 
   if (productError) throw productError;

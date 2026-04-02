@@ -856,12 +856,12 @@ export default function AdminChat() {
               </div>
               <div><Label className="text-xs">Border Radius: {config.window.borderRadius}px</Label><Slider value={[config.window.borderRadius]} onValueChange={([v]) => setNested("window", "borderRadius", v)} min={0} max={40} step={2} /></div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div><Label className="text-xs">Background Color</Label><Input value={config.window.bgColor ?? ""} onChange={e => setNested("window", "bgColor", e.target.value)} /></div>
-                <div><Label className="text-xs">Border Color</Label><Input value={config.window.borderColor ?? ""} onChange={e => setNested("window", "borderColor", e.target.value)} /></div>
+                <ColorPickerField label="Background Color" value={config.window.bgColor ?? ""} onChange={v => setNested("window", "bgColor", v)} />
+                <ColorPickerField label="Border Color" value={config.window.borderColor ?? ""} onChange={v => setNested("window", "borderColor", v)} />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div><Label className="text-xs">Header BG</Label><Input value={config.window.headerBgColor ?? ""} onChange={e => setNested("window", "headerBgColor", e.target.value)} /></div>
-                <div><Label className="text-xs">Send Button Color</Label><Input value={config.window.sendButtonColor ?? ""} onChange={e => setNested("window", "sendButtonColor", e.target.value)} /></div>
+                <ColorPickerField label="Header BG" value={config.window.headerBgColor ?? ""} onChange={v => setNested("window", "headerBgColor", v)} />
+                <ColorPickerField label="Send Button Color" value={config.window.sendButtonColor ?? ""} onChange={v => setNested("window", "sendButtonColor", v)} />
               </div>
               <div><Label className="text-xs">Opacity: {config.window.opacity}%</Label><Slider value={[config.window.opacity]} onValueChange={([v]) => setNested("window", "opacity", v)} min={50} max={100} step={5} /></div>
               <div className="flex items-center gap-2"><Switch checked={config.window.glassEffect} onCheckedChange={v => setNested("window", "glassEffect", v)} /><Label className="text-xs">Glass Effect</Label></div>

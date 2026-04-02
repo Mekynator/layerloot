@@ -681,10 +681,19 @@ export default function AdminChat() {
               </CardContent>
             </Card>
           </div>
+            </div>
+            <div className="hidden xl:block w-[400px] shrink-0">
+              <div className="sticky top-4">
+                <ChatLivePreview config={config} />
+              </div>
+            </div>
+          </div>
         </TabsContent>
 
         {/* ─── TONE ─── */}
-        <TabsContent value="tone" className="space-y-4">
+        <TabsContent value="tone">
+          <div className="flex gap-6">
+            <div className="flex-1 min-w-0 space-y-4">
           <Card><CardHeader><CardTitle className="font-display text-sm uppercase">Tone & Personality</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

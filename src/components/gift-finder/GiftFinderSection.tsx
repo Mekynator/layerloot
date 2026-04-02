@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useRememberedChoices } from "@/hooks/use-remembered-choices";
 import {
   Baby, Check, Dog, Flower2, Gamepad2, Gift, Home,
   Monitor, Music, Palette, Search, Sparkles, Swords,

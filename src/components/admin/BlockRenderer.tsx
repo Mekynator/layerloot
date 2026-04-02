@@ -36,6 +36,7 @@ import { fadeUp } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import i18n from "@/lib/i18n";
 import { useTranslation } from "react-i18next";
+import BlockBackgroundSlideshow from "@/components/admin/BlockBackgroundSlideshow";
 
 type ActionType = "none" | "internal_link" | "external_link";
 

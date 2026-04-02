@@ -562,7 +562,18 @@ const AdminProducts = () => {
       <SchedulePublishDialog
         open={!!scheduleProductId}
         onOpenChange={(o) => { if (!o) setScheduleProductId(null); }}
-        onConfirm={handleScheduleConfirm}
+        onSchedule={async (date) => {
+          if (!scheduleProductId || !user?.id) return;
+          const ok = await productAdmin.scheduleProductPublish(scheduleProductId, date.toISOString(), user.id);
+          setScheduleProductId(null);
+          if (ok) await fetchProducts();
+        }}
+        onPublishNow={async () => {
+          if (!scheduleProductId || !user?.id) return;
+          const ok = await productAdmin.publishProduct(scheduleProductId, user.id);
+          setScheduleProductId(null);
+          if (ok) await fetchProducts();
+        }}
       />
 
       {/* Confirmation Alert Dialog */}

@@ -273,6 +273,15 @@ const ChatWidget = () => {
   const location = useLocation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const promptBubbleTimerRef = useRef<number | null>(null);
+  const { campaign } = useCampaign();
+  const { settings: chatSettings } = useChatSettings();
+
+  const posClass = chatSettings.position === "bottom-left" ? "left-4 sm:left-6" : "right-4 sm:right-6";
+  const headerBg = campaign?.chat_overrides?.headerColor
+    ? `hsl(${campaign.chat_overrides.headerColor})`
+    : chatSettings.headerColor
+    ? `hsl(${chatSettings.headerColor})`
+    : undefined;
 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);

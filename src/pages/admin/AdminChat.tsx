@@ -820,7 +820,7 @@ export default function AdminChat() {
                 <div><Label className="text-xs">Icon Style</Label>
                   <Select value={config.launcher.icon} onValueChange={v => setNested("launcher", "icon", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="message">Message</SelectItem><SelectItem value="bot">Bot</SelectItem><SelectItem value="sparkle">Sparkle</SelectItem><SelectItem value="custom">Custom Image</SelectItem></SelectContent></Select></div>
               </div>
-              {config.launcher.icon === "custom" && <div><Label className="text-xs">Custom Icon URL</Label><Input value={config.launcher.customIconUrl ?? ""} onChange={e => setNested("launcher", "customIconUrl", e.target.value)} /></div>}
+              {config.launcher.icon === "custom" && <ImageUploadPlaceholder label="Custom Icon" value={config.launcher.customIconUrl ?? ""} onChange={v => setNested("launcher", "customIconUrl", v)} />}
               <div><Label className="text-xs">Size: {config.launcher.size}px</Label><Slider value={[config.launcher.size]} onValueChange={([v]) => setNested("launcher", "size", v)} min={40} max={80} step={2} /></div>
               <div><Label className="text-xs">Bottom Offset: {config.launcher.bottomOffset}px</Label><Slider value={[config.launcher.bottomOffset]} onValueChange={([v]) => setNested("launcher", "bottomOffset", v)} min={8} max={80} step={4} /></div>
               <div className="grid gap-4 sm:grid-cols-2">

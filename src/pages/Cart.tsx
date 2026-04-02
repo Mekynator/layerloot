@@ -69,12 +69,12 @@ export default function CartPage() {
   const cartItems = items as CartItemExt[];
 
   const [savedItems, setSavedItems] = useState<CartItemExt[]>([]);
-  const [selectedDiscountCode, setSelectedDiscountCode] = useState<string>("");
-  const [manualDiscountCode, setManualDiscountCode] = useState("");
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [recentlyChanged, setRecentlyChanged] = useState<Record<string, "inc" | "dec" | "added">>({});
   const [removingIds, setRemovingIds] = useState<string[]>([]);
   const [savedToast, setSavedToast] = useState<string>("");
+  const [manualCodeError, setManualCodeError] = useState<string | undefined>();
+  const [manualCodeLoading, setManualCodeLoading] = useState(false);
   const [giftSettings, setGiftSettings] = useState<GiftSettings>({
     enabled: false,
     personalMessage: "",
@@ -86,38 +86,12 @@ export default function CartPage() {
 
   const checkoutButtonRef = useRef<HTMLButtonElement | null>(null);
 
-  useEffect(() => {
-    const raw = localStorage.getItem("layerloot_saved_items");
-    if (raw) {
-      try {
-        setSavedItems(JSON.parse(raw));
-      } catch {
-        setSavedItems([]);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("layerloot_saved_items", JSON.stringify(savedItems));
-  }, [savedItems]);
-
-  useEffect(() => {
-    if (!savedToast) return;
-    const timer = window.setTimeout(() => setSavedToast(""), 1800);
-    return () => window.clearTimeout(timer);
-  }, [savedToast]);
-
-  const selectedDiscount = useMemo(() => {
-    return (accountData?.availableDiscountCodes ?? []).find((d) => d.code === selectedDiscountCode) ?? null;
-  }, [selectedDiscountCode, accountData?.availableDiscountCodes]);
-
   const availableDiscountCodes = accountData?.availableDiscountCodes ?? [];
   const pointsBalance = accountData?.pointsBalance ?? 0;
 
-  const shippingProgress = Math.min((totalPrice / FREE_SHIPPING_THRESHOLD) * 100, 100);
-  const remainingForFreeShipping = Math.max(FREE_SHIPPING_THRESHOLD - totalPrice, 0);
-
   const shippingCost = totalPrice >= FREE_SHIPPING_THRESHOLD || totalPrice === 0 ? 0 : BASE_SHIPPING_PRICE;
+
+  const savings = useCheckoutSavings(totalPrice, shippingCost, availableDiscountCodes);
 
   const GIFT_FEE_PER_ITEM = 10;
   const GIFT_WRAP_FEE = 25;
@@ -127,17 +101,14 @@ export default function CartPage() {
 
   const pointsToEarn = Math.floor(totalPrice / 4);
 
-  const discountAmount = useMemo(() => {
-    if (!selectedDiscount) return 0;
+  const shippingProgress = Math.min((totalPrice / FREE_SHIPPING_THRESHOLD) * 100, 100);
+  const remainingForFreeShipping = Math.max(FREE_SHIPPING_THRESHOLD - totalPrice, 0);
 
-    if (selectedDiscount.type === "percent") {
-      return Number(((totalPrice * selectedDiscount.value) / 100).toFixed(2));
-    }
-
-    return Math.min(selectedDiscount.value, totalPrice + shippingCost);
-  }, [selectedDiscount, totalPrice, shippingCost]);
-
-  const finalTotal = Math.max(totalPrice + shippingCost + giftFee + giftWrapFee - discountAmount, 0);
+  const effectiveShipping = Math.max(shippingCost - savings.summary.shippingDiscount, 0);
+  const finalTotal = Math.max(
+    totalPrice + effectiveShipping + giftFee + giftWrapFee - savings.summary.discountAmount - savings.summary.giftCardDeduction,
+    0,
+  );
 
   const recommendedProducts = useMemo(() => {
     const map = new Map<string, RecommendedProduct>();

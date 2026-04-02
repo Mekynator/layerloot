@@ -28,6 +28,7 @@ import AdminCustomOrders from "./pages/admin/AdminCustomOrders";
 import AdminDiscounts from "./pages/admin/AdminDiscounts";
 import AdminShowcases from "./pages/admin/AdminShowcases";
 import AdminPricing from "./pages/admin/AdminPricing";
+import AdminProductPreview from "./pages/admin/AdminProductPreview";
 import AdminGrowth from "./pages/admin/AdminGrowth";
 import AdminCampaigns from "./pages/admin/AdminCampaigns";
 import AdminReports from "./pages/admin/AdminReports";

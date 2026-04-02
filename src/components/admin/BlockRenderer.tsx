@@ -179,27 +179,15 @@ export type BlockButton = {
 };
 
 const ICON_MAP: Record<string, any> = {
-  ShoppingBag,
-  ArrowRight,
-  Palette,
-  Upload,
-  Printer,
-  Package,
-  Truck,
-  Shield,
-  Star,
-  Mail,
-  ExternalLink,
-  Box,
-  Sparkles,
-  CheckCircle2,
-  HelpCircle,
-  Gem,
-  Wrench,
-  Home,
-  Gift,
-  BadgeCheck,
-  Instagram,
+  ShoppingBag, ArrowRight, Palette, Upload, Printer, Package, Truck, Shield,
+  Star, Mail, ExternalLink, Box, Sparkles, CheckCircle2, HelpCircle, Gem,
+  Wrench, Home, Gift, BadgeCheck, Instagram, Clock, CreditCard, DollarSign,
+  MapPin, Phone, Globe, Camera, Image, Video, Play, Download, Share2,
+  ThumbsUp, Award, Zap, Flame, Lock, Eye, Bell, MessageCircle, Send,
+  Search, Filter, Settings, BarChart3, TrendingUp, Users, UserPlus, User,
+  Layers, Bookmark, Tag, Calendar, FileText, Rocket, Target, Flag, Trophy,
+  Medal, Crown, Diamond, Scissors, Ruler, Pencil, Copy, RefreshCw,
+  Maximize, Move, Menu, Info, AlertCircle, AlertTriangle, XCircle, Heart, Coffee,
 };
 
 const iconForName = (name?: string, fallback = Box) => ICON_MAP[name || ""] || fallback;

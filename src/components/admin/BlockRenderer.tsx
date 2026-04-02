@@ -310,9 +310,6 @@ const sectionStyle = (content: any): CSSProperties => {
   if (content?.marginTop !== undefined) style.marginTop = `${Number(content.marginTop) || 0}px`;
   if (content?.marginBottom !== undefined) style.marginBottom = `${Number(content.marginBottom) || 0}px`;
 
-  // Background image is now rendered as a separate layer in withSection for opacity control
-  // Only set if no slideshow and no separate layer needed (fallback removed - always use layer)
-
   // Min height
   if (content?.minHeight) style.minHeight = `${Number(content.minHeight)}px`;
 
@@ -347,6 +344,68 @@ const sectionStyle = (content: any): CSSProperties => {
 
   // Border radius
   if (content?.borderRadius) style.borderRadius = `${content.borderRadius}px`;
+
+  // Glassmorphism
+  if (content?.glassEnabled) {
+    style.backdropFilter = `blur(${content.glassBlur ?? 16}px)`;
+    style.WebkitBackdropFilter = `blur(${content.glassBlur ?? 16}px)`;
+    const opacity = (content.glassOpacity ?? 70) / 100;
+    if (content.glassTint) {
+      style.backgroundColor = `color-mix(in srgb, ${content.glassTint} ${Math.round(opacity * 100)}%, transparent)`;
+    } else if (!style.backgroundColor) {
+      style.backgroundColor = `hsla(var(--card), ${opacity})`;
+    }
+    if (content.glassBorderGlow) {
+      style.borderColor = "hsl(var(--primary) / 0.3)";
+      style.borderWidth = style.borderWidth || "1px";
+      style.borderStyle = style.borderStyle || "solid";
+    }
+  }
+
+  // Gradient background
+  if (content?.gradientEnabled && content.gradientColor1 && content.gradientColor2) {
+    const dir = content.gradientDirection || "to right";
+    const colors = [content.gradientColor1, content.gradientColor2, content.gradientColor3].filter(Boolean);
+    style.background = `linear-gradient(${dir}, ${colors.join(", ")})`;
+    if (content.gradientAnimated) {
+      style.backgroundSize = "200% 200%";
+    }
+  }
+
+  // Shadow system
+  if (content?.shadow && content.shadow !== "none") {
+    const color = content.shadowColor || "hsl(228 33% 2% / 0.4)";
+    const shadowMap: Record<string, string> = {
+      sm: `0 1px 2px 0 ${color}`,
+      md: `0 4px 6px -1px ${color}`,
+      lg: `0 10px 15px -3px ${color}`,
+      xl: `0 20px 25px -5px ${color}`,
+      "2xl": `0 25px 50px -12px ${color}`,
+      soft: `0 8px 40px -8px ${color}`,
+      hard: `4px 4px 0px ${color}`,
+      colored: `0 10px 30px -5px ${color}`,
+      layered: `0 2px 4px ${color}, 0 8px 20px ${color}`,
+      inset: `inset 0 2px 12px ${color}`,
+    };
+    if (shadowMap[content.shadow]) {
+      style.boxShadow = shadowMap[content.shadow];
+    }
+  }
+
+  // Glow
+  if (content?.glowEnabled) {
+    const glowColor = content.glowColor || "hsl(217, 91%, 60%)";
+    const intensity = content.glowIntensity ?? 20;
+    const spread = content.glowSpread ?? 30;
+    const outerGlow = `0 0 ${spread}px ${intensity / 3}px ${glowColor}`;
+    const innerGlow = content.glowInner ? `, inset 0 0 ${intensity}px ${glowColor}` : "";
+    style.boxShadow = (style.boxShadow ? `${style.boxShadow}, ` : "") + outerGlow + innerGlow;
+    if (content.neonBorder) {
+      style.borderColor = glowColor;
+      style.borderWidth = style.borderWidth || "1px";
+      style.borderStyle = style.borderStyle || "solid";
+    }
+  }
 
   return style;
 };

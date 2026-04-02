@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Tags, ArrowLeft, Layers, Menu, X,
   Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
   Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone,
-  BarChart3, Wallet, ImageIcon, Shield, Activity,
+  BarChart3, Wallet, ImageIcon, Shield, Activity, Globe,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminPermissions } from "@/hooks/use-admin-permissions";

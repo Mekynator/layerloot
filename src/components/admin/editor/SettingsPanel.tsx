@@ -884,13 +884,20 @@ function AdvancedStyleEditor({ content, patchContent }: { content: Record<string
         min={0} max={100} step={5} unit="%"
       />
 
-      {/* Border Color (moved to Border tab) */}
-      {/* Overlay Color (for blocks with overlays) */}
+      {/* Overlay Color + Opacity (for all blocks) */}
       <ColorPickerField
         label="Overlay Color"
         value={content.overlayColor || ""}
         onChange={(v) => patchContent("overlayColor", v)}
       />
+      {content.overlayColor && (
+        <SliderField
+          label="Overlay Opacity"
+          value={content.overlayOpacity ?? 50}
+          onChange={(v) => patchContent("overlayOpacity", v)}
+          min={0} max={100} step={5} unit="%"
+        />
+      )}
     </div>
   );
 }

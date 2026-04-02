@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Star, History, ChevronDown, ChevronUp, Package, Gift, CreditCard } from "lucide-react";
+import { Star, History, ChevronDown, ChevronUp, Package, Gift, CreditCard, TrendingUp, TrendingDown } from "lucide-react";
 import { motion } from "framer-motion";
-import type { AccountModuleProps, AccountPageConfig } from "./types";
+import type { AccountModuleProps, AccountPageConfig, UserVoucher } from "./types";
+import { classifyVoucher } from "./types";
 
 interface Props extends AccountModuleProps {
   config: AccountPageConfig;
@@ -20,11 +21,12 @@ const AccountOverviewPanel = ({ overview, tt, config }: Props) => {
   }>;
 
   const tiles = config.overviewTiles;
-  const activeVouchersCount = (overview?.userVouchers ?? []).filter((v: any) => !v.is_used && !v.used_at).length;
+  const allUserVouchers = (overview?.userVouchers ?? []) as UserVoucher[];
+  const activeVouchersCount = allUserVouchers.filter(v => classifyVoucher(v) === "active").length;
   const totalOrders = (overview?.orders ?? []).length;
-  const giftCardBalance = (overview?.userVouchers ?? [])
-    .filter((v: any) => v.vouchers?.discount_type === "gift_card" && !v.is_used && Number(v.balance ?? 0) > 0)
-    .reduce((sum: number, v: any) => sum + Number(v.balance ?? 0), 0);
+  const giftCardBalance = allUserVouchers
+    .filter(v => classifyVoucher(v) === "active" && v.vouchers?.discount_type === "gift_card" && Number(v.balance ?? 0) > 0)
+    .reduce((sum: number, v) => sum + Number(v.balance ?? 0), 0);
 
   const tileData: Record<string, { label: string; value: string | number; icon: any }> = {
     points: { label: tt("account.points.earnedTotal", "Earned total"), value: pointsEarned, icon: Star },

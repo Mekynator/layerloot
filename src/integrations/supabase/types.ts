@@ -729,6 +729,119 @@ export type Database = {
           },
         ]
       }
+      media_asset_versions: {
+        Row: {
+          asset_id: string
+          created_at: string
+          file_size_bytes: number | null
+          id: string
+          public_url: string
+          replaced_by: string | null
+          storage_path: string
+          version_number: number
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string
+          file_size_bytes?: number | null
+          id?: string
+          public_url: string
+          replaced_by?: string | null
+          storage_path: string
+          version_number?: number
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string
+          file_size_bytes?: number | null
+          id?: string
+          public_url?: string
+          replaced_by?: string | null
+          storage_path?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_asset_versions_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_assets: {
+        Row: {
+          alt_text: string | null
+          created_at: string
+          description: string | null
+          file_name: string
+          file_size_bytes: number | null
+          folder: string
+          height: number | null
+          id: string
+          is_archived: boolean
+          media_type: string
+          mime_type: string
+          original_name: string
+          public_url: string
+          storage_bucket: string
+          storage_path: string
+          tags: string[] | null
+          title: string | null
+          updated_at: string
+          uploaded_by: string | null
+          usage_count: number
+          width: number | null
+        }
+        Insert: {
+          alt_text?: string | null
+          created_at?: string
+          description?: string | null
+          file_name: string
+          file_size_bytes?: number | null
+          folder?: string
+          height?: number | null
+          id?: string
+          is_archived?: boolean
+          media_type?: string
+          mime_type?: string
+          original_name: string
+          public_url: string
+          storage_bucket?: string
+          storage_path: string
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+          usage_count?: number
+          width?: number | null
+        }
+        Update: {
+          alt_text?: string | null
+          created_at?: string
+          description?: string | null
+          file_name?: string
+          file_size_bytes?: number | null
+          folder?: string
+          height?: number | null
+          id?: string
+          is_archived?: boolean
+          media_type?: string
+          mime_type?: string
+          original_name?: string
+          public_url?: string
+          storage_bucket?: string
+          storage_path?: string
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+          usage_count?: number
+          width?: number | null
+        }
+        Relationships: []
+      }
       newsletter_subscribers: {
         Row: {
           created_at: string
@@ -1276,6 +1389,51 @@ export type Database = {
           shipping_address?: Json | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      reusable_blocks: {
+        Row: {
+          block_type: string
+          content: Json
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_archived: boolean
+          name: string
+          tags: string[] | null
+          thumbnail_url: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          block_type: string
+          content?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_archived?: boolean
+          name: string
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          block_type?: string
+          content?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_archived?: boolean
+          name?: string
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }

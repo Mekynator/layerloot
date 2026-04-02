@@ -86,9 +86,7 @@ export default function ChatLivePreview({ config }: ChatLivePreviewProps) {
 
   const toneSample = TONE_SAMPLES[config.tone.personality] || TONE_SAMPLES.friendly;
 
-  const headerBg = config.window.headerBgColor
-    ? `hsl(${config.window.headerBgColor})`
-    : undefined;
+  const headerBg = config.window.headerBgColor || undefined;
 
   const handleSimSend = (text?: string) => {
     const msg = (text ?? simInput).trim();

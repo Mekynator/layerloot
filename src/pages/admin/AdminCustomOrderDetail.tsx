@@ -732,6 +732,9 @@ const AdminCustomOrderDetail = () => {
 
           {/* ── Sidebar ──────────────────────────────── */}
           <div className="space-y-5">
+            {/* SLA Tracking */}
+            <CustomOrderSlaCard orderId={orderId!} />
+
             {/* Status & Actions — no Admin Notes */}
             <Card>
               <CardHeader className="pb-3">

@@ -37,6 +37,8 @@ import VisualEditor from "./pages/admin/VisualEditor";
 import AdminBackgrounds from "./pages/admin/AdminBackgrounds";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminActivity from "./pages/admin/AdminActivity";
+import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
+import AdminCustomOrderDetail from "./pages/admin/AdminCustomOrderDetail";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminMedia from "./pages/admin/AdminMedia";
 import AdminReusableBlocks from "./pages/admin/AdminReusableBlocks";

@@ -341,8 +341,103 @@
   color: hsl(0 0% 100%);
 }
 
+/* ─── Ripple click effect ─── */
+@keyframes ripple-expand {
+  0% { transform: scale(0); opacity: 1; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+/* ─── Icon micro-interactions ─── */
+.icon-hover {
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), color 0.25s ease;
+}
+
+.icon-hover:hover {
+  transform: scale(1.15) rotate(-4deg);
+  color: hsl(var(--primary));
+}
+
+/* ─── Form validation animations ─── */
+@keyframes input-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+
+.input-error {
+  animation: input-shake 0.4s ease-out;
+  border-color: hsl(var(--destructive)) !important;
+}
+
+.input-success {
+  border-color: hsl(142 71% 45%) !important;
+  box-shadow: 0 0 0 2px hsl(142 71% 45% / 0.15);
+}
+
+/* ─── Success checkmark ─── */
+@keyframes check-pop {
+  0% { transform: scale(0) rotate(-45deg); opacity: 0; }
+  50% { transform: scale(1.2) rotate(0deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+.success-check {
+  animation: check-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ─── Shimmer skeleton ─── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ─── Focus ring glow ─── */
+.focus-glow:focus-visible,
+.focus-glow:focus-within {
+  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.25), 0 0 12px hsl(var(--primary) / 0.1);
+}
+
+/* ─── Card interactive hover ─── */
+.card-interactive {
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 0.4s ease;
+}
+
+.card-interactive:hover {
+  transform: translateY(-6px);
+  box-shadow:
+    0 24px 80px -12px hsl(217 91% 60% / 0.15),
+    0 0 0 1px hsl(217 91% 60% / 0.12),
+    inset 0 1px 0 0 hsl(215 25% 95% / 0.06);
+  border-color: hsl(217 91% 60% / 0.2);
+}
+
+/* ─── Button press feedback ─── */
+@keyframes btn-press {
+  0% { transform: scale(1); }
+  40% { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+
+.btn-press:active {
+  animation: btn-press 0.2s ease-out;
+}
+
+/* ─── Toast slide-in ─── */
+@keyframes toast-slide-in {
+  from { transform: translateY(100%) scale(0.95); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ambient-blob {
     animation: none !important;
+  }
+  .card-interactive:hover {
+    transform: none;
+  }
+  .icon-hover:hover {
+    transform: none;
   }
 }

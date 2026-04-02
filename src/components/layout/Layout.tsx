@@ -6,6 +6,7 @@ import GlobalSectionRenderer from "./GlobalSectionRenderer";
 import PageBackgroundSlideshow from "./PageBackgroundSlideshow";
 import FloatingCartSummary from "@/components/cart/FloatingCartSummary";
 import AchievementToast, { useAchievements } from "@/components/smart/AchievementToast";
+import ScrollProgress from "@/components/ui/scroll-progress";
 
 const Layout = ({ children }: { children: ReactNode }) => {
   const [searchParams] = useSearchParams();
@@ -48,6 +49,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
       </div>
       {!isCartPage && !isEditorPreview && <FloatingCartSummary />}
       <AchievementToast achievement={currentAchievement} onDismiss={dismiss} />
+      {!isEditorPreview && <ScrollProgress />}
     </div>
   );
 };

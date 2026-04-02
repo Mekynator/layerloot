@@ -121,13 +121,16 @@ interface CustomOrderMessage {
 }
 
 type RewardCatalogItem = {
-  key: string;
+  id: string;
   name: string;
-  description: string;
-  pointsCost: number;
-  discountType: string;
-  discountValue: number;
-  badge?: string;
+  description: string | null;
+  points_cost: number;
+  discount_type: string;
+  discount_value: number;
+  badge_text?: string | null;
+  icon_key?: string | null;
+  reward_type: string;
+  sort_order: number;
 };
 
 type AccountTab = "orders" | "custom-requests" | "rewards" | "vouchers" | "settings";
@@ -157,76 +160,6 @@ const customStatusBadgeColors: Record<string, string> = {
   completed: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
   rejected: "bg-red-500/10 text-red-600 border-red-500/30",
 };
-
-const REWARD_CATALOG: RewardCatalogItem[] = [
-  {
-    key: "25-discount",
-    name: "25 KR DISCOUNT",
-    description: "Get 25 kr off your next order",
-    pointsCost: 200,
-    discountType: "fixed_discount",
-    discountValue: 25,
-  },
-  {
-    key: "50-discount",
-    name: "50 KR DISCOUNT",
-    description: "Get 50 kr off your next order",
-    pointsCost: 400,
-    discountType: "fixed_discount",
-    discountValue: 50,
-  },
-  {
-    key: "100-discount",
-    name: "100 KR DISCOUNT",
-    description: "Get 100 kr off your next order",
-    pointsCost: 800,
-    discountType: "fixed_discount",
-    discountValue: 100,
-  },
-  {
-    key: "150-discount",
-    name: "150 KR DISCOUNT",
-    description: "Get 150 kr off your next order",
-    pointsCost: 1200,
-    discountType: "fixed_discount",
-    discountValue: 150,
-  },
-  {
-    key: "250-discount",
-    name: "250 KR DISCOUNT",
-    description: "Get 250 kr off your next order",
-    pointsCost: 2000,
-    discountType: "fixed_discount",
-    discountValue: 250,
-  },
-  {
-    key: "500-gift-card",
-    name: "500 KR GIFT CARD",
-    description: "A 500 kr gift card - use it yourself or send it to someone!",
-    pointsCost: 5000,
-    discountType: "gift_card",
-    discountValue: 500,
-    badge: "Gift Card",
-  },
-  {
-    key: "free-delivery",
-    name: "FREE DELIVERY DISCOUNT",
-    description: "Get free delivery on one order",
-    pointsCost: 800,
-    discountType: "free_shipping",
-    discountValue: 0,
-    badge: "Shipping",
-  },
-  {
-    key: "free-gift-wrap",
-    name: "FREE GIFT WRAPPING + CARD",
-    description: "Free gift wrapping and a personalised card with your message",
-    pointsCost: 350,
-    discountType: "gift_wrap",
-    discountValue: 0,
-    badge: "Gift",
-  },
-];
 
 const DONE_CUSTOM_STATUSES = new Set(["rejected", "completed"]);
 const DONE_PRODUCTION_STATUSES = new Set(["shipped", "cancelled", "completed"]);
@@ -292,20 +225,6 @@ function parseCustomOrderDescription(description: string) {
   });
 
   return { customerDescription, ...parsed };
-}
-
-function findMatchingVoucher(catalogItem: RewardCatalogItem, vouchers: Voucher[]) {
-  return vouchers.find((voucher) => {
-    if (catalogItem.discountType === "free_shipping") {
-      return voucher.discount_type === "free_shipping";
-    }
-
-    return (
-      voucher.discount_type === catalogItem.discountType &&
-      Number(voucher.discount_value) === Number(catalogItem.discountValue) &&
-      Number(voucher.points_cost) === Number(catalogItem.pointsCost)
-    );
-  });
 }
 
 function getNotificationsStorageKey(userId: string) {
@@ -532,50 +451,19 @@ const Account = () => {
   const redeemReward = async (reward: RewardCatalogItem) => {
     if (!user) return;
 
-    if (pointsBalance < reward.pointsCost) {
+    if (pointsBalance < reward.points_cost) {
       toast({ title: tt("account.rewards.notEnoughPoints", "Not enough points"), variant: "destructive" });
       return;
     }
 
-    setRedeemingKey(reward.key);
-
-    let voucherId: string | null = null;
-    const matchedVoucher = findMatchingVoucher(reward, vouchers);
-
-    if (matchedVoucher) {
-      voucherId = matchedVoucher.id;
-    } else {
-      const { data: newVoucher, error: createError } = await supabase
-        .from("vouchers")
-        .insert({
-          name: reward.name,
-          description: reward.description,
-          discount_type: reward.discountType,
-          discount_value: reward.discountValue,
-          points_cost: reward.pointsCost,
-          is_active: true,
-        })
-        .select("id")
-        .single();
-
-      if (createError || !newVoucher) {
-        setRedeemingKey(null);
-        toast({
-          title: tt("common.error", "Error"),
-          description: createError?.message || tt("account.rewards.createVoucherError", "Could not create voucher"),
-          variant: "destructive",
-        });
-        return;
-      }
-      voucherId = newVoucher.id;
-    }
+    setRedeemingKey(reward.id);
 
     const code = `LL-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    const isGiftCard = reward.discountType === "gift_card";
+    const isGiftCard = reward.discount_type === "gift_card";
 
     const { error: pointsError } = await supabase.from("loyalty_points").insert({
       user_id: user.id,
-      points: -reward.pointsCost,
+      points: -reward.points_cost,
       reason: `Redeemed: ${reward.name}`,
     });
 
@@ -587,9 +475,9 @@ const Account = () => {
 
     const { error: voucherError } = await supabase.from("user_vouchers").insert({
       user_id: user.id,
-      voucher_id: voucherId,
+      voucher_id: reward.id,
       code,
-      balance: isGiftCard ? reward.discountValue : null,
+      balance: isGiftCard ? reward.discount_value : null,
     });
 
     if (voucherError) {
@@ -600,7 +488,7 @@ const Account = () => {
 
     setRedeemingKey(null);
     toast({
-      title: tt("account.vouchers.redeemed", "Voucher redeemed"),
+      title: "✨ " + tt("account.vouchers.redeemed", "Reward redeemed!"),
       description: `${tt("account.vouchers.code", "Your code")}: ${code}`,
     });
     await refetchOverview();
@@ -1466,80 +1354,90 @@ const Account = () => {
                 />
               </div>
             )}
-            <div className="grid gap-4 sm:grid-cols-2">
-              {REWARD_CATALOG.map((reward) => {
-                const canRedeem = pointsBalance >= reward.pointsCost;
-                const rewardName = tt(`account.rewards.catalog.${reward.key}.name`, reward.name);
-                const rewardDescription = tt(`account.rewards.catalog.${reward.key}.description`, reward.description);
-                const rewardBadge = reward.badge
-                  ? tt(`account.rewards.catalog.${reward.key}.badge`, reward.badge)
-                  : null;
+            {vouchers.length === 0 && !overviewLoading ? (
+              <Card>
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  {tt("account.rewards.empty", "No rewards available right now.")}
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {vouchers
+                  .filter((v) => v.is_active)
+                  .sort((a, b) => (a as any).sort_order - (b as any).sort_order)
+                  .map((reward) => {
+                    const canRedeem = pointsBalance >= reward.points_cost;
+                    const neededPoints = reward.points_cost - pointsBalance;
 
-                return (
-                  <motion.div
-                    key={reward.key}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Card className="glass-card h-full shine-sweep">
-                      <CardContent className="space-y-4 p-6">
-                        <div className="flex items-center gap-2">
-                          <div className="font-display text-lg uppercase">{rewardName}</div>
-                          {rewardBadge && (
-                            <Badge variant="outline" className="font-display text-xs">
-                              {rewardBadge === tt("account.rewards.shippingBadge", "Shipping") ? (
-                                <Truck className="mr-1 h-3 w-3" />
-                              ) : null}
-                              {rewardBadge}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">{rewardDescription}</p>
+                    return (
+                      <motion.div
+                        key={reward.id}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.3 }}
+                        whileHover={{ scale: 1.02 }}
+                      >
+                        <Card className="glass-card h-full shine-sweep border border-primary/10 hover:border-primary/30 transition-all duration-200">
+                          <CardContent className="space-y-4 p-6">
+                            <div className="flex items-center gap-2">
+                              <div className="font-display text-lg uppercase">{reward.name}</div>
+                              {(reward as any).badge_text && (
+                                <Badge variant="outline" className="font-display text-xs">
+                                  {(reward as any).badge_text}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">{reward.description}</p>
 
-                        <div className="flex items-end justify-between gap-4">
-                          <div>
-                            {reward.discountType === "free_shipping" ? (
-                              <>
-                                <span className="font-display text-2xl font-bold text-primary">
-                                  {tt("account.rewards.freeDelivery", "Free delivery")}
-                                </span>
-                                <span className="ml-1 text-sm text-muted-foreground">
-                                  {tt("account.rewards.discount", "discount")}
-                                </span>
-                              </>
-                            ) : (
-                              <>
-                                <span className="font-display text-2xl font-bold text-primary">
-                                  {reward.discountValue} kr
-                                </span>
-                                <span className="ml-1 text-sm text-muted-foreground">
-                                  {reward.discountType === "gift_card"
-                                    ? tt("account.rewards.giftCard", "gift card")
-                                    : tt("account.rewards.discount", "discount")}
-                                </span>
-                              </>
+                            {!canRedeem && (
+                              <p className="text-xs text-muted-foreground">
+                                {tt("account.rewards.needMore", "You need")} <span className="font-bold text-primary">{neededPoints}</span> {tt("account.rewards.morePoints", "more points")}
+                              </p>
                             )}
-                          </div>
 
-                          <Button
-                            size="sm"
-                            onClick={() => redeemReward(reward)}
-                            disabled={!canRedeem || redeemingKey === reward.key}
-                            className="font-display uppercase tracking-wider"
-                          >
-                            <Star className="mr-1 h-3 w-3" />
-                            {redeemingKey === reward.key
-                              ? tt("account.rewards.redeeming", "Redeeming...")
-                              : `${reward.pointsCost} ${tt("account.rewards.pointsShort", "pts")}`}
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                );
-              })}
-            </div>
+                            <div className="flex items-end justify-between gap-4">
+                              <div>
+                                {reward.discount_type === "free_shipping" ? (
+                                  <span className="font-display text-2xl font-bold text-primary">
+                                    {tt("account.rewards.freeDelivery", "Free delivery")}
+                                  </span>
+                                ) : reward.discount_type === "gift_wrap" ? (
+                                  <span className="font-display text-2xl font-bold text-primary">
+                                    {tt("account.rewards.freeGiftWrap", "Free gift wrap")}
+                                  </span>
+                                ) : (
+                                  <>
+                                    <span className="font-display text-2xl font-bold text-primary">
+                                      {reward.discount_value} kr
+                                    </span>
+                                    <span className="ml-1 text-sm text-muted-foreground">
+                                      {reward.discount_type === "gift_card"
+                                        ? tt("account.rewards.giftCard", "gift card")
+                                        : tt("account.rewards.discount", "discount")}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+
+                              <Button
+                                size="sm"
+                                onClick={() => redeemReward(reward as unknown as RewardCatalogItem)}
+                                disabled={!canRedeem || redeemingKey === reward.id}
+                                className="font-display uppercase tracking-wider"
+                              >
+                                <Star className="mr-1 h-3 w-3" />
+                                {redeemingKey === reward.id
+                                  ? tt("account.rewards.redeeming", "Redeeming...")
+                                  : `${reward.points_cost} ${tt("account.rewards.pointsShort", "pts")}`}
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
+              </div>
+            )}
           </>
         )}
 

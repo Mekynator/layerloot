@@ -10,9 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
+import RewardsStoreEditor from "@/components/admin/RewardsStoreEditor";
 
 interface DiscountCode {
   id: string;
@@ -394,17 +396,24 @@ const AdminDiscounts = () => {
 
   return (
     <AdminLayout>
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-bold uppercase text-foreground">Discount Codes</h1>
-          <p className="text-sm text-muted-foreground">Create and manage promotional discount codes.</p>
-        </div>
-
-        <Button onClick={openCreate} className="font-display uppercase tracking-wider">
-          <Plus className="mr-1 h-4 w-4" />
-          New Discount
-        </Button>
+      <div className="mb-6">
+        <h1 className="font-display text-3xl font-bold uppercase text-foreground">Discounts & Rewards</h1>
+        <p className="text-sm text-muted-foreground">Manage discount codes and the rewards store catalog.</p>
       </div>
+
+      <Tabs defaultValue="discounts" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="discounts">Discount Codes</TabsTrigger>
+          <TabsTrigger value="rewards">Rewards Store</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="discounts" className="space-y-6">
+          <div className="flex justify-end">
+            <Button onClick={openCreate} className="font-display uppercase tracking-wider">
+              <Plus className="mr-1 h-4 w-4" />
+              New Discount
+            </Button>
+          </div>
 
       <Card>
         <CardContent className="p-0">
@@ -804,6 +813,12 @@ const AdminDiscounts = () => {
           </div>
         </DialogContent>
       </Dialog>
+        </TabsContent>
+
+        <TabsContent value="rewards">
+          <RewardsStoreEditor />
+        </TabsContent>
+      </Tabs>
     </AdminLayout>
   );
 };

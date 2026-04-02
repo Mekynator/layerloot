@@ -1603,34 +1603,58 @@ export type Database = {
       }
       vouchers: {
         Row: {
+          badge_text: string | null
           created_at: string
           description: string | null
           discount_type: string
           discount_value: number
+          expiry_days: number | null
+          global_usage_limit: number | null
+          icon_key: string | null
           id: string
+          image_url: string | null
           is_active: boolean
           name: string
           points_cost: number
+          reward_type: string | null
+          sort_order: number | null
+          usage_limit_per_user: number | null
         }
         Insert: {
+          badge_text?: string | null
           created_at?: string
           description?: string | null
           discount_type?: string
           discount_value: number
+          expiry_days?: number | null
+          global_usage_limit?: number | null
+          icon_key?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
           name: string
           points_cost: number
+          reward_type?: string | null
+          sort_order?: number | null
+          usage_limit_per_user?: number | null
         }
         Update: {
+          badge_text?: string | null
           created_at?: string
           description?: string | null
           discount_type?: string
           discount_value?: number
+          expiry_days?: number | null
+          global_usage_limit?: number | null
+          icon_key?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
           name?: string
           points_cost?: number
+          reward_type?: string | null
+          sort_order?: number | null
+          usage_limit_per_user?: number | null
         }
         Relationships: []
       }

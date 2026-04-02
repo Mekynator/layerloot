@@ -606,48 +606,53 @@ export default function CartPage() {
                   </div>
                 )}
 
-                <div className="rounded-xl border border-border bg-background/50 p-3">
-                  <label className="mb-2 block text-sm font-medium text-foreground">{t("cart.discount")}</label>
-
-                  {availableDiscountCodes.length > 0 ? (
-                    <select
-                      value={selectedDiscountCode}
-                      onChange={(e) => {
-                        setSelectedDiscountCode(e.target.value);
-                        setManualDiscountCode("");
-                      }}
-                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none"
-                    >
-                      <option value="">{t("cart.chooseVoucher")}</option>
-                      {availableDiscountCodes.map((discount) => (
-                        <option key={discount.code} value={discount.code}>
-                          {discount.label}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      value={manualDiscountCode}
-                      onChange={(e) => setManualDiscountCode(e.target.value)}
-                      placeholder={t("cart.enterDiscountCode")}
-                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none"
-                    />
-                  )}
-
-                  {selectedDiscount && (
-                    <div className="mt-2 flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">{t("cart.applied")}</span>
-                      <span className="font-semibold text-primary">-{formatPrice(discountAmount)}</span>
-                    </div>
-                  )}
-                </div>
+                {/* Checkout Savings Panel */}
+                <CheckoutSavingsPanel
+                  available={availableDiscountCodes}
+                  applied={savings.applied}
+                  summary={savings.summary}
+                  categorized={savings.categorized}
+                  bestSuggestion={savings.bestSuggestion}
+                  canApply={savings.canApply}
+                  onApply={savings.applySaving}
+                  onRemove={savings.removeSaving}
+                  onManualCode={handleManualCode}
+                  manualCodeError={manualCodeError}
+                  manualCodeLoading={manualCodeLoading}
+                  giftCardSliderValue={savings.giftCardSliderValue}
+                  onGiftCardSliderChange={savings.setGiftCardSliderValue}
+                />
 
                 <div className="border-t border-border pt-4">
-                  {discountAmount > 0 && (
+                  {savings.summary.discountAmount > 0 && (
                     <div className="mb-2 flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">{t("cart.discount")}</span>
-                      <span className="font-display font-bold text-primary">-{formatPrice(discountAmount)}</span>
+                      <span className="font-display font-bold text-primary">-{formatPrice(savings.summary.discountAmount)}</span>
                     </div>
+                  )}
+
+                  {savings.summary.shippingDiscount > 0 && (
+                    <div className="mb-2 flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{t("cart.freeShipping", "Free shipping reward")}</span>
+                      <span className="font-display font-bold text-primary">-{formatPrice(savings.summary.shippingDiscount)}</span>
+                    </div>
+                  )}
+
+                  {savings.summary.giftCardDeduction > 0 && (
+                    <div className="mb-2 flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{t("cart.giftCardDeduction", "Gift card")}</span>
+                      <span className="font-display font-bold text-primary">-{formatPrice(savings.summary.giftCardDeduction)}</span>
+                    </div>
+                  )}
+
+                  {savings.summary.totalSavings > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mb-3 rounded-lg bg-emerald-500/10 px-3 py-1.5 text-center text-sm font-semibold text-emerald-600"
+                    >
+                      🎉 {t("cart.youSaved", "You save")} {formatPrice(savings.summary.totalSavings)}!
+                    </motion.div>
                   )}
 
                   <div className="flex items-center justify-between">

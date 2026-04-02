@@ -876,13 +876,7 @@ function AdvancedStyleEditor({ content, patchContent }: { content: Record<string
         min={0} max={100} step={5} unit="%"
       />
 
-      {/* Border Color */}
-      <ColorPickerField
-        label="Border Color"
-        value={content.borderColor || ""}
-        onChange={(v) => patchContent("borderColor", v)}
-      />
-
+      {/* Border Color (moved to Border tab) */}
       {/* Overlay Color (for blocks with overlays) */}
       <ColorPickerField
         label="Overlay Color"

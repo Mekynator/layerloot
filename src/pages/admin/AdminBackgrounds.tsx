@@ -583,7 +583,7 @@ export default function AdminBackgrounds() {
             <div className={CARD} style={CARD_SHADOW}>
               <p className="text-sm text-muted-foreground">Background is disabled for this page.</p>
             </div>
-            <DraftActionButtons bgDraftStatus={bgDraftStatus} saving={saving} publishingBg={publishingBg} onSave={save} onPublish={publishBg} onDiscard={discardBgDraft} />
+            <DraftActionButtons bgDraftStatus={bgDraftStatus} saving={saving} publishingBg={publishingBg} onSave={save} onPublish={publishBg} onDiscard={discardBgDraft} settingsKey={settingKeyForPage(selectedPage)} />
           </div>
         ) : (
           <div className="space-y-4">

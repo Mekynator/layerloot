@@ -33,6 +33,15 @@ export interface DashboardData {
   customOrdersByStatus: { name: string; value: number }[];
   lowStockProducts: { id: string; name: string; stock: number }[];
   insights: { message: string; type: "positive" | "neutral" | "warning" }[];
+  // New fields for role-based dashboard
+  draftBlocksCount: number;
+  scheduledPublishCount: number;
+  draftProductsCount: number;
+  ordersAwaitingShipment: number;
+  ordersOnHold: number;
+  unansweredCustomMessages: number;
+  missingTranslations: number;
+  outdatedTranslations: number;
 }
 
 const EMPTY: DashboardData = {
@@ -41,6 +50,9 @@ const EMPTY: DashboardData = {
   pendingShowcases: 0, quotesAwaiting: 0, loyaltyPointsIssued: 0, vouchersRedeemed: 0,
   revenueByDay: [], ordersByStatus: [], topProducts: [], recentOrders: [],
   customOrdersByStatus: [], lowStockProducts: [], insights: [],
+  draftBlocksCount: 0, scheduledPublishCount: 0, draftProductsCount: 0,
+  ordersAwaitingShipment: 0, ordersOnHold: 0, unansweredCustomMessages: 0,
+  missingTranslations: 0, outdatedTranslations: 0,
 };
 
 export function useAdminDashboard(period: Period) {
@@ -62,6 +74,10 @@ export function useAdminDashboard(period: Period) {
         productsRes, profilesRes, activeCoRes, pendingOrdRes,
         pendingRevRes, pendingShowRes, quotesRes,
         loyaltyRes, vouchersRes, lowStockRes, coAllRes,
+        // New queries
+        draftBlocksRes, scheduledBlocksRes, scheduledProductsRes,
+        draftProductsRes, shipmentRes, onHoldRes,
+        outdatedTransRes, missingTransRes,
       ] = await Promise.all([
         supabase.from("products").select("id", { count: "exact", head: true }),
         supabase.from("profiles").select("id", { count: "exact", head: true }),
@@ -80,6 +96,15 @@ export function useAdminDashboard(period: Period) {
           .eq("is_used", true),
         supabase.from("products").select("id, name, stock").lte("stock", 5).eq("is_active", true).order("stock").limit(10),
         supabase.from("custom_orders").select("status"),
+        // New parallel queries
+        supabase.from("site_blocks").select("id", { count: "exact", head: true }).eq("has_draft", true),
+        supabase.from("site_blocks").select("id", { count: "exact", head: true }).not("scheduled_publish_at", "is", null),
+        supabase.from("products").select("id", { count: "exact", head: true }).not("scheduled_publish_at", "is", null),
+        supabase.from("products").select("id", { count: "exact", head: true }).eq("status", "draft"),
+        supabase.from("orders").select("id", { count: "exact", head: true }).in("status", ["paid", "processing", "printing", "finishing", "packed"]),
+        supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "on_hold"),
+        supabase.from("translation_entries").select("id", { count: "exact", head: true }).eq("status", "outdated"),
+        supabase.from("translation_entries").select("id", { count: "exact", head: true }).eq("status", "missing"),
       ]);
 
       const revenue = allOrders.reduce((s, o) => s + Number(o.total), 0);
@@ -115,6 +140,20 @@ export function useAdminDashboard(period: Period) {
         .select("id, total, status, created_at")
         .order("created_at", { ascending: false }).limit(8);
 
+      // Unanswered custom messages: custom orders where last message sender_role = 'user'
+      const { data: coWithMessages } = await supabase
+        .from("custom_order_messages")
+        .select("custom_order_id, sender_role, created_at")
+        .order("created_at", { ascending: false });
+      
+      const lastMsgByOrder: Record<string, string> = {};
+      (coWithMessages ?? []).forEach((m) => {
+        if (!lastMsgByOrder[m.custom_order_id]) {
+          lastMsgByOrder[m.custom_order_id] = m.sender_role;
+        }
+      });
+      const unanswered = Object.values(lastMsgByOrder).filter(r => r === "user").length;
+
       // Generate insights
       const insights: DashboardData["insights"] = [];
       if (allOrders.length > 0) insights.push({ message: `${allOrders.length} orders in this period generating ${revenue.toFixed(0)} kr revenue.`, type: "positive" });
@@ -138,6 +177,14 @@ export function useAdminDashboard(period: Period) {
         customOrdersByStatus: Object.entries(coStatusMap).map(([name, value]) => ({ name, value })),
         lowStockProducts: (lowStockRes.data ?? []) as any,
         insights,
+        draftBlocksCount: draftBlocksRes.count ?? 0,
+        scheduledPublishCount: (scheduledBlocksRes.count ?? 0) + (scheduledProductsRes.count ?? 0),
+        draftProductsCount: draftProductsRes.count ?? 0,
+        ordersAwaitingShipment: shipmentRes.count ?? 0,
+        ordersOnHold: onHoldRes.count ?? 0,
+        unansweredCustomMessages: unanswered,
+        missingTranslations: missingTransRes.count ?? 0,
+        outdatedTranslations: outdatedTransRes.count ?? 0,
       });
       setLoading(false);
     };

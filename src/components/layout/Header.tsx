@@ -153,7 +153,7 @@ const Header = () => {
 
   const location = useLocation();
   const { totalItems } = useCart();
-  const { user, isAdmin, signOut } = useAuth();
+  const { user } = useAuth();
   const navLinks = useNavLinks();
   const { t } = useTranslation();
   const cartButtonRef = useRef<HTMLButtonElement | null>(null);

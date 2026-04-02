@@ -234,9 +234,9 @@ const MegaMenuDropdown = ({ config, children, linkTo }: MegaMenuDropdownProps) =
                           to={`/products/${product.slug}`}
                           className="group rounded-lg border border-border/10 bg-muted/10 p-2 transition-all duration-200 hover:border-primary/20 hover:bg-muted/20 hover:shadow-lg"
                         >
-                          {product.image_url ? (
+                          {product.images?.[0] ? (
                             <img
-                              src={product.image_url}
+                              src={product.images[0]}
                               alt={product.name}
                               className="mb-2 h-24 w-full rounded-md object-cover transition-transform duration-200 group-hover:scale-[1.03]"
                               loading="lazy"

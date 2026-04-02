@@ -558,9 +558,10 @@ const AdminCustomOrderDetail = () => {
                             rows={2}
                             className="flex-1"
                           />
-                        <Button size="sm" onClick={sendAdminMessage} disabled={saving || !threadMessage.trim()} className="self-end h-10 px-4">
-                          <Send className="h-4 w-4" />
-                        </Button>
+                          <Button size="sm" onClick={sendAdminMessage} disabled={saving || !threadMessage.trim()} className="self-end h-10 px-4">
+                            <Send className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </TabsContent>

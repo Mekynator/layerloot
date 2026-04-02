@@ -83,6 +83,7 @@ const AdminSettings = () => {
           if (s.key === "branding") setBranding({ ...defaultBranding, ...(s.value as any) });
           if (s.key === "admin_dashboard_shortcuts" && Array.isArray(s.value)) setShortcuts(s.value as unknown as DashboardShortcut[]);
           if (s.key === "admin_sidebar_config" && (s.value as any)?.groups) setSidebarConfig(s.value as unknown as SidebarConfig);
+          if (s.key === "account_page_config" && s.value) setAccountConfig({ ...DEFAULT_ACCOUNT_CONFIG, ...(s.value as any) });
           if (s.key.startsWith("policy_") && s.value) policyData[s.key] = s.value as { title: string; body: string };
         });
         setPolicies(policyData);

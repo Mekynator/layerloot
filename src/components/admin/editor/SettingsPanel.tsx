@@ -18,6 +18,9 @@ import IconPickerField from "./controls/IconPickerField";
 import TypographyControls from "./controls/TypographyControls";
 import BorderControls from "./controls/BorderControls";
 import BackgroundSlideshowControls from "./controls/BackgroundSlideshowControls";
+import ImageEffectsControls from "./controls/ImageEffectsControls";
+import AnimationControls from "./controls/AnimationControls";
+import VisualEffectsControls from "./controls/VisualEffectsControls";
 import { getBlockSchema, type EditableNode } from "./editable-schema";
 
 const getRepeaterKey = (blockType?: string) => {

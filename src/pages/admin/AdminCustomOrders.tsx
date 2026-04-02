@@ -1,94 +1,31 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Eye,
-  Box,
-  ArrowRight,
-  Palette,
-  Layers3,
-  Ruler,
-  Hash,
-  Download,
-  Send,
-  DollarSign,
-  CheckCircle2,
-  XCircle,
-  MessageSquare,
-  Image as ImageIcon,
-  LampDesk,
-  Package,
-} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Eye, Box, Search, LampDesk, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
-import ModelViewer from "@/components/ModelViewer";
-import PricingCalculator from "@/components/admin/PricingCalculator";
 
 interface CustomOrder {
   id: string;
   name: string;
   email: string;
   description: string;
-  model_url: string | null;
   model_filename: string;
   status: string;
-  admin_notes: string | null;
   created_at: string;
-  updated_at: string;
-  user_id: string;
   quoted_price: number | null;
   customer_offer_price: number | null;
   final_agreed_price: number | null;
-  customer_response_status: "pending" | "accepted" | "declined" | "countered";
-  payment_status: "unpaid" | "awaiting_payment" | "paid" | "refunded" | "cancelled";
-  production_status: "pending" | "queued" | "in_production" | "completed" | "shipped" | "cancelled";
+  payment_status: string;
+  production_status: string;
   request_fee_status?: string;
-  request_fee_amount?: number;
-  metadata?: {
-    order_type?: string | null;
-    reference_image_url?: string | null;
-    reference_image_filename?: string | null;
-    uploaded_model_url?: string | null;
-    uploaded_model_filename?: string | null;
-    source_image_url?: string | null;
-    processed_image_url?: string | null;
-    preview_image_url?: string | null;
-    cropped_image_url?: string | null;
-    original_source_image_url?: string | null;
-    [key: string]: any;
-  } | null;
-}
-
-interface ParsedCustomOrder extends CustomOrder {
-  customer_description: string;
-  material: string;
-  color: string;
-  quality: string;
-  quantity: string;
-  scale: string;
-  reference_image_url: string | null;
-  reference_image_filename: string | null;
-  order_type_label: "lithophane" | "custom-print";
-}
-
-interface CustomOrderMessage {
-  id: string;
-  custom_order_id: string;
-  sender_role: "user" | "admin" | "system";
-  sender_user_id: string | null;
-  message: string | null;
-  message_type: "note" | "quote" | "counter_offer" | "status_update" | "system";
-  proposed_price: number | null;
-  created_at: string;
+  metadata?: Record<string, any> | null;
 }
 
 type ViewGroup = "in-production" | "done";
@@ -104,453 +41,62 @@ const STATUSES = [
   { value: "rejected", label: "Rejected", color: "bg-red-500/10 text-red-600 border-red-500/30" },
 ];
 
-const PAYMENT_STATUSES = ["unpaid", "awaiting_payment", "paid", "refunded", "cancelled"] as const;
-const PRODUCTION_STATUSES = ["pending", "queued", "in_production", "completed", "shipped", "cancelled"] as const;
-const FEE_STATUSES = ["unpaid", "paid"] as const;
-const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
-
 function detectOrderType(order: CustomOrder): "lithophane" | "custom-print" {
-  const metadataType = order.metadata?.order_type;
+  const metadataType = (order.metadata as any)?.order_type;
   if (metadataType === "lithophane") return "lithophane";
   if (metadataType === "custom-print") return "custom-print";
-
   const raw = (order.description || "").toLowerCase();
-  if (raw.includes("lithophane custom order") || raw.includes('"component": "lithophane"')) {
-    return "lithophane";
-  }
-
+  if (raw.includes("lithophane")) return "lithophane";
   return "custom-print";
-}
-
-function parseCustomOrder(order: CustomOrder): ParsedCustomOrder {
-  const raw = order.description || "";
-  const orderType = detectOrderType(order);
-  const marker = "\n--- Options ---";
-  const parts = raw.split(marker);
-
-  let customer_description = (parts[0] || "").trim();
-  const optionsText = (parts[1] || "").trim();
-
-  if (orderType === "lithophane") {
-    const lithoMarker = "\n--- Lithophane Config JSON ---";
-    customer_description = raw.split(lithoMarker)[0].trim();
-  }
-
-  const parsed: Record<string, string> = {
-    material: "",
-    color: "",
-    quality: "",
-    quantity: "",
-    scale: "",
-    referenceImageUrl: "",
-  };
-
-  optionsText.split("\n").forEach((line) => {
-    const [key, ...rest] = line.split(":");
-    if (!key || rest.length === 0) return;
-
-    const normalizedKey = key.trim().toLowerCase();
-    const value = rest.join(":").trim();
-
-    if (normalizedKey === "material") parsed.material = value;
-    if (normalizedKey === "color") parsed.color = value;
-    if (normalizedKey === "quality") parsed.quality = value;
-    if (normalizedKey === "quantity") parsed.quantity = value;
-    if (normalizedKey === "scale") parsed.scale = value;
-    if (normalizedKey === "reference image url") parsed.referenceImageUrl = value;
-  });
-
-  return {
-    ...order,
-    customer_description,
-    material: parsed.material || "-",
-    color: parsed.color || "-",
-    quality: parsed.quality || "-",
-    quantity: parsed.quantity || "-",
-    scale: parsed.scale || "-",
-    reference_image_url: order.metadata?.reference_image_url || parsed.referenceImageUrl || null,
-    reference_image_filename: order.metadata?.reference_image_filename || null,
-    order_type_label: orderType,
-  };
-}
-
-function extractImageUrl(message: string | null): string | null {
-  if (!message) return null;
-  const match = message.match(/https?:\/\/\S+\.(?:png|jpg|jpeg|webp)(?:\?\S*)?/i);
-  return match ? match[0] : null;
-}
-
-function stripImageUrl(message: string | null): string {
-  if (!message) return "-";
-  return message.replace(/https?:\/\/\S+\.(?:png|jpg|jpeg|webp)(?:\?\S*)?/gi, "").trim() || "Image attachment";
-}
-
-function orderTypeBadge(type: ParsedCustomOrder["order_type_label"]) {
-  if (type === "lithophane") {
-    return (
-      <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-700">
-        <LampDesk className="mr-1 h-3.5 w-3.5" />
-        Lithophane
-      </Badge>
-    );
-  }
-
-  return (
-    <Badge variant="outline" className="border-sky-500/30 bg-sky-500/10 text-sky-700">
-      <Package className="mr-1 h-3.5 w-3.5" />
-      Custom 3D Print
-    </Badge>
-  );
 }
 
 const AdminCustomOrders = () => {
   const [orders, setOrders] = useState<CustomOrder[]>([]);
-  const [selectedOrder, setSelectedOrder] = useState<ParsedCustomOrder | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [adminNotes, setAdminNotes] = useState("");
-  const [statusUpdate, setStatusUpdate] = useState("");
-  const [saving, setSaving] = useState(false);
   const [viewGroup, setViewGroup] = useState<ViewGroup>("in-production");
   const [productionTypeFilter, setProductionTypeFilter] = useState<ProductionTypeFilter>("all");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [convertOpen, setConvertOpen] = useState(false);
-  const [convertForm, setConvertForm] = useState({ name: "", slug: "", price: 0, stock: 1 });
-  const [messages, setMessages] = useState<CustomOrderMessage[]>([]);
-  const [threadMessage, setThreadMessage] = useState("");
-  const [quoteAmount, setQuoteAmount] = useState("");
-  const [paymentStatusUpdate, setPaymentStatusUpdate] = useState<CustomOrder["payment_status"]>("unpaid");
-  const [productionStatusUpdate, setProductionStatusUpdate] = useState<CustomOrder["production_status"]>("pending");
-  const [feeStatusUpdate, setFeeStatusUpdate] = useState<string>("unpaid");
-  const [conversationImage, setConversationImage] = useState<File | null>(null);
-  const [conversationImagePreviewUrl, setConversationImagePreviewUrl] = useState<string | null>(null);
-  const imageInputRef = useRef<HTMLInputElement | null>(null);
-  const { toast } = useToast();
-
-  const fetchOrders = async () => {
-    const { data, error } = await supabase.from("custom_orders").select("*").order("created_at", { ascending: false });
-
-    if (error) {
-      toast({ title: "Error loading custom orders", description: error.message, variant: "destructive" });
-      return;
-    }
-
-    setOrders((data as CustomOrder[]) ?? []);
-  };
-
-  const fetchMessages = async (customOrderId: string) => {
-    const { data, error } = await supabase
-      .from("custom_order_messages")
-      .select("*")
-      .eq("custom_order_id", customOrderId)
-      .order("created_at", { ascending: true });
-
-    if (error) {
-      toast({ title: "Error loading conversation", description: error.message, variant: "destructive" });
-      return;
-    }
-
-    setMessages((data as CustomOrderMessage[]) ?? []);
-  };
+  const [search, setSearch] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchOrders();
+    supabase
+      .from("custom_orders")
+      .select("id, name, email, description, model_filename, status, created_at, quoted_price, customer_offer_price, final_agreed_price, payment_status, production_status, request_fee_status, metadata")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setOrders((data as CustomOrder[]) ?? []));
   }, []);
 
-  useEffect(() => {
-    return () => {
-      if (conversationImagePreviewUrl) URL.revokeObjectURL(conversationImagePreviewUrl);
-    };
-  }, [conversationImagePreviewUrl]);
+  const enriched = useMemo(() => orders.map((o) => ({ ...o, order_type: detectOrderType(o) })), [orders]);
 
-  const parsedOrders = useMemo(() => orders.map(parseCustomOrder), [orders]);
-
-  const productionCounts = useMemo(() => {
-    const activeOrders = parsedOrders.filter((o) => o.status !== "completed" && o.status !== "rejected");
+  const counts = useMemo(() => {
+    const active = enriched.filter((o) => o.status !== "completed" && o.status !== "rejected");
     return {
-      all: activeOrders.length,
-      lithophane: activeOrders.filter((o) => o.order_type_label === "lithophane").length,
-      customPrint: activeOrders.filter((o) => o.order_type_label === "custom-print").length,
+      all: active.length,
+      lithophane: active.filter((o) => o.order_type === "lithophane").length,
+      customPrint: active.filter((o) => o.order_type === "custom-print").length,
     };
-  }, [parsedOrders]);
+  }, [enriched]);
 
-  const openDetail = async (order: ParsedCustomOrder) => {
-    setSelectedOrder(order);
-    setAdminNotes(order.admin_notes ?? "");
-    setStatusUpdate(order.status);
-    setQuoteAmount(order.quoted_price !== null ? String(order.quoted_price) : "");
-    setPaymentStatusUpdate(order.payment_status);
-    setProductionStatusUpdate(order.production_status);
-    setFeeStatusUpdate((order as any).request_fee_status || "unpaid");
-    setThreadMessage("");
-    setConversationImage(null);
-    setConversationImagePreviewUrl(null);
-    setDetailOpen(true);
-    await fetchMessages(order.id);
-  };
+  let filtered = enriched.filter((o) =>
+    viewGroup === "done"
+      ? o.status === "completed" || o.status === "rejected"
+      : o.status !== "completed" && o.status !== "rejected",
+  );
 
-  const handleConversationImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (!selectedFile) return;
+  if (viewGroup === "in-production" && productionTypeFilter !== "all") {
+    filtered = filtered.filter((o) => o.order_type === productionTypeFilter);
+  }
 
-    if (!ACCEPTED_IMAGE_TYPES.includes(selectedFile.type)) {
-      toast({
-        title: "Invalid image",
-        description: "Please upload PNG, JPG, JPEG, or WEBP.",
-        variant: "destructive",
-      });
-      return;
-    }
+  if (filterStatus !== "all") filtered = filtered.filter((o) => o.status === filterStatus);
 
-    if (conversationImagePreviewUrl) URL.revokeObjectURL(conversationImagePreviewUrl);
-    setConversationImage(selectedFile);
-    setConversationImagePreviewUrl(URL.createObjectURL(selectedFile));
-  };
-
-  const clearConversationAttachment = () => {
-    if (conversationImagePreviewUrl) URL.revokeObjectURL(conversationImagePreviewUrl);
-    setConversationImage(null);
-    setConversationImagePreviewUrl(null);
-    if (imageInputRef.current) imageInputRef.current.value = "";
-  };
-
-  const uploadConversationImage = async (): Promise<string | null> => {
-    if (!selectedOrder || !conversationImage) return null;
-
-    const ext = conversationImage.name.split(".").pop() || "png";
-    const filePath = `${selectedOrder.user_id}/conversation-images/${selectedOrder.id}-${Date.now()}.${ext}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("custom-order-files")
-      .upload(filePath, conversationImage, {
-        upsert: false,
-        contentType: conversationImage.type,
-      });
-
-    if (uploadError) throw uploadError;
-
-    return supabase.storage.from("custom-order-files").getPublicUrl(filePath).data.publicUrl;
-  };
-
-  const handleSave = async () => {
-    if (!selectedOrder) return;
-    setSaving(true);
-
-    const { error } = await supabase
-      .from("custom_orders")
-      .update({
-        status: statusUpdate,
-        admin_notes: adminNotes || null,
-        payment_status: paymentStatusUpdate,
-        production_status: productionStatusUpdate,
-        ...(selectedOrder.order_type_label === "custom-print" ? { request_fee_status: feeStatusUpdate } : {}),
-      })
-      .eq("id", selectedOrder.id);
-
-    setSaving(false);
-
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-      return;
-    }
-
-    await supabase.from("custom_order_messages").insert({
-      custom_order_id: selectedOrder.id,
-      sender_role: "admin",
-      message: `Admin updated request. Status: ${statusUpdate}. Payment: ${paymentStatusUpdate}. Production: ${productionStatusUpdate}.`,
-      message_type: "status_update",
-    });
-
-    toast({ title: "Request updated" });
-    setDetailOpen(false);
-    fetchOrders();
-  };
-
-  const sendAdminMessage = async () => {
-    if (!selectedOrder || (!threadMessage.trim() && !conversationImage)) return;
-
-    setSaving(true);
-
-    try {
-      const uploadedImageUrl = await uploadConversationImage();
-      const composedMessage = [threadMessage.trim(), uploadedImageUrl].filter(Boolean).join("\n");
-
-      const { error } = await supabase.from("custom_order_messages").insert({
-        custom_order_id: selectedOrder.id,
-        sender_role: "admin",
-        message: composedMessage || "Image attachment",
-        message_type: "note",
-      });
-
-      if (error) throw error;
-
-      setThreadMessage("");
-      clearConversationAttachment();
-      toast({ title: "Message sent" });
-      await fetchMessages(selectedOrder.id);
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const sendQuote = async () => {
-    if (!selectedOrder) return;
-    const amount = parseFloat(quoteAmount);
-
-    if (!amount || amount <= 0) {
-      toast({ title: "Invalid quote", description: "Enter a valid amount.", variant: "destructive" });
-      return;
-    }
-
-    setSaving(true);
-
-    try {
-      const { error: updateError } = await supabase
-        .from("custom_orders")
-        .update({
-          quoted_price: amount,
-          status: "quoted",
-          customer_response_status: "pending",
-        })
-        .eq("id", selectedOrder.id);
-
-      if (updateError) throw updateError;
-
-      const uploadedImageUrl = await uploadConversationImage();
-      const quoteMessage = [threadMessage.trim() || `Admin sent a quote of ${amount.toFixed(2)} kr.`, uploadedImageUrl]
-        .filter(Boolean)
-        .join("\n");
-
-      const { error: messageError } = await supabase.from("custom_order_messages").insert({
-        custom_order_id: selectedOrder.id,
-        sender_role: "admin",
-        message: quoteMessage,
-        message_type: "quote",
-        proposed_price: amount,
-      });
-
-      if (messageError) throw messageError;
-
-      setThreadMessage("");
-      clearConversationAttachment();
-      toast({ title: "Quote sent" });
-      await fetchOrders();
-      await fetchMessages(selectedOrder.id);
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const respondToCustomerOffer = async (accept: boolean) => {
-    if (!selectedOrder) return;
-    if (selectedOrder.customer_offer_price === null) {
-      toast({
-        title: "No customer offer",
-        description: "There is no counter-offer to review.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setSaving(true);
-
-    const updatePayload = accept
-      ? {
-          final_agreed_price: selectedOrder.customer_offer_price,
-          status: "accepted",
-          customer_response_status: "accepted",
-          payment_status: "awaiting_payment",
-        }
-      : {
-          status: "reviewing",
-        };
-
-    const { error: updateError } = await supabase
-      .from("custom_orders")
-      .update(updatePayload)
-      .eq("id", selectedOrder.id);
-
-    if (updateError) {
-      setSaving(false);
-      toast({ title: "Error", description: updateError.message, variant: "destructive" });
-      return;
-    }
-
-    await supabase.from("custom_order_messages").insert({
-      custom_order_id: selectedOrder.id,
-      sender_role: "admin",
-      message: accept
-        ? `Admin accepted the customer offer of ${selectedOrder.customer_offer_price.toFixed(2)} kr.`
-        : `Admin declined the customer offer of ${selectedOrder.customer_offer_price.toFixed(2)} kr.`,
-      message_type: "status_update",
-      proposed_price: accept ? selectedOrder.customer_offer_price : null,
-    });
-
-    setSaving(false);
-    toast({ title: accept ? "Customer offer accepted" : "Customer offer declined" });
-    await fetchOrders();
-    await fetchMessages(selectedOrder.id);
-  };
-
-  const generateSlug = (name: string) =>
-    name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
-
-  const handleConvertToProduct = async () => {
-    if (!selectedOrder) return;
-    setSaving(true);
-
-    const { error } = await supabase.from("products").insert({
-      name: convertForm.name,
-      slug: convertForm.slug || generateSlug(convertForm.name),
-      price: convertForm.price,
-      stock: convertForm.stock,
-      model_url: selectedOrder.model_url,
-      is_active: false,
-      description: `Custom order from ${selectedOrder.name}: ${selectedOrder.customer_description}`,
-    });
-
-    setSaving(false);
-
-    if (error) {
-      toast({ title: "Error creating product", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Product created!", description: "The product has been created as a draft." });
-      setConvertOpen(false);
-      await supabase.from("custom_orders").update({ status: "completed" }).eq("id", selectedOrder.id);
-      setDetailOpen(false);
-      fetchOrders();
-    }
-  };
-
-  const handleDownloadModel = () => {
-    if (!selectedOrder?.model_url) return;
-
-    const link = document.createElement("a");
-    link.href = selectedOrder.model_url;
-    link.download = selectedOrder.model_filename || "custom-model";
-    link.target = "_blank";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handleDownloadReferenceImage = () => {
-    if (!selectedOrder?.reference_image_url) return;
-
-    const link = document.createElement("a");
-    link.href = selectedOrder.reference_image_url;
-    link.download = selectedOrder.reference_image_filename || "reference-image";
-    link.target = "_blank";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  if (search.trim()) {
+    const q = search.toLowerCase();
+    filtered = filtered.filter((o) =>
+      o.name.toLowerCase().includes(q) ||
+      o.email.toLowerCase().includes(q) ||
+      o.id.toLowerCase().includes(q)
+    );
+  }
 
   const getStatusBadge = (status: string) => {
     const s = STATUSES.find((st) => st.value === status);
@@ -561,46 +107,38 @@ const AdminCustomOrders = () => {
     );
   };
 
-  const groupedOrders = parsedOrders.filter((o) =>
-    viewGroup === "done"
-      ? o.status === "completed" || o.status === "rejected"
-      : o.status !== "completed" && o.status !== "rejected",
-  );
-
-  const productionFilteredOrders =
-    viewGroup === "in-production" && productionTypeFilter !== "all"
-      ? groupedOrders.filter((o) => o.order_type_label === productionTypeFilter)
-      : groupedOrders;
-
-  const filtered =
-    filterStatus === "all"
-      ? productionFilteredOrders
-      : productionFilteredOrders.filter((o) => o.status === filterStatus);
-
   return (
     <AdminLayout>
       <div className="mb-6 space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="font-display text-3xl font-bold uppercase text-foreground">Custom Print Requests</h1>
+            <h1 className="font-display text-3xl font-bold uppercase text-foreground">Custom Orders</h1>
             <p className="text-sm text-muted-foreground">
-              Review uploaded 3D print requests before quoting or converting them into products.
+              Manage custom 3D print requests, quoting, and production.
             </p>
           </div>
-
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              {STATUSES.map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search name, email, ID…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-56 pl-9"
+              />
+            </div>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                {STATUSES.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <Tabs
@@ -624,13 +162,13 @@ const AdminCustomOrders = () => {
           <Tabs value={productionTypeFilter} onValueChange={(v) => setProductionTypeFilter(v as ProductionTypeFilter)}>
             <TabsList className="grid h-auto w-full max-w-2xl grid-cols-1 gap-2 sm:grid-cols-3">
               <TabsTrigger value="all" className="font-display uppercase tracking-wider">
-                All ({productionCounts.all})
+                All ({counts.all})
               </TabsTrigger>
               <TabsTrigger value="lithophane" className="font-display uppercase tracking-wider">
-                Custom Lithophane ({productionCounts.lithophane})
+                Lithophane ({counts.lithophane})
               </TabsTrigger>
               <TabsTrigger value="custom-print" className="font-display uppercase tracking-wider">
-                Custom 3D Prints ({productionCounts.customPrint})
+                Custom 3D ({counts.customPrint})
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -645,89 +183,88 @@ const AdminCustomOrders = () => {
                 <TableHead>Customer</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>File</TableHead>
-                <TableHead>Material</TableHead>
-                <TableHead>Color</TableHead>
-                <TableHead>Quality</TableHead>
-                <TableHead>Qty</TableHead>
-                <TableHead>Scale</TableHead>
                 <TableHead>Fee</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Payment</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
-
             <TableBody>
               {filtered.map((order) => (
-                <TableRow key={order.id}>
+                <TableRow
+                  key={order.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => navigate(`/admin/custom-orders/${order.id}`)}
+                >
                   <TableCell>
                     <p className="font-display text-sm font-semibold uppercase">{order.name}</p>
                     <p className="text-xs text-muted-foreground">{order.email}</p>
                   </TableCell>
-
-                  <TableCell>{orderTypeBadge(order.order_type_label)}</TableCell>
-
+                  <TableCell>
+                    {order.order_type === "lithophane" ? (
+                      <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-700">
+                        <LampDesk className="mr-1 h-3.5 w-3.5" />Lithophane
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="border-sky-500/30 bg-sky-500/10 text-sky-700">
+                        <Package className="mr-1 h-3.5 w-3.5" />Custom 3D
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1.5">
                       <Box className="h-4 w-4 text-primary" />
-                      <span className="max-w-[150px] truncate text-xs text-muted-foreground">
-                        {order.model_filename}
-                      </span>
+                      <span className="max-w-[120px] truncate text-xs text-muted-foreground">{order.model_filename}</span>
                     </div>
                   </TableCell>
-
-                  <TableCell className="text-sm">{order.material}</TableCell>
-                  <TableCell className="text-sm">{order.color}</TableCell>
-                  <TableCell className="text-sm">{order.quality}</TableCell>
-                  <TableCell className="text-sm">{order.quantity}</TableCell>
-                  <TableCell className="text-sm">{order.scale}</TableCell>
                   <TableCell>
-                    {order.order_type_label === "lithophane" ? (
-                      <Badge
-                        variant="outline"
-                        className="text-xs uppercase border-slate-300 bg-slate-100 text-slate-700"
-                      >
-                        No fee
-                      </Badge>
+                    {order.order_type === "lithophane" ? (
+                      <Badge variant="outline" className="text-xs border-muted-foreground/30">No fee</Badge>
                     ) : (
                       <Badge
                         variant="outline"
                         className={`text-xs uppercase ${
-                          (order as any).request_fee_status === "paid"
+                          order.request_fee_status === "paid"
                             ? "border-green-500/30 bg-green-500/10 text-green-600"
                             : "border-yellow-500/30 bg-yellow-500/10 text-yellow-600"
                         }`}
                       >
-                        {(order as any).request_fee_status === "paid" ? "Paid" : "Unpaid"}
+                        {order.request_fee_status === "paid" ? "Paid" : "Unpaid"}
                       </Badge>
                     )}
                   </TableCell>
                   <TableCell>{getStatusBadge(order.status)}</TableCell>
-
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={`text-xs capitalize ${
+                        order.payment_status === "paid"
+                          ? "border-green-500/30 text-green-600"
+                          : "border-muted-foreground/30 text-muted-foreground"
+                      }`}
+                    >
+                      {order.payment_status.replace(/_/g, " ")}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {new Date(order.created_at).toLocaleDateString()}
                   </TableCell>
-
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => openDetail(order)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/admin/custom-orders/${order.id}`); }}
+                    >
                       <Eye className="h-4 w-4" />
                     </Button>
                   </TableCell>
                 </TableRow>
               ))}
-
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={12} className="py-8 text-center text-muted-foreground">
-                    No{" "}
-                    {viewGroup === "done"
-                      ? "completed"
-                      : productionTypeFilter === "lithophane"
-                        ? "lithophane"
-                        : productionTypeFilter === "custom-print"
-                          ? "custom 3D print"
-                          : "custom print"}{" "}
-                    requests found in this tab.
+                  <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
+                    No custom orders found.
                   </TableCell>
                 </TableRow>
               )}
@@ -735,737 +272,6 @@ const AdminCustomOrders = () => {
           </Table>
         </CardContent>
       </Card>
-
-      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-6xl">
-          <DialogHeader>
-            <DialogTitle className="font-display uppercase">Custom Print Request Details</DialogTitle>
-          </DialogHeader>
-
-          {selectedOrder && (
-            <Tabs defaultValue="details" className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="details">Details</TabsTrigger>
-                <TabsTrigger value="model">3D Model</TabsTrigger>
-                <TabsTrigger value="pricing">
-                  <DollarSign className="mr-1 h-3.5 w-3.5" /> Pricing Tool
-                </TabsTrigger>
-                <TabsTrigger value="conversation">
-                  <MessageSquare className="mr-1 h-3.5 w-3.5" /> Conversation
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="details" className="space-y-6">
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Customer</Label>
-                    <p className="font-medium text-foreground">{selectedOrder.name}</p>
-                  </div>
-
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Email</Label>
-                    <p className="font-medium text-foreground">{selectedOrder.email}</p>
-                  </div>
-
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Submitted</Label>
-                    <p className="text-sm text-foreground">{new Date(selectedOrder.created_at).toLocaleString()}</p>
-                  </div>
-
-                  <div>
-                    <Label className="text-xs text-muted-foreground">File</Label>
-                    <p className="text-sm text-foreground">{selectedOrder.model_filename}</p>
-                  </div>
-
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Order Type</Label>
-                    <div className="mt-1">{orderTypeBadge(selectedOrder.order_type_label)}</div>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                  <div className="rounded-md border border-border bg-muted/40 p-3">
-                    <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
-                      <Layers3 className="h-3.5 w-3.5" />
-                      Material
-                    </div>
-                    <p className="text-sm font-medium text-foreground">{selectedOrder.material}</p>
-                  </div>
-
-                  <div className="rounded-md border border-border bg-muted/40 p-3">
-                    <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
-                      <Palette className="h-3.5 w-3.5" />
-                      Color
-                    </div>
-                    <p className="text-sm font-medium text-foreground">{selectedOrder.color}</p>
-                  </div>
-
-                  <div className="rounded-md border border-border bg-muted/40 p-3">
-                    <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
-                      <Box className="h-3.5 w-3.5" />
-                      Quality
-                    </div>
-                    <p className="text-sm font-medium text-foreground">{selectedOrder.quality}</p>
-                  </div>
-
-                  <div className="rounded-md border border-border bg-muted/40 p-3">
-                    <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
-                      <Hash className="h-3.5 w-3.5" />
-                      Quantity
-                    </div>
-                    <p className="text-sm font-medium text-foreground">{selectedOrder.quantity}</p>
-                  </div>
-
-                  <div className="rounded-md border border-border bg-muted/40 p-3">
-                    <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
-                      <Ruler className="h-3.5 w-3.5" />
-                      Scale
-                    </div>
-                    <p className="text-sm font-medium text-foreground">{selectedOrder.scale}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Customer Description</Label>
-                    <pre className="mt-1 whitespace-pre-wrap rounded-md border border-border bg-muted p-3 text-sm text-foreground">
-                      {selectedOrder.customer_description || "-"}
-                    </pre>
-                  </div>
-
-                  {selectedOrder.order_type_label === "lithophane" &&
-                  (selectedOrder.metadata?.original_source_image_url ||
-                    selectedOrder.metadata?.source_image_url ||
-                    selectedOrder.metadata?.cropped_image_url ||
-                    selectedOrder.metadata?.preview_image_url) ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Label className="text-xs text-muted-foreground">Uploaded Picture</Label>
-                        <Badge variant="outline" className="text-[10px] uppercase">
-                          Lithophane Source
-                        </Badge>
-                      </div>
-                      <div className="overflow-hidden rounded-xl border border-border bg-card">
-                        <img
-                          src={
-                            selectedOrder.metadata?.original_source_image_url ||
-                            selectedOrder.metadata?.source_image_url ||
-                            selectedOrder.metadata?.cropped_image_url ||
-                            selectedOrder.metadata?.preview_image_url ||
-                            ""
-                          }
-                          alt="Lithophane source"
-                          className="h-80 w-full object-contain bg-muted/20"
-                        />
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-
-                {selectedOrder.reference_image_url && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <Label className="text-xs text-muted-foreground">Reference Picture</Label>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleDownloadReferenceImage}
-                        className="font-display uppercase tracking-wider"
-                      >
-                        <Download className="mr-1 h-4 w-4" /> Download Picture
-                      </Button>
-                    </div>
-                    <div className="overflow-hidden rounded-xl border border-border bg-card">
-                      <img
-                        src={selectedOrder.reference_image_url}
-                        alt={selectedOrder.reference_image_filename || "Reference image"}
-                        className="h-80 w-full object-contain bg-muted/20"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <div className="space-y-4 rounded-md border border-border bg-muted/50 p-4">
-                    <div>
-                      <Label>Status</Label>
-                      <Select value={statusUpdate} onValueChange={setStatusUpdate}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {STATUSES.map((s) => (
-                            <SelectItem key={s.value} value={s.value}>
-                              {s.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label>Payment Status</Label>
-                      <Select
-                        value={paymentStatusUpdate}
-                        onValueChange={(v) => setPaymentStatusUpdate(v as CustomOrder["payment_status"])}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PAYMENT_STATUSES.map((s) => (
-                            <SelectItem key={s} value={s}>
-                              {s.replace(/_/g, " ")}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label>Production Status</Label>
-                      <Select
-                        value={productionStatusUpdate}
-                        onValueChange={(v) => setProductionStatusUpdate(v as CustomOrder["production_status"])}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PRODUCTION_STATUSES.map((s) => (
-                            <SelectItem key={s} value={s}>
-                              {s.replace(/_/g, " ")}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {selectedOrder.order_type_label === "custom-print" ? (
-                      <div>
-                        <Label>Request Fee Status</Label>
-                        <Select value={feeStatusUpdate} onValueChange={setFeeStatusUpdate}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {FEE_STATUSES.map((s) => (
-                              <SelectItem key={s} value={s}>
-                                {s.replace(/_/g, " ")}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ) : (
-                      <div>
-                        <Label>Request Fee</Label>
-                        <div className="mt-2 rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-                          Lithophane orders do not require a request fee.
-                        </div>
-                      </div>
-                    )}
-
-                    <div>
-                      <Textarea
-                        value={adminNotes}
-                        onChange={(e) => setAdminNotes(e.target.value)}
-                        placeholder="Internal notes, production notes..."
-                        rows={4}
-                      />
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={handleSave}
-                        disabled={saving}
-                        className="flex-1 font-display uppercase tracking-wider"
-                      >
-                        {saving ? "Saving..." : "Update Request"}
-                      </Button>
-
-                      {selectedOrder.model_url ? (
-                        <Button
-                          variant="outline"
-                          onClick={handleDownloadModel}
-                          className="font-display uppercase tracking-wider"
-                        >
-                          <Download className="mr-1 h-4 w-4" /> Download File
-                        </Button>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="space-y-4 rounded-md border border-border bg-muted/50 p-4">
-                    <div>
-                      <Label>Current Pricing State</Label>
-                      <div className="mt-2 space-y-2 text-sm">
-                        <p>
-                          <span className="text-muted-foreground">Quoted Price:</span>{" "}
-                          {selectedOrder.quoted_price !== null
-                            ? `${Number(selectedOrder.quoted_price).toFixed(2)} kr`
-                            : "-"}
-                        </p>
-                        <p>
-                          <span className="text-muted-foreground">Customer Offer:</span>{" "}
-                          {selectedOrder.customer_offer_price !== null
-                            ? `${Number(selectedOrder.customer_offer_price).toFixed(2)} kr`
-                            : "-"}
-                        </p>
-                        <p>
-                          <span className="text-muted-foreground">Final Agreed:</span>{" "}
-                          {selectedOrder.final_agreed_price !== null
-                            ? `${Number(selectedOrder.final_agreed_price).toFixed(2)} kr`
-                            : "-"}
-                        </p>
-                        <p>
-                          <span className="text-muted-foreground">Customer Response:</span>{" "}
-                          {selectedOrder.customer_response_status.replace(/_/g, " ")}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label>Send / Update Quote</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="Quoted amount in DKK"
-                        value={quoteAmount}
-                        onChange={(e) => setQuoteAmount(e.target.value)}
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Quote / Pricing Message</Label>
-                      <Textarea
-                        value={threadMessage}
-                        onChange={(e) => setThreadMessage(e.target.value)}
-                        placeholder="Explain the quote, timeline, or conditions..."
-                        rows={4}
-                      />
-                    </div>
-
-                    <div className="space-y-3 rounded-md border border-dashed border-border bg-background/60 p-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <Label className="text-sm">Attach Picture to Conversation</Label>
-                          <p className="text-xs text-muted-foreground">
-                            PNG, JPG, JPEG, or WEBP. The customer will be able to view/download it from the chat.
-                          </p>
-                        </div>
-
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => imageInputRef.current?.click()}
-                          className="font-display uppercase tracking-wider"
-                        >
-                          <ImageIcon className="mr-1 h-4 w-4" />
-                          Add Picture
-                        </Button>
-                      </div>
-
-                      <input
-                        ref={imageInputRef}
-                        type="file"
-                        accept="image/png,image/jpeg,image/jpg,image/webp"
-                        onChange={handleConversationImageChange}
-                        className="hidden"
-                      />
-
-                      {conversationImagePreviewUrl && (
-                        <div className="space-y-2">
-                          <div className="overflow-hidden rounded-md border border-border bg-muted/20">
-                            <img
-                              src={conversationImagePreviewUrl}
-                              alt="Conversation attachment preview"
-                              className="h-56 w-full object-contain bg-muted/10"
-                            />
-                          </div>
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="truncate text-xs text-muted-foreground">{conversationImage?.name}</p>
-                            <Button type="button" variant="ghost" size="sm" onClick={clearConversationAttachment}>
-                              Remove
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        onClick={sendQuote}
-                        disabled={saving || !quoteAmount}
-                        className="font-display uppercase tracking-wider"
-                      >
-                        <DollarSign className="mr-1 h-4 w-4" />
-                        Send Quote
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        onClick={sendAdminMessage}
-                        disabled={saving || (!threadMessage.trim() && !conversationImage)}
-                        className="font-display uppercase tracking-wider"
-                      >
-                        <Send className="mr-1 h-4 w-4" />
-                        Send Note
-                      </Button>
-                    </div>
-
-                    {selectedOrder.customer_response_status === "countered" &&
-                      selectedOrder.customer_offer_price !== null && (
-                        <div className="rounded-md border border-primary/20 bg-primary/5 p-3">
-                          <p className="mb-2 text-sm text-foreground">
-                            Customer counter-offered <strong>{selectedOrder.customer_offer_price.toFixed(2)} kr</strong>
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => respondToCustomerOffer(true)}
-                              disabled={saving}
-                              className="font-display uppercase tracking-wider"
-                            >
-                              <CheckCircle2 className="mr-1 h-4 w-4" />
-                              Accept Offer
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => respondToCustomerOffer(false)}
-                              disabled={saving}
-                              className="font-display uppercase tracking-wider"
-                            >
-                              <XCircle className="mr-1 h-4 w-4" />
-                              Decline Offer
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        setConvertForm({
-                          name: `Custom - ${selectedOrder.name}`,
-                          slug: generateSlug(`custom-${selectedOrder.name}-${Date.now()}`),
-                          price: selectedOrder.final_agreed_price || selectedOrder.quoted_price || 0,
-                          stock: 1,
-                        });
-                        setConvertOpen(true);
-                      }}
-                      className="font-display uppercase tracking-wider"
-                    >
-                      <ArrowRight className="mr-1 h-4 w-4" /> Convert to Product
-                    </Button>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="model" className="space-y-4">
-                {selectedOrder.model_url ? (
-                  <>
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs text-muted-foreground">File: {selectedOrder.model_filename}</p>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleDownloadModel}
-                        className="font-display uppercase tracking-wider"
-                      >
-                        <Download className="mr-1 h-4 w-4" /> Download File
-                      </Button>
-                    </div>
-
-                    <ModelViewer
-                      url={selectedOrder.model_url}
-                      fileName={selectedOrder.model_filename}
-                      className="aspect-video"
-                    />
-                  </>
-                ) : selectedOrder.reference_image_url ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs text-muted-foreground">
-                        Picture: {selectedOrder.reference_image_filename || selectedOrder.model_filename}
-                      </p>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleDownloadReferenceImage}
-                        className="font-display uppercase tracking-wider"
-                      >
-                        <Download className="mr-1 h-4 w-4" /> Download Picture
-                      </Button>
-                    </div>
-
-                    <div className="overflow-hidden rounded-xl border border-border bg-card">
-                      <img
-                        src={selectedOrder.reference_image_url}
-                        alt={selectedOrder.reference_image_filename || "Reference image"}
-                        className="h-[28rem] w-full object-contain bg-muted/20"
-                      />
-                    </div>
-                  </div>
-                ) : selectedOrder.order_type_label === "lithophane" &&
-                  (selectedOrder.metadata?.original_source_image_url ||
-                    selectedOrder.metadata?.source_image_url ||
-                    selectedOrder.metadata?.cropped_image_url ||
-                    selectedOrder.metadata?.preview_image_url) ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs text-muted-foreground">Picture: lithophane source image</p>
-                    </div>
-
-                    <div className="overflow-hidden rounded-xl border border-border bg-card">
-                      <img
-                        src={
-                          selectedOrder.metadata?.original_source_image_url ||
-                          selectedOrder.metadata?.source_image_url ||
-                          selectedOrder.metadata?.cropped_image_url ||
-                          selectedOrder.metadata?.preview_image_url ||
-                          ""
-                        }
-                        alt="Lithophane source"
-                        className="h-[28rem] w-full object-contain bg-muted/20"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="rounded-md border border-border bg-muted/20 p-6 text-sm text-muted-foreground">
-                    No 3D model or picture available.
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="pricing" className="space-y-4">
-                <div className="rounded-lg border border-border bg-muted/30 p-4">
-                  <h4 className="mb-3 font-display text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-                    Cost Estimator for This Order
-                  </h4>
-                  <p className="mb-4 text-xs text-muted-foreground">
-                    Calculate production cost and get recommended quote prices. Use "Apply" to set the quote amount.
-                  </p>
-                  <PricingCalculator
-                    customOrderId={selectedOrder.id}
-                    compact
-                    onPriceCalculated={(price) => setQuoteAmount(String(price))}
-                  />
-                </div>
-              </TabsContent>
-
-              <TabsContent value="conversation" className="space-y-4">
-                <div className="space-y-3 rounded-md border border-border bg-muted/20 p-3">
-                  {messages.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No conversation yet.</p>
-                  ) : (
-                    messages.map((msg) => {
-                      const imageUrl = extractImageUrl(msg.message);
-                      const messageText = stripImageUrl(msg.message);
-
-                      return (
-                        <div
-                          key={msg.id}
-                          className={`rounded-md border p-3 text-sm ${
-                            msg.sender_role === "admin"
-                              ? "border-blue-500/20 bg-blue-500/5"
-                              : msg.sender_role === "user"
-                                ? "border-primary/20 bg-primary/5"
-                                : "border-border bg-card"
-                          }`}
-                        >
-                          <div className="mb-1 flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-[10px] uppercase">
-                                {msg.sender_role}
-                              </Badge>
-                              <Badge variant="outline" className="text-[10px] uppercase">
-                                {msg.message_type.replace(/_/g, " ")}
-                              </Badge>
-                              {msg.proposed_price !== null && (
-                                <Badge variant="outline" className="text-[10px] uppercase border-primary text-primary">
-                                  {Number(msg.proposed_price).toFixed(2)} kr
-                                </Badge>
-                              )}
-                            </div>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(msg.created_at).toLocaleString()}
-                            </span>
-                          </div>
-
-                          <p className="whitespace-pre-wrap text-foreground">{messageText}</p>
-
-                          {imageUrl && (
-                            <div className="mt-3 space-y-2">
-                              <div className="overflow-hidden rounded-md border border-border bg-background">
-                                <img
-                                  src={imageUrl}
-                                  alt="Conversation attachment"
-                                  className="h-72 w-full object-contain bg-muted/10"
-                                />
-                              </div>
-                              <a
-                                href={imageUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex text-xs text-primary hover:underline"
-                              >
-                                Open / download picture
-                              </a>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-
-                <div className="rounded-md border border-border bg-muted/40 p-4 space-y-4">
-                  <div>
-                    <Label>Quick Admin Reply</Label>
-                    <Textarea
-                      value={threadMessage}
-                      onChange={(e) => setThreadMessage(e.target.value)}
-                      rows={4}
-                      placeholder="Reply to customer..."
-                    />
-                  </div>
-
-                  <div className="space-y-3 rounded-md border border-dashed border-border bg-background/60 p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <Label className="text-sm">Attach Picture</Label>
-                        <p className="text-xs text-muted-foreground">
-                          Add a visual example, mockup, or production photo.
-                        </p>
-                      </div>
-
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => imageInputRef.current?.click()}
-                        className="font-display uppercase tracking-wider"
-                      >
-                        <ImageIcon className="mr-1 h-4 w-4" />
-                        Add Picture
-                      </Button>
-                    </div>
-
-                    <input
-                      ref={imageInputRef}
-                      type="file"
-                      accept="image/png,image/jpeg,image/jpg,image/webp"
-                      onChange={handleConversationImageChange}
-                      className="hidden"
-                    />
-
-                    {conversationImagePreviewUrl && (
-                      <div className="space-y-2">
-                        <div className="overflow-hidden rounded-md border border-border bg-muted/20">
-                          <img
-                            src={conversationImagePreviewUrl}
-                            alt="Conversation attachment preview"
-                            className="h-56 w-full object-contain bg-muted/10"
-                          />
-                        </div>
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="truncate text-xs text-muted-foreground">{conversationImage?.name}</p>
-                          <Button type="button" variant="ghost" size="sm" onClick={clearConversationAttachment}>
-                            Remove
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="mt-3 flex gap-2">
-                    <Button
-                      onClick={sendAdminMessage}
-                      disabled={saving || (!threadMessage.trim() && !conversationImage)}
-                      className="font-display uppercase tracking-wider"
-                    >
-                      <Send className="mr-1 h-4 w-4" />
-                      Send Reply
-                    </Button>
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={convertOpen} onOpenChange={setConvertOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="font-display uppercase">Convert to Product</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div>
-              <Label>Product Name</Label>
-              <Input
-                value={convertForm.name}
-                onChange={(e) => setConvertForm({ ...convertForm, name: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <Label>Slug</Label>
-              <Input
-                value={convertForm.slug}
-                onChange={(e) => setConvertForm({ ...convertForm, slug: e.target.value })}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Price (DKK)</Label>
-                <Input
-                  type="number"
-                  step="1"
-                  value={convertForm.price}
-                  onChange={(e) =>
-                    setConvertForm({
-                      ...convertForm,
-                      price: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                />
-              </div>
-
-              <div>
-                <Label>Initial Stock</Label>
-                <Input
-                  type="number"
-                  value={convertForm.stock}
-                  onChange={(e) =>
-                    setConvertForm({
-                      ...convertForm,
-                      stock: parseInt(e.target.value) || 1,
-                    })
-                  }
-                />
-              </div>
-            </div>
-
-            <p className="text-xs text-muted-foreground">
-              The 3D model will be linked automatically. The product will be created as a draft.
-            </p>
-
-            <Button
-              onClick={handleConvertToProduct}
-              disabled={saving}
-              className="w-full font-display uppercase tracking-wider"
-            >
-              {saving ? "Creating..." : "Create Product"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </AdminLayout>
   );
 };

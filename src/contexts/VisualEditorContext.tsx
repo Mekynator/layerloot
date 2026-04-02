@@ -195,6 +195,7 @@ const createDefaultContent = (type: string): Record<string, any> => {
 const MAX_UNDO = 50;
 
 export function VisualEditorProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [pages, setPages] = useState<SitePage[]>([]);
   const [activePage, setActivePageRaw] = useState("home");
   const [draftBlocks, setDraftBlocks] = useState<SiteBlock[]>([]);

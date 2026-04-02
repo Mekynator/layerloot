@@ -193,26 +193,64 @@ export default function AdminBackgrounds() {
     if (urls.length > 0) setForm(p => ({ ...p, images: [...p.images, ...urls] }));
   };
 
+  // Save as draft
   const save = async () => {
     setSaving(true);
     const key = settingKeyForPage(selectedPage);
 
-    let payload: any;
+    let draftValue: any;
     if (isGlobal) {
-      payload = { key, value: { ...form, intervalMs: Math.max(1000, form.intervalMs) } };
+      draftValue = { ...form, intervalMs: Math.max(1000, form.intervalMs) };
     } else {
-      payload = {
-        key,
-        value: overrideMode === "custom"
-          ? { mode: "custom", ...form, intervalMs: Math.max(1000, form.intervalMs) }
-          : { mode: overrideMode },
-      };
+      draftValue = overrideMode === "custom"
+        ? { mode: "custom", ...form, intervalMs: Math.max(1000, form.intervalMs) }
+        : { mode: overrideMode };
     }
 
-    const { error } = await supabase.from("site_settings").upsert(payload, { onConflict: "key" });
+    const ok = await saveDraftSetting(key, draftValue);
     setSaving(false);
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-    toast({ title: "Background saved" });
+    if (!ok) return;
+    setBgDraftStatus("draft");
+    toast({ title: "Draft saved" });
+  };
+
+  // Publish draft to live
+  const publishBg = async () => {
+    setPublishingBg(true);
+    const key = settingKeyForPage(selectedPage);
+
+    let draftValue: any;
+    if (isGlobal) {
+      draftValue = { ...form, intervalMs: Math.max(1000, form.intervalMs) };
+    } else {
+      draftValue = overrideMode === "custom"
+        ? { mode: "custom", ...form, intervalMs: Math.max(1000, form.intervalMs) }
+        : { mode: overrideMode };
+    }
+
+    const ok = await publishDraftSetting(key, draftValue);
+    setPublishingBg(false);
+    if (!ok) return;
+    setBgDraftStatus("published");
+    toast({ title: "Background published" });
+  };
+
+  // Discard draft
+  const discardBgDraft = async () => {
+    const key = settingKeyForPage(selectedPage);
+    await discardDraftSetting(key);
+    // Reload live settings
+    const { data } = await supabase.from("site_settings").select("value").eq("key", key).maybeSingle();
+    if (isGlobal) {
+      setForm(normalizeSettings(data?.value));
+    } else {
+      const val = data?.value as any;
+      const mode: PageOverrideMode = val?.mode || "inherit";
+      setOverrideMode(mode);
+      setForm(mode === "custom" ? normalizeSettings(val) : DEFAULT_SETTINGS);
+    }
+    setBgDraftStatus("published");
+    toast({ title: "Draft discarded — reverted to published" });
   };
 
   const copyGlobalToPage = async () => {

@@ -18,6 +18,16 @@ const STEP_DEFINITIONS = [
   { key: "shipped", label: "Shipped", icon: <Truck className="h-4 w-4" /> },
 ];
 
+const ADMIN_STEP_DEFINITIONS = [
+  { key: "received", label: "Received", icon: <Package className="h-4 w-4" /> },
+  { key: "review", label: "Review", icon: <Clock className="h-4 w-4" /> },
+  { key: "printing", label: "Printing", icon: <Printer className="h-4 w-4" /> },
+  { key: "finishing", label: "Finishing", icon: <Paintbrush className="h-4 w-4" /> },
+  { key: "quality_check", label: "QC", icon: <Check className="h-4 w-4" /> },
+  { key: "packed", label: "Packed", icon: <Package className="h-4 w-4" /> },
+  { key: "shipped", label: "Shipped", icon: <Truck className="h-4 w-4" /> },
+];
+
 const STATUS_TO_STEP_INDEX: Record<string, number> = {
   pending: 0,
   confirmed: 0,

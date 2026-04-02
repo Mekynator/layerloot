@@ -39,6 +39,7 @@ import AdminActivity from "./pages/admin/AdminActivity";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminMedia from "./pages/admin/AdminMedia";
 import AdminReusableBlocks from "./pages/admin/AdminReusableBlocks";
+import AdminTranslations from "./pages/admin/AdminTranslations";
 import AdminRoute from "./components/admin/AdminRoute";
 import DynamicPage from "./pages/DynamicPage";
 import CreateYourOwn from "./pages/CreateYourOwn";

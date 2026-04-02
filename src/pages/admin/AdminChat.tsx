@@ -776,11 +776,13 @@ export default function AdminChat() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="flex flex-wrap h-auto gap-1">
           <TabsTrigger value="overview" className="gap-1.5"><Settings2 className="h-3.5 w-3.5" /> Overview</TabsTrigger>
+          <TabsTrigger value="presets" className="gap-1.5"><LayoutTemplate className="h-3.5 w-3.5" /> Presets</TabsTrigger>
           <TabsTrigger value="appearance" className="gap-1.5"><Palette className="h-3.5 w-3.5" /> Appearance</TabsTrigger>
           <TabsTrigger value="tone" className="gap-1.5"><Volume2 className="h-3.5 w-3.5" /> Tone</TabsTrigger>
           <TabsTrigger value="context" className="gap-1.5"><FileText className="h-3.5 w-3.5" /> Context</TabsTrigger>
           <TabsTrigger value="quickreplies" className="gap-1.5"><Zap className="h-3.5 w-3.5" /> Quick Replies</TabsTrigger>
           <TabsTrigger value="training" className="gap-1.5"><Brain className="h-3.5 w-3.5" /> Training</TabsTrigger>
+          <TabsTrigger value="optimization" className="gap-1.5"><Gauge className="h-3.5 w-3.5" /> Optimization</TabsTrigger>
           <TabsTrigger value="campaign" className="gap-1.5"><Megaphone className="h-3.5 w-3.5" /> Campaign</TabsTrigger>
           <TabsTrigger value="analytics" className="gap-1.5"><BarChart3 className="h-3.5 w-3.5" /> Analytics</TabsTrigger>
           <TabsTrigger value="logs" className="gap-1.5"><MessageCircle className="h-3.5 w-3.5" /> Logs</TabsTrigger>
@@ -789,6 +791,9 @@ export default function AdminChat() {
 
         {/* ─── OVERVIEW ─── */}
         <TabsContent value="overview"><OverviewTab config={config} setTab={setActiveTab} /></TabsContent>
+
+        {/* ─── PRESETS ─── */}
+        <TabsContent value="presets"><PresetsTab config={config} setConfig={setConfig} /></TabsContent>
 
         {/* ─── APPEARANCE ─── */}
         <TabsContent value="appearance">

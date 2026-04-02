@@ -1693,7 +1693,7 @@ const CreateYourOwn = () => {
       const { data } = await supabase
         .from("site_blocks")
         .select("*")
-        .eq("page", "create-your-own")
+        .eq("page", "create")
         .eq("is_active", true)
         .order("sort_order");
 

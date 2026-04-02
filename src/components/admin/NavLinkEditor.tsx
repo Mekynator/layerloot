@@ -16,6 +16,18 @@ import { Badge } from "@/components/ui/badge";
 type NavSource = "manual" | "site_page";
 type LocalizedText = string | Partial<Record<SupportedLanguage, string>>;
 
+export interface MegaMenuConfig {
+  enabled: boolean;
+  layout: "categories" | "featured" | "full";
+  featuredProductIds?: string[];
+  bannerImageUrl?: string;
+  bannerLink?: string;
+  bannerText?: string;
+  showCategories?: boolean;
+  showNewArrivals?: boolean;
+  showBestSellers?: boolean;
+}
+
 export interface NavItem {
   label: LocalizedText;
   to: string;
@@ -23,6 +35,7 @@ export interface NavItem {
   pageId?: string;
   openInNewTab?: boolean;
   visible?: boolean;
+  megaMenu?: MegaMenuConfig;
 }
 
 type NavEditorItem = {

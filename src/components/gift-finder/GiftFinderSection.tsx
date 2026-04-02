@@ -74,10 +74,25 @@ export default function GiftFinderSection() {
         setTags([]);
         return;
       }
-      setTags((data as GiftFinderTag[]) ?? []);
+      const fetched = (data as GiftFinderTag[]) ?? [];
+      setTags(fetched);
+      setTagsLoaded(true);
     };
     void fetchTags();
   }, []);
+
+  // Pre-select tags based on saved gift preferences
+  useEffect(() => {
+    if (!tagsLoaded || tags.length === 0) return;
+    const interests = choices.lastGiftSettings?.recipientInterests;
+    if (!interests || interests.length === 0) return;
+    const matchedIds = tags
+      .filter((tag) => interests.some((i) => tag.slug.includes(i.toLowerCase()) || tag.name.toLowerCase().includes(i.toLowerCase())))
+      .map((t) => t.id);
+    if (matchedIds.length > 0 && selectedTagIds.length === 0) {
+      setSelectedTagIds(matchedIds);
+    }
+  }, [tagsLoaded, tags, choices.lastGiftSettings]);
 
   useEffect(() => {
     const fetchMatches = async () => {

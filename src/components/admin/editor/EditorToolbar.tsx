@@ -65,11 +65,7 @@ export default function EditorToolbar({ onAddBlock, onPageSettings, onDeletePage
                 ))}
               </SelectGroup>
             )}
-            <SelectGroup>
-              <SelectLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Site Sections</SelectLabel>
-              <SelectItem value="__header__">🔝 Header</SelectItem>
-              <SelectItem value="__footer__">📄 Footer</SelectItem>
-            </SelectGroup>
+            {/* Header & Footer editing reserved for future release */}
             {globalPages.length > 0 && (
               <SelectGroup>
                 <SelectLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Global Sections</SelectLabel>

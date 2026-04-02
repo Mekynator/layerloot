@@ -262,7 +262,6 @@ const AdminSettings = () => {
       <Tabs defaultValue="general" className="space-y-6">
         <TabsList>
           <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="footer">Footer</TabsTrigger>
           <TabsTrigger value="policies">Policies</TabsTrigger>
         </TabsList>
 

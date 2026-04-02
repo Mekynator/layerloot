@@ -182,7 +182,10 @@ export function isVoucherUsedOrArchived(voucher: UserVoucher) {
     voucher.is_used ||
     !!voucher.used_at ||
     gs === "pending_claim" ||
+    gs === "gifted" ||
+    gs === "claimed" ||
     gs === "cancelled" ||
+    !!voucher.recipient_email ||
     (remainingBalance !== null && remainingBalance <= 0)
   );
 }

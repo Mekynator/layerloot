@@ -207,10 +207,12 @@ export default function ChatLivePreview({ config }: ChatLivePreviewProps) {
                 width: windowWidth,
                 height: windowHeight,
                 borderRadius: config.window.borderRadius,
-                backgroundColor: config.window.bgColor ? `hsl(${config.window.bgColor})` : "hsl(var(--card))",
+                backgroundColor: config.window.bgColor || "hsl(var(--card))",
                 opacity: config.window.opacity / 100,
                 backdropFilter: config.window.glassEffect ? "blur(24px)" : undefined,
                 boxShadow: config.window.shadow || "0 24px 80px hsl(217 91% 60% / 0.15)",
+                borderColor: (config.window as any).borderColor || undefined,
+                borderWidth: (config.window as any).borderColor ? 1 : undefined,
               }}
             >
               {/* Header */}

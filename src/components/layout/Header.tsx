@@ -343,24 +343,26 @@ const Header = () => {
 
           <div className="relative flex items-center gap-1">
             {headerSettings.show_cart_icon && (
-              <MiniCart
-                cartButtonRef={cartButtonRef}
-                cartPulse={cartPulse}
-                cartGlow={cartGlow}
-                totalItems={totalItems}
-              />
-              <AnimatePresence>
-                {cartToast.visible && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 6, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -6, scale: 0.96 }}
-                    className="pointer-events-none absolute right-0 top-full mt-2 whitespace-nowrap rounded-full border border-primary/20 bg-card/90 px-3 py-1.5 text-xs font-medium text-primary shadow-lg backdrop-blur-xl"
-                  >
-                    {cartToast.text}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              <>
+                <MiniCart
+                  cartButtonRef={cartButtonRef}
+                  cartPulse={cartPulse}
+                  cartGlow={cartGlow}
+                  totalItems={totalItems}
+                />
+                <AnimatePresence>
+                  {cartToast.visible && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -6, scale: 0.96 }}
+                      className="pointer-events-none absolute right-0 top-full mt-2 whitespace-nowrap rounded-full border border-primary/20 bg-card/90 px-3 py-1.5 text-xs font-medium text-primary shadow-lg backdrop-blur-xl"
+                    >
+                      {cartToast.text}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </>
             )}
 
             <LanguageSwitcher />

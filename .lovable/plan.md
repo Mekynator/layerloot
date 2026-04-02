@@ -1,140 +1,171 @@
 
 
-# AI Chat Analytics, Training & Optimization Dashboard
+# Automation Engine — IF → THEN Workflow System
 
 ## Overview
 
-Build a comprehensive analytics, training, and optimization system for the AI chat, adding database tables for conversation tracking, a Q&A knowledge base, and a multi-tab admin dashboard.
+Build an event-driven automation engine that lets admins create visual IF → THEN workflows. Workflows are stored in the database, evaluated client-side against real-time events, and execute UI/chat/campaign actions without page reload.
 
 ## Architecture
 
 ```text
-┌─────────────────────────────────────────────────┐
-│  ChatWidget (frontend)                          │
-│  ├─ Tracks: session start, messages, clicks     │
-│  └─ Sends events → chat_analytics table         │
-├─────────────────────────────────────────────────┤
-│  chat edge function                             │
-│  ├─ Fetches Q&A knowledge base for system prompt│
-│  └─ Logs conversations → chat_conversations     │
-├─────────────────────────────────────────────────┤
-│  AdminChatAnalytics page (new)                  │
-│  ├─ Analytics Dashboard tab                     │
-│  ├─ Conversation Logs tab                       │
-│  ├─ Knowledge Base / Training tab               │
-│  ├─ Performance Health tab                      │
-│  └─ Testing Sandbox tab                         │
-└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────┐
+│  Database: automation_workflows     │
+│  (trigger, conditions, actions,     │
+│   priority, cooldown, enabled)      │
+├─────────────────────────────────────┤
+│  Database: automation_logs          │
+│  (workflow_id, session, timestamp,  │
+│   trigger_event, actions_executed)  │
+├─────────────────────────────────────┤
+│  useAutomationEngine (hook)         │
+│  ├─ Fetches active workflows        │
+│  ├─ Listens to events from          │
+│  │   EventBus (custom events)       │
+│  ├─ Evaluates conditions            │
+│  ├─ Executes actions                │
+│  └─ Respects cooldowns/priority     │
+├─────────────────────────────────────┤
+│  AutomationEventBus (context)       │
+│  ├─ emit("cart_add", data)          │
+│  ├─ emit("page_view", data)         │
+│  ├─ emit("user_idle", data)         │
+│  └─ … from CartContext, ChatWidget, │
+│       Layout, behavior tracking     │
+├─────────────────────────────────────┤
+│  Admin: AutomationBuilder page      │
+│  ├─ Workflow list + create/edit     │
+│  ├─ Trigger selector                │
+│  ├─ Condition builder (AND/OR)      │
+│  ├─ Action chain builder            │
+│  ├─ Priority/cooldown settings      │
+│  └─ Execution logs viewer           │
+└─────────────────────────────────────┘
 ```
 
-## Database Changes (3 new tables)
+## Database Changes (2 new tables)
 
-### 1. `chat_conversations`
-Stores every AI chat session with messages and metadata for admin review.
-
-| Column | Type | Purpose |
-|--------|------|---------|
+### `automation_workflows`
+| Column | Type | Notes |
+|--------|------|-------|
 | id | uuid PK | |
-| session_id | text | Client-generated session ID |
-| user_id | uuid nullable | Logged-in user |
-| messages | jsonb | Full message array |
-| page | text | Page where chat started |
-| campaign_id | text nullable | Active campaign |
-| language | text | User language |
-| started_at | timestamptz | Session start |
-| ended_at | timestamptz nullable | Session end |
-| message_count | int | Total messages |
-| outcome | text | 'converted', 'abandoned', 'resolved', 'unknown' |
-| metadata | jsonb | Cart snapshot, quick replies clicked, products viewed |
-| admin_flags | jsonb | Flagged, useful/not useful markers |
-| created_at | timestamptz | |
-
-RLS: Admins full access. Service role insert. No public read.
-
-### 2. `chat_analytics_events`
-Lightweight event tracking for aggregation.
-
-| Column | Type | Purpose |
-|--------|------|---------|
-| id | uuid PK | |
-| session_id | text | Links to conversation |
-| event_type | text | 'open', 'message', 'quick_reply_click', 'product_click', 'conversion', 'close' |
-| event_data | jsonb | Event-specific payload |
-| page | text | |
-| campaign_id | text nullable | |
-| user_id | uuid nullable | |
-| created_at | timestamptz | |
-
-RLS: Admins read. Service role insert.
-
-### 3. `chat_knowledge_base`
-Q&A pairs for AI training / preferred responses.
-
-| Column | Type | Purpose |
-|--------|------|---------|
-| id | uuid PK | |
-| question | text | Pattern/question |
-| answer | text | Preferred response |
-| category | text | 'products', 'shipping', 'materials', 'custom_orders', 'rewards', 'general' |
-| is_active | boolean | |
-| priority | int | Higher = used first |
+| name | text | Workflow name |
+| description | text | |
+| is_active | boolean | Enable/disable |
+| priority | int | Higher = evaluated first |
+| trigger_event | text | e.g. `page_view`, `cart_add`, `user_idle` |
+| trigger_config | jsonb | Event-specific params (page, product, seconds) |
+| conditions | jsonb | Array of `{field, op, value, logic}` |
+| actions | jsonb | Array of `{type, config}` |
+| cooldown_seconds | int | Per-session cooldown |
+| max_fires_per_session | int | Limit repeated firing |
+| campaign_id | uuid nullable | Scope to campaign |
 | created_by | uuid | |
 | created_at / updated_at | timestamptz | |
 
-RLS: Admins full CRUD. Public read active entries (for edge function).
+RLS: Admin full CRUD. No public access.
+
+### `automation_logs`
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid PK | |
+| workflow_id | uuid | |
+| session_id | text | |
+| user_id | uuid nullable | |
+| trigger_event | text | |
+| actions_executed | jsonb | |
+| page | text | |
+| created_at | timestamptz | |
+
+RLS: Admin read. Anon/auth insert.
 
 ## Implementation Steps
 
 ### Step 1: Database migration
-Create all 3 tables with RLS policies.
+Create both tables with RLS policies (admin manage, anon/auth insert for logs).
 
-### Step 2: Frontend event tracking (`ChatWidget.tsx`)
-- On chat open: insert `open` event
-- On message send: insert `message` event
-- On quick reply click: insert `quick_reply_click` event
-- On product link click in AI response: insert `product_click` event
-- On session end (close/navigate away): upsert conversation record with full messages
-- Use `navigator.sendBeacon` or fire-and-forget fetch for non-blocking tracking
+### Step 2: Event Bus (`src/contexts/AutomationContext.tsx`)
+- Create `AutomationEventBus` context with `emit(event, data)` and `useAutomationEvent()` hook
+- Wrap app in provider (inside existing providers in App.tsx)
+- Supported events: `page_view`, `product_view`, `cart_add`, `cart_remove`, `checkout_start`, `user_idle`, `user_login`, `user_register`, `chat_open`, `chat_message`, `scroll_percent`, `campaign_active`
 
-### Step 3: Edge function updates (`chat/index.ts`)
-- Fetch active `chat_knowledge_base` entries and inject into system prompt as a "Preferred Q&A" section
-- Log conversation to `chat_conversations` table after generating response (fire-and-forget)
+### Step 3: Automation Engine hook (`src/hooks/use-automation-engine.ts`)
+- Fetches active workflows from `automation_workflows` ordered by priority
+- Subscribes to EventBus events
+- On each event: finds matching workflows → evaluates conditions (AND/OR) → executes actions in sequence
+- Tracks cooldowns in session memory (Map of workflow_id → last fired timestamp)
+- Logs executions to `automation_logs` (fire-and-forget)
 
-### Step 4: Admin Analytics Dashboard page
-New page: `src/pages/admin/AdminChatAnalytics.tsx` with tabs:
+### Step 4: Action executors
+Built into the engine hook, each action type maps to a function:
+- `show_toast` → call `toast()` from sonner
+- `open_chat` → dispatch custom DOM event that ChatWidget listens to
+- `show_popup` → set state in AutomationContext consumed by a global `<AutomationOverlay>` component
+- `navigate` → use `window.location` or router
+- `apply_theme` → dispatch event to CampaignThemeProvider
+- `suggest_products` → inject into chat context
+- `show_banner` → rendered by AutomationOverlay
+- `highlight_element` → add CSS class via DOM query
 
-**Tab 1 — Dashboard**: Stat tiles (total chats, unique users, conversion rate, avg messages), charts (chats over time, top pages, top questions), quick reply performance table, product recommendation clicks.
+### Step 5: Event emitters in existing code
+Add `emit()` calls to:
+- `CartContext.tsx` → `cart_add`, `cart_remove`
+- `Layout.tsx` → `page_view` (on route change)
+- `AuthContext.tsx` → `user_login`, `user_register`
+- `ChatWidget.tsx` → `chat_open`, `chat_message`
+- Idle timer in AutomationContext → `user_idle`
 
-**Tab 2 — Conversations**: Searchable/filterable table of all conversations. Click to expand full chat log. Filters: date range, page, user, campaign, outcome. Flag/mark useful buttons.
+### Step 6: Admin page (`src/pages/admin/AdminAutomations.tsx`)
+Tabs:
+- **Workflows**: List all workflows with enable/disable toggle, priority, duplicate, delete. Click to edit.
+- **Builder**: Form-based workflow editor with trigger dropdown, condition rows (field + operator + value + AND/OR), action rows (type + config), priority/cooldown fields.
+- **Logs**: Table of recent executions with filters (workflow, date, page). Shows trigger, conditions matched, actions fired.
+- **Templates**: Pre-built workflow templates (cart abandonment, idle chat, voucher reminder, campaign activation) that can be cloned.
 
-**Tab 3 — Knowledge Base (Training)**: CRUD interface for Q&A pairs. Categories, priority sorting, active toggle. Bulk import. "Add from conversation" quick action.
+### Step 7: AutomationOverlay component
+Small component in `App.tsx` that renders popups/banners/notifications triggered by the engine. Consumes automation state from context.
 
-**Tab 4 — Health & Insights**: Health score cards (engagement, conversion, response quality). Alert cards for issues (high abandonment, unanswered questions). Top unanswered questions list.
+### Step 8: Route & sidebar
+- Add `/admin/automations` route in App.tsx
+- Add "Automations" link to admin sidebar under Tools group
 
-**Tab 5 — Testing Sandbox**: Embedded chat preview. Page/campaign/tone selector. Test conversations without affecting analytics. Uses same edge function with `test_mode` flag.
+## Trigger Types Reference
+| Trigger | Config |
+|---------|--------|
+| `page_view` | `{page: string}` |
+| `product_view` | `{productId?: string, categoryId?: string}` |
+| `cart_add` | `{productId?: string}` |
+| `cart_remove` | `{}` |
+| `checkout_start` | `{}` |
+| `user_idle` | `{seconds: number}` |
+| `user_login` | `{}` |
+| `scroll_percent` | `{threshold: number}` |
+| `campaign_active` | `{campaignId: string}` |
+| `chat_open` | `{}` |
+| `time_on_page` | `{seconds: number}` |
 
-### Step 5: Route registration
-Add `/admin/chat-analytics` route in `App.tsx` with admin guard.
+## Condition Fields
+`user.logged_in`, `user.points`, `user.has_vouchers`, `cart.item_count`, `cart.total`, `page.path`, `campaign.active`, `campaign.id`, `time.hour`, `session.visit_count`
 
-### Step 6: Sidebar navigation
-Add "AI Analytics" link to admin sidebar.
-
-## Technical Details
-
-- Analytics queries use `supabase.from("chat_analytics_events")` with date filtering and `.select()` aggregations
-- Conversation logging from ChatWidget uses the anon key (insert-only RLS)
-- Knowledge base entries are fetched in the edge function alongside existing chat config
-- Health scores are computed client-side from event aggregates (no extra DB functions needed)
-- Testing sandbox reuses the existing ChatWidget component with a `sandboxMode` prop that skips analytics logging
+## Safety
+- Cooldown tracking per workflow per session (in-memory Map)
+- `max_fires_per_session` default 1
+- No recursive triggers (actions don't re-emit events)
+- Async non-blocking execution
+- Logs capped at 10k rows (cleanup query in admin)
 
 ## Files to Create/Modify
-
 | File | Action |
 |------|--------|
-| Migration SQL | Create 3 tables |
-| `src/pages/admin/AdminChatAnalytics.tsx` | New — full dashboard |
-| `src/components/ChatWidget.tsx` | Add event tracking |
-| `supabase/functions/chat/index.ts` | Add knowledge base fetch, conversation logging |
-| `src/App.tsx` | Add route |
+| Migration SQL | 2 new tables |
+| `src/contexts/AutomationContext.tsx` | New — event bus + overlay state |
+| `src/hooks/use-automation-engine.ts` | New — workflow evaluation engine |
+| `src/pages/admin/AdminAutomations.tsx` | New — admin builder + logs |
+| `src/components/AutomationOverlay.tsx` | New — renders dynamic popups/banners |
+| `src/App.tsx` | Add provider, route, overlay |
+| `src/contexts/CartContext.tsx` | Add emit calls |
+| `src/components/layout/Layout.tsx` | Add page_view emit |
+| `src/contexts/AuthContext.tsx` | Add login/register emit |
+| `src/components/ChatWidget.tsx` | Add chat event emit |
 | `src/components/admin/AdminLayout.tsx` | Add sidebar link |
 

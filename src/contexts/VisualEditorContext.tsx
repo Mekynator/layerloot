@@ -72,6 +72,11 @@ interface EditorState {
   discardDraft: () => Promise<void>;
   draftStatus: DraftStatus;
 
+  // Scheduling
+  schedulePublish: (date: Date) => Promise<void>;
+  cancelSchedule: () => Promise<void>;
+  scheduledAt: string | null;
+
   // Undo/Redo
   undo: () => void;
   redo: () => void;

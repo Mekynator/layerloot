@@ -150,6 +150,13 @@ export default function ImageUploadField({ label, value, onChange }: ImageUpload
           placeholder="https://..."
         />
       )}
+
+      <MediaPickerDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onSelect={(url) => onChange(url)}
+        mediaType="image"
+      />
     </div>
   );
 }

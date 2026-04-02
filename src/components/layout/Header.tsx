@@ -465,11 +465,7 @@ const Header = () => {
                   <Link to="/account" className="block py-3 font-display text-sm uppercase tracking-widest text-muted-foreground hover:text-primary">
                     {getLocalizedValue(headerSettings.mobile_account_label, getLocalizedValue(headerSettings.account_label, t("nav.account", "My Account")))}
                   </Link>
-                  {isAdmin && (
-                    <Link to="/admin" className="block py-3 font-display text-sm uppercase tracking-widest text-muted-foreground hover:text-primary">
-                      {getLocalizedValue(headerSettings.mobile_admin_label, getLocalizedValue(headerSettings.admin_label, t("nav.admin", "Admin")))}
-                    </Link>
-                  )}
+                  {/* Mobile admin link removed — admin access is via /admin/login */}
                 </>
               ) : (
                 <Link to="/auth" className="block py-3 font-display text-sm uppercase tracking-widest text-muted-foreground hover:text-primary">

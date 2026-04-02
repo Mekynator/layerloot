@@ -585,8 +585,22 @@ const NavLinkEditor = () => {
             </Button>
           </div>
 
-          <Button onClick={save} className="w-full font-display uppercase tracking-wider">
-            <Save className="mr-1 h-4 w-4" /> Save Navigation
+          {hasDraft && (
+            <Button variant="ghost" size="sm" onClick={discardDraft} className="w-full text-xs text-muted-foreground hover:text-destructive">
+              Discard Draft
+            </Button>
+          )}
+
+          <Badge variant={hasDraft ? "secondary" : "outline"} className="mx-auto text-[10px] uppercase tracking-wider">
+            {hasDraft ? "Draft" : "Published"}
+          </Badge>
+
+          <Button onClick={save} disabled={saving} variant="outline" className="w-full font-display uppercase tracking-wider">
+            <Save className="mr-1 h-4 w-4" /> {saving ? "Saving..." : "Save Draft"}
+          </Button>
+
+          <Button onClick={publish} disabled={publishing} className="w-full font-display uppercase tracking-wider">
+            <Save className="mr-1 h-4 w-4" /> {publishing ? "Publishing..." : "Publish"}
           </Button>
 
           <div className="space-y-2 rounded-lg border border-border p-3">

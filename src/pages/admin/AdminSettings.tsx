@@ -174,6 +174,7 @@ const AdminSettings = () => {
           <TabsTrigger value="policies">Policies</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="navigation">Navigation</TabsTrigger>
+          <TabsTrigger value="account">Account Page</TabsTrigger>
         </TabsList>
 
         {/* ─── GENERAL ─── */}

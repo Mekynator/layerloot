@@ -110,9 +110,24 @@ function getStr(val: any): string {
 }
 
 function buildSystemPrompt(user: any, ctx: Record<string, any>, cart: any, page: string | null, chatConfig: Record<string, any>) {
+  const activePreset = chatConfig.activePreset;
+  const presets = [...(chatConfig.presets ?? [])];
+  const builtInPresets = [
+    { id: "support", tone: { personality: "warm", assistantMode: "support", responseLength: "medium" }, behavior: { prioritize: "support" } },
+    { id: "sales", tone: { personality: "friendly", assistantMode: "sales", ctaStyle: "direct", upsellIntensity: "moderate" }, behavior: { prioritize: "selling" } },
+    { id: "advisor", tone: { personality: "professional", assistantMode: "advisor", responseLength: "long" }, behavior: { prioritize: "balanced" } },
+    { id: "custom_orders", tone: { personality: "warm", assistantMode: "guide", responseLength: "long" }, behavior: { prioritize: "support" } },
+    { id: "rewards", tone: { personality: "playful", assistantMode: "guide", responseLength: "short" }, behavior: { prioritize: "balanced" } },
+    { id: "campaign", tone: { personality: "friendly", assistantMode: "sales", ctaStyle: "urgent", persuasiveStyle: "strong" }, behavior: { prioritize: "selling" } },
+    { id: "premium", tone: { personality: "premium", assistantMode: "advisor", formalityLevel: "formal", useEmoji: false }, behavior: { prioritize: "balanced" } },
+    { id: "minimal", tone: { personality: "concise", assistantMode: "support", responseLength: "short", useEmoji: false }, behavior: { prioritize: "support" } },
+  ];
+  const allPresets = [...builtInPresets, ...presets];
+  const matchedPreset = activePreset ? allPresets.find((p: any) => p.id === activePreset) : null;
+
   const prompts = chatConfig.prompts ?? {};
-  const tone = chatConfig.tone ?? {};
-  const behavior = chatConfig.behavior ?? {};
+  const tone = { ...(chatConfig.tone ?? {}), ...(matchedPreset?.tone ?? {}) };
+  const behavior = { ...(chatConfig.behavior ?? {}), ...(matchedPreset?.behavior ?? {}) };
   const pageRules = chatConfig.pageRules ?? [];
 
   const name = ctx.profile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "there";

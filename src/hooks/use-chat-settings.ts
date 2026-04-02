@@ -176,6 +176,34 @@ export interface ChatAnalyticsConfig {
   trackConversions: boolean;
 }
 
+/* ─── Preset Template ─── */
+export interface ChatPreset {
+  id: string;
+  name: string;
+  description?: string;
+  tone: Partial<ChatToneConfig>;
+  behavior: Partial<ChatBehaviorConfig>;
+  prompts?: Partial<ChatPromptConfig>;
+  icon?: string;
+}
+
+/* ─── Self-Optimization Config ─── */
+export interface ChatOptimizationConfig {
+  enabled: boolean;
+  autoAdjustTone: boolean;
+  autoAdjustLength: boolean;
+  autoAdjustCta: boolean;
+  autoAdjustRecommendations: boolean;
+  requireApproval: boolean; // admin must approve changes
+  optimizationInterval: "daily" | "weekly" | "monthly";
+  metrics: {
+    trackEngagement: boolean;
+    trackConversions: boolean;
+    trackBounce: boolean;
+    trackFollowUps: boolean;
+  };
+}
+
 /* ─── Full Chat Config ─── */
 export interface ChatConfig {
   enabled: boolean;
@@ -193,7 +221,39 @@ export interface ChatConfig {
   analytics: ChatAnalyticsConfig;
   disabledPages: string[];
   enabledLanguages: string[];
+  activePreset?: string; // preset id or null for custom
+  presets: ChatPreset[];
+  optimization: ChatOptimizationConfig;
 }
+
+/* ─── Built-in Presets ─── */
+export const BUILT_IN_PRESETS: ChatPreset[] = [
+  { id: "support", name: "Support Mode", description: "Focused on helping users solve problems", icon: "🛟",
+    tone: { personality: "warm", assistantMode: "support", responseLength: "medium", ctaStyle: "soft", upsellIntensity: "none", persuasiveStyle: "subtle" },
+    behavior: { prioritize: "support", autoRecommendProducts: false, showCheckoutEncouragement: false, askFollowUpQuestions: true } },
+  { id: "sales", name: "Sales Mode", description: "Maximize conversions and upsells", icon: "💰",
+    tone: { personality: "friendly", assistantMode: "sales", responseLength: "medium", ctaStyle: "direct", upsellIntensity: "moderate", persuasiveStyle: "moderate" },
+    behavior: { prioritize: "selling", autoRecommendProducts: true, showCheckoutEncouragement: true, showLoyaltyPrompts: true } },
+  { id: "advisor", name: "Product Advisor", description: "Expert guidance on products and materials", icon: "🧑‍🔬",
+    tone: { personality: "professional", assistantMode: "advisor", responseLength: "long", ctaStyle: "soft", upsellIntensity: "light" },
+    behavior: { prioritize: "balanced", autoRecommendProducts: true, askFollowUpQuestions: true } },
+  { id: "custom_orders", name: "Custom Orders Assistant", description: "Guide users through custom print process", icon: "🎨",
+    tone: { personality: "warm", assistantMode: "guide", responseLength: "long", ctaStyle: "soft", upsellIntensity: "none" },
+    behavior: { prioritize: "support", customOrderHelpPrompt: true, autoRecommendProducts: false },
+    prompts: { productGuidance: "Focus on explaining the custom order process, materials, file requirements, and pricing." } },
+  { id: "rewards", name: "Rewards Assistant", description: "Help with loyalty points and vouchers", icon: "🏆",
+    tone: { personality: "playful", assistantMode: "guide", responseLength: "short", ctaStyle: "direct", upsellIntensity: "light" },
+    behavior: { prioritize: "balanced", showLoyaltyPrompts: true, autoRecommendProducts: false } },
+  { id: "campaign", name: "Campaign Mode", description: "Promote active campaigns and offers", icon: "📢",
+    tone: { personality: "friendly", assistantMode: "sales", responseLength: "short", ctaStyle: "urgent", upsellIntensity: "moderate", persuasiveStyle: "strong" },
+    behavior: { prioritize: "selling", autoRecommendProducts: true, showCheckoutEncouragement: true } },
+  { id: "premium", name: "Premium Brand Voice", description: "Refined luxury brand experience", icon: "✨",
+    tone: { personality: "premium", assistantMode: "advisor", responseLength: "medium", formalityLevel: "formal", ctaStyle: "soft", upsellIntensity: "light", useEmoji: false },
+    behavior: { prioritize: "balanced", showTrustMessages: true } },
+  { id: "minimal", name: "Minimal Mode", description: "Short, direct answers only", icon: "⚡",
+    tone: { personality: "concise", assistantMode: "support", responseLength: "short", ctaStyle: "soft", upsellIntensity: "none", useEmoji: false, conversationStyle: "direct" },
+    behavior: { prioritize: "support", autoRecommendProducts: false, askFollowUpQuestions: false } },
+];
 
 /* ─── Defaults ─── */
 export const DEFAULT_CHAT_CONFIG: ChatConfig = {
@@ -300,6 +360,23 @@ export const DEFAULT_CHAT_CONFIG: ChatConfig = {
   },
   disabledPages: [],
   enabledLanguages: ["en", "da", "de", "es", "ro"],
+  activePreset: undefined,
+  presets: [],
+  optimization: {
+    enabled: false,
+    autoAdjustTone: false,
+    autoAdjustLength: false,
+    autoAdjustCta: false,
+    autoAdjustRecommendations: false,
+    requireApproval: true,
+    optimizationInterval: "weekly",
+    metrics: {
+      trackEngagement: true,
+      trackConversions: true,
+      trackBounce: true,
+      trackFollowUps: true,
+    },
+  },
 };
 
 // ─── Legacy-compatible settings alias ───

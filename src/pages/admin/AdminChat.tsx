@@ -6,6 +6,7 @@ import {
   ChevronDown, ChevronRight, Search, RefreshCw, Send, Bot, User,
   Activity, Zap, Target, HelpCircle, BookOpen, X,
   Settings2, Palette, Volume2, FileText, Sparkles, Megaphone,
+  Gauge, Wand2, LayoutTemplate, Check, Copy, ArrowRight,
 } from "lucide-react";
 import ChatLivePreview from "@/components/admin/ChatLivePreview";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { DEFAULT_CHAT_CONFIG, type ChatConfig, type ChatQuickReply, type ChatPageRule } from "@/hooks/use-chat-settings";
+import { DEFAULT_CHAT_CONFIG, BUILT_IN_PRESETS, type ChatConfig, type ChatQuickReply, type ChatPageRule, type ChatPreset } from "@/hooks/use-chat-settings";
 import { format } from "date-fns";
 
 /* ─── Helpers ─── */
@@ -402,6 +403,243 @@ function KnowledgeBaseTab() {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   PRESETS TAB
+   ═══════════════════════════════════════════════════════════════ */
+function PresetsTab({ config, setConfig }: { config: ChatConfig; setConfig: React.Dispatch<React.SetStateAction<ChatConfig>> }) {
+  const allPresets = [...BUILT_IN_PRESETS, ...(config.presets || [])];
+  const activePreset = config.activePreset;
+
+  const applyPreset = (preset: ChatPreset) => {
+    setConfig(prev => ({
+      ...prev,
+      activePreset: preset.id,
+      tone: { ...prev.tone, ...preset.tone },
+      behavior: { ...prev.behavior, ...preset.behavior },
+      ...(preset.prompts ? { prompts: { ...prev.prompts, ...preset.prompts } } : {}),
+    }));
+    sonnerToast.success(`Applied "${preset.name}" preset`);
+  };
+
+  const clearPreset = () => {
+    setConfig(prev => ({ ...prev, activePreset: undefined }));
+    sonnerToast.info("Switched to custom configuration");
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2"><LayoutTemplate className="h-5 w-5" /> AI Preset Templates</h2>
+          <p className="text-xs text-muted-foreground mt-1">Choose a preset mode or create custom configurations. Presets control tone, behavior, and prompts simultaneously.</p>
+        </div>
+        {activePreset && (
+          <Badge variant="outline" className="gap-1.5">
+            Active: {allPresets.find(p => p.id === activePreset)?.name ?? activePreset}
+            <button onClick={clearPreset} className="ml-1 opacity-60 hover:opacity-100"><X className="h-3 w-3" /></button>
+          </Badge>
+        )}
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {/* Custom mode card */}
+        <Card className={`border-2 transition-colors cursor-pointer ${!activePreset ? "border-primary bg-primary/5" : "border-border/50 hover:border-border"}`} onClick={clearPreset}>
+          <CardContent className="p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-2xl">🔧</span>
+              {!activePreset && <Check className="h-4 w-4 text-primary" />}
+            </div>
+            <h3 className="font-semibold text-sm">Custom</h3>
+            <p className="text-xs text-muted-foreground">Manually configure all tone and behavior settings</p>
+          </CardContent>
+        </Card>
+
+        {/* Preset cards */}
+        {allPresets.map(preset => (
+          <Card key={preset.id} className={`border-2 transition-colors cursor-pointer ${activePreset === preset.id ? "border-primary bg-primary/5" : "border-border/50 hover:border-border"}`} onClick={() => applyPreset(preset)}>
+            <CardContent className="p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-2xl">{preset.icon || "🤖"}</span>
+                {activePreset === preset.id && <Check className="h-4 w-4 text-primary" />}
+              </div>
+              <h3 className="font-semibold text-sm">{preset.name}</h3>
+              <p className="text-xs text-muted-foreground">{preset.description}</p>
+              <div className="flex flex-wrap gap-1 mt-2">
+                {preset.tone.personality && <Badge variant="secondary" className="text-[10px]">{preset.tone.personality}</Badge>}
+                {preset.tone.assistantMode && <Badge variant="secondary" className="text-[10px]">{preset.tone.assistantMode}</Badge>}
+                {preset.tone.ctaStyle && <Badge variant="outline" className="text-[10px]">CTA: {preset.tone.ctaStyle}</Badge>}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Active preset details */}
+      {activePreset && (() => {
+        const preset = allPresets.find(p => p.id === activePreset);
+        if (!preset) return null;
+        return (
+          <Card className="border-primary/30">
+            <CardHeader><CardTitle className="font-display text-sm uppercase flex items-center gap-2"><span>{preset.icon}</span> Active Preset: {preset.name}</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {Object.entries(preset.tone).map(([k, v]) => (
+                  <div key={k} className="flex items-center justify-between text-xs bg-muted/40 rounded px-3 py-2">
+                    <span className="text-muted-foreground capitalize">{k.replace(/([A-Z])/g, " $1")}</span>
+                    <span className="font-medium">{String(v)}</span>
+                  </div>
+                ))}
+                {Object.entries(preset.behavior || {}).map(([k, v]) => (
+                  <div key={k} className="flex items-center justify-between text-xs bg-muted/40 rounded px-3 py-2">
+                    <span className="text-muted-foreground capitalize">{k.replace(/([A-Z])/g, " $1")}</span>
+                    <span className="font-medium">{String(v)}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">These settings override your manual tone/behavior configuration while this preset is active. Switch tabs to fine-tune individual values.</p>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
+      {/* Dynamic switching info */}
+      <Card className="border-border/50">
+        <CardContent className="p-4 space-y-2">
+          <h3 className="text-sm font-semibold flex items-center gap-2"><Wand2 className="h-4 w-4" /> Dynamic Preset Switching</h3>
+          <p className="text-xs text-muted-foreground">Presets can be activated automatically using the Automation Engine. Create workflows that switch presets based on page context, campaign, user type, or time of day via the <strong>Automations</strong> admin page.</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   OPTIMIZATION TAB
+   ═══════════════════════════════════════════════════════════════ */
+function OptimizationTab({ config, setConfig }: { config: ChatConfig; setConfig: React.Dispatch<React.SetStateAction<ChatConfig>> }) {
+  const [snapshots, setSnapshots] = useState<any[]>([]);
+  const [feedback, setFeedback] = useState<{ total: number; positive: number; negative: number; conversionRate: string }>({ total: 0, positive: 0, negative: 0, conversionRate: "0" });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const [snapRes, fbRes] = await Promise.all([
+        supabase.from("chat_optimization_snapshots").select("*").order("created_at", { ascending: false }).limit(10),
+        supabase.from("chat_response_feedback").select("rating, led_to_conversion").limit(1000),
+      ]);
+      setSnapshots((snapRes.data as any[]) ?? []);
+      const fb = (fbRes.data as any[]) ?? [];
+      setFeedback({
+        total: fb.length,
+        positive: fb.filter(f => f.rating === "positive").length,
+        negative: fb.filter(f => f.rating === "negative").length,
+        conversionRate: fb.length > 0 ? ((fb.filter(f => f.led_to_conversion).length / fb.length) * 100).toFixed(1) : "0",
+      });
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  const opt = config.optimization;
+  const setOpt = (field: string, value: any) => setConfig(prev => ({ ...prev, optimization: { ...prev.optimization, [field]: value } }));
+  const setMetric = (field: string, value: boolean) => setConfig(prev => ({ ...prev, optimization: { ...prev.optimization, metrics: { ...prev.optimization.metrics, [field]: value } } }));
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2"><Gauge className="h-5 w-5" /> Self-Optimization Engine</h2>
+          <p className="text-xs text-muted-foreground mt-1">AI analyzes its own performance and automatically fine-tunes responses for better engagement and conversions.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Switch checked={opt.enabled} onCheckedChange={v => setOpt("enabled", v)} />
+          <Label className="text-xs font-medium">{opt.enabled ? "Active" : "Disabled"}</Label>
+        </div>
+      </div>
+
+      {/* Performance summary */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "Total Feedback", value: feedback.total, icon: Activity, color: "text-primary" },
+          { label: "Positive Ratings", value: feedback.positive, icon: ThumbsUp, color: "text-emerald-500" },
+          { label: "Negative Ratings", value: feedback.negative, icon: ThumbsDown, color: "text-rose-500" },
+          { label: "Conversion Rate", value: `${feedback.conversionRate}%`, icon: Target, color: "text-amber-500" },
+        ].map(s => (
+          <Card key={s.label} className="border-border/50"><CardContent className="flex items-center gap-3 p-4">
+            <s.icon className={`h-8 w-8 ${s.color}`} /><div><p className="text-2xl font-bold">{s.value}</p><p className="text-xs text-muted-foreground">{s.label}</p></div>
+          </CardContent></Card>
+        ))}
+      </div>
+
+      {/* Auto-adjustment controls */}
+      <Card className="border-border/50">
+        <CardHeader><CardTitle className="font-display text-sm uppercase">Auto-Adjustment Rules</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-xs text-muted-foreground">When enabled, the AI will gradually adjust these parameters based on measured performance. Changes are small and incremental.</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex items-center gap-2"><Switch checked={opt.autoAdjustTone} onCheckedChange={v => setOpt("autoAdjustTone", v)} /><Label className="text-xs">Auto-adjust tone warmth</Label></div>
+            <div className="flex items-center gap-2"><Switch checked={opt.autoAdjustLength} onCheckedChange={v => setOpt("autoAdjustLength", v)} /><Label className="text-xs">Auto-adjust response length</Label></div>
+            <div className="flex items-center gap-2"><Switch checked={opt.autoAdjustCta} onCheckedChange={v => setOpt("autoAdjustCta", v)} /><Label className="text-xs">Auto-adjust CTA strength</Label></div>
+            <div className="flex items-center gap-2"><Switch checked={opt.autoAdjustRecommendations} onCheckedChange={v => setOpt("autoAdjustRecommendations", v)} /><Label className="text-xs">Auto-adjust recommendation frequency</Label></div>
+          </div>
+          <Separator />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex items-center gap-2"><Switch checked={opt.requireApproval} onCheckedChange={v => setOpt("requireApproval", v)} /><Label className="text-xs">Require admin approval for changes</Label></div>
+            <div>
+              <Label className="text-xs">Optimization Interval</Label>
+              <Select value={opt.optimizationInterval} onValueChange={v => setOpt("optimizationInterval", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Metrics tracking */}
+      <Card className="border-border/50">
+        <CardHeader><CardTitle className="font-display text-sm uppercase">Tracked Metrics</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex items-center gap-2"><Switch checked={opt.metrics.trackEngagement} onCheckedChange={v => setMetric("trackEngagement", v)} /><Label className="text-xs">Engagement (clicks, follow-ups)</Label></div>
+            <div className="flex items-center gap-2"><Switch checked={opt.metrics.trackConversions} onCheckedChange={v => setMetric("trackConversions", v)} /><Label className="text-xs">Conversions</Label></div>
+            <div className="flex items-center gap-2"><Switch checked={opt.metrics.trackBounce} onCheckedChange={v => setMetric("trackBounce", v)} /><Label className="text-xs">Bounce after response</Label></div>
+            <div className="flex items-center gap-2"><Switch checked={opt.metrics.trackFollowUps} onCheckedChange={v => setMetric("trackFollowUps", v)} /><Label className="text-xs">Follow-up interactions</Label></div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Snapshots */}
+      <Card className="border-border/50">
+        <CardHeader><CardTitle className="font-display text-sm uppercase">Performance Snapshots</CardTitle></CardHeader>
+        <CardContent>
+          {loading ? <p className="text-sm text-muted-foreground text-center py-6">Loading...</p> :
+            snapshots.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">No optimization snapshots yet. Snapshots are generated automatically based on your optimization interval.</p>
+            ) : (
+              <div className="space-y-2">
+                {snapshots.map(snap => (
+                  <div key={snap.id} className="flex items-center justify-between rounded-lg border border-border/30 bg-muted/30 p-3 text-xs">
+                    <div>
+                      <span className="font-medium">{format(new Date(snap.period_start), "MMM d")} – {format(new Date(snap.period_end), "MMM d, yyyy")}</span>
+                      <span className="ml-3 text-muted-foreground">{snap.total_sessions} sessions · {snap.total_messages} msgs · {Number(snap.conversion_rate).toFixed(1)}% conversion</span>
+                    </div>
+                    <Badge variant={snap.applied ? "default" : "outline"} className="text-[10px]">{snap.applied ? "Applied" : "Pending"}</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
    SANDBOX TAB
    ═══════════════════════════════════════════════════════════════ */
 function SandboxTab() {
@@ -486,6 +724,7 @@ function SandboxTab() {
   );
 }
 
+
 /* ═══════════════════════════════════════════════════════════════
    MAIN PAGE
    ═══════════════════════════════════════════════════════════════ */
@@ -537,11 +776,13 @@ export default function AdminChat() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="flex flex-wrap h-auto gap-1">
           <TabsTrigger value="overview" className="gap-1.5"><Settings2 className="h-3.5 w-3.5" /> Overview</TabsTrigger>
+          <TabsTrigger value="presets" className="gap-1.5"><LayoutTemplate className="h-3.5 w-3.5" /> Presets</TabsTrigger>
           <TabsTrigger value="appearance" className="gap-1.5"><Palette className="h-3.5 w-3.5" /> Appearance</TabsTrigger>
           <TabsTrigger value="tone" className="gap-1.5"><Volume2 className="h-3.5 w-3.5" /> Tone</TabsTrigger>
           <TabsTrigger value="context" className="gap-1.5"><FileText className="h-3.5 w-3.5" /> Context</TabsTrigger>
           <TabsTrigger value="quickreplies" className="gap-1.5"><Zap className="h-3.5 w-3.5" /> Quick Replies</TabsTrigger>
           <TabsTrigger value="training" className="gap-1.5"><Brain className="h-3.5 w-3.5" /> Training</TabsTrigger>
+          <TabsTrigger value="optimization" className="gap-1.5"><Gauge className="h-3.5 w-3.5" /> Optimization</TabsTrigger>
           <TabsTrigger value="campaign" className="gap-1.5"><Megaphone className="h-3.5 w-3.5" /> Campaign</TabsTrigger>
           <TabsTrigger value="analytics" className="gap-1.5"><BarChart3 className="h-3.5 w-3.5" /> Analytics</TabsTrigger>
           <TabsTrigger value="logs" className="gap-1.5"><MessageCircle className="h-3.5 w-3.5" /> Logs</TabsTrigger>
@@ -550,6 +791,9 @@ export default function AdminChat() {
 
         {/* ─── OVERVIEW ─── */}
         <TabsContent value="overview"><OverviewTab config={config} setTab={setActiveTab} /></TabsContent>
+
+        {/* ─── PRESETS ─── */}
+        <TabsContent value="presets"><PresetsTab config={config} setConfig={setConfig} /></TabsContent>
 
         {/* ─── APPEARANCE ─── */}
         <TabsContent value="appearance">
@@ -870,6 +1114,9 @@ export default function AdminChat() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* ─── OPTIMIZATION ─── */}
+        <TabsContent value="optimization"><OptimizationTab config={config} setConfig={setConfig} /></TabsContent>
 
         {/* ─── ANALYTICS ─── */}
         <TabsContent value="analytics"><AnalyticsTab /></TabsContent>

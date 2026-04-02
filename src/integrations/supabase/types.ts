@@ -434,8 +434,12 @@ export type Database = {
           created_by: string | null
           id: string
           is_active: boolean
+          keywords: string[] | null
+          media_url: string | null
           priority: number
           question: string
+          tags: string[] | null
+          title: string | null
           updated_at: string
         }
         Insert: {
@@ -445,8 +449,12 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_active?: boolean
+          keywords?: string[] | null
+          media_url?: string | null
           priority?: number
           question: string
+          tags?: string[] | null
+          title?: string | null
           updated_at?: string
         }
         Update: {
@@ -456,11 +464,122 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_active?: boolean
+          keywords?: string[] | null
+          media_url?: string | null
           priority?: number
           question?: string
+          tags?: string[] | null
+          title?: string | null
           updated_at?: string
         }
         Relationships: []
+      }
+      chat_optimization_snapshots: {
+        Row: {
+          applied: boolean | null
+          avg_engagement_score: number | null
+          conversion_rate: number | null
+          created_at: string
+          id: string
+          period_end: string
+          period_start: string
+          suggested_adjustments: Json | null
+          top_performing_responses: Json | null
+          total_messages: number | null
+          total_sessions: number | null
+          weak_responses: Json | null
+        }
+        Insert: {
+          applied?: boolean | null
+          avg_engagement_score?: number | null
+          conversion_rate?: number | null
+          created_at?: string
+          id?: string
+          period_end: string
+          period_start: string
+          suggested_adjustments?: Json | null
+          top_performing_responses?: Json | null
+          total_messages?: number | null
+          total_sessions?: number | null
+          weak_responses?: Json | null
+        }
+        Update: {
+          applied?: boolean | null
+          avg_engagement_score?: number | null
+          conversion_rate?: number | null
+          created_at?: string
+          id?: string
+          period_end?: string
+          period_start?: string
+          suggested_adjustments?: Json | null
+          top_performing_responses?: Json | null
+          total_messages?: number | null
+          total_sessions?: number | null
+          weak_responses?: Json | null
+        }
+        Relationships: []
+      }
+      chat_response_feedback: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          engagement_score: number | null
+          feedback_type: string
+          follow_up_count: number | null
+          id: string
+          led_to_conversion: boolean | null
+          message_index: number
+          page: string | null
+          preset_used: string | null
+          rating: string
+          response_snippet: string | null
+          session_id: string
+          tone_used: string | null
+          user_id: string | null
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          engagement_score?: number | null
+          feedback_type?: string
+          follow_up_count?: number | null
+          id?: string
+          led_to_conversion?: boolean | null
+          message_index?: number
+          page?: string | null
+          preset_used?: string | null
+          rating?: string
+          response_snippet?: string | null
+          session_id: string
+          tone_used?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          engagement_score?: number | null
+          feedback_type?: string
+          follow_up_count?: number | null
+          id?: string
+          led_to_conversion?: boolean | null
+          message_index?: number
+          page?: string | null
+          preset_used?: string | null
+          rating?: string
+          response_snippet?: string | null
+          session_id?: string
+          tone_used?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_response_feedback_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       content_revisions: {
         Row: {

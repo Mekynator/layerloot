@@ -234,11 +234,12 @@ export default function AdminBackgrounds() {
     const key = settingKeyForPage(selectedPage);
     await discardDraftSetting(key);
     // Reload live settings
-    const { data } = await supabase.from("site_settings").select("value").eq("key", key).maybeSingle();
+    const result = await loadDraftSetting(key);
+    const liveVal = result?.live;
     if (isGlobal) {
-      setForm(normalizeSettings(data?.value));
+      setForm(normalizeSettings(liveVal));
     } else {
-      const val = data?.value as any;
+      const val = liveVal as any;
       const mode: PageOverrideMode = val?.mode || "inherit";
       setOverrideMode(mode);
       setForm(mode === "custom" ? normalizeSettings(val) : DEFAULT_SETTINGS);

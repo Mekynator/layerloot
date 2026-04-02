@@ -234,8 +234,13 @@ export function useUpdateAssetMetadata() {
 
 /** Increment usage_count when an asset is selected */
 export async function incrementUsageCount(assetId: string) {
-  await supabase.rpc("increment_usage_count" as any, { asset_id: assetId }).catch(() => {
-    // Fallback: just update directly (no rpc needed)
-    supabase.from("media_assets").update({ usage_count: 1 }).eq("id", assetId);
-  });
+  try {
+    // Simple increment via select + update
+    const { data } = await supabase.from("media_assets").select("usage_count").eq("id", assetId).single();
+    if (data) {
+      await supabase.from("media_assets").update({ usage_count: ((data as any).usage_count ?? 0) + 1 }).eq("id", assetId);
+    }
+  } catch {
+    // Non-critical, ignore
+  }
 }

@@ -1723,16 +1723,6 @@ const CreateYourOwn = () => {
 
       <section className="py-8 lg:py-12">
         <div className="container max-w-6xl">
-          <motion.div {...fadeUp} className="mb-8">
-            <h1 className="mb-2 font-display text-3xl font-bold uppercase text-foreground lg:text-5xl">
-              {t("create.pageTitle")}
-            </h1>
-
-            <p className="max-w-2xl text-muted-foreground">
-              {t("create.pageSubtitle")}
-            </p>
-          </motion.div>
-
           <Tabs
             value={activeTab}
             onValueChange={(value) => setActiveTab(value as CreateTabValue)}

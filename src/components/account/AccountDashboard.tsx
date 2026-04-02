@@ -9,7 +9,7 @@ import type { AccountModuleProps, Order, CustomOrder, UserVoucher } from "./type
 import { isCustomOrderDone } from "./types";
 import { useRememberedChoices } from "@/hooks/use-remembered-choices";
 import { useBehaviorTracking } from "@/hooks/use-behavior-tracking";
-import { useStorefront } from "@/hooks/use-storefront";
+import { useStorefrontCatalog } from "@/hooks/use-storefront";
 import { motion } from "framer-motion";
 
 interface Props extends AccountModuleProps {

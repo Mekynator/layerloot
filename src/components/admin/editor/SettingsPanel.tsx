@@ -820,13 +820,7 @@ function AdvancedStyleEditor({ content, patchContent }: { content: Record<string
         </div>
       </div>
 
-      {/* Border Radius */}
-      <SliderField
-        label="Border Radius"
-        value={content.borderRadius ?? 0}
-        onChange={(v) => patchContent("borderRadius", v)}
-        min={0} max={32} step={2}
-      />
+      {/* Border Radius (moved to Border tab) */}
 
       {/* Gap */}
       <SliderField

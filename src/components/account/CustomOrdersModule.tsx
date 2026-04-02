@@ -221,6 +221,8 @@ const CustomOrdersModule = ({ user, tt, customOrders, customOrderMessages, seenS
   useEffect(() => {
     if (expandedCustomOrderId) {
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+      // Clear unread flag for user when expanding
+      supabase.from("custom_orders").update({ unread_by_user: false } as any).eq("id", expandedCustomOrderId).then(() => {});
     }
   }, [expandedCustomOrderId, customOrderMessages]);
 

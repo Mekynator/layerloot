@@ -787,7 +787,4 @@ const AdminCustomOrderDetail = () => {
   );
 };
 
-// Need React import for Fragment
-import React from "react";
-
 export default AdminCustomOrderDetail;

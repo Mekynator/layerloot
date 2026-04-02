@@ -7,6 +7,7 @@ import {
   Activity, Zap, Target, HelpCircle, BookOpen, X,
   Settings2, Palette, Volume2, FileText, Sparkles, Megaphone,
 } from "lucide-react";
+import ChatLivePreview from "@/components/admin/ChatLivePreview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -551,7 +552,9 @@ export default function AdminChat() {
         <TabsContent value="overview"><OverviewTab config={config} setTab={setActiveTab} /></TabsContent>
 
         {/* ─── APPEARANCE ─── */}
-        <TabsContent value="appearance" className="space-y-6">
+        <TabsContent value="appearance">
+          <div className="flex gap-6">
+            <div className="flex-1 min-w-0 space-y-6">
           {/* General */}
           <Card><CardHeader><CardTitle className="font-display text-sm uppercase">Global</CardTitle></CardHeader>
             <CardContent className="space-y-4">
@@ -678,10 +681,19 @@ export default function AdminChat() {
               </CardContent>
             </Card>
           </div>
+            </div>
+            <div className="hidden xl:block w-[400px] shrink-0">
+              <div className="sticky top-4">
+                <ChatLivePreview config={config} />
+              </div>
+            </div>
+          </div>
         </TabsContent>
 
         {/* ─── TONE ─── */}
-        <TabsContent value="tone" className="space-y-4">
+        <TabsContent value="tone">
+          <div className="flex gap-6">
+            <div className="flex-1 min-w-0 space-y-4">
           <Card><CardHeader><CardTitle className="font-display text-sm uppercase">Tone & Personality</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -711,10 +723,19 @@ export default function AdminChat() {
               <div className="flex items-center gap-2"><Switch checked={config.tone.useEmoji} onCheckedChange={v => setNested("tone", "useEmoji", v)} /><Label className="text-xs">Use Emoji</Label></div>
             </CardContent>
           </Card>
+            </div>
+            <div className="hidden xl:block w-[400px] shrink-0">
+              <div className="sticky top-4">
+                <ChatLivePreview config={config} />
+              </div>
+            </div>
+          </div>
         </TabsContent>
 
         {/* ─── CONTEXT RULES ─── */}
-        <TabsContent value="context" className="space-y-4">
+        <TabsContent value="context">
+          <div className="flex gap-6">
+            <div className="flex-1 min-w-0 space-y-4">
           <Card><CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="font-display text-sm uppercase">Page-based Context Rules</CardTitle>
             <Button size="sm" variant="outline" onClick={addPageRule}><Plus className="mr-1 h-3 w-3" /> Add Rule</Button>
@@ -775,10 +796,19 @@ export default function AdminChat() {
               </div>
             </CardContent>
           </Card>
+            </div>
+            <div className="hidden xl:block w-[400px] shrink-0">
+              <div className="sticky top-4">
+                <ChatLivePreview config={config} />
+              </div>
+            </div>
+          </div>
         </TabsContent>
 
         {/* ─── QUICK REPLIES ─── */}
-        <TabsContent value="quickreplies" className="space-y-4">
+        <TabsContent value="quickreplies">
+          <div className="flex gap-6">
+            <div className="flex-1 min-w-0 space-y-4">
           <Card><CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="font-display text-sm uppercase">Quick Replies</CardTitle>
             <Button size="sm" variant="outline" onClick={addQuickReply}><Plus className="mr-1 h-3 w-3" /> Add</Button>
@@ -800,6 +830,13 @@ export default function AdminChat() {
               {config.quickReplies.length === 0 && <p className="py-4 text-center text-sm text-muted-foreground">No quick replies configured</p>}
             </CardContent>
           </Card>
+            </div>
+            <div className="hidden xl:block w-[400px] shrink-0">
+              <div className="sticky top-4">
+                <ChatLivePreview config={config} />
+              </div>
+            </div>
+          </div>
         </TabsContent>
 
         {/* ─── TRAINING ─── */}

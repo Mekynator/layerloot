@@ -813,6 +813,12 @@ const AdminDiscounts = () => {
           </div>
         </DialogContent>
       </Dialog>
+        </TabsContent>
+
+        <TabsContent value="rewards">
+          <RewardsStoreEditor />
+        </TabsContent>
+      </Tabs>
     </AdminLayout>
   );
 };

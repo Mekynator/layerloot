@@ -120,27 +120,7 @@ type ProgressState = {
   status: string;
 };
 
-type GiftFinderTag = {
-  id: string;
-  name: string;
-  slug: string;
-  icon_key: keyof typeof GIFT_FINDER_ICON_MAP | null;
-  is_active?: boolean;
-};
-
-type GiftFinderProduct = {
-  id: string;
-  name: string;
-  slug: string;
-  price: number;
-  images: string[] | null;
-  is_featured?: boolean;
-};
-
-type GiftFinderLink = {
-  product_id: string;
-  gift_finder_tag_id: string;
-};
+// GiftFinder types moved to GiftFinderSection.tsx
 
 type CreateTabValue = "custom-print" | "lithophane" | "gift-finder";
 

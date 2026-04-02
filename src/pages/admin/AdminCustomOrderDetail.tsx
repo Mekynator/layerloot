@@ -271,6 +271,10 @@ const AdminCustomOrderDetail = () => {
       metadata: { amount },
     });
 
+    // Trigger automation for quote
+    await executeAutomation({ orderId, triggerEvent: "quote_sent" });
+    await supabase.from("custom_orders").update({ unread_by_user: true } as any).eq("id", orderId);
+
     setThreadMessage("");
     toast({ title: "Quote sent" });
     setSaving(false);

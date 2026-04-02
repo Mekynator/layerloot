@@ -9,6 +9,8 @@ import {
   Gauge, Wand2, LayoutTemplate, Check, Copy, ArrowRight,
 } from "lucide-react";
 import ChatLivePreview from "@/components/admin/ChatLivePreview";
+import ColorPickerField from "@/components/admin/editor/controls/ColorPickerField";
+import ImageUploadPlaceholder from "@/components/admin/editor/controls/ImageUploadPlaceholder";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -804,7 +806,7 @@ export default function AdminChat() {
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3"><Switch checked={config.enabled} onCheckedChange={v => set("enabled", v)} /><Label>Enable AI Chat Widget</Label></div>
               <div><Label className="text-xs">Brand Name</Label><Input value={getStr(config.window.brandName)} onChange={e => setNested("window", "brandName", setStr(config.window.brandName, e.target.value))} /></div>
-              <div><Label className="text-xs">Avatar URL</Label><Input value={config.window.avatarUrl ?? ""} onChange={e => setNested("window", "avatarUrl", e.target.value)} placeholder="https://..." /></div>
+              <ImageUploadPlaceholder label="Avatar" value={config.window.avatarUrl ?? ""} onChange={v => setNested("window", "avatarUrl", v)} />
               <div><Label className="text-xs">Disabled Pages</Label><Input value={config.disabledPages.join(", ")} onChange={e => set("disabledPages", e.target.value.split(",").map(s => s.trim()).filter(Boolean))} placeholder="/admin, /auth" /></div>
             </CardContent>
           </Card>
@@ -818,16 +820,16 @@ export default function AdminChat() {
                 <div><Label className="text-xs">Icon Style</Label>
                   <Select value={config.launcher.icon} onValueChange={v => setNested("launcher", "icon", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="message">Message</SelectItem><SelectItem value="bot">Bot</SelectItem><SelectItem value="sparkle">Sparkle</SelectItem><SelectItem value="custom">Custom Image</SelectItem></SelectContent></Select></div>
               </div>
-              {config.launcher.icon === "custom" && <div><Label className="text-xs">Custom Icon URL</Label><Input value={config.launcher.customIconUrl ?? ""} onChange={e => setNested("launcher", "customIconUrl", e.target.value)} /></div>}
+              {config.launcher.icon === "custom" && <ImageUploadPlaceholder label="Custom Icon" value={config.launcher.customIconUrl ?? ""} onChange={v => setNested("launcher", "customIconUrl", v)} />}
               <div><Label className="text-xs">Size: {config.launcher.size}px</Label><Slider value={[config.launcher.size]} onValueChange={([v]) => setNested("launcher", "size", v)} min={40} max={80} step={2} /></div>
               <div><Label className="text-xs">Bottom Offset: {config.launcher.bottomOffset}px</Label><Slider value={[config.launcher.bottomOffset]} onValueChange={([v]) => setNested("launcher", "bottomOffset", v)} min={8} max={80} step={4} /></div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div><Label className="text-xs">Background Color</Label><Input value={config.launcher.bgColor ?? ""} onChange={e => setNested("launcher", "bgColor", e.target.value)} placeholder="var(--primary)" /></div>
-                <div><Label className="text-xs">Icon Color</Label><Input value={config.launcher.iconColor ?? ""} onChange={e => setNested("launcher", "iconColor", e.target.value)} /></div>
+                <ColorPickerField label="Background Color" value={config.launcher.bgColor ?? ""} onChange={v => setNested("launcher", "bgColor", v)} placeholder="var(--primary)" />
+                <ColorPickerField label="Icon Color" value={config.launcher.iconColor ?? ""} onChange={v => setNested("launcher", "iconColor", v)} />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div><Label className="text-xs">Glow Color</Label><Input value={config.launcher.glowColor ?? ""} onChange={e => setNested("launcher", "glowColor", e.target.value)} /></div>
-                <div><Label className="text-xs">Border Color</Label><Input value={config.launcher.borderColor ?? ""} onChange={e => setNested("launcher", "borderColor", e.target.value)} /></div>
+                <ColorPickerField label="Glow Color" value={config.launcher.glowColor ?? ""} onChange={v => setNested("launcher", "glowColor", v)} />
+                <ColorPickerField label="Border Color" value={config.launcher.borderColor ?? ""} onChange={v => setNested("launcher", "borderColor", v)} />
               </div>
               <Separator />
               <div className="flex flex-wrap gap-6">
@@ -854,12 +856,12 @@ export default function AdminChat() {
               </div>
               <div><Label className="text-xs">Border Radius: {config.window.borderRadius}px</Label><Slider value={[config.window.borderRadius]} onValueChange={([v]) => setNested("window", "borderRadius", v)} min={0} max={40} step={2} /></div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div><Label className="text-xs">Background Color</Label><Input value={config.window.bgColor ?? ""} onChange={e => setNested("window", "bgColor", e.target.value)} /></div>
-                <div><Label className="text-xs">Border Color</Label><Input value={config.window.borderColor ?? ""} onChange={e => setNested("window", "borderColor", e.target.value)} /></div>
+                <ColorPickerField label="Background Color" value={config.window.bgColor ?? ""} onChange={v => setNested("window", "bgColor", v)} />
+                <ColorPickerField label="Border Color" value={config.window.borderColor ?? ""} onChange={v => setNested("window", "borderColor", v)} />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div><Label className="text-xs">Header BG</Label><Input value={config.window.headerBgColor ?? ""} onChange={e => setNested("window", "headerBgColor", e.target.value)} /></div>
-                <div><Label className="text-xs">Send Button Color</Label><Input value={config.window.sendButtonColor ?? ""} onChange={e => setNested("window", "sendButtonColor", e.target.value)} /></div>
+                <ColorPickerField label="Header BG" value={config.window.headerBgColor ?? ""} onChange={v => setNested("window", "headerBgColor", v)} />
+                <ColorPickerField label="Send Button Color" value={config.window.sendButtonColor ?? ""} onChange={v => setNested("window", "sendButtonColor", v)} />
               </div>
               <div><Label className="text-xs">Opacity: {config.window.opacity}%</Label><Slider value={[config.window.opacity]} onValueChange={([v]) => setNested("window", "opacity", v)} min={50} max={100} step={5} /></div>
               <div className="flex items-center gap-2"><Switch checked={config.window.glassEffect} onCheckedChange={v => setNested("window", "glassEffect", v)} /><Label className="text-xs">Glass Effect</Label></div>
@@ -872,8 +874,8 @@ export default function AdminChat() {
           <div className="grid gap-4 lg:grid-cols-2">
             <Card><CardHeader><CardTitle className="font-display text-sm uppercase">AI Messages</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <div><Label className="text-xs">BG Color</Label><Input value={config.bubbles.ai.bgColor ?? ""} onChange={e => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, ai: { ...p.bubbles.ai, bgColor: e.target.value } } }))} /></div>
-                <div><Label className="text-xs">Text Color</Label><Input value={config.bubbles.ai.textColor ?? ""} onChange={e => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, ai: { ...p.bubbles.ai, textColor: e.target.value } } }))} /></div>
+                <ColorPickerField label="BG Color" value={config.bubbles.ai.bgColor ?? ""} onChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, ai: { ...p.bubbles.ai, bgColor: v } } }))} />
+                <ColorPickerField label="Text Color" value={config.bubbles.ai.textColor ?? ""} onChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, ai: { ...p.bubbles.ai, textColor: v } } }))} />
                 <div><Label className="text-xs">Border Radius: {config.bubbles.ai.borderRadius}px</Label><Slider value={[config.bubbles.ai.borderRadius]} onValueChange={([v]) => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, ai: { ...p.bubbles.ai, borderRadius: v } } }))} min={0} max={24} step={2} /></div>
                 <div className="flex flex-wrap gap-4">
                   <div className="flex items-center gap-2"><Switch checked={config.bubbles.ai.showAvatar} onCheckedChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, ai: { ...p.bubbles.ai, showAvatar: v } } }))} /><Label className="text-xs">Avatar</Label></div>
@@ -884,8 +886,8 @@ export default function AdminChat() {
             </Card>
             <Card><CardHeader><CardTitle className="font-display text-sm uppercase">User Messages</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <div><Label className="text-xs">BG Color</Label><Input value={config.bubbles.user.bgColor ?? ""} onChange={e => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, user: { ...p.bubbles.user, bgColor: e.target.value } } }))} /></div>
-                <div><Label className="text-xs">Text Color</Label><Input value={config.bubbles.user.textColor ?? ""} onChange={e => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, user: { ...p.bubbles.user, textColor: e.target.value } } }))} /></div>
+                <ColorPickerField label="BG Color" value={config.bubbles.user.bgColor ?? ""} onChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, user: { ...p.bubbles.user, bgColor: v } } }))} />
+                <ColorPickerField label="Text Color" value={config.bubbles.user.textColor ?? ""} onChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, user: { ...p.bubbles.user, textColor: v } } }))} />
                 <div><Label className="text-xs">Border Radius: {config.bubbles.user.borderRadius}px</Label><Slider value={[config.bubbles.user.borderRadius]} onValueChange={([v]) => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, user: { ...p.bubbles.user, borderRadius: v } } }))} min={0} max={24} step={2} /></div>
                 <div className="flex flex-wrap gap-4">
                   <div className="flex items-center gap-2"><Switch checked={config.bubbles.user.showAvatar} onCheckedChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, user: { ...p.bubbles.user, showAvatar: v } } }))} /><Label className="text-xs">Avatar</Label></div>

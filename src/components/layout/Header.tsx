@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { ShoppingCart, User, Menu, X, LogOut, Shield } from "lucide-react";
+import { User, Menu, X, LogOut, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import MiniCart from "@/components/layout/MiniCart";
+import AccountDropdown from "@/components/layout/AccountDropdown";
 import logoImg from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";

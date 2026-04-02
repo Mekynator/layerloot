@@ -295,26 +295,50 @@ const NavLinkEditor = () => {
     [sitePages, editingLanguage],
   );
 
+  const buildPayload = (): NavItem[] => links.map((item) => ({
+    label: sanitizeLocalizedLabel(item.label),
+    to: normalizePath(item.to),
+    source: item.source,
+    pageId: item.pageId,
+    openInNewTab: Boolean(item.openInNewTab),
+    visible: item.visible !== false,
+  }));
+
   const save = async () => {
-    const payload: NavItem[] = links.map((item) => ({
-      label: sanitizeLocalizedLabel(item.label),
-      to: normalizePath(item.to),
-      source: item.source,
-      pageId: item.pageId,
-      openInNewTab: Boolean(item.openInNewTab),
-      visible: item.visible !== false,
-    }));
-
-    const { error } = await supabase
-      .from("site_settings")
-      .upsert({ key: storageKey, value: payload as any }, { onConflict: "key" });
-
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-      return;
+    setSaving(true);
+    const ok = await saveDraftSetting(storageKey, buildPayload(), userId);
+    setSaving(false);
+    if (ok) {
+      setHasDraft(true);
+      toast({ title: `${mode === "header" ? "Header" : "Footer"} navigation draft saved!` });
     }
+  };
 
-    toast({ title: `${mode === "header" ? "Header" : "Footer"} navigation saved!` });
+  const publish = async () => {
+    setPublishing(true);
+    const payload = buildPayload();
+    // Save draft first, then publish
+    await saveDraftSetting(storageKey, payload, userId);
+    const ok = await publishDraftSetting(storageKey, payload, userId);
+    setPublishing(false);
+    if (ok) {
+      setHasDraft(false);
+      toast({ title: `${mode === "header" ? "Header" : "Footer"} navigation published!` });
+    }
+  };
+
+  const discardDraft = async () => {
+    const ok = await discardDraftSetting(storageKey);
+    if (ok) {
+      setHasDraft(false);
+      toast({ title: "Draft discarded" });
+      // Reload live data
+      const result = await loadDraftSetting(storageKey);
+      if (result?.live) {
+        const storedItems = asNavItems(result.live);
+        setLinks(storedItems.length > 0 ? storedItems.map(toEditorItem) : fallbackLinks);
+      }
+    }
   };
 
   const addManualLink = () =>

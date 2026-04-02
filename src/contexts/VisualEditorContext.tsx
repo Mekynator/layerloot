@@ -3,6 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
+import {
+  loadDraftBlocks, saveDraftBlocks, discardDraftBlocks, publishDraftBlocks,
+  type DraftStatus,
+} from "@/hooks/use-draft-publish";
 
 type SitePage = Tables<"site_pages">;
 
@@ -55,10 +59,16 @@ interface EditorState {
   moveBlock: (fromIndex: number, toIndex: number) => void;
   toggleBlockActive: (id: string) => void;
 
-  // Save
+  // Save (draft)
   save: () => Promise<void>;
   saving: boolean;
   discardChanges: () => void;
+
+  // Publish
+  publish: () => Promise<void>;
+  publishing: boolean;
+  discardDraft: () => Promise<void>;
+  draftStatus: DraftStatus;
 
   // Undo/Redo
   undo: () => void;
@@ -194,6 +204,8 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
   const [inlineEditingKey, setInlineEditingKey] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [draftStatus, setDraftStatus] = useState<DraftStatus>("published");
 
   const selectElement = useCallback((el: SelectedElement | null) => {
     setSelectedElement(el);
@@ -221,9 +233,19 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   const fetchBlocks = useCallback(async (page: string) => {
     const { data, error } = await supabase.from("site_blocks").select("*").eq("page", page).order("sort_order");
     if (error) { toast.error("Error loading blocks"); return; }
-    const blocks = sortBlocks((data as SiteBlock[]) ?? []);
-    setSavedBlocks(blocks);
-    setDraftBlocks(blocks);
+    const liveBlocks = sortBlocks((data as SiteBlock[]) ?? []);
+    setSavedBlocks(liveBlocks);
+
+    // Check for existing draft
+    const draft = await loadDraftBlocks(page);
+    if (draft) {
+      setDraftBlocks(sortBlocks(draft));
+      setDraftStatus("draft");
+    } else {
+      setDraftBlocks(liveBlocks);
+      setDraftStatus("published");
+    }
+
     undoStack.current = [];
     redoStack.current = [];
     setUndoVersion(0);
@@ -365,61 +387,47 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     setDraftBlocks(prev => prev.map(b => b.id === id ? { ...b, is_active: !(b.is_active ?? true) } : b));
   }, [pushUndo]);
 
-  // Save to database
+  // Save as draft (to site_settings, not directly to site_blocks)
   const save = useCallback(async () => {
     setSaving(true);
     try {
       const currentPageBlocks = sortBlocks(draftBlocks.filter(b => b.page === activePage));
-      
-      // Delete removed blocks
-      const savedIds = new Set(savedBlocks.filter(b => b.page === activePage).map(b => b.id));
-      const draftIds = new Set(currentPageBlocks.map(b => b.id));
-      const deletedIds = [...savedIds].filter(id => !draftIds.has(id));
-      
-      if (deletedIds.length > 0) {
-        await Promise.all(deletedIds.map(id => supabase.from("site_blocks").delete().eq("id", id)));
-      }
-
-      // Upsert remaining blocks
-      for (let i = 0; i < currentPageBlocks.length; i++) {
-        const block = currentPageBlocks[i];
-        const isDraft = block.id.startsWith("draft-");
-        
-        if (isDraft) {
-          const { data, error } = await supabase.from("site_blocks").insert({
-            page: activePage,
-            block_type: block.block_type,
-            title: block.title,
-            content: block.content as any,
-            sort_order: i,
-            is_active: block.is_active ?? true,
-          }).select().single();
-
-          if (error) throw error;
-          
-          // Replace draft ID with real ID
-          setDraftBlocks(prev => prev.map(b => b.id === block.id ? { ...b, id: data.id, sort_order: i } : b));
-        } else {
-          const { error } = await supabase.from("site_blocks").update({
-            title: block.title,
-            content: block.content as any,
-            sort_order: i,
-            is_active: block.is_active ?? true,
-          }).eq("id", block.id);
-
-          if (error) throw error;
-        }
-      }
-
-      // Refresh from DB
-      await fetchBlocks(activePage);
-      toast.success("Changes saved!");
+      const ok = await saveDraftBlocks(activePage, currentPageBlocks);
+      if (!ok) throw new Error("Failed to save draft");
+      setDraftStatus("draft");
+      toast.success("Draft saved!");
     } catch (err: any) {
       toast.error(`Save failed: ${err.message}`);
     } finally {
       setSaving(false);
     }
-  }, [draftBlocks, savedBlocks, activePage, fetchBlocks]);
+  }, [draftBlocks, activePage]);
+
+  // Publish: apply draft to live site_blocks, then delete draft
+  const publish = useCallback(async () => {
+    setPublishing(true);
+    try {
+      const currentPageBlocks = sortBlocks(draftBlocks.filter(b => b.page === activePage));
+      const ok = await publishDraftBlocks(activePage, currentPageBlocks);
+      if (!ok) throw new Error("Publish failed");
+
+      // Refresh from DB to get real IDs
+      await fetchBlocks(activePage);
+      setDraftStatus("published");
+      toast.success("Published successfully!");
+    } catch (err: any) {
+      toast.error(`Publish failed: ${err.message}`);
+    } finally {
+      setPublishing(false);
+    }
+  }, [draftBlocks, activePage, fetchBlocks]);
+
+  // Discard draft: delete draft from site_settings, reload live blocks
+  const discardDraft = useCallback(async () => {
+    await discardDraftBlocks(activePage);
+    await fetchBlocks(activePage);
+    toast.info("Draft discarded — reverted to published version");
+  }, [activePage, fetchBlocks]);
 
   const discardChanges = useCallback(() => {
     setDraftBlocks(savedBlocks);
@@ -476,6 +484,10 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     save,
     saving,
     discardChanges,
+    publish,
+    publishing,
+    discardDraft,
+    draftStatus,
     undo,
     redo,
     canUndo,
@@ -485,7 +497,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     frontendPages,
     globalPages,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [pages, activePage, selectedPage, pageBlocks, savedBlocks, isDirty, selectedBlockId, selectedBlock, hoveredBlockId, saving, viewport, frontendPages, globalPages, undoVersion, selectedElement, inlineEditingKey]);
+  }), [pages, activePage, selectedPage, pageBlocks, savedBlocks, isDirty, selectedBlockId, selectedBlock, hoveredBlockId, saving, publishing, draftStatus, viewport, frontendPages, globalPages, undoVersion, selectedElement, inlineEditingKey]);
 
   return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;
 }

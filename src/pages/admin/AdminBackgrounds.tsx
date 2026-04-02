@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
-import { ArrowDown, ArrowUp, ImagePlus, Trash2, Play, Pause, Copy, RotateCcw } from "lucide-react";
+import { ArrowDown, ArrowUp, ImagePlus, Trash2, Play, Pause, Copy, RotateCcw, Save, Upload, CheckCircle2, Eye, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,11 @@ import {
   type BackgroundSizeMode, type TransitionType, type MotionEffect, type BlendMode, type AttachmentMode,
   normalizeSettings, DEFAULT_SETTINGS, SETTING_KEY, pageKeyFromPath,
 } from "@/components/admin/PageBackgroundEditor";
+import { Badge } from "@/components/ui/badge";
+import {
+  saveDraftSetting, loadDraftSetting, discardDraftSetting, publishDraftSetting,
+  type DraftStatus,
+} from "@/hooks/use-draft-publish";
 
 const PAGES = [
   { key: "__global__", label: "Global (All Pages)" },
@@ -85,36 +90,60 @@ export default function AdminBackgrounds() {
   const [overrideMode, setOverrideMode] = useState<PageOverrideMode>("inherit");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [publishingBg, setPublishingBg] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewPlaying, setPreviewPlaying] = useState(true);
   const previewTimerRef = useRef<number | null>(null);
+  const [bgDraftStatus, setBgDraftStatus] = useState<DraftStatus>("published");
 
   const isGlobal = selectedPage === "__global__";
 
-  // Load settings for selected page
+  // Load settings for selected page (check draft first, then live)
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     const key = settingKeyForPage(selectedPage);
 
-    supabase.from("site_settings").select("value").eq("key", key).maybeSingle()
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        setLoading(false);
-        if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    (async () => {
+      // Check for draft first
+      const draftVal = await loadDraftSetting(key);
+      if (cancelled) return;
 
+      if (draftVal) {
+        // Load from draft
+        setBgDraftStatus("draft");
         if (isGlobal) {
-          setForm(normalizeSettings(data?.value));
+          setForm(normalizeSettings(draftVal));
           setOverrideMode("custom");
         } else {
-          const val = data?.value as any;
-          const mode: PageOverrideMode = val?.mode || "inherit";
+          const mode: PageOverrideMode = draftVal?.mode || "inherit";
           setOverrideMode(mode);
-          setForm(mode === "custom" ? normalizeSettings(val) : DEFAULT_SETTINGS);
+          setForm(mode === "custom" ? normalizeSettings(draftVal) : DEFAULT_SETTINGS);
         }
         setPreviewIndex(0);
-      });
+        setLoading(false);
+        return;
+      }
+
+      // No draft, load live
+      setBgDraftStatus("published");
+      const { data, error } = await supabase.from("site_settings").select("value").eq("key", key).maybeSingle();
+      if (cancelled) return;
+      setLoading(false);
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+
+      if (isGlobal) {
+        setForm(normalizeSettings(data?.value));
+        setOverrideMode("custom");
+      } else {
+        const val = data?.value as any;
+        const mode: PageOverrideMode = val?.mode || "inherit";
+        setOverrideMode(mode);
+        setForm(mode === "custom" ? normalizeSettings(val) : DEFAULT_SETTINGS);
+      }
+      setPreviewIndex(0);
+    })();
 
     return () => { cancelled = true; };
   }, [selectedPage]);
@@ -164,26 +193,64 @@ export default function AdminBackgrounds() {
     if (urls.length > 0) setForm(p => ({ ...p, images: [...p.images, ...urls] }));
   };
 
+  // Save as draft
   const save = async () => {
     setSaving(true);
     const key = settingKeyForPage(selectedPage);
 
-    let payload: any;
+    let draftValue: any;
     if (isGlobal) {
-      payload = { key, value: { ...form, intervalMs: Math.max(1000, form.intervalMs) } };
+      draftValue = { ...form, intervalMs: Math.max(1000, form.intervalMs) };
     } else {
-      payload = {
-        key,
-        value: overrideMode === "custom"
-          ? { mode: "custom", ...form, intervalMs: Math.max(1000, form.intervalMs) }
-          : { mode: overrideMode },
-      };
+      draftValue = overrideMode === "custom"
+        ? { mode: "custom", ...form, intervalMs: Math.max(1000, form.intervalMs) }
+        : { mode: overrideMode };
     }
 
-    const { error } = await supabase.from("site_settings").upsert(payload, { onConflict: "key" });
+    const ok = await saveDraftSetting(key, draftValue);
     setSaving(false);
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-    toast({ title: "Background saved" });
+    if (!ok) return;
+    setBgDraftStatus("draft");
+    toast({ title: "Draft saved" });
+  };
+
+  // Publish draft to live
+  const publishBg = async () => {
+    setPublishingBg(true);
+    const key = settingKeyForPage(selectedPage);
+
+    let draftValue: any;
+    if (isGlobal) {
+      draftValue = { ...form, intervalMs: Math.max(1000, form.intervalMs) };
+    } else {
+      draftValue = overrideMode === "custom"
+        ? { mode: "custom", ...form, intervalMs: Math.max(1000, form.intervalMs) }
+        : { mode: overrideMode };
+    }
+
+    const ok = await publishDraftSetting(key, draftValue);
+    setPublishingBg(false);
+    if (!ok) return;
+    setBgDraftStatus("published");
+    toast({ title: "Background published" });
+  };
+
+  // Discard draft
+  const discardBgDraft = async () => {
+    const key = settingKeyForPage(selectedPage);
+    await discardDraftSetting(key);
+    // Reload live settings
+    const { data } = await supabase.from("site_settings").select("value").eq("key", key).maybeSingle();
+    if (isGlobal) {
+      setForm(normalizeSettings(data?.value));
+    } else {
+      const val = data?.value as any;
+      const mode: PageOverrideMode = val?.mode || "inherit";
+      setOverrideMode(mode);
+      setForm(mode === "custom" ? normalizeSettings(val) : DEFAULT_SETTINGS);
+    }
+    setBgDraftStatus("published");
+    toast({ title: "Draft discarded — reverted to published" });
   };
 
   const copyGlobalToPage = async () => {
@@ -502,33 +569,73 @@ export default function AdminBackgrounds() {
               )}
             </div>
 
-            <Button onClick={save} disabled={saving || uploading} className="w-full font-display uppercase tracking-wider">
-              {saving ? "Saving..." : "Save Background Settings"}
-            </Button>
+            <DraftActionButtons
+              bgDraftStatus={bgDraftStatus}
+              saving={saving}
+              publishingBg={publishingBg}
+              uploading={uploading}
+              onSave={save}
+              onPublish={publishBg}
+              onDiscard={discardBgDraft}
+            />
           </div>
         ) : overrideMode === "disabled" ? (
           <div className="space-y-4">
             <div className={CARD} style={CARD_SHADOW}>
               <p className="text-sm text-muted-foreground">Background is disabled for this page.</p>
             </div>
-            <Button onClick={save} disabled={saving} className="w-full font-display uppercase tracking-wider">
-              {saving ? "Saving..." : "Save"}
-            </Button>
+            <DraftActionButtons bgDraftStatus={bgDraftStatus} saving={saving} publishingBg={publishingBg} onSave={save} onPublish={publishBg} onDiscard={discardBgDraft} />
           </div>
         ) : (
           <div className="space-y-4">
             <div className={CARD} style={CARD_SHADOW}>
               <p className="text-sm text-muted-foreground">This page inherits the global background.</p>
             </div>
-            <Button onClick={save} disabled={saving} className="w-full font-display uppercase tracking-wider">
-              {saving ? "Saving..." : "Save"}
-            </Button>
+            <DraftActionButtons bgDraftStatus={bgDraftStatus} saving={saving} publishingBg={publishingBg} onSave={save} onPublish={publishBg} onDiscard={discardBgDraft} />
           </div>
         )}
       </div>
     </AdminLayout>
   );
 }
+
+function DraftActionButtons({ bgDraftStatus, saving, publishingBg, uploading, onSave, onPublish, onDiscard }: {
+  bgDraftStatus: DraftStatus; saving: boolean; publishingBg: boolean; uploading?: boolean;
+  onSave: () => void; onPublish: () => void; onDiscard: () => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        {bgDraftStatus === "draft" && (
+          <Badge variant="outline" className="gap-1 border-blue-500/50 bg-blue-500/10 text-blue-400 text-[10px]">
+            <Eye className="h-3 w-3" /> Draft
+          </Badge>
+        )}
+        {bgDraftStatus === "published" && (
+          <Badge variant="outline" className="gap-1 border-emerald-500/50 bg-emerald-500/10 text-emerald-400 text-[10px]">
+            <CheckCircle2 className="h-3 w-3" /> Published
+          </Badge>
+        )}
+      </div>
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={onSave} disabled={saving || uploading} className="flex-1 gap-1.5 font-display uppercase tracking-wider">
+          <Save className="h-4 w-4" />
+          {saving ? "Saving..." : "Save Draft"}
+        </Button>
+        <Button onClick={onPublish} disabled={publishingBg || saving} className="flex-1 gap-1.5 font-display uppercase tracking-wider">
+          <Upload className="h-4 w-4" />
+          {publishingBg ? "Publishing..." : "Publish"}
+        </Button>
+      </div>
+      {bgDraftStatus === "draft" && (
+        <Button variant="ghost" onClick={onDiscard} className="w-full gap-1.5 text-xs text-muted-foreground hover:text-destructive">
+          <RotateCcw className="h-3.5 w-3.5" /> Discard Draft & Revert to Published
+        </Button>
+      )}
+    </div>
+  );
+}
+
 
 function SliderRow({ label, value, min = 0, max = 100, step = 1, suffix = "", onChange }: {
   label: string; value: number; min?: number; max?: number; step?: number; suffix?: string;

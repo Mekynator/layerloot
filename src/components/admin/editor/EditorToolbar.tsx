@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Save, Undo2, Redo2, Plus, Monitor, Tablet, Smartphone,
-  X, AlertCircle, Settings2, Trash2, ExternalLink, Eye,
+  X, AlertCircle, Settings2, Trash2, ExternalLink, Eye, Upload, RotateCcw, CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,11 +23,34 @@ export default function EditorToolbar({ onAddBlock, onPageSettings, onDeletePage
     activePage, setActivePage, selectedPage,
     frontendPages, globalPages,
     isDirty, save, saving, discardChanges,
+    publish, publishing, discardDraft, draftStatus,
     undo, redo, canUndo, canRedo,
     viewport, setViewport,
   } = useVisualEditor();
 
   const previewPath = selectedPage ? pageToRealPath(selectedPage) : "/";
+
+  const statusBadge = () => {
+    if (isDirty) {
+      return (
+        <Badge variant="outline" className="gap-1 border-amber-500/50 bg-amber-500/10 text-amber-400 text-[10px]">
+          <AlertCircle className="h-3 w-3" /> Unsaved
+        </Badge>
+      );
+    }
+    if (draftStatus === "draft") {
+      return (
+        <Badge variant="outline" className="gap-1 border-blue-500/50 bg-blue-500/10 text-blue-400 text-[10px]">
+          <Eye className="h-3 w-3" /> Draft
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="gap-1 border-emerald-500/50 bg-emerald-500/10 text-emerald-400 text-[10px]">
+        <CheckCircle2 className="h-3 w-3" /> Published
+      </Badge>
+    );
+  };
 
   return (
     <div className="flex h-12 items-center justify-between gap-2 border-b border-border/30 bg-card/95 px-3 backdrop-blur-xl">
@@ -65,7 +88,6 @@ export default function EditorToolbar({ onAddBlock, onPageSettings, onDeletePage
                 ))}
               </SelectGroup>
             )}
-            {/* Header & Footer editing reserved for future release */}
             {globalPages.length > 0 && (
               <SelectGroup>
                 <SelectLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Global Sections</SelectLabel>
@@ -125,12 +147,7 @@ export default function EditorToolbar({ onAddBlock, onPageSettings, onDeletePage
 
       {/* Right section */}
       <div className="flex items-center gap-1.5">
-        {isDirty && (
-          <Badge variant="outline" className="gap-1 border-amber-500/50 bg-amber-500/10 text-amber-400 text-[10px]">
-            <AlertCircle className="h-3 w-3" />
-            Unsaved
-          </Badge>
-        )}
+        {statusBadge()}
 
         <Tooltip>
           <TooltipTrigger asChild>
@@ -171,14 +188,44 @@ export default function EditorToolbar({ onAddBlock, onPageSettings, onDeletePage
           </Button>
         )}
 
+        {/* Save Draft */}
         <Button
           size="sm"
+          variant="outline"
           onClick={() => void save()}
           disabled={!isDirty || saving}
-          className="h-8 gap-1.5 text-xs font-display uppercase tracking-wider"
+          className="h-8 gap-1.5 text-xs"
         >
           <Save className="h-3.5 w-3.5" />
-          {saving ? "Saving..." : "Save"}
+          {saving ? "Saving..." : "Save Draft"}
+        </Button>
+
+        {/* Discard Draft (revert to published) */}
+        {draftStatus === "draft" && !isDirty && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void discardDraft()}
+                className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-destructive"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> Revert
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Discard draft and revert to published version</TooltipContent>
+          </Tooltip>
+        )}
+
+        {/* Publish */}
+        <Button
+          size="sm"
+          onClick={() => void publish()}
+          disabled={publishing || (draftStatus === "published" && !isDirty)}
+          className="h-8 gap-1.5 text-xs font-display uppercase tracking-wider"
+        >
+          <Upload className="h-3.5 w-3.5" />
+          {publishing ? "Publishing..." : "Publish"}
         </Button>
 
         <Button variant="ghost" size="icon" onClick={() => navigate("/admin")} className="h-8 w-8 text-muted-foreground">

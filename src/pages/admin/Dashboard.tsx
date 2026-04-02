@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import {
   DollarSign, Package, ShoppingCart, Users, Download, Calendar, Star,
   MessageSquareMore, Palette, TicketPercent, Truck, Tags, FileText,
-  Settings, TrendingUp, AlertTriangle, Box,
+  Settings, TrendingUp, AlertTriangle, Box, ImageIcon,
   Clock, CheckCircle, Zap, BarChart3, Activity, Eye,
   ArrowRight, Bell, Calculator, Megaphone, Wallet,
 } from "lucide-react";
@@ -28,7 +28,7 @@ const TILE_CLASS = "rounded-xl border border-primary/20 shadow-[0_0_12px_-4px_hs
 const ICON_MAP: Record<string, typeof Package> = {
   Package, ShoppingCart, Box, Palette, TicketPercent, Tags, Truck, FileText,
   Star, Users, BarChart3, Settings, TrendingUp, Megaphone, Wallet, Calculator,
-  MessageSquareMore, Calendar, Eye,
+  MessageSquareMore, Calendar, Eye, ImageIcon,
 };
 
 export interface DashboardShortcut {
@@ -56,6 +56,7 @@ const DEFAULT_SHORTCUTS: DashboardShortcut[] = [
   { id: "campaigns", label: "Campaigns", icon: "Megaphone", to: "/admin/campaigns", visible: true },
   { id: "revenue", label: "Revenue Engine", icon: "Wallet", to: "/admin/revenue", visible: true },
   { id: "pricing", label: "Pricing", icon: "Calculator", to: "/admin/pricing", visible: true },
+  { id: "backgrounds", label: "Backgrounds", icon: "ImageIcon", to: "/admin/backgrounds", visible: true },
 ];
 
 /* ─── Activity Feed ─── */

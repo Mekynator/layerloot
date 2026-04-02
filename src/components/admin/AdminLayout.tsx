@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Tags, ArrowLeft, Layers, Menu, X,
   Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
   Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone,
-  BarChart3, Wallet,
+  BarChart3, Wallet, ImageIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const ICON_MAP: Record<string, typeof Package> = {
   LayoutDashboard, Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
-  Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone, BarChart3, Wallet, Tags, Layers,
+  Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone, BarChart3, Wallet, Tags, Layers, ImageIcon,
 };
 
 export interface SidebarItem {
@@ -35,6 +35,7 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
         { id: "dashboard", to: "/admin", label: "Dashboard", icon: "LayoutDashboard", visible: true },
         { id: "categories", to: "/admin/categories", label: "Categories & Tags", icon: "Tags", visible: true },
         { id: "editor", to: "/admin/editor", label: "Page Editor", icon: "FileText", visible: true },
+        { id: "backgrounds", to: "/admin/backgrounds", label: "Backgrounds", icon: "ImageIcon", visible: true },
         { id: "settings", to: "/admin/settings", label: "Settings", icon: "Settings", visible: true },
       ],
     },

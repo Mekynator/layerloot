@@ -33,6 +33,7 @@ import AdminCampaigns from "./pages/admin/AdminCampaigns";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminRevenue from "./pages/admin/AdminRevenue";
 import VisualEditor from "./pages/admin/VisualEditor";
+import AdminBackgrounds from "./pages/admin/AdminBackgrounds";
 import DynamicPage from "./pages/DynamicPage";
 import CreateYourOwn from "./pages/CreateYourOwn";
 import Policies from "./pages/Policies";
@@ -99,6 +100,7 @@ const AppShell = () => {
           <Route path="/admin/content" element={<AdminContent />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
           <Route path="/admin/editor" element={<VisualEditor />} />
+          <Route path="/admin/backgrounds" element={<AdminBackgrounds />} />
           <Route path="/policies/:slug" element={<Policies />} />
           <Route path="/pages/:slug" element={<DynamicPage />} />
           <Route path="/:slug" element={<DynamicPage />} />

@@ -391,7 +391,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     setSaving(true);
     try {
       const currentPageBlocks = sortBlocks(draftBlocks.filter(b => b.page === activePage));
-      const ok = await saveDraftBlocks(activePage, currentPageBlocks);
+      const ok = await saveDraftBlocks(activePage, currentPageBlocks, user?.id);
       if (!ok) throw new Error("Failed to save draft");
       setDraftStatus("draft");
       toast.success("Draft saved!");
@@ -400,7 +400,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     } finally {
       setSaving(false);
     }
-  }, [draftBlocks, activePage]);
+  }, [draftBlocks, activePage, user]);
 
   // Publish: apply draft to live site_blocks, then delete draft
   const publish = useCallback(async () => {

@@ -824,12 +824,12 @@ export default function AdminChat() {
               <div><Label className="text-xs">Size: {config.launcher.size}px</Label><Slider value={[config.launcher.size]} onValueChange={([v]) => setNested("launcher", "size", v)} min={40} max={80} step={2} /></div>
               <div><Label className="text-xs">Bottom Offset: {config.launcher.bottomOffset}px</Label><Slider value={[config.launcher.bottomOffset]} onValueChange={([v]) => setNested("launcher", "bottomOffset", v)} min={8} max={80} step={4} /></div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div><Label className="text-xs">Background Color</Label><Input value={config.launcher.bgColor ?? ""} onChange={e => setNested("launcher", "bgColor", e.target.value)} placeholder="var(--primary)" /></div>
-                <div><Label className="text-xs">Icon Color</Label><Input value={config.launcher.iconColor ?? ""} onChange={e => setNested("launcher", "iconColor", e.target.value)} /></div>
+                <ColorPickerField label="Background Color" value={config.launcher.bgColor ?? ""} onChange={v => setNested("launcher", "bgColor", v)} placeholder="var(--primary)" />
+                <ColorPickerField label="Icon Color" value={config.launcher.iconColor ?? ""} onChange={v => setNested("launcher", "iconColor", v)} />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div><Label className="text-xs">Glow Color</Label><Input value={config.launcher.glowColor ?? ""} onChange={e => setNested("launcher", "glowColor", e.target.value)} /></div>
-                <div><Label className="text-xs">Border Color</Label><Input value={config.launcher.borderColor ?? ""} onChange={e => setNested("launcher", "borderColor", e.target.value)} /></div>
+                <ColorPickerField label="Glow Color" value={config.launcher.glowColor ?? ""} onChange={v => setNested("launcher", "glowColor", v)} />
+                <ColorPickerField label="Border Color" value={config.launcher.borderColor ?? ""} onChange={v => setNested("launcher", "borderColor", v)} />
               </div>
               <Separator />
               <div className="flex flex-wrap gap-6">

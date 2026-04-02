@@ -313,7 +313,7 @@ export default function ChatLivePreview({ config }: ChatLivePreviewProps) {
                   type="submit"
                   disabled={!simInput.trim()}
                   className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40 shrink-0"
-                  style={{ backgroundColor: config.window.sendButtonColor ? `hsl(${config.window.sendButtonColor})` : undefined }}
+                  style={{ backgroundColor: config.window.sendButtonColor || undefined }}
                 >
                   <Send className="h-3 w-3" />
                 </button>

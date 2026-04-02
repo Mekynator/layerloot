@@ -9,6 +9,8 @@ type InstagramMediaItem = {
   media_url?: string;
   permalink?: string;
   thumbnail_url?: string;
+  is_reel?: boolean;
+  timestamp?: string;
 };
 
 type InstagramAutoFeedBlockProps = {
@@ -24,18 +26,6 @@ type InstagramAutoFeedBlockProps = {
   functionName?: string;
 };
 
-function normalizeInstagramUsername(value?: string) {
-  const raw = String(value || "").trim();
-  if (!raw) return "";
-
-  const withoutProtocol = raw.replace(/^https?:\/\//i, "");
-  const withoutDomain = withoutProtocol.replace(/^www\.instagram\.com\//i, "");
-  const withoutAt = withoutDomain.replace(/^@/, "");
-  const cleaned = withoutAt.split(/[/?#]/)[0]?.trim() || "";
-
-  return cleaned.toLowerCase();
-}
-
 export default function InstagramAutoFeedBlock({
   title = "Follow us on Instagram",
   subtitle = "Latest posts and reels",
@@ -46,16 +36,13 @@ export default function InstagramAutoFeedBlock({
   showCaptions = false,
   showProfileButton = true,
   intervalMs = 3000,
-  functionName = "instagram-feed",
 }: InstagramAutoFeedBlockProps) {
   const [items, setItems] = useState<InstagramMediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState(0);
 
-  const username = useMemo(() => normalizeInstagramUsername(instagramUsername) || "layerloot3d", [instagramUsername]);
-
   const safeItemsToShow = Math.max(1, Number(itemsToShow) || 10);
-  const profileUrl = `https://www.instagram.com/${username}`;
+  const profileUrl = `https://www.instagram.com/${instagramUsername}`;
 
   useEffect(() => {
     let mounted = true;
@@ -65,8 +52,8 @@ export default function InstagramAutoFeedBlock({
         setLoading(true);
 
         const url =
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${functionName}` +
-          `?username=${encodeURIComponent(username)}&limit=${safeItemsToShow}`;
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/instagram-feed` +
+          `?limit=${safeItemsToShow}`;
 
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
@@ -113,7 +100,7 @@ export default function InstagramAutoFeedBlock({
     return () => {
       mounted = false;
     };
-  }, [functionName, safeItemsToShow, username]);
+  }, [safeItemsToShow]);
 
   useEffect(() => {
     if (!autoplay || layout !== "slider" || items.length <= 1) return;
@@ -149,14 +136,18 @@ export default function InstagramAutoFeedBlock({
         {showProfileButton && (
           <Button asChild>
             <a href={profileUrl} target="_blank" rel="noreferrer">
-              <Instagram className="mr-2 h-4 w-4" />@{username}
+              <Instagram className="mr-2 h-4 w-4" />@{instagramUsername}
             </a>
           </Button>
         )}
       </div>
 
       {loading ? (
-        <div className="text-sm text-muted-foreground">Loading Instagram feed...</div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="aspect-square animate-pulse rounded-2xl bg-muted" />
+          ))}
+        </div>
       ) : items.length === 0 ? (
         <div className="text-sm text-muted-foreground">No Instagram posts found.</div>
       ) : layout === "grid" ? (
@@ -170,7 +161,7 @@ export default function InstagramAutoFeedBlock({
                 href={item.permalink || profileUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="overflow-hidden rounded-2xl border bg-background transition hover:shadow-md"
+                className="group relative overflow-hidden rounded-2xl border bg-background transition hover:shadow-md"
               >
                 {imageSrc ? (
                   <img
@@ -182,6 +173,14 @@ export default function InstagramAutoFeedBlock({
                 ) : (
                   <div className="flex aspect-square items-center justify-center bg-muted text-sm text-muted-foreground">
                     No image
+                  </div>
+                )}
+
+                {/* Reel badge */}
+                {item.is_reel && (
+                  <div className="absolute left-2 top-2 flex items-center gap-1 rounded-md bg-background/80 px-1.5 py-0.5 text-xs font-medium backdrop-blur">
+                    <svg viewBox="0 0 24 24" className="h-3 w-3 fill-current"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+                    Reel
                   </div>
                 )}
 

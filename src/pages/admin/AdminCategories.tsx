@@ -444,6 +444,39 @@ const AdminCategories = () => {
                         />
                       </div>
 
+                      <ImageUploadField
+                        label="Background Image"
+                        value={giftTagForm.image_url}
+                        onChange={(url) => setGiftTagForm({ ...giftTagForm, image_url: url })}
+                      />
+
+                      <SliderField
+                        label="Image Opacity"
+                        value={giftTagForm.image_opacity}
+                        onChange={(v) => setGiftTagForm({ ...giftTagForm, image_opacity: v })}
+                        min={5}
+                        max={100}
+                        step={5}
+                        unit="%"
+                      />
+
+                      <div>
+                        <Label>Image Fit</Label>
+                        <Select
+                          value={giftTagForm.image_fit}
+                          onValueChange={(value) => setGiftTagForm({ ...giftTagForm, image_fit: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="cover">Cover</SelectItem>
+                            <SelectItem value="contain">Contain</SelectItem>
+                            <SelectItem value="stretch">Stretch</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
                       <label className="flex items-center gap-2 text-sm">
                         <Switch
                           checked={giftTagForm.is_active}

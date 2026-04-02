@@ -111,6 +111,7 @@ const AdminSettings = () => {
       upsertSetting("branding", branding),
       upsertSetting("admin_dashboard_shortcuts", shortcuts),
       upsertSetting("admin_sidebar_config", sidebarConfig),
+      upsertSetting("account_page_config", accountConfig),
       ...policyUpserts,
     ]);
     setSaving(false);

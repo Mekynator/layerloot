@@ -222,19 +222,22 @@ const Footer = () => {
               </motion.div>
             )}
 
-            <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.10 }}>
-              <h4 className="mb-5 font-display text-xs font-semibold uppercase tracking-[0.2em] text-foreground">Policies</h4>
-              <ul className="space-y-2.5 text-sm text-muted-foreground">
-                <li><Link to="/policies/returns-policy" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Returns Policy</Link></li>
-                <li><Link to="/policies/cancellation-policy" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Cancellation Policy</Link></li>
-                <li><Link to="/policies/refund-policy" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Refund Policy</Link></li>
-                <li><Link to="/policies/privacy-policy" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Privacy Policy</Link></li>
-                <li><Link to="/policies/terms-of-service" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Terms of Service</Link></li>
-                <li><Link to="/policies/safety-regulations" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Safety Regulations</Link></li>
-                <li><Link to="/policies/intellectual-property" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Intellectual Property</Link></li>
-                <li><Link to="/policies/shipping-policy" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">Shipping Policy</Link></li>
-              </ul>
-            </motion.div>
+            {footerSettings.show_policies !== false && (
+              <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.10 }}>
+                <h4 className="mb-5 font-display text-xs font-semibold uppercase tracking-[0.2em] text-foreground">
+                  {getLocalizedValue(footerSettings.policies_title, t("footer.policies", "Policies"))}
+                </h4>
+                <ul className="space-y-2.5 text-sm text-muted-foreground">
+                  {(footerSettings.policy_links ?? defaultFooterSettings.policy_links ?? []).map((link) => (
+                    <li key={link.path}>
+                      <Link to={link.path} className="transition-all duration-200 hover:translate-x-1 hover:text-primary">
+                        {getLocalizedValue(link.label, typeof link.label === "string" ? link.label : "")}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            )}
 
             {footerSettings.show_contact_block && (
               <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.12 }}>

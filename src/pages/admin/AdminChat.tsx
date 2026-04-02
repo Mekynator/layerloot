@@ -552,7 +552,9 @@ export default function AdminChat() {
         <TabsContent value="overview"><OverviewTab config={config} setTab={setActiveTab} /></TabsContent>
 
         {/* ─── APPEARANCE ─── */}
-        <TabsContent value="appearance" className="space-y-6">
+        <TabsContent value="appearance">
+          <div className="flex gap-6">
+            <div className="flex-1 min-w-0 space-y-6">
           {/* General */}
           <Card><CardHeader><CardTitle className="font-display text-sm uppercase">Global</CardTitle></CardHeader>
             <CardContent className="space-y-4">

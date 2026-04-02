@@ -829,7 +829,7 @@ export default function AdminChat() {
               <Separator />
               <div><Label className="text-xs">Campaign Instructions (synced from Training tab)</Label>
                 <Textarea value={config.prompts.campaignInstructions} onChange={e => setNested("prompts", "campaignInstructions", e.target.value)} rows={3} placeholder="How should the assistant reference campaigns?" /></div>
-              <div className="flex items-center gap-2"><Switch checked={config.behavior.campaignAware ?? false} onCheckedChange={v => setNested("behavior", "campaignAware", v)} /><Label className="text-xs">Campaign-aware responses</Label></div>
+              <div className="flex items-center gap-2"><Switch checked={(config.behavior as any).campaignAware ?? false} onCheckedChange={v => setNested("behavior", "campaignAware", v)} /><Label className="text-xs">Campaign-aware responses</Label></div>
             </CardContent>
           </Card>
         </TabsContent>

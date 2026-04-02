@@ -1,29 +1,17 @@
 import { useState, useEffect, FormEvent, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import {
-  ArrowRight,
-  Truck,
-  Shield,
-  Star,
-  Printer,
-  ChevronLeft,
-  ChevronRight,
-  Upload,
-  Palette,
-  ShoppingBag,
-  Package,
-  Mail,
-  ExternalLink,
-  Box,
-  Sparkles,
-  CheckCircle2,
-  HelpCircle,
-  Gem,
-  Wrench,
-  Home,
-  Gift,
-  BadgeCheck,
-  Instagram,
+  ArrowRight, Truck, Shield, Star, Printer, ChevronLeft, ChevronRight,
+  Upload, Palette, ShoppingBag, Package, Mail, ExternalLink, Box,
+  Sparkles, CheckCircle2, HelpCircle, Gem, Wrench, Home, Gift,
+  BadgeCheck, Instagram, Clock, CreditCard, DollarSign, MapPin, Phone,
+  Globe, Camera, Image, Video, Play, Download, Share2, ThumbsUp, Award,
+  Zap, Flame, Lock, Eye, Bell, MessageCircle, Send, Search, Filter,
+  Settings, BarChart3, TrendingUp, Users, UserPlus, User, Layers,
+  Bookmark, Tag, Calendar, FileText, Rocket, Target, Flag, Trophy,
+  Medal, Crown, Diamond, Scissors, Ruler, Pencil, Copy, RefreshCw,
+  Maximize, Move, Menu, Info, AlertCircle, AlertTriangle, XCircle,
+  Heart, Coffee,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
@@ -36,6 +24,7 @@ import { fadeUp } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import i18n from "@/lib/i18n";
 import { useTranslation } from "react-i18next";
+import BlockBackgroundSlideshow from "@/components/admin/BlockBackgroundSlideshow";
 
 type ActionType = "none" | "internal_link" | "external_link";
 
@@ -190,27 +179,15 @@ export type BlockButton = {
 };
 
 const ICON_MAP: Record<string, any> = {
-  ShoppingBag,
-  ArrowRight,
-  Palette,
-  Upload,
-  Printer,
-  Package,
-  Truck,
-  Shield,
-  Star,
-  Mail,
-  ExternalLink,
-  Box,
-  Sparkles,
-  CheckCircle2,
-  HelpCircle,
-  Gem,
-  Wrench,
-  Home,
-  Gift,
-  BadgeCheck,
-  Instagram,
+  ShoppingBag, ArrowRight, Palette, Upload, Printer, Package, Truck, Shield,
+  Star, Mail, ExternalLink, Box, Sparkles, CheckCircle2, HelpCircle, Gem,
+  Wrench, Home, Gift, BadgeCheck, Instagram, Clock, CreditCard, DollarSign,
+  MapPin, Phone, Globe, Camera, Image, Video, Play, Download, Share2,
+  ThumbsUp, Award, Zap, Flame, Lock, Eye, Bell, MessageCircle, Send,
+  Search, Filter, Settings, BarChart3, TrendingUp, Users, UserPlus, User,
+  Layers, Bookmark, Tag, Calendar, FileText, Rocket, Target, Flag, Trophy,
+  Medal, Crown, Diamond, Scissors, Ruler, Pencil, Copy, RefreshCw,
+  Maximize, Move, Menu, Info, AlertCircle, AlertTriangle, XCircle, Heart, Coffee,
 };
 
 const iconForName = (name?: string, fallback = Box) => ICON_MAP[name || ""] || fallback;
@@ -318,23 +295,65 @@ const verticalClass = (vertical?: string) => {
   }
 };
 
-const sectionStyle = (content: any): CSSProperties => ({
-  ...(content?.backgroundColor || content?.bg_color
-    ? { backgroundColor: content?.backgroundColor || content?.bg_color }
-    : {}),
-  ...(content?.textColor || content?.text_color ? { color: content?.textColor || content?.text_color } : {}),
-  ...(content?.paddingTop !== undefined ? { paddingTop: `${Number(content.paddingTop) || 0}px` } : {}),
-  ...(content?.paddingBottom !== undefined ? { paddingBottom: `${Number(content.paddingBottom) || 0}px` } : {}),
-  ...(content?.marginTop !== undefined ? { marginTop: `${Number(content.marginTop) || 0}px` } : {}),
-  ...(content?.marginBottom !== undefined ? { marginBottom: `${Number(content.marginBottom) || 0}px` } : {}),
-  ...(content?.backgroundImage || content?.bg_image
-    ? {
-        backgroundImage: `url(${content?.backgroundImage || content?.bg_image})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
+const sectionStyle = (content: any): CSSProperties => {
+  const style: CSSProperties = {};
+
+  // Colors
+  if (content?.backgroundColor || content?.bg_color) style.backgroundColor = content.backgroundColor || content.bg_color;
+  if (content?.textColor || content?.text_color) style.color = content.textColor || content.text_color;
+
+  // Spacing
+  if (content?.paddingTop !== undefined) style.paddingTop = `${Number(content.paddingTop) || 0}px`;
+  if (content?.paddingBottom !== undefined) style.paddingBottom = `${Number(content.paddingBottom) || 0}px`;
+  if (content?.paddingLeft !== undefined) style.paddingLeft = `${Number(content.paddingLeft) || 0}px`;
+  if (content?.paddingRight !== undefined) style.paddingRight = `${Number(content.paddingRight) || 0}px`;
+  if (content?.marginTop !== undefined) style.marginTop = `${Number(content.marginTop) || 0}px`;
+  if (content?.marginBottom !== undefined) style.marginBottom = `${Number(content.marginBottom) || 0}px`;
+
+  // Background image (static, not slideshow)
+  if (!content?._slideshow?.enabled && (content?.backgroundImage || content?.bg_image)) {
+    style.backgroundImage = `url(${content.backgroundImage || content.bg_image})`;
+    style.backgroundSize = "cover";
+    style.backgroundPosition = "center";
+  }
+
+  // Min height
+  if (content?.minHeight) style.minHeight = `${Number(content.minHeight)}px`;
+
+  // Opacity
+  if (content?.opacity !== undefined && content.opacity !== 100) style.opacity = Number(content.opacity) / 100;
+
+  // Gap
+  if (content?.gap) style.gap = `${Number(content.gap)}px`;
+
+  // Border (uniform)
+  if (content?.borderWidth && content.borderWidth > 0 && content?.borderStyle && content.borderStyle !== "none") {
+    const bOpacity = content.borderOpacity !== undefined ? Number(content.borderOpacity) / 100 : 1;
+    const bColor = content.borderColor || "hsl(var(--border))";
+    style.borderWidth = `${content.borderWidth}px`;
+    style.borderStyle = content.borderStyle;
+    style.borderColor = bOpacity < 1 ? `color-mix(in srgb, ${bColor} ${Math.round(bOpacity * 100)}%, transparent)` : bColor;
+  }
+
+  // Per-side borders
+  if (content?._borderPerSide) {
+    for (const side of ["Top", "Right", "Bottom", "Left"] as const) {
+      const w = content[`border${side}Width`];
+      const s = content[`border${side}Style`];
+      const c2 = content[`border${side}Color`];
+      if (w && w > 0 && s && s !== "none") {
+        (style as any)[`border${side}Width`] = `${w}px`;
+        (style as any)[`border${side}Style`] = s;
+        if (c2) (style as any)[`border${side}Color`] = c2;
       }
-    : {}),
-});
+    }
+  }
+
+  // Border radius
+  if (content?.borderRadius) style.borderRadius = `${content.borderRadius}px`;
+
+  return style;
+};
 
 const sectionProps = (block: SiteBlock, defaults: string) => {
   const c = block.content || {};
@@ -436,21 +455,35 @@ const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNo
   const props = sectionProps(block, defaultClasses);
   const action = resolveSectionAction(c);
   const clickable = applySectionAction(action);
+  const hasSlideshow = c._slideshow?.enabled && c._slideshow?.images?.length > 0;
+
+  // Hover border CSS
+  const hoverStyle = (c.borderHoverColor || c.borderHoverWidth)
+    ? `[data-editor-block-id="${block.id}"]:hover { ${c.borderHoverColor ? `border-color: ${c.borderHoverColor} !important;` : ""} ${c.borderHoverWidth ? `border-width: ${c.borderHoverWidth}px !important;` : ""} }`
+    : "";
 
   return (
-    <motion.section
-      {...props}
-      initial={{ opacity: 0, y: 18 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.12 }}
-      transition={{ duration: 0.36 }}
-      className={`${props.className} ${clickable.className}`.trim()}
-      onClick={clickable.onClick}
-      data-editor-block-id={block.id}
-      data-editor-block-type={block.title || block.block_type}
-    >
-      {children}
-    </motion.section>
+    <>
+      {hoverStyle && <style>{hoverStyle}</style>}
+      <motion.section
+        {...props}
+        initial={{ opacity: 0, y: 18 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.12 }}
+        transition={{ duration: 0.36 }}
+        className={`${hasSlideshow ? "relative overflow-hidden" : ""} ${props.className} ${clickable.className}`.trim()}
+        onClick={clickable.onClick}
+        data-editor-block-id={block.id}
+        data-editor-block-type={block.title || block.block_type}
+      >
+        {hasSlideshow && <BlockBackgroundSlideshow slideshow={c._slideshow} />}
+        {/* Overlay color */}
+        {c.overlayColor && (
+          <div className="pointer-events-none absolute inset-0" style={{ backgroundColor: c.overlayColor, opacity: (c.overlayOpacity ?? 50) / 100 }} aria-hidden="true" />
+        )}
+        {hasSlideshow ? <div className="relative">{children}</div> : children}
+      </motion.section>
+    </>
   );
 };
 
@@ -461,19 +494,22 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
   switch (block.block_type) {
     case "hero":
       return <HeroBlock block={block} />;
-    case "shipping_banner":
+    case "shipping_banner": {
+      const BannerIcon = iconForName(c.icon, Truck);
+      const bannerIconSize = c.iconSize ? `h-[${c.iconSize}px] w-[${c.iconSize}px]` : "h-4 w-4";
       return withSection(
         block,
         "py-3 border-y border-border/20",
         <div className="container flex items-center justify-center gap-2 text-foreground">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
-            <Truck className="h-4 w-4 text-primary" />
+            <BannerIcon className={`${bannerIconSize} text-primary`} style={c.iconColor ? { color: c.iconColor } : undefined} />
           </div>
           <span className="font-display text-sm uppercase tracking-widest text-foreground/90">
             {getLocalizedValue(c.text, tr("blocks.shippingBanner.text", "Free shipping on orders over 500 kr"))}
           </span>
         </div>,
       );
+    }
     case "entry_cards":
       return <EntryCardsBlock block={block} disableAnimations={disableAnimations} />;
     case "categories":
@@ -526,11 +562,17 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
       return <CarouselBlock block={block} />;
     case "video":
       return <VideoBlock block={block} />;
-    case "banner":
+    case "banner": {
+      const BnrIcon = c.icon ? iconForName(c.icon, null) : null;
       return withSection(
         block,
         "py-3 border-y border-border/20",
         <div className="container flex items-center justify-center gap-3 text-foreground">
+          {BnrIcon && (
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
+              <BnrIcon className="h-4 w-4 text-primary" style={c.iconColor ? { color: c.iconColor } : undefined} />
+            </div>
+          )}
           {c.badge && (
             <span className="rounded-lg bg-primary/15 px-2.5 py-0.5 font-display text-[10px] uppercase tracking-wider text-primary">
               {getLocalizedValue(c.badge)}
@@ -539,8 +581,14 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
           <span className="font-display text-sm uppercase tracking-widest text-foreground/90">
             {getLocalizedValue(c.heading || c.title, tr("blocks.banner.title", "Banner"))}
           </span>
+          {c.button_text && (
+            <Button variant="outline" size="sm" className="ml-2 h-7 text-[10px] font-display uppercase">
+              {getLocalizedValue(c.button_text)}
+            </Button>
+          )}
         </div>,
       );
+    }
     case "cta":
       return <CtaBlock block={block} />;
     case "button":
@@ -653,14 +701,11 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
             viewport={{ once: true }}
             className={`mb-4 flex items-center gap-2 ${justifyClass(align)}`}
           >
-            {c.icon ? (
-              (() => {
-                const Icon = iconForName(c.icon, Printer);
-                return <Icon className="h-5 w-5 text-primary" />;
-              })()
-            ) : (
-              <Printer className="h-5 w-5 text-primary" />
-            )}
+            {(() => {
+              const Icon = iconForName(c.icon || "Printer", Printer);
+              const iconSizePx = c.iconSize || 20;
+              return <Icon style={{ width: iconSizePx, height: iconSizePx, color: c.iconColor || undefined }} className="text-primary" />;
+            })()}
             <span className="font-display text-sm uppercase tracking-widest text-primary">
               {getLocalizedValue(c.eyebrow || c.badge, tr("blocks.hero.eyebrow", "3D Printing Essentials"))}
             </span>

@@ -566,7 +566,8 @@ function SandboxTab() {
       });
 
       if (!resp.ok || !resp.body) {
-        setTestMessages(prev => { const c = [...prev]; c[c.length - 1] = { role: "assistant", content: "Error: " + (await resp.text()) }; return c; });
+        const errText = await resp.text();
+        setTestMessages(prev => { const c = [...prev]; c[c.length - 1] = { role: "assistant", content: "Error: " + errText }; return c; });
         setLoading(false);
         return;
       }

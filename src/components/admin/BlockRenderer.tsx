@@ -505,6 +505,75 @@ const ActionButton = ({
   );
 };
 
+const getEntranceAnimation = (c: any) => {
+  const anim = c.animation || "none";
+  const dist = c.animationDistance ?? 20;
+  const dur = c.animationDuration ?? 0.4;
+  const delay = c.animationDelay ?? 0;
+
+  const map: Record<string, { initial: any; animate: any }> = {
+    none: { initial: { opacity: 0, y: 18 }, animate: { opacity: 1, y: 0 } },
+    fadeUp: { initial: { opacity: 0, y: dist }, animate: { opacity: 1, y: 0 } },
+    fadeDown: { initial: { opacity: 0, y: -dist }, animate: { opacity: 1, y: 0 } },
+    fadeIn: { initial: { opacity: 0 }, animate: { opacity: 1 } },
+    fadeLeft: { initial: { opacity: 0, x: -dist }, animate: { opacity: 1, x: 0 } },
+    fadeRight: { initial: { opacity: 0, x: dist }, animate: { opacity: 1, x: 0 } },
+    slideUp: { initial: { y: dist, opacity: 0 }, animate: { y: 0, opacity: 1 } },
+    slideDown: { initial: { y: -dist, opacity: 0 }, animate: { y: 0, opacity: 1 } },
+    slideLeft: { initial: { x: -dist, opacity: 0 }, animate: { x: 0, opacity: 1 } },
+    slideRight: { initial: { x: dist, opacity: 0 }, animate: { x: 0, opacity: 1 } },
+    scaleIn: { initial: { scale: 0.9, opacity: 0 }, animate: { scale: 1, opacity: 1 } },
+    scaleUp: { initial: { scale: 0.8, opacity: 0 }, animate: { scale: 1, opacity: 1 } },
+    rotateIn: { initial: { rotate: -5, opacity: 0, scale: 0.95 }, animate: { rotate: 0, opacity: 1, scale: 1 } },
+    blurIn: { initial: { opacity: 0, filter: "blur(10px)" }, animate: { opacity: 1, filter: "blur(0px)" } },
+    flipIn: { initial: { rotateX: 90, opacity: 0 }, animate: { rotateX: 0, opacity: 1 } },
+    bounceIn: { initial: { scale: 0.5, opacity: 0 }, animate: { scale: 1, opacity: 1 } },
+  };
+
+  const entry = map[anim] || map.none;
+  return { ...entry, transition: { duration: dur, delay, ease: [0.22, 1, 0.36, 1] } };
+};
+
+const getHoverProps = (c: any) => {
+  const effect = c.hoverEffect || "none";
+  const intensity = (c.hoverIntensity ?? 50) / 100;
+  const map: Record<string, any> = {
+    lift: { y: -6 * intensity },
+    scale: { scale: 1 + 0.05 * intensity },
+    glow: { boxShadow: `0 0 ${30 * intensity}px hsl(217 91% 60% / ${0.3 * intensity})` },
+    shadowGrow: { boxShadow: `0 ${20 * intensity}px ${40 * intensity}px -10px hsl(228 33% 2% / 0.5)` },
+    brighten: { filter: `brightness(${1 + 0.2 * intensity})` },
+    tiltX: { rotateY: 3 * intensity, rotateX: -2 * intensity },
+  };
+  return map[effect] || {};
+};
+
+const getContinuousAnimation = (c: any): string => {
+  const effect = c.continuousEffect || "none";
+  const speed = c.continuousSpeed ?? 3;
+  if (effect === "none") return "";
+
+  const animations: Record<string, string> = {
+    float: `sectionFloat ${speed}s ease-in-out infinite`,
+    pulse: `sectionPulse ${speed}s ease-in-out infinite`,
+    breathe: `sectionBreathe ${speed}s ease-in-out infinite`,
+    rotate: `sectionRotate ${speed * 10}s linear infinite`,
+    shimmer: `sectionShimmer ${speed}s ease-in-out infinite`,
+    gradientMove: `sectionGradientMove ${speed}s ease infinite`,
+  };
+  return animations[effect] || "";
+};
+
+const CONTINUOUS_KEYFRAMES = `
+@keyframes sectionFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+@keyframes sectionPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.01)} }
+@keyframes sectionBreathe { 0%,100%{opacity:1} 50%{opacity:0.92} }
+@keyframes sectionRotate { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+@keyframes sectionShimmer { 0%,100%{filter:brightness(1)} 50%{filter:brightness(1.06)} }
+@keyframes sectionGradientMove { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+@keyframes glowPulse { 0%,100%{box-shadow:var(--glow-shadow)} 50%{box-shadow:var(--glow-shadow-bright)} }
+`;
+
 const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNode) => {
   const c = block.content || {};
   const props = sectionProps(block, defaultClasses);
@@ -513,47 +582,155 @@ const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNo
   const hasSlideshow = c._slideshow?.enabled && c._slideshow?.images?.length > 0;
 
   // Hover border CSS
-  const hoverStyle = (c.borderHoverColor || c.borderHoverWidth)
+  const hoverBorderCSS = (c.borderHoverColor || c.borderHoverWidth || c.shadowGrowOnHover)
     ? `[data-editor-block-id="${block.id}"]:hover { ${c.borderHoverColor ? `border-color: ${c.borderHoverColor} !important;` : ""} ${c.borderHoverWidth ? `border-width: ${c.borderHoverWidth}px !important;` : ""} }`
     : "";
 
   const hasBgImage = !hasSlideshow && (c.backgroundImage || c.bg_image);
   const bgImageOpacity = (c.bgImageOpacity ?? 100) / 100;
-  const needsRelative = hasSlideshow || hasBgImage || c.overlayColor;
+  const needsRelative = hasSlideshow || hasBgImage || c.overlayColor || c.glassEnabled || c.glowEnabled || c.vignetteEnabled || c.noiseOverlay || c.bgImageTintColor;
+
+  // Image filters
+  const buildImageFilter = () => {
+    const filters: string[] = [];
+    if (c.bgImageBlur) filters.push(`blur(${c.bgImageBlur}px)`);
+    if (c.bgImageBrightness !== undefined && c.bgImageBrightness !== 100) filters.push(`brightness(${c.bgImageBrightness / 100})`);
+    if (c.bgImageContrast !== undefined && c.bgImageContrast !== 100) filters.push(`contrast(${c.bgImageContrast / 100})`);
+    if (c.bgImageSaturation !== undefined && c.bgImageSaturation !== 100) filters.push(`saturate(${c.bgImageSaturation / 100})`);
+    if (c.bgImageGrayscale) filters.push(`grayscale(${c.bgImageGrayscale / 100})`);
+    if (c.bgImageSepia) filters.push(`sepia(${c.bgImageSepia / 100})`);
+    return filters.length > 0 ? filters.join(" ") : undefined;
+  };
+
+  // Image fit/position
+  const bgFit = c.bgImageFit || "cover";
+  const bgPosX = c.bgImagePositionX || "center";
+  const bgPosY = c.bgImagePositionY || "center";
+  const bgSize = bgFit === "repeat" ? undefined : bgFit === "contain" ? "contain" : bgFit === "fill" ? "100% 100%" : "cover";
+  const bgRepeat = bgFit === "repeat" ? "repeat" : "no-repeat";
+
+  // Entrance animation
+  const entranceAnim = getEntranceAnimation(c);
+  const hoverProps = getHoverProps(c);
+  const continuousAnim = getContinuousAnimation(c);
+
+  // Glow animation
+  const glowColor = c.glowColor || "hsl(217, 91%, 60%)";
+  const glowIntensity = c.glowIntensity ?? 20;
+  const glowSpread = c.glowSpread ?? 30;
+  const glowAnimCSS = c.glowEnabled && c.glowAnimated
+    ? `[data-editor-block-id="${block.id}"] { --glow-shadow: 0 0 ${glowSpread}px ${glowIntensity / 3}px ${glowColor}; --glow-shadow-bright: 0 0 ${glowSpread * 1.5}px ${glowIntensity / 2}px ${glowColor}; animation: glowPulse 2s ease-in-out infinite; }`
+    : "";
+
+  // Gradient animation
+  const gradientAnimCSS = c.gradientEnabled && c.gradientAnimated
+    ? `[data-editor-block-id="${block.id}"] { animation: sectionGradientMove ${c.gradientSpeed ?? 5}s ease infinite; background-size: 200% 200% !important; }`
+    : "";
+
+  const dynamicCSS = [CONTINUOUS_KEYFRAMES, hoverBorderCSS, glowAnimCSS, gradientAnimCSS].filter(Boolean).join("\n");
+
+  const sectionStyleOverrides: CSSProperties = {};
+  if (continuousAnim && !c.glowAnimated && !(c.gradientEnabled && c.gradientAnimated)) {
+    sectionStyleOverrides.animation = continuousAnim;
+  }
 
   return (
     <>
-      {hoverStyle && <style>{hoverStyle}</style>}
+      {dynamicCSS && <style>{dynamicCSS}</style>}
       <motion.section
         {...props}
-        initial={{ opacity: 0, y: 18 }}
-        whileInView={{ opacity: 1, y: 0 }}
+        initial={entranceAnim.initial}
+        whileInView={entranceAnim.animate || entranceAnim.initial}
         viewport={{ once: true, amount: 0.12 }}
-        transition={{ duration: 0.36 }}
+        transition={entranceAnim.transition}
+        whileHover={Object.keys(hoverProps).length > 0 ? hoverProps : undefined}
         className={`${needsRelative ? "relative overflow-hidden" : ""} ${props.className} ${clickable.className}`.trim()}
+        style={{ ...props.style, ...sectionStyleOverrides }}
         onClick={clickable.onClick}
         data-editor-block-id={block.id}
         data-editor-block-type={block.title || block.block_type}
       >
-        {/* Background image as separate layer for independent opacity */}
+        {/* Background image layer */}
         {hasBgImage && (
           <div
             className="pointer-events-none absolute inset-0"
             style={{
               backgroundImage: `url(${c.backgroundImage || c.bg_image})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
+              backgroundSize: bgSize,
+              backgroundPosition: `${bgPosX} ${bgPosY}`,
+              backgroundRepeat: bgRepeat,
               opacity: bgImageOpacity,
+              filter: buildImageFilter(),
+              mixBlendMode: (c.bgImageBlendMode && c.bgImageBlendMode !== "normal") ? c.bgImageBlendMode as any : undefined,
             }}
             aria-hidden="true"
           />
         )}
+
+        {/* Image tint overlay */}
+        {hasBgImage && c.bgImageTintColor && (
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{ backgroundColor: c.bgImageTintColor, opacity: (c.bgImageTintOpacity ?? 0) / 100 }}
+            aria-hidden="true"
+          />
+        )}
+
         {hasSlideshow && <BlockBackgroundSlideshow slideshow={c._slideshow} />}
+
         {/* Overlay color */}
         {c.overlayColor && (
           <div className="pointer-events-none absolute inset-0" style={{ backgroundColor: c.overlayColor, opacity: (c.overlayOpacity ?? 50) / 100 }} aria-hidden="true" />
         )}
-        {(hasSlideshow || hasBgImage || c.overlayColor) ? <div className="relative">{children}</div> : children}
+
+        {/* Vignette */}
+        {c.vignetteEnabled && (
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{ background: `radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,${(c.vignetteStrength ?? 30) / 100}) 100%)` }}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Noise overlay */}
+        {c.noiseOverlay && (
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              opacity: (c.noiseOpacity ?? 5) / 100,
+              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E")`,
+              backgroundSize: "128px 128px",
+            }}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Glass noise */}
+        {c.glassEnabled && c.glassNoise && (
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              opacity: 0.04,
+              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E")`,
+              backgroundSize: "128px 128px",
+            }}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Gradient border overlay */}
+        {c.gradientBorder && c.gradientEnabled && c.gradientColor1 && c.gradientColor2 && (
+          <div
+            className="pointer-events-none absolute inset-0 rounded-[inherit]"
+            style={{
+              border: "1px solid transparent",
+              borderImage: `linear-gradient(${c.gradientDirection || "to right"}, ${c.gradientColor1}, ${c.gradientColor2}${c.gradientColor3 ? `, ${c.gradientColor3}` : ""}) 1`,
+            }}
+            aria-hidden="true"
+          />
+        )}
+
+        {(needsRelative) ? <div className="relative">{children}</div> : children}
       </motion.section>
     </>
   );

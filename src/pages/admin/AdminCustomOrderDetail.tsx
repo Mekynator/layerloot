@@ -308,6 +308,8 @@ const AdminCustomOrderDetail = () => {
 
     setThreadMessage("");
     toast({ title: "Message sent" });
+    // Mark unread for user
+    await supabase.from("custom_orders").update({ unread_by_user: true } as any).eq("id", orderId);
     setSaving(false);
     await loadMessages();
   };

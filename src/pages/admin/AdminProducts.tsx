@@ -494,7 +494,7 @@ const AdminProducts = () => {
 
                         {status === "published" && (
                           <Button variant="ghost" size="icon" title="Unpublish" onClick={() => setConfirmAction({ type: "unpublish", productId: product.id, name: product.name })}>
-                            <XCircle className="h-4 w-4 text-amber-500" />
+                            <XCircle className="h-4 w-4 text-destructive" />
                           </Button>
                         )}
 

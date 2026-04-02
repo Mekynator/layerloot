@@ -88,6 +88,51 @@ Deno.serve(async (req) => {
       publishedCount++;
     }
 
+    // Process scheduled products
+    const { data: scheduledProducts } = await supabase
+      .from("products")
+      .select("*")
+      .eq("has_draft", true)
+      .not("scheduled_publish_at", "is", null)
+      .lte("scheduled_publish_at", now);
+
+    for (const product of (scheduledProducts ?? []) as any[]) {
+      const draft = product.draft_data;
+      const updatePayload: any = {
+        has_draft: false,
+        draft_data: null,
+        published_at: now,
+        scheduled_publish_at: null,
+        status: "published",
+        is_active: true,
+      };
+
+      if (draft && typeof draft === "object") {
+        const draftFields = [
+          "name", "slug", "description", "price", "compare_at_price",
+          "category_id", "images", "stock", "is_featured", "model_url",
+          "print_time_hours", "dimensions_cm", "weight_grams", "finish_type", "material_type",
+        ];
+        for (const key of draftFields) {
+          if (key in draft) updatePayload[key] = draft[key];
+        }
+      }
+
+      // Log revision
+      const revNum = await getNextRevNum(supabase, "product", product.id);
+      await supabase.from("content_revisions").insert({
+        content_type: "product",
+        content_id: product.id,
+        revision_data: product.draft_data ?? {},
+        revision_number: revNum,
+        action: "auto_publish",
+        change_summary: "Scheduled auto-publish",
+      });
+
+      await supabase.from("products").update(updatePayload).eq("id", product.id);
+      publishedCount++;
+    }
+
     // Log activity
     if (publishedCount > 0) {
       await supabase.from("admin_activity_log").insert({

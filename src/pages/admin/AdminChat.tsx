@@ -732,16 +732,48 @@ function SandboxTab() {
 /* ═══════════════════════════════════════════════════════════════
    MAIN PAGE
    ═══════════════════════════════════════════════════════════════ */
+/* ─── Collapsible Section wrapper ─── */
+function CollapsibleSection({ title, icon: Icon, defaultOpen = true, children }: { title: string; icon?: React.ElementType; defaultOpen?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <Card className="border-border/50">
+        <CollapsibleTrigger asChild>
+          <button className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-muted/20 transition-colors rounded-t-lg">
+            <span className="font-display text-sm font-semibold uppercase tracking-wide flex items-center gap-2">
+              {Icon && <Icon className="h-4 w-4 text-primary" />}
+              {title}
+            </span>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="pt-0 space-y-4">
+            {children}
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
+  );
+}
+
 export default function AdminChat() {
   const { toast } = useToast();
   const [config, setConfig] = useState<ChatConfig>(DEFAULT_CHAT_CONFIG);
+  const [savedConfig, setSavedConfig] = useState<ChatConfig>(DEFAULT_CHAT_CONFIG);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
 
+  const isDirty = useMemo(() => JSON.stringify(config) !== JSON.stringify(savedConfig), [config, savedConfig]);
+
   useEffect(() => {
     supabase.from("site_settings").select("value").eq("key", "chat_widget").maybeSingle().then(({ data }) => {
-      if (data?.value && typeof data.value === "object") setConfig(prev => deepMerge(prev, data.value as any));
+      if (data?.value && typeof data.value === "object") {
+        const merged = deepMerge(DEFAULT_CHAT_CONFIG, data.value as any);
+        setConfig(merged);
+        setSavedConfig(merged);
+      }
       setLoading(false);
     });
   }, []);
@@ -749,9 +781,15 @@ export default function AdminChat() {
   const save = async () => {
     setSaving(true);
     await upsertSetting("chat_widget", config);
+    setSavedConfig(config);
     setSaving(false);
     toast({ title: "Chat settings saved!" });
   };
+
+  const revert = useCallback(() => {
+    setConfig(savedConfig);
+    sonnerToast.info("Reverted to last saved state");
+  }, [savedConfig]);
 
   const set = <K extends keyof ChatConfig>(key: K, value: ChatConfig[K]) => setConfig(prev => ({ ...prev, [key]: value }));
   const setNested = <K extends keyof ChatConfig>(section: K, field: string, value: any) => setConfig(prev => ({ ...prev, [section]: { ...(prev[section] as any), [field]: value } }));

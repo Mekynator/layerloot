@@ -1115,6 +1115,9 @@ export default function AdminChat() {
           </Card>
         </TabsContent>
 
+        {/* ─── OPTIMIZATION ─── */}
+        <TabsContent value="optimization"><OptimizationTab config={config} setConfig={setConfig} /></TabsContent>
+
         {/* ─── ANALYTICS ─── */}
         <TabsContent value="analytics"><AnalyticsTab /></TabsContent>
 

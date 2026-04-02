@@ -1264,13 +1264,6 @@ export type Database = {
             referencedRelation: "custom_order_showcases"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "showcase_favorites_showcase_id_fkey"
-            columns: ["showcase_id"]
-            isOneToOne: false
-            referencedRelation: "public_showcases"
-            referencedColumns: ["id"]
-          },
         ]
       }
       showcase_reviews: {
@@ -1304,13 +1297,6 @@ export type Database = {
             columns: ["showcase_id"]
             isOneToOne: false
             referencedRelation: "custom_order_showcases"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "showcase_reviews_showcase_id_fkey"
-            columns: ["showcase_id"]
-            isOneToOne: false
-            referencedRelation: "public_showcases"
             referencedColumns: ["id"]
           },
         ]
@@ -1647,113 +1633,7 @@ export type Database = {
       }
     }
     Views: {
-      public_showcases: {
-        Row: {
-          approved_by_admin: boolean | null
-          category: string | null
-          colors: string | null
-          created_at: string | null
-          currency: string | null
-          custom_order_id: string | null
-          description: string | null
-          dimensions: string | null
-          featured: boolean | null
-          final_price: number | null
-          finished_image_urls: string[] | null
-          id: string | null
-          materials: string | null
-          owner_user_id: string | null
-          preview_image_urls: string[] | null
-          production_settings_json: Json | null
-          quoted_price: number | null
-          rating_avg: number | null
-          rating_count: number | null
-          reorder_count: number | null
-          reorder_enabled: boolean | null
-          size_notes: string | null
-          slug: string | null
-          source_model_filename: string | null
-          source_model_url: string | null
-          tags: string[] | null
-          thumbnail_url: string | null
-          title: string | null
-          updated_at: string | null
-          visibility_status: string | null
-        }
-        Insert: {
-          approved_by_admin?: boolean | null
-          category?: string | null
-          colors?: string | null
-          created_at?: string | null
-          currency?: string | null
-          custom_order_id?: string | null
-          description?: string | null
-          dimensions?: string | null
-          featured?: boolean | null
-          final_price?: number | null
-          finished_image_urls?: string[] | null
-          id?: string | null
-          materials?: string | null
-          owner_user_id?: string | null
-          preview_image_urls?: string[] | null
-          production_settings_json?: Json | null
-          quoted_price?: number | null
-          rating_avg?: number | null
-          rating_count?: number | null
-          reorder_count?: number | null
-          reorder_enabled?: boolean | null
-          size_notes?: string | null
-          slug?: string | null
-          source_model_filename?: string | null
-          source_model_url?: string | null
-          tags?: string[] | null
-          thumbnail_url?: string | null
-          title?: string | null
-          updated_at?: string | null
-          visibility_status?: string | null
-        }
-        Update: {
-          approved_by_admin?: boolean | null
-          category?: string | null
-          colors?: string | null
-          created_at?: string | null
-          currency?: string | null
-          custom_order_id?: string | null
-          description?: string | null
-          dimensions?: string | null
-          featured?: boolean | null
-          final_price?: number | null
-          finished_image_urls?: string[] | null
-          id?: string | null
-          materials?: string | null
-          owner_user_id?: string | null
-          preview_image_urls?: string[] | null
-          production_settings_json?: Json | null
-          quoted_price?: number | null
-          rating_avg?: number | null
-          rating_count?: number | null
-          reorder_count?: number | null
-          reorder_enabled?: boolean | null
-          size_notes?: string | null
-          slug?: string | null
-          source_model_filename?: string | null
-          source_model_url?: string | null
-          tags?: string[] | null
-          thumbnail_url?: string | null
-          title?: string | null
-          updated_at?: string | null
-          visibility_status?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "custom_order_showcases_custom_order_id_fkey"
-            columns: ["custom_order_id"]
-            isOneToOne: false
-            referencedRelation: "custom_orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
       can_access_custom_order: {

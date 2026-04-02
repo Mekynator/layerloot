@@ -1,50 +1,67 @@
 
 
-# Upgrade Vouchers Module to 4-Tab Status System
+# Redesign Gift Finder — Premium Visual-First Experience
 
-## Problem
-Currently the vouchers area has only 2 tabs (Active / Used), lumping gifted, used, and expired cards together. Users need clearer separation.
+## Current State
+The Gift Finder is a tab inside `CreateYourOwn.tsx` (lines 801–1003). It shows icon+label buttons in a grid, with inline product results below. The `gift_finder_tags` table has `name`, `slug`, `icon_key`, `sort_order`, `is_active`. No image support exists on tags.
 
-## Solution
-Replace the 2-tab system with 4 tabs: **Active**, **Gifted**, **Used**, **Expired**. Add proper classification logic, tab counters with icons, contextual empty states, and tab-specific card content.
+## Plan
 
-## Changes
+### 1. Database Migration — Add image fields to `gift_finder_tags`
+Add columns:
+- `image_url TEXT` — background image for card
+- `image_opacity NUMERIC DEFAULT 0.3` — overlay opacity
+- `image_fit TEXT DEFAULT 'cover'` — cover/contain/stretch
 
-### 1. `src/components/account/types.ts` — Add classification helper
+### 2. Extract GiftFinder to its own component
+Create `src/components/gift-finder/GiftFinderSection.tsx` — extracted from `CreateYourOwn.tsx` lines 801–1003, then redesigned.
 
-Add a new function `classifyVoucher(v: UserVoucher): "active" | "gifted" | "used" | "expired"` that returns exactly one category per voucher:
+### 3. Redesign the Gift Finder UI
 
-- **Expired**: if `gift_status === "cancelled"` (treat as expired/voided)
-- **Gifted**: if `gift_status` is `"pending_claim"`, `"gifted"`, or `"claimed"`, OR if `recipient_email` is set and the voucher was sent away by the current user
-- **Used**: if `is_used`, `used_at` is set, or balance is 0 or less
-- **Active**: everything else (owned, has balance, not gifted, not expired)
+**Layout:**
+- Center-aligned header: small "Gift Finder" label + "Find the Best Match" title
+- Subtle hint: "AI will recommend the best products for you"
+- Remove all helper/description text ("Pick one or more vibes", "Smarter matching…")
+- Max-width container, generous vertical spacing
 
-This replaces the binary `isVoucherUsedOrArchived` for the vouchers UI (keep existing function for backward compat elsewhere).
+**Tag Cards (core redesign):**
+- Responsive grid: 3–4 cols desktop, 2 mobile
+- Each card: icon (top-center), label (center), optional background image with gradient overlay
+- States:
+  - Default: dark surface, soft border, muted icon
+  - Hover: `scale(1.03)`, blue glow border, icon brightens
+  - Selected: strong glow border, filled background, checkmark top-right, subtle pulse
+- Images lazy-loaded with `loading="lazy"`
 
-### 2. `src/components/account/VouchersModule.tsx` — Full rewrite of tab system
+**Selection UX:**
+- Multi-select with animated transitions
+- Selection counter: "3 selected" displayed above/below grid
+- Selected tag chips removed (replaced by in-card checkmarks)
 
-**State**: Change `voucherView` from `"active" | "used"` to `"active" | "gifted" | "used" | "expired"`.
+**CTA System:**
+- "Find Matches (X selected)" button — hidden when 0 selected, slides in when ≥1
+- "Browse all products" secondary link below
+- Both animated with framer-motion fade/slide
 
-**Filtering**: Use `classifyVoucher` to split `userVouchers` into 4 arrays, then group each with `groupVouchersByDefinition`.
+**Results inline** (kept as-is but polished) — products shown below with match scoring. This prepares for a future dedicated results page.
 
-**Tab bar**: 4 buttons with icons and counts:
-- Active (Wallet icon) — "Ready to use"
-- Gifted (Send icon) — "Sent to others"  
-- Used (CheckCircle icon) — "Already used"
-- Expired (Clock icon) — "No longer valid"
+### 4. Admin — Image management for tags
+Update `AdminCategories.tsx` Gift Finder Tags form to add:
+- Image upload field (to `site-assets` bucket)
+- Image opacity slider
+- Image fit selector (cover/contain/stretch)
 
-**Empty states**: Each tab gets a unique empty message with a relevant icon.
+### 5. Files Changed
 
-**Card content adapts per tab**:
-- Active: show balance, code, expiry if available, gift button for gift cards
-- Gifted: show recipient info, sent date, gifted status badge, hide gift button
-- Used: show original value, used date, completed badge
-- Expired: show original value, expired date, expired badge
+| File | Change |
+|------|--------|
+| `supabase migration` | Add `image_url`, `image_opacity`, `image_fit` to `gift_finder_tags` |
+| `src/components/gift-finder/GiftFinderSection.tsx` | **New** — extracted and redesigned Gift Finder component |
+| `src/pages/CreateYourOwn.tsx` | Replace inline `GiftFinder` with import of new component |
+| `src/pages/admin/AdminCategories.tsx` | Add image upload, opacity slider, fit selector to Gift Finder Tags form |
 
-**Gift action**: Only show the "Gift" button on the Active tab for gift cards owned by user.
-
-### Summary
-- 2 files changed: `types.ts` (add classifier), `VouchersModule.tsx` (4-tab UI)
-- No database changes needed — all fields already exist on `user_vouchers`
-- No breaking changes to other components using `isVoucherUsedOrArchived`
+### 6. Scope Boundaries
+- **Included:** Visual redesign, image support, selection UX, CTA, admin editing
+- **Deferred (next phase):** Occasion filters, smart preview tooltips on hover, dedicated results page, AI suggestion section ("People who chose this also liked…")
+- **Not changing:** Database query logic, product matching/scoring, product_gift_finder_tags table
 

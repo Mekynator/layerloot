@@ -593,7 +593,7 @@ const ChatWidget = () => {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-primary-foreground hover:bg-primary/80"
-                  onClick={() => setOpen(false)}
+                  onClick={() => { setOpen(false); trackChatEvent("close", {}, location.pathname, userId); saveConversation(messages, location.pathname, userId); }}
                   title="Close"
                 >
                   <X className="h-4 w-4" />

@@ -76,6 +76,7 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
       name: "System",
       items: [
         { id: "activity", to: "/admin/activity", label: "Activity Log", icon: "Activity", visible: true, permission: "reports.view" },
+        { id: "chat-analytics", to: "/admin/chat-analytics", label: "AI Analytics", icon: "BarChart3", visible: true, permission: "reports.view" },
         { id: "users", to: "/admin/users", label: "Admin Users", icon: "Shield", visible: true, permission: "*" },
       ],
     },

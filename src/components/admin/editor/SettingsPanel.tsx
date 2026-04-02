@@ -174,12 +174,15 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
       <ScrollArea className="flex-1">
         <div className="p-3">
           <Tabs defaultValue="content" className="w-full">
-            <TabsList className="w-full grid grid-cols-4">
+            <TabsList className="w-full grid grid-cols-5">
               <TabsTrigger value="content" className="gap-1 text-[10px]">
                 <Type className="h-3 w-3" /> Content
               </TabsTrigger>
               <TabsTrigger value="style" className="gap-1 text-[10px]">
                 <Palette className="h-3 w-3" /> Style
+              </TabsTrigger>
+              <TabsTrigger value="border" className="gap-1 text-[10px]">
+                <Square className="h-3 w-3" /> Border
               </TabsTrigger>
               <TabsTrigger value="responsive" className="gap-1 text-[10px]">
                 <Monitor className="h-3 w-3" /> Device

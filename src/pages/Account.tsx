@@ -451,50 +451,19 @@ const Account = () => {
   const redeemReward = async (reward: RewardCatalogItem) => {
     if (!user) return;
 
-    if (pointsBalance < reward.pointsCost) {
+    if (pointsBalance < reward.points_cost) {
       toast({ title: tt("account.rewards.notEnoughPoints", "Not enough points"), variant: "destructive" });
       return;
     }
 
-    setRedeemingKey(reward.key);
-
-    let voucherId: string | null = null;
-    const matchedVoucher = findMatchingVoucher(reward, vouchers);
-
-    if (matchedVoucher) {
-      voucherId = matchedVoucher.id;
-    } else {
-      const { data: newVoucher, error: createError } = await supabase
-        .from("vouchers")
-        .insert({
-          name: reward.name,
-          description: reward.description,
-          discount_type: reward.discountType,
-          discount_value: reward.discountValue,
-          points_cost: reward.pointsCost,
-          is_active: true,
-        })
-        .select("id")
-        .single();
-
-      if (createError || !newVoucher) {
-        setRedeemingKey(null);
-        toast({
-          title: tt("common.error", "Error"),
-          description: createError?.message || tt("account.rewards.createVoucherError", "Could not create voucher"),
-          variant: "destructive",
-        });
-        return;
-      }
-      voucherId = newVoucher.id;
-    }
+    setRedeemingKey(reward.id);
 
     const code = `LL-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    const isGiftCard = reward.discountType === "gift_card";
+    const isGiftCard = reward.discount_type === "gift_card";
 
     const { error: pointsError } = await supabase.from("loyalty_points").insert({
       user_id: user.id,
-      points: -reward.pointsCost,
+      points: -reward.points_cost,
       reason: `Redeemed: ${reward.name}`,
     });
 
@@ -506,9 +475,9 @@ const Account = () => {
 
     const { error: voucherError } = await supabase.from("user_vouchers").insert({
       user_id: user.id,
-      voucher_id: voucherId,
+      voucher_id: reward.id,
       code,
-      balance: isGiftCard ? reward.discountValue : null,
+      balance: isGiftCard ? reward.discount_value : null,
     });
 
     if (voucherError) {
@@ -519,7 +488,7 @@ const Account = () => {
 
     setRedeemingKey(null);
     toast({
-      title: tt("account.vouchers.redeemed", "Voucher redeemed"),
+      title: "✨ " + tt("account.vouchers.redeemed", "Reward redeemed!"),
       description: `${tt("account.vouchers.code", "Your code")}: ${code}`,
     });
     await refetchOverview();

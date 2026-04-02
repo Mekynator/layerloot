@@ -9,6 +9,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, type SupportedLanguage } from "@/lib/i18n";
 import i18n from "@/lib/i18n";
+import { saveDraftSetting, publishDraftSetting, loadDraftSetting, discardDraftSetting } from "@/hooks/use-draft-publish";
+import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from "@/components/ui/badge";
 
 type NavSource = "manual" | "site_page";
 type LocalizedText = string | Partial<Record<SupportedLanguage, string>>;

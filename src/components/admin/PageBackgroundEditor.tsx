@@ -252,31 +252,22 @@ export default function PageBackgroundEditor({
     setSaving(true);
 
     const payload = {
-      key: SETTING_KEY,
-      value: {
-        enabled: form.enabled,
-        images: form.images,
-        opacity: form.opacity,
-        blur: form.blur,
-        intervalMs: Math.max(1000, form.intervalMs),
-        sizeMode: form.sizeMode,
-        position: form.position,
-        overlayOpacity: form.overlayOpacity,
-      } as any,
+      enabled: form.enabled,
+      images: form.images,
+      opacity: form.opacity,
+      blur: form.blur,
+      intervalMs: Math.max(1000, form.intervalMs),
+      sizeMode: form.sizeMode,
+      position: form.position,
+      overlayOpacity: form.overlayOpacity,
     };
 
-    const { error } = await supabase
-      .from("site_settings")
-      .upsert(payload, { onConflict: "key" });
-
+    const ok = await saveDraftSetting(SETTING_KEY, payload);
     setSaving(false);
 
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-      return;
-    }
+    if (!ok) return;
 
-    toast({ title: "Background saved — applies to all pages" });
+    toast({ title: "Background draft saved — publish to make live" });
     onOpenChange(false);
   };
 

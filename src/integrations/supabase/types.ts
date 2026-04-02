@@ -1087,6 +1087,9 @@ export type Database = {
           created_at: string
           icon_key: string | null
           id: string
+          image_fit: string
+          image_opacity: number
+          image_url: string | null
           is_active: boolean
           name: string
           slug: string
@@ -1097,6 +1100,9 @@ export type Database = {
           created_at?: string
           icon_key?: string | null
           id?: string
+          image_fit?: string
+          image_opacity?: number
+          image_url?: string | null
           is_active?: boolean
           name: string
           slug: string
@@ -1107,6 +1113,9 @@ export type Database = {
           created_at?: string
           icon_key?: string | null
           id?: string
+          image_fit?: string
+          image_opacity?: number
+          image_url?: string | null
           is_active?: boolean
           name?: string
           slug?: string

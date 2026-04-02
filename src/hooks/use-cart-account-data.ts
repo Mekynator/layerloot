@@ -6,6 +6,9 @@ export type CartDiscountCode = {
   label: string;
   type: "percent" | "fixed";
   value: number;
+  category: "voucher" | "gift_card" | "free_shipping" | "discount";
+  userVoucherId?: string;
+  voucherType?: string;
 };
 
 function mergeAvailableVouchers(owned: any[], received: any[], userId: string, userEmail?: string) {
@@ -20,6 +23,12 @@ function mergeAvailableVouchers(owned: any[], received: any[], userId: string, u
   });
 
   return Array.from(unique.values());
+}
+
+function mapVoucherCategory(discountType: string): CartDiscountCode["category"] {
+  if (discountType === "gift_card") return "gift_card";
+  if (discountType === "free_shipping") return "free_shipping";
+  return "voucher";
 }
 
 async function fetchCartAccountData(userId: string, userEmail?: string) {
@@ -60,23 +69,31 @@ async function fetchCartAccountData(userId: string, userEmail?: string) {
     })
     .map((row) => {
       const voucher = row.vouchers;
+      const discountType = voucher?.discount_type || "fixed";
+      const category = mapVoucherCategory(discountType);
+
       const labelValue =
-        voucher?.discount_type === "free_shipping"
+        discountType === "free_shipping"
           ? "Free delivery"
-          : voucher?.discount_type === "gift_card"
+          : discountType === "gift_card"
             ? `${Number(row.balance ?? voucher?.discount_value ?? 0).toFixed(2)} kr gift card`
-            : `${Number(voucher?.discount_value ?? 0).toFixed(2)} kr off`;
+            : discountType === "percent_discount"
+              ? `${Number(voucher?.discount_value ?? 0)}% off`
+              : `${Number(voucher?.discount_value ?? 0).toFixed(2)} kr off`;
 
       return {
         code: row.code,
         label: `${row.code} - ${labelValue}`,
-        type: voucher?.discount_type === "percent_discount" ? "percent" : "fixed",
+        type: discountType === "percent_discount" ? "percent" : "fixed",
         value:
-          voucher?.discount_type === "gift_card"
+          discountType === "gift_card"
             ? Number(row.balance ?? voucher?.discount_value ?? 0)
-            : voucher?.discount_type === "free_shipping"
+            : discountType === "free_shipping"
               ? 5.99
               : Number(voucher?.discount_value ?? 0),
+        category,
+        userVoucherId: row.id,
+        voucherType: discountType,
       } as CartDiscountCode;
     });
 

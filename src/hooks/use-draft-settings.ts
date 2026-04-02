@@ -93,7 +93,24 @@ export function useDraftSettings<T>(key: string, defaultValue: T): UseDraftSetti
     return ok;
   }, [key, liveValue]);
 
-  const draftStatus: DraftStatus = hasDraft || dirty ? "draft" : "published";
+  const draftStatus: DraftStatus = scheduledAt ? "scheduled" : (hasDraft || dirty ? "draft" : "published");
 
-  return { value, liveValue, hasDraft, draftStatus, loading, dirty, setValue, saveDraft, publish, discard, reload: load };
+  const doSchedulePublish = useCallback(async (date: Date) => {
+    // Save draft first if dirty
+    if (dirty) {
+      const saved = await saveDraftSetting(key, value);
+      if (!saved) return false;
+    }
+    const ok = await scheduleSettingPublish(key, date);
+    if (ok) { setScheduledAt(date.toISOString()); setDirty(false); }
+    return ok;
+  }, [key, value, dirty]);
+
+  const doCancelSchedule = useCallback(async () => {
+    const ok = await cancelSettingSchedule(key);
+    if (ok) setScheduledAt(null);
+    return ok;
+  }, [key]);
+
+  return { value, liveValue, hasDraft, draftStatus, loading, dirty, scheduledAt, setValue, saveDraft, publish, discard, schedulePublish: doSchedulePublish, cancelSchedule: doCancelSchedule, reload: load };
 }

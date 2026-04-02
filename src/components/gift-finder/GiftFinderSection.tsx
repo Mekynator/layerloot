@@ -9,6 +9,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import GiftFinderResults from "./GiftFinderResults";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   gamer: Gamepad2,

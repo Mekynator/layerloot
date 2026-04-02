@@ -214,6 +214,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   const [inlineEditingKey, setInlineEditingKey] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [draftStatus, setDraftStatus] = useState<DraftStatus>("published");
+  const [scheduledAt, setScheduledAt] = useState<string | null>(null);
 
   const selectElement = useCallback((el: SelectedElement | null) => {
     setSelectedElement(el);

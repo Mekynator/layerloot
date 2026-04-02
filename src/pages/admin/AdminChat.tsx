@@ -830,6 +830,13 @@ export default function AdminChat() {
               {config.quickReplies.length === 0 && <p className="py-4 text-center text-sm text-muted-foreground">No quick replies configured</p>}
             </CardContent>
           </Card>
+            </div>
+            <div className="hidden xl:block w-[400px] shrink-0">
+              <div className="sticky top-4">
+                <ChatLivePreview config={config} />
+              </div>
+            </div>
+          </div>
         </TabsContent>
 
         {/* ─── TRAINING ─── */}

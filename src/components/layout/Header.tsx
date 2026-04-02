@@ -141,7 +141,7 @@ const isActiveLink = (pathname: string, to: string) => {
 
 const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [adminAlerts, setAdminAlerts] = useState(0);
+  
   const [branding, setBranding] = useState<BrandingSettings>(defaultBranding);
   const [headerSettings, setHeaderSettings] = useState<HeaderSettings>(defaultHeaderSettings);
   const [hasAccountNotifications, setHasAccountNotifications] = useState(false);

@@ -46,6 +46,9 @@ const emptyGiftTag = {
   icon_key: "",
   sort_order: 0,
   is_active: true,
+  image_url: "",
+  image_opacity: 30,
+  image_fit: "cover",
 };
 
 const slugify = (value: string) =>

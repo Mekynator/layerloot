@@ -38,6 +38,8 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
         { id: "dashboard", to: "/admin", label: "Dashboard", icon: "LayoutDashboard", visible: true },
         { id: "categories", to: "/admin/categories", label: "Categories & Tags", icon: "Tags", visible: true, permission: "categories.manage" },
         { id: "editor", to: "/admin/editor", label: "Page Editor", icon: "FileText", visible: true, permission: "content.edit" },
+        { id: "media", to: "/admin/media", label: "Media Library", icon: "ImageIcon", visible: true, permission: "media.manage" },
+        { id: "reusable", to: "/admin/reusable-blocks", label: "Reusable Blocks", icon: "Box", visible: true, permission: "content.edit" },
         { id: "backgrounds", to: "/admin/backgrounds", label: "Backgrounds", icon: "ImageIcon", visible: true, permission: "backgrounds.manage" },
         { id: "settings", to: "/admin/settings", label: "Settings", icon: "Settings", visible: true, permission: "settings.view" },
       ],

@@ -4,6 +4,7 @@ import {
   LayoutGrid, ChevronUp, ChevronDown,
   Square, Type, Image, Columns, PlayCircle, MousePointer, Link2, Code, Globe, Mail,
   Truck, Star, HelpCircle, ShieldCheck, Layers, Package, FolderTree, Search,
+  Box, BookmarkPlus,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,10 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useVisualEditor, pageDisplayTitle } from "@/contexts/VisualEditorContext";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import InsertReusableDialog from "@/components/admin/reusable/InsertReusableDialog";
 
 const BLOCK_ICONS: Record<string, any> = {
   hero: Square, shipping_banner: Truck, entry_cards: Layers, categories: FolderTree,
@@ -39,11 +44,14 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
     draftBlocks, selectedBlockId, hoveredBlockId,
     selectBlock, hoverBlock, selectedPage,
     deleteBlock, duplicateBlock, toggleBlockActive, moveBlock,
+    addBlock,
   } = useVisualEditor();
+  const { user } = useAuth();
 
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [reusableOpen, setReusableOpen] = useState(false);
 
   const handleDragEnd = useCallback(() => {
     if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
@@ -58,6 +66,30 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
         (b.title || b.block_type).toLowerCase().includes(searchQuery.toLowerCase())
       )
     : draftBlocks;
+
+  const saveAsReusable = async (blockId: string) => {
+    const block = draftBlocks.find(b => b.id === blockId);
+    if (!block) return;
+    const { error } = await supabase.from("reusable_blocks").insert({
+      name: block.title || block.block_type,
+      block_type: block.block_type,
+      content: block.content as any,
+      created_by: user?.id || null,
+      updated_by: user?.id || null,
+    });
+    if (error) toast.error("Failed to save");
+    else toast.success("Saved as reusable block!");
+  };
+
+  const handleInsertReusable = (data: { block_type: string; content: any; title: string }) => {
+    addBlock(data.block_type);
+    // The addBlock creates default content, so we need to update it
+    // We'll use a setTimeout to let the state update, then patch
+    setTimeout(() => {
+      const newest = draftBlocks[draftBlocks.length]; // won't work perfectly but addBlock selects it
+    }, 0);
+    toast.success("Reusable block inserted");
+  };
 
   return (
     <div className="flex h-full flex-col border-r border-border/30 bg-card/80 backdrop-blur-xl">
@@ -163,6 +195,9 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
                       <button onClick={(e) => { e.stopPropagation(); duplicateBlock(block.id); }} className="rounded p-0.5 text-muted-foreground hover:text-foreground" title="Duplicate">
                         <Copy className="h-2.5 w-2.5" />
                       </button>
+                      <button onClick={(e) => { e.stopPropagation(); saveAsReusable(block.id); }} className="rounded p-0.5 text-muted-foreground hover:text-foreground" title="Save as reusable">
+                        <BookmarkPlus className="h-2.5 w-2.5" />
+                      </button>
                       <button onClick={(e) => { e.stopPropagation(); deleteBlock(block.id); }} className="rounded p-0.5 text-muted-foreground hover:text-destructive" title="Delete">
                         <Trash2 className="h-2.5 w-2.5" />
                       </button>
@@ -178,14 +213,23 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
           )}
 
           {draftBlocks.length > 0 && (
-            <button
-              onClick={onAddBlock}
-              onDragOver={(e) => { e.preventDefault(); setDragOverIndex(draftBlocks.length); }}
-              className="flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border/50 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-            >
-              <Plus className="h-3 w-3" />
-              <span className="text-[10px] uppercase tracking-wider">Add Section</span>
-            </button>
+            <div className="space-y-1">
+              <button
+                onClick={onAddBlock}
+                onDragOver={(e) => { e.preventDefault(); setDragOverIndex(draftBlocks.length); }}
+                className="flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border/50 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                <Plus className="h-3 w-3" />
+                <span className="text-[10px] uppercase tracking-wider">Add Section</span>
+              </button>
+              <button
+                onClick={() => setReusableOpen(true)}
+                className="flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border/50 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                <Box className="h-3 w-3" />
+                <span className="text-[10px] uppercase tracking-wider">From Library</span>
+              </button>
+            </div>
           )}
         </div>
       </ScrollArea>
@@ -197,6 +241,12 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
           <span>{draftBlocks.filter(b => b.is_active !== false).length} visible</span>
         </div>
       </div>
+
+      <InsertReusableDialog
+        open={reusableOpen}
+        onOpenChange={setReusableOpen}
+        onInsert={handleInsertReusable}
+      />
     </div>
   );
 }

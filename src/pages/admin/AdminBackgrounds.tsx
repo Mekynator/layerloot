@@ -569,9 +569,15 @@ export default function AdminBackgrounds() {
               )}
             </div>
 
-            <Button onClick={save} disabled={saving || uploading} className="w-full font-display uppercase tracking-wider">
-              {saving ? "Saving..." : "Save Background Settings"}
-            </Button>
+            <DraftActionButtons
+              bgDraftStatus={bgDraftStatus}
+              saving={saving}
+              publishingBg={publishingBg}
+              uploading={uploading}
+              onSave={save}
+              onPublish={publishBg}
+              onDiscard={discardBgDraft}
+            />
           </div>
         ) : overrideMode === "disabled" ? (
           <div className="space-y-4">

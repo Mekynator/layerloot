@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { Save, ChevronUp, ChevronDown, Eye, EyeOff, GripVertical, Package } from "lucide-react";
 import type { AccountPageConfig } from "@/components/account/types";
 import { DEFAULT_ACCOUNT_CONFIG } from "@/components/account/types";

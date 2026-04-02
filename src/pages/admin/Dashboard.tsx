@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import {
   DollarSign, Package, ShoppingCart, Users, Download, Calendar, Star,
   MessageSquareMore, Palette, TicketPercent, Truck, Tags, FileText,
-  Settings, TrendingUp, AlertTriangle, Box,
+  Settings, TrendingUp, AlertTriangle, Box, ImageIcon,
   Clock, CheckCircle, Zap, BarChart3, Activity, Eye,
   ArrowRight, Bell, Calculator, Megaphone, Wallet,
 } from "lucide-react";

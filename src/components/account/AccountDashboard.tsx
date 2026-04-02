@@ -24,7 +24,8 @@ export default function AccountDashboard({ overview, tt, orders, customOrders, u
   const { choices } = useRememberedChoices();
   const { getInterestProfile } = useBehaviorTracking();
   const profile = getInterestProfile();
-  const { products } = useStorefront();
+  const { data: catalogData } = useStorefrontCatalog();
+  const products = catalogData?.products ?? [];
 
   const latestOrder = orders[0];
   const activeCustomOrders = customOrders.filter(o => !isCustomOrderDone(o));

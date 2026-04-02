@@ -23,6 +23,7 @@ export interface SidebarItem {
   label: string;
   icon: string;
   visible: boolean;
+  permission?: string;
 }
 
 export interface SidebarConfig {

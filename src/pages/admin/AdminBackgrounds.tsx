@@ -106,13 +106,13 @@ export default function AdminBackgrounds() {
     const key = settingKeyForPage(selectedPage);
 
     (async () => {
-      // Check for draft first
-      const draftVal = await loadDraftSetting(key);
+      const result = await loadDraftSetting(key);
       if (cancelled) return;
 
-      if (draftVal) {
+      if (result && result.hasDraft) {
         // Load from draft
         setBgDraftStatus("draft");
+        const draftVal = result.draft;
         if (isGlobal) {
           setForm(normalizeSettings(draftVal));
           setOverrideMode("custom");
@@ -121,28 +121,22 @@ export default function AdminBackgrounds() {
           setOverrideMode(mode);
           setForm(mode === "custom" ? normalizeSettings(draftVal) : DEFAULT_SETTINGS);
         }
-        setPreviewIndex(0);
-        setLoading(false);
-        return;
-      }
-
-      // No draft, load live
-      setBgDraftStatus("published");
-      const { data, error } = await supabase.from("site_settings").select("value").eq("key", key).maybeSingle();
-      if (cancelled) return;
-      setLoading(false);
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-
-      if (isGlobal) {
-        setForm(normalizeSettings(data?.value));
-        setOverrideMode("custom");
       } else {
-        const val = data?.value as any;
-        const mode: PageOverrideMode = val?.mode || "inherit";
-        setOverrideMode(mode);
-        setForm(mode === "custom" ? normalizeSettings(val) : DEFAULT_SETTINGS);
+        // No draft, load live
+        setBgDraftStatus("published");
+        const liveVal = result?.live;
+        if (isGlobal) {
+          setForm(normalizeSettings(liveVal));
+          setOverrideMode("custom");
+        } else {
+          const val = liveVal as any;
+          const mode: PageOverrideMode = val?.mode || "inherit";
+          setOverrideMode(mode);
+          setForm(mode === "custom" ? normalizeSettings(val) : DEFAULT_SETTINGS);
+        }
       }
       setPreviewIndex(0);
+      setLoading(false);
     })();
 
     return () => { cancelled = true; };

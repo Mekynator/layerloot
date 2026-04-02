@@ -115,6 +115,7 @@ const AppShell = () => {
           <Route path="/admin/revenue" element={<AdminRoute requiredPermission="revenue.view"><AdminRevenue /></AdminRoute>} />
           <Route path="/admin/content" element={<AdminRoute requiredPermission="content.edit"><AdminContent /></AdminRoute>} />
           <Route path="/admin/settings" element={<AdminRoute requiredPermission="settings.view"><AdminSettings /></AdminRoute>} />
+          <Route path="/admin/chat-settings" element={<AdminRoute requiredPermission="settings.view"><AdminChatSettings /></AdminRoute>} />
           <Route path="/admin/editor" element={<AdminRoute requiredPermission="content.edit"><VisualEditor /></AdminRoute>} />
           <Route path="/admin/backgrounds" element={<AdminRoute requiredPermission="backgrounds.manage"><AdminBackgrounds /></AdminRoute>} />
           <Route path="/admin/media" element={<AdminRoute requiredPermission="media.manage"><AdminMedia /></AdminRoute>} />

@@ -72,6 +72,15 @@ export default function ImageUploadField({ label, value, onChange }: ImageUpload
                 type="button"
                 size="sm"
                 variant="outline"
+                onClick={() => setPickerOpen(true)}
+                className="h-7 text-[10px]"
+              >
+                <FolderOpen className="h-3 w-3 mr-1" /> Browse
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
                 onClick={() => inputRef.current?.click()}
                 className="h-7 text-[10px]"
               >

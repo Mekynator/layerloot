@@ -165,7 +165,7 @@ export interface ChatCampaignOverrides {
 export interface ChatResponsiveConfig {
   desktop: { position: string; size: number; windowHeight: string };
   mobile: { position: string; size: number; windowHeight: string; minimizedStyle: "fab" | "bar" };
-  avoidOverlap: string[]; // CSS selectors to avoid overlapping
+  avoidOverlap?: string[]; // CSS selectors to avoid overlapping
 }
 
 /* ─── Analytics-ready flags ─── */

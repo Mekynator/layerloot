@@ -526,7 +526,7 @@ const ChatWidget = () => {
                   <Bot className="h-5 w-5 text-primary-foreground" />
                 )}
                 <div className="font-display text-sm font-bold uppercase tracking-wider text-primary-foreground">
-                  {chatSettings.brandName || "LayerLoot Assistant"}
+                  {(typeof chatSettings.window.brandName === "string" ? chatSettings.window.brandName : chatSettings.window.brandName?.en) || "LayerLoot Assistant"}
                 </div>
               </div>
 

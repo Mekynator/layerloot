@@ -1,185 +1,123 @@
 
 
-# Admin Roles, Permissions & Activity Tracking System
+# Revision History, Rollback & Scheduled Publishing
 
 ## Current State
-- Single `app_role` enum with values `admin`, `moderator`, `user`
-- `user_roles` table links users to roles
-- `has_role()` security definer function checks role membership
-- `AdminRoute` component checks binary `isAdmin` (admin or not)
-- No granular permissions, no activity logging, no multi-tier admin access
+- `content_revisions` table already exists with `content_type`, `content_id`, `page`, `revision_data`, `revision_number`, `action`, `created_by`, `created_at`
+- `revertToRevision()` function exists in `use-draft-publish.ts` — reverts directly to published (no restore-as-draft option)
+- No scheduled publishing support
+- No revision history UI
+- No `scheduled_publish_at` field anywhere
 
-## Architecture
+## Database Changes
 
-### Database Changes
-
-**Migration 1: Extend `app_role` enum + create permissions & activity tables**
+### Migration 1: Extend `content_revisions` + add scheduling to blocks/settings
 
 ```sql
--- Add new admin role levels
-ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'super_admin';
-ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'editor';
-ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'support';
+-- Add metadata to content_revisions for richer history
+ALTER TABLE public.content_revisions
+  ADD COLUMN IF NOT EXISTS change_summary text,
+  ADD COLUMN IF NOT EXISTS restored_from_revision_id uuid;
 
--- Permission definitions per role
-CREATE TABLE public.admin_permissions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  role app_role NOT NULL,
-  permission text NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (role, permission)
-);
-ALTER TABLE public.admin_permissions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Admins read permissions" ON public.admin_permissions
-  FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Super admins manage permissions" ON public.admin_permissions
-  FOR ALL TO authenticated USING (has_role(auth.uid(), 'super_admin'));
+-- Add scheduled publishing to site_blocks
+ALTER TABLE public.site_blocks
+  ADD COLUMN IF NOT EXISTS scheduled_publish_at timestamptz;
 
--- Seed default permissions
-INSERT INTO public.admin_permissions (role, permission) VALUES
-  ('super_admin','*'),
-  ('admin','products.manage'),('admin','orders.manage'),('admin','customers.view'),
-  ('admin','reviews.manage'),('admin','showcases.manage'),('admin','discounts.manage'),
-  ('admin','shipping.manage'),('admin','content.edit'),('admin','content.publish'),
-  ('admin','categories.manage'),('admin','pricing.manage'),('admin','campaigns.manage'),
-  ('admin','reports.view'),('admin','revenue.view'),('admin','backgrounds.manage'),
-  ('admin','settings.view'),
-  ('editor','content.edit'),('editor','content.preview'),('editor','backgrounds.manage'),
-  ('editor','categories.manage'),
-  ('support','orders.manage'),('support','customers.view'),('support','reviews.manage');
+-- Add scheduled publishing to site_settings
+ALTER TABLE public.site_settings
+  ADD COLUMN IF NOT EXISTS scheduled_publish_at timestamptz;
 
--- Activity log
-CREATE TABLE public.admin_activity_log (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  user_email text,
-  user_role text,
-  action text NOT NULL,
-  entity_type text,
-  entity_id text,
-  summary text,
-  metadata jsonb DEFAULT '{}',
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-ALTER TABLE public.admin_activity_log ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Admin roles can view activity" ON public.admin_activity_log
-  FOR SELECT TO authenticated
-  USING (has_role(auth.uid(), 'admin') OR has_role(auth.uid(), 'super_admin'));
-CREATE POLICY "Any admin can insert activity" ON public.admin_activity_log
-  FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() = user_id);
-CREATE INDEX idx_activity_created ON public.admin_activity_log (created_at DESC);
-CREATE INDEX idx_activity_user ON public.admin_activity_log (user_id);
+-- Index for the scheduled publish job
+CREATE INDEX IF NOT EXISTS idx_blocks_scheduled
+  ON public.site_blocks (scheduled_publish_at)
+  WHERE scheduled_publish_at IS NOT NULL AND has_draft = true;
+
+CREATE INDEX IF NOT EXISTS idx_settings_scheduled
+  ON public.site_settings (scheduled_publish_at)
+  WHERE scheduled_publish_at IS NOT NULL AND has_draft = true;
 ```
 
-**Migration 2: Create `has_permission` security definer function**
+### Edge Function: `process-scheduled-publish`
+A cron-triggered edge function that:
+1. Queries `site_blocks` and `site_settings` where `scheduled_publish_at <= now()` and `has_draft = true`
+2. For each match: promotes `draft_content` → `content` (or `draft_value` → `value`), logs revision, clears draft state
+3. Scheduled via `pg_cron` to run every minute
 
-```sql
-CREATE OR REPLACE FUNCTION public.has_permission(_user_id uuid, _permission text)
-RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.admin_permissions ap
-    JOIN public.user_roles ur ON ur.role = ap.role
-    WHERE ur.user_id = _user_id
-      AND (ap.permission = _permission OR ap.permission = '*')
-  )
-$$;
-```
+## Code Changes
 
-### Code Changes
+### 1. Update `use-draft-publish.ts`
+- Add `saveDraftBlocksScheduled(page, blocks, scheduledAt, userId)` — same as `saveDraftBlocks` but also sets `scheduled_publish_at`
+- Add `saveDraftSettingScheduled(key, value, scheduledAt, userId)` — same pattern for settings
+- Add `cancelSchedule(contentType, contentId)` — clears `scheduled_publish_at`
+- Update `revertToRevision` to support "restore as draft" mode (creates draft_content from revision instead of publishing directly)
+- Add `loadRevisions(contentType, contentId)` — fetches revision history for a content item
+- Add `loadPageRevisions(page)` — fetches all revisions for blocks on a page
 
-**1. New: `src/hooks/use-admin-permissions.ts`**
-- Hook that loads the current user's admin role and resolved permissions list
-- Exposes `{ adminRole, permissions, hasPermission(p), loading }`
-- Queries `user_roles` + `admin_permissions` on mount
-- Caches in state; provides `can('content.publish')` style checks
+### 2. New: `src/components/admin/RevisionHistoryPanel.tsx`
+A slide-out panel or dialog showing revision history for the current page/setting:
+- Table of revisions: revision number, action (publish/revert/delete), created_by, created_at, change_summary
+- Badge showing which is current published
+- "Restore as Draft" button on each revision row
+- "Restore & Publish" button (super_admin/admin only)
+- Filterable by action type
 
-**2. New: `src/lib/activity-log.ts`**
-- Helper `logAdminActivity({ userId, userEmail, userRole, action, entityType, entityId, summary, metadata })`
-- Inserts into `admin_activity_log`
-- Used across editors: publish, save draft, order status change, role change, etc.
+### 3. New: `src/components/admin/SchedulePublishDialog.tsx`
+A dialog for scheduling:
+- Date/time picker for `scheduled_publish_at`
+- Shows current timezone
+- Actions: "Schedule", "Cancel Schedule", "Publish Now Instead"
+- Status badge: "Scheduled for [date]"
 
-**3. New: `src/pages/admin/AdminActivity.tsx`**
-- Activity log viewer page with table of recent actions
-- Filters by user, action type, date range, entity type
-- Pagination support
+### 4. Update `EditorToolbar.tsx`
+- Add "History" button → opens `RevisionHistoryPanel`
+- Add dropdown to Publish button: "Publish Now" / "Schedule Publish"
+- Show "Scheduled for [date]" badge when content is scheduled
+- Extend `DraftStatus` type to include `"scheduled"`
 
-**4. New: `src/pages/admin/AdminUsers.tsx`**
-- Admin user management page (super_admin only)
-- Lists users with their roles from `admin-users` edge function
-- Assign/change roles via `user_roles` table
-- Shows last login, role badge
+### 5. Update `VisualEditorContext.tsx`
+- Add `schedulePublish(date)` action
+- Add `cancelSchedule()` action
+- Track `scheduledAt` state from block data
+- Add `revisions` state for history panel
 
-**5. Modify: `src/components/admin/AdminRoute.tsx`**
-- Accept optional `requiredPermission` prop
-- Check `has_permission` in addition to basic admin check
-- Redirect to dashboard with toast if insufficient permission
+### 6. Update `DraftActionBar.tsx`
+- Add optional `scheduledAt` prop
+- Add "Schedule" button option
+- Show "Scheduled for [date]" status badge
+- Connect to `RevisionHistoryPanel` via optional `onViewHistory` prop
 
-**6. Modify: `src/contexts/AuthContext.tsx`**
-- Expand `isAdmin` to also recognize `super_admin`, `editor`, `support` roles
-- Add `adminRole: string | null` to context
-- Add `permissions: string[]` to context
+### 7. Update `AdminBackgrounds.tsx`
+- Add "History" button to view revision history for background settings
+- Add schedule option to publish controls
 
-**7. Modify: `src/components/admin/AdminLayout.tsx`**
-- Filter sidebar items based on user permissions
-- Add "Activity Log" and "Admin Users" sidebar items
-- Map each sidebar item `id` to a required permission
+### 8. Update `use-draft-settings.ts`
+- Add `schedulePublish(date, userId)` method
+- Add `cancelSchedule()` method
+- Track `scheduledAt` from the loaded setting row
 
-**8. Modify: `src/App.tsx`**
-- Add routes for `/admin/activity` and `/admin/users`
-- Pass `requiredPermission` to `AdminRoute` for restricted pages:
-  - `/admin/settings` → `settings.view`
-  - `/admin/users` → `*` (super_admin only)
-  - `/admin/editor` → `content.edit`
-  - etc.
+### 9. Edge function: `supabase/functions/process-scheduled-publish/index.ts`
+- Uses service_role key to query and promote scheduled content
+- Logs activity for each auto-publish
+- Inserts revision records
+- Set up cron job via `pg_cron` + `pg_net`
 
-**9. Modify: `src/components/admin/DraftActionBar.tsx`**
-- Accept `canPublish` prop; disable Publish button if false
-- Consumer components pass `hasPermission('content.publish')`
-
-**10. Sprinkle `logAdminActivity()` calls** into:
-- `use-draft-publish.ts` (publish, revert)
-- `AdminSettings.tsx` (publish settings)
-- `AdminOrders.tsx` (status changes)
-- `AdminRoute.tsx` (login tracking via auth state)
-
-### Permission-to-Route Map
-
-| Route | Permission |
-|---|---|
-| `/admin` | any admin role |
-| `/admin/products` | `products.manage` |
-| `/admin/orders` | `orders.manage` |
-| `/admin/clients` | `customers.view` |
-| `/admin/editor` | `content.edit` |
-| `/admin/backgrounds` | `backgrounds.manage` |
-| `/admin/settings` | `settings.view` |
-| `/admin/users` | `*` |
-| `/admin/activity` | `reports.view` |
-| `/admin/discounts` | `discounts.manage` |
-| `/admin/shipping` | `shipping.manage` |
-| `/admin/pricing` | `pricing.manage` |
-| `/admin/reviews` | `reviews.manage` |
-| `/admin/reports` | `reports.view` |
-
-### Files Summary
+## Files Summary
 
 | Action | File |
 |---|---|
-| Create | `src/hooks/use-admin-permissions.ts` |
-| Create | `src/lib/activity-log.ts` |
-| Create | `src/pages/admin/AdminActivity.tsx` |
-| Create | `src/pages/admin/AdminUsers.tsx` |
-| Modify | `src/components/admin/AdminRoute.tsx` |
-| Modify | `src/contexts/AuthContext.tsx` |
-| Modify | `src/components/admin/AdminLayout.tsx` |
-| Modify | `src/components/admin/DraftActionBar.tsx` |
-| Modify | `src/App.tsx` |
-| Modify | `src/hooks/use-draft-publish.ts` (add activity logging on publish/revert) |
+| Create | `src/components/admin/RevisionHistoryPanel.tsx` |
+| Create | `src/components/admin/SchedulePublishDialog.tsx` |
+| Create | `supabase/functions/process-scheduled-publish/index.ts` |
+| Modify | `src/hooks/use-draft-publish.ts` (add schedule helpers, restore-as-draft, load revisions) |
+| Modify | `src/hooks/use-draft-settings.ts` (add schedule support) |
+| Modify | `src/contexts/VisualEditorContext.tsx` (add schedule/history state) |
+| Modify | `src/components/admin/editor/EditorToolbar.tsx` (add History + Schedule buttons) |
+| Modify | `src/components/admin/DraftActionBar.tsx` (add schedule/history props) |
+| Modify | `src/pages/admin/AdminBackgrounds.tsx` (add history + schedule UI) |
 
-### Database Changes Summary
-- Extend `app_role` enum: +`super_admin`, +`editor`, +`support`
-- Create `admin_permissions` table with role-permission mapping + seed data
-- Create `admin_activity_log` table with admin-only RLS
-- Create `has_permission()` security definer function
+## Database changes summary
+- **Alter** `content_revisions`: +`change_summary`, +`restored_from_revision_id`
+- **Alter** `site_blocks`: +`scheduled_publish_at`
+- **Alter** `site_settings`: +`scheduled_publish_at`
+- **Create** edge function `process-scheduled-publish` + cron job
 

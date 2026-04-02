@@ -1,185 +1,156 @@
 
 
-# Translation Management System & Multilingual CMS
+# Product Catalog Workflow with Draft/Publish Architecture
 
 ## Current State
-- 5 locale files (en, da, de, es, ro) with ~575 keys each for static UI text
-- `tr()` helper resolves multilingual objects `{ en: "...", da: "..." }` in CMS content
-- `ai_translations` table exists but is unused in frontend code
-- CMS blocks store content as JSON — some fields already use multilingual objects
-- Draft/publish system operates on `content` / `draft_content` columns with no locale dimension
-- No admin UI for managing translations
+- Products table uses `is_active` boolean as only visibility control — changes are live immediately
+- `AdminProducts.tsx` writes directly to the `products` table with no draft layer
+- `use-storefront.ts` queries `products` with `.eq("is_active", true)` — no draft/published distinction
+- No product revision history, no scheduled publishing, no product status system
+- Variants (`product_variants`) also have no draft support
 
-## Architecture
+## Architecture Approach
+Mirror the existing `site_blocks` draft pattern: add `draft_data` (jsonb), `has_draft`, `published_at`, `published_by`, `scheduled_publish_at`, and a `status` column to the `products` table. Admin reads draft_data when available; public storefront reads only the base columns when `status = 'published'`.
 
-### Data Model
-CMS content already supports multilingual via `tr()` — block content fields can be `string` or `{ en: "...", da: "..." }`. The system needs:
+## Database Changes
 
-1. **`translation_entries` table** — central registry for static UI translation keys (mirrors locale JSON files but allows DB-backed admin editing with draft/publish)
-2. Extend `ai_translations` table with `status`, `is_published`, `draft_text`, `source_hash` fields for tracking staleness and draft state
-3. No schema changes to `site_blocks` or `site_settings` — locale data lives inside the existing JSON content fields
-
-### Database Migration
+### Migration: Extend `products` table for draft/publish
 
 ```sql
--- Translation entries for static UI keys (database-backed locale management)
-CREATE TABLE public.translation_entries (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  namespace text NOT NULL DEFAULT 'common',
-  key text NOT NULL,
-  locale text NOT NULL,
-  value text NOT NULL DEFAULT '',
-  draft_value text,
-  has_draft boolean NOT NULL DEFAULT false,
-  is_published boolean NOT NULL DEFAULT true,
-  source_hash text,
-  status text NOT NULL DEFAULT 'published', -- published, draft, missing, outdated
-  updated_by uuid,
-  published_at timestamptz,
-  published_by uuid,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (namespace, key, locale)
-);
-ALTER TABLE public.translation_entries ENABLE ROW LEVEL SECURITY;
+-- Add draft/publish columns to products
+ALTER TABLE public.products
+  ADD COLUMN IF NOT EXISTS draft_data jsonb,
+  ADD COLUMN IF NOT EXISTS has_draft boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS published_at timestamptz,
+  ADD COLUMN IF NOT EXISTS published_by uuid,
+  ADD COLUMN IF NOT EXISTS updated_by uuid,
+  ADD COLUMN IF NOT EXISTS scheduled_publish_at timestamptz,
+  ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'published',
+  ADD COLUMN IF NOT EXISTS archived_at timestamptz;
 
-CREATE POLICY "Admins manage translations" ON public.translation_entries
-  FOR ALL TO authenticated
-  USING (has_role(auth.uid(), 'admin'::app_role) OR has_role(auth.uid(), 'super_admin'::app_role) OR has_role(auth.uid(), 'editor'::app_role))
-  WITH CHECK (has_role(auth.uid(), 'admin'::app_role) OR has_role(auth.uid(), 'super_admin'::app_role) OR has_role(auth.uid(), 'editor'::app_role));
+-- Index for scheduled publish job
+CREATE INDEX IF NOT EXISTS idx_products_scheduled
+  ON public.products (scheduled_publish_at)
+  WHERE scheduled_publish_at IS NOT NULL AND has_draft = true;
 
-CREATE POLICY "Public read published translations" ON public.translation_entries
-  FOR SELECT TO public USING (is_published = true AND has_draft = false);
-
-CREATE TRIGGER set_translation_entries_updated_at
-  BEFORE UPDATE ON public.translation_entries
-  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
--- Seed translations.manage permission
+-- Seed products.manage permission
 INSERT INTO public.admin_permissions (role, permission) VALUES
-  ('super_admin', 'translations.manage'),
-  ('admin', 'translations.manage'),
-  ('editor', 'translations.manage')
+  ('super_admin', 'products.manage'),
+  ('admin', 'products.manage'),
+  ('editor', 'products.manage')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO public.admin_permissions (role, permission) VALUES
+  ('super_admin', 'products.publish'),
+  ('admin', 'products.publish')
 ON CONFLICT DO NOTHING;
 ```
 
-### New Files
+`draft_data` stores a full snapshot of all editable product fields (name, description, price, images, stock, etc.) as a JSON object. When an admin edits a product, changes go into `draft_data` instead of the live columns. Publishing promotes `draft_data` values into the real columns and clears the draft.
 
-**1. `src/pages/admin/AdminTranslations.tsx`**
-Main translation management page with:
-- Tab layout: "Static Keys" | "CMS Content" | "Overview"
-- Static Keys tab: table of all translation keys grouped by namespace, editable per locale, shows status badges (published/draft/missing/outdated)
-- CMS Content tab: list of pages/blocks with their translatable fields, per-locale editing
-- Overview tab: completion progress per language, missing/outdated counts
-- Filters: by locale, status, namespace, search
-- Bulk actions: mark outdated, publish all drafts for a locale
-- Import from locale JSON files (seed DB from existing files)
-- Draft/publish per entry via DraftActionBar pattern
+`status` values: `draft` (never published), `published`, `unpublished`, `archived`, `scheduled`.
 
-**2. `src/hooks/use-translation-manager.ts`**
-Hook for translation CRUD:
-- `useTranslationEntries(filters)` — paginated query
-- `useTranslationStats()` — per-locale completion stats
-- `saveDraftTranslation(key, locale, value)` — draft save
-- `publishTranslations(locale?, namespace?)` — publish drafts
-- `discardDraftTranslations(locale?, namespace?)` — discard
-- `markOutdated(key)` — when source content changes, mark all non-source locales as outdated
-- `importFromLocaleFiles()` — seed DB from JSON files
-- `getCmsTranslatableFields(page)` — extract translatable text fields from block content
+### Extend `process-scheduled-publish` edge function
+Add a products query alongside the existing blocks/settings queries to auto-promote products whose `scheduled_publish_at <= now()`.
 
-**3. `src/components/admin/translations/TranslationKeyEditor.tsx`**
-Inline editor component for a single translation key across all locales:
-- Shows source (EN) text
-- Side-by-side locale inputs
-- Status badges per locale
-- Save draft / publish actions
+## New Files
 
-**4. `src/components/admin/translations/CmsTranslationPanel.tsx`**
-Panel for editing CMS block content translations:
-- Lists translatable fields from block content
-- Per-locale text inputs
-- Shows when a field is using fallback (EN) vs has a real translation
-- Integrates with `updateBlockContent` from VisualEditorContext
+### 1. `src/hooks/use-product-admin.ts`
+Product admin hook providing:
+- `loadAdminProduct(id)` — returns product with draft_data merged if present
+- `saveDraftProduct(id, data, userId)` — writes to `draft_data`, sets `has_draft = true`
+- `publishProduct(id, userId)` — promotes `draft_data` into live columns, logs revision, clears draft
+- `unpublishProduct(id)` — sets `status = 'unpublished'`, `is_active = false`
+- `archiveProduct(id)` — sets `status = 'archived'`, `archived_at`
+- `scheduleProductPublish(id, date)` — sets `scheduled_publish_at`
+- `loadProductRevisions(id)` — fetches from `content_revisions` where `content_type = 'product'`
+- `restoreProductRevision(id, revisionNumber, asDraft)` — restores old version
 
-**5. `src/components/admin/translations/TranslationOverview.tsx`**
-Dashboard showing:
-- Per-language completion percentage
-- Missing translations count
-- Outdated translations count
-- Quick links to fix issues
+### 2. `src/pages/admin/AdminProductPreview.tsx`
+A route `/admin/products/:productId/preview` that renders a read-only product detail view using draft_data. Shows exactly how the product will appear on the storefront before publishing. Reuses existing `ProductDetail` rendering components but feeds them draft data.
 
-### Modified Files
+## Modified Files
 
-**`src/App.tsx`**
-- Add route: `/admin/translations` → `AdminTranslations` with `requiredPermission="translations.manage"`
+### `src/pages/admin/AdminProducts.tsx`
+Major refactor:
+- Replace direct `supabase.from("products").update()` with `saveDraftProduct()`
+- Add status column in product table showing: Published, Draft, Unpublished, Archived, Scheduled
+- Add status filter dropdown
+- Replace "Active/Draft" toggle with proper status badges
+- Add "Publish" / "Unpublish" / "Archive" action buttons per product
+- Add "Preview" link → opens `AdminProductPreview`
+- Add "History" button → opens `RevisionHistoryPanel` for product
+- Add "Schedule" option on publish
+- Add confirmation dialog for destructive actions (delete, archive, price changes)
+- Show draft indicator when product has unpublished changes
 
-**`src/components/admin/AdminLayout.tsx`**
-- Add "Translations" sidebar item under Core group (icon: `Globe`, permission: `translations.manage`)
+### `src/hooks/use-storefront.ts`
+Update public storefront queries:
+- Change `.eq("is_active", true)` to `.eq("status", "published").eq("is_active", true)` so draft/unpublished/archived products never appear publicly
+- Same for `useProductDetailQuery` — add status check
 
-**`src/contexts/VisualEditorContext.tsx`**
-- Add `previewLocale` state (defaults to current i18n language)
-- Add `setPreviewLocale(locale)` action
-- Pass preview locale to EditorCanvas for locale-aware rendering
+### `src/App.tsx`
+- Add route: `/admin/products/:productId/preview` → `AdminProductPreview`
 
-**`src/components/admin/editor/EditorToolbar.tsx`**
-- Add locale switcher dropdown in toolbar for preview locale selection
-- Shows current preview language with flag/label
+### `supabase/functions/process-scheduled-publish/index.ts`
+- Add products scheduled publish processing alongside existing blocks/settings logic
 
-**`src/components/admin/BlockRenderer.tsx`**
-- Update `tr()` calls to respect preview locale when in editor context
-- Add `previewLocale` prop support for rendering blocks in a specific language
+## How Draft/Publish Works for Products
 
-**`src/lib/translate.ts`**
-- Add `trWithLocale(value, locale, fallback)` variant that accepts explicit locale override
-- Used by editor preview to render in selected locale without changing global i18n state
+```text
+Admin edits product
+  → Changes saved to products.draft_data (JSON snapshot)
+  → products.has_draft = true
+  → Live storefront unchanged
 
-**`src/hooks/use-draft-publish.ts`**
-- No structural changes — CMS locale content lives inside the existing `content`/`draft_content` JSON fields as multilingual objects
+Admin clicks "Preview"
+  → AdminProductPreview reads draft_data
+  → Renders product as it will appear
 
-### How It Works
+Admin clicks "Publish"
+  → draft_data fields promoted to live columns (name, price, images, etc.)
+  → Revision logged to content_revisions (content_type = 'product')
+  → draft_data cleared, has_draft = false
+  → products.published_at set
+  → Live storefront now shows updated product
 
-**Static UI text flow:**
-1. Admin opens Translations page → sees all keys from locale files
-2. Edits a value for DA → saved as `draft_value` in `translation_entries`
-3. Preview shows draft value for DA
-4. Publishes → `value` updated, `draft_value` cleared
-5. Public site reads published `value` (or falls back to locale JSON files)
+Admin clicks "Schedule"
+  → scheduled_publish_at set
+  → process-scheduled-publish edge function promotes at scheduled time
+```
 
-**CMS content flow:**
-1. Block content field `heading` stores `{ en: "Hello", da: "Hej" }`
-2. Admin switches preview locale to DA → sees "Hej" in canvas
-3. Admin edits DA text in CMS Translation Panel → updates draft_content's multilingual object
-4. Draft save preserves changes; publish promotes to live content
-5. Public `tr()` resolves correct locale from published `content` field
+## Product Status Logic
 
-**Fallback chain:**
-Published locale-specific text → Published EN text → Empty string
+| Status | `is_active` | `status` | Storefront visible |
+|---|---|---|---|
+| Published | true | published | Yes |
+| Draft (new) | false | draft | No |
+| Unpublished | false | unpublished | No |
+| Archived | false | archived | No |
+| Scheduled | true/false | scheduled | No (until publish time) |
 
-**Outdated detection:**
-When EN source text changes, compute hash comparison against stored `source_hash` → mark other locales as "outdated"
+## Revision History
+Uses existing `content_revisions` table with `content_type = 'product'` and `content_id = product.id`. Each publish creates a revision snapshot. Rollback restores as draft for re-review.
 
-### Permission Mapping
+## Permission Mapping
 | Action | Permission |
 |---|---|
-| View/edit translations | `translations.manage` |
-| Publish translations | `content.publish` |
-| Import/seed from files | `translations.manage` |
+| Edit product drafts | `products.manage` |
+| Publish / unpublish products | `products.publish` |
+| Archive / delete products | `products.publish` |
+| View product admin | `products.manage` |
 
-### Files Summary
+## Files Summary
 | Action | File |
 |---|---|
-| Create | `src/pages/admin/AdminTranslations.tsx` |
-| Create | `src/hooks/use-translation-manager.ts` |
-| Create | `src/components/admin/translations/TranslationKeyEditor.tsx` |
-| Create | `src/components/admin/translations/CmsTranslationPanel.tsx` |
-| Create | `src/components/admin/translations/TranslationOverview.tsx` |
-| Modify | `src/App.tsx` (add route) |
-| Modify | `src/components/admin/AdminLayout.tsx` (add sidebar item) |
-| Modify | `src/contexts/VisualEditorContext.tsx` (add previewLocale) |
-| Modify | `src/components/admin/editor/EditorToolbar.tsx` (add locale switcher) |
-| Modify | `src/lib/translate.ts` (add trWithLocale) |
+| Create | `src/hooks/use-product-admin.ts` |
+| Create | `src/pages/admin/AdminProductPreview.tsx` |
+| Modify | `src/pages/admin/AdminProducts.tsx` (draft workflow, status UI, actions) |
+| Modify | `src/hooks/use-storefront.ts` (add status filter to public queries) |
+| Modify | `src/App.tsx` (add preview route) |
+| Modify | `supabase/functions/process-scheduled-publish/index.ts` (add products) |
 
-### Database Changes Summary
-- Create `translation_entries` table with draft/publish columns + RLS
-- Seed `translations.manage` permission for admin roles
+## Database Changes Summary
+- **Alter** `products`: +`draft_data`, +`has_draft`, +`published_at`, +`published_by`, +`updated_by`, +`scheduled_publish_at`, +`status`, +`archived_at`
+- **Seed** `products.manage` and `products.publish` permissions
 

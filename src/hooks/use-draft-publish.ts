@@ -351,24 +351,96 @@ export async function revertToRevision(contentType: string, contentId: string, r
 }
 
 /* ------------------------------------------------------------------ */
+/*  Scheduling helpers                                                 */
+/* ------------------------------------------------------------------ */
+
+export async function scheduleBlocksPublish(page: string, scheduledAt: Date, userId?: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("site_blocks")
+      .update({ scheduled_publish_at: scheduledAt.toISOString() } as any)
+      .eq("page", page)
+      .eq("has_draft", true);
+    if (error) throw error;
+    toast.success(`Scheduled for ${scheduledAt.toLocaleString()}`);
+    return true;
+  } catch (err: any) {
+    toast.error(`Schedule failed: ${err.message}`);
+    return false;
+  }
+}
+
+export async function cancelBlocksSchedule(page: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("site_blocks")
+      .update({ scheduled_publish_at: null } as any)
+      .eq("page", page)
+      .eq("has_draft", true);
+    if (error) throw error;
+    toast.success("Schedule cancelled");
+    return true;
+  } catch (err: any) {
+    toast.error(`Cancel failed: ${err.message}`);
+    return false;
+  }
+}
+
+export async function scheduleSettingPublish(key: string, scheduledAt: Date): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("site_settings")
+      .update({ scheduled_publish_at: scheduledAt.toISOString() } as any)
+      .eq("key", key)
+      .eq("has_draft", true);
+    if (error) throw error;
+    toast.success(`Scheduled for ${scheduledAt.toLocaleString()}`);
+    return true;
+  } catch (err: any) {
+    toast.error(`Schedule failed: ${err.message}`);
+    return false;
+  }
+}
+
+export async function cancelSettingSchedule(key: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("site_settings")
+      .update({ scheduled_publish_at: null } as any)
+      .eq("key", key)
+      .eq("has_draft", true);
+    if (error) throw error;
+    toast.success("Schedule cancelled");
+    return true;
+  } catch (err: any) {
+    toast.error(`Cancel failed: ${err.message}`);
+    return false;
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /*  Hook: check if a page has a draft                                  */
 /* ------------------------------------------------------------------ */
 export function usePageDraftStatus(page: string) {
   const [status, setStatus] = useState<DraftStatus>("published");
   const [loading, setLoading] = useState(true);
+  const [scheduledAt, setScheduledAt] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     const { data } = await supabase
       .from("site_blocks")
-      .select("id")
+      .select("id, scheduled_publish_at")
       .eq("page", page)
       .eq("has_draft", true)
       .limit(1);
-    setStatus((data && data.length > 0) ? "draft" : "published");
+    const hasDraft = data && data.length > 0;
+    const scheduled = hasDraft ? (data[0] as any).scheduled_publish_at : null;
+    setScheduledAt(scheduled);
+    setStatus(scheduled ? "scheduled" : hasDraft ? "draft" : "published");
     setLoading(false);
   }, [page]);
 
   useEffect(() => { void refresh(); }, [refresh]);
 
-  return { status, loading, refresh };
+  return { status, loading, scheduledAt, refresh };
 }

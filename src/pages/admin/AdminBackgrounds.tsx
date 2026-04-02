@@ -590,7 +590,7 @@ export default function AdminBackgrounds() {
             <div className={CARD} style={CARD_SHADOW}>
               <p className="text-sm text-muted-foreground">This page inherits the global background.</p>
             </div>
-            <DraftActionButtons bgDraftStatus={bgDraftStatus} saving={saving} publishingBg={publishingBg} onSave={save} onPublish={publishBg} onDiscard={discardBgDraft} />
+            <DraftActionButtons bgDraftStatus={bgDraftStatus} saving={saving} publishingBg={publishingBg} onSave={save} onPublish={publishBg} onDiscard={discardBgDraft} settingsKey={settingKeyForPage(selectedPage)} />
           </div>
         )}
       </div>

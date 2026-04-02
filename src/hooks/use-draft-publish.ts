@@ -291,7 +291,7 @@ export async function discardDraftSetting(settingsKey: string): Promise<boolean>
 /* ------------------------------------------------------------------ */
 /*  Revert to a previous revision                                      */
 /* ------------------------------------------------------------------ */
-export async function revertToRevision(contentType: string, contentId: string, revisionNumber: number, userId?: string): Promise<boolean> {
+export async function revertToRevision(contentType: string, contentId: string, revisionNumber: number, userId?: string, restoreAsDraft = false): Promise<boolean> {
   try {
     const { data, error } = await supabase
       .from("content_revisions")
@@ -303,31 +303,46 @@ export async function revertToRevision(contentType: string, contentId: string, r
     if (error || !data) throw error || new Error("Revision not found");
 
     if (contentType === "site_block") {
-      // Log current state as revision before reverting
       const { data: current } = await supabase.from("site_blocks").select("content").eq("id", contentId).single();
       if (current) await insertRevision("site_block", contentId, current.content, "revert", userId, data.page);
 
-      await supabase.from("site_blocks").update({
-        content: data.revision_data,
-        draft_content: null,
-        has_draft: false,
-        published_at: new Date().toISOString(),
-        published_by: userId ?? null,
-      } as any).eq("id", contentId);
+      if (restoreAsDraft) {
+        await supabase.from("site_blocks").update({
+          draft_content: data.revision_data,
+          has_draft: true,
+          updated_by: userId ?? null,
+        } as any).eq("id", contentId);
+      } else {
+        await supabase.from("site_blocks").update({
+          content: data.revision_data,
+          draft_content: null,
+          has_draft: false,
+          published_at: new Date().toISOString(),
+          published_by: userId ?? null,
+        } as any).eq("id", contentId);
+      }
     } else if (contentType === "site_setting") {
       const { data: current } = await supabase.from("site_settings").select("value").eq("key", contentId).single();
       if (current) await insertRevision("site_setting", contentId, current.value, "revert", userId);
 
-      await supabase.from("site_settings").update({
-        value: data.revision_data,
-        draft_value: null,
-        has_draft: false,
-        published_at: new Date().toISOString(),
-        published_by: userId ?? null,
-      } as any).eq("key", contentId);
+      if (restoreAsDraft) {
+        await supabase.from("site_settings").update({
+          draft_value: data.revision_data,
+          has_draft: true,
+          updated_by: userId ?? null,
+        } as any).eq("key", contentId);
+      } else {
+        await supabase.from("site_settings").update({
+          value: data.revision_data,
+          draft_value: null,
+          has_draft: false,
+          published_at: new Date().toISOString(),
+          published_by: userId ?? null,
+        } as any).eq("key", contentId);
+      }
     }
 
-    toast.success("Reverted successfully");
+    toast.success(restoreAsDraft ? "Restored as draft" : "Reverted successfully");
     return true;
   } catch (err: any) {
     toast.error(`Revert failed: ${err.message}`);

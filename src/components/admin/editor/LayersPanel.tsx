@@ -4,6 +4,7 @@ import {
   LayoutGrid, ChevronUp, ChevronDown,
   Square, Type, Image, Columns, PlayCircle, MousePointer, Link2, Code, Globe, Mail,
   Truck, Star, HelpCircle, ShieldCheck, Layers, Package, FolderTree, Search,
+  Box, BookmarkPlus,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,10 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useVisualEditor, pageDisplayTitle } from "@/contexts/VisualEditorContext";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import InsertReusableDialog from "@/components/admin/reusable/InsertReusableDialog";
 
 const BLOCK_ICONS: Record<string, any> = {
   hero: Square, shipping_banner: Truck, entry_cards: Layers, categories: FolderTree,

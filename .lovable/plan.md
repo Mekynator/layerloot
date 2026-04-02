@@ -1,74 +1,66 @@
 
 
-# Redesign Gift Finder Results — Smart AI-Powered Results Section
+# Fix & Upgrade Account Dashboard — Loyalty, Gift Cards, Vouchers
 
-## Current State
-The results are rendered inline at the bottom of `GiftFinderSection.tsx` (lines 271–325) as a simple grid of product links with match score badges. No AI messaging, no filtering, no badges, no add-to-cart, no recommendations. The existing `ProductCard` component already has add-to-cart, hover effects, rating stars, and sale badges.
-
-## Scope for This Phase
-Given the scale of the request, this plan focuses on the **highest-impact deliverables** that can be built now using existing data. Admin-configurable ranking weights, analytics tracking, and bundle logic are deferred to future phases.
+## Problems
+1. **Wrong Gift Card Balance**: `AccountOverviewPanel` line 25-27 filters gift cards only by `is_used` and `balance > 0` — doesn't exclude gifted/expired cards
+2. **Wrong Active Vouchers count**: line 23 only checks `!is_used && !used_at` — doesn't exclude gifted/expired
+3. **Dashboard Rewards Progress**: `AccountDashboard` line 32 has same wrong active vouchers logic; line 35 uses hardcoded `[50, 100, 200, 500, 1000]` milestones instead of the real `REWARD_TIERS` from `use-loyalty-progress.ts`
+4. **No interactive reward markers** on the progress bar — just a plain bar with no tier visualization
 
 ## Plan
 
-### 1. Create `src/components/gift-finder/GiftFinderResults.tsx`
-A new component that replaces the inline results section in `GiftFinderSection.tsx`. Receives `selectedTagIds`, `selectedTagNames`, matched `products`, and `loading` as props.
+### 1. Fix `AccountOverviewPanel.tsx` — Use `classifyVoucher`
 
-**Sections rendered:**
+Import `classifyVoucher` from `./types` and rewrite the tile calculations:
 
-**A. Sticky Selection Summary Bar**
-- Horizontal bar showing selected tag names as chips
-- "Edit Selection" button (scrolls back to grid) + "Clear All"
-- Sticky on scroll (`sticky top-16 z-30`)
+- **Active Vouchers count**: `userVouchers.filter(v => classifyVoucher(v) === "active").length`
+- **Gift Card Balance**: filter to `classifyVoucher(v) === "active" && v.vouchers?.discount_type === "gift_card"`, then sum balances
 
-**B. AI Header**
-- Dynamic text: "We found X perfect matches based on your preferences"
-- Contextual subtitle generated from tag names: "These are perfect for a **Gamer** who loves **Fantasy** themes"
-- Sparkles icon, subtle fade-in animation
+This syncs with the Vouchers Module tabs exactly.
 
-**C. Smart Badges on Products**
-- "Best Match" badge on products matching ALL selected tags (`matchScore === selectedTagIds.length`)
-- "Top Pick" badge on featured products
-- Products already sorted by matchScore → featured → name (existing logic)
+### 2. Fix `AccountDashboard.tsx` — Use `classifyVoucher` + real reward tiers
 
-**D. Enhanced Product Cards**
-- Reuse the existing `ProductCard` component (already has add-to-cart, hover, ratings, sale badges)
-- Wrap each card with an additional overlay showing:
-  - Match explanation text: "Matches your Fantasy + Gamer selection"
-  - "Best Match" / "Top Pick" badge at top
-- Grid: 2 cols mobile, 3 tablet, 4 desktop
+- **Active vouchers** (line 32): same fix as above
+- **Rewards Progress card**: replace hardcoded milestones with `computeLoyaltyProgress()` from `use-loyalty-progress.ts`
+- Replace the simple Progress bar with an **interactive rewards bar** showing tier markers
 
-**E. Empty State**
-- Friendly illustration with "No exact matches" message
-- "Browse all products" CTA
-- Suggestion to try different vibes
+### 3. Build interactive Rewards Progress in `AccountDashboard.tsx`
 
-**F. "You Might Also Like" Section**
-- Below main results, fetch 4–6 additional products NOT in results but sharing at least 1 tag
-- Uses same query pattern but excludes already-shown product IDs
-- Simple horizontal scroll or grid
+Replace the current Rewards Progress card content with:
 
-### 2. Update `GiftFinderSection.tsx`
-- Extract results rendering (lines 271–325) into the new `GiftFinderResults` component
-- Pass tag names (not just IDs) to results for display
-- Add `onClear` and `onScrollToSelection` callbacks
-- Keep all data fetching in GiftFinderSection (single source of truth)
+**A. Reward tier markers on progress bar:**
+- Show all tiers from `REWARD_TIERS` (imported via `computeLoyaltyProgress`)
+- Each tier rendered as a small labeled marker positioned along the bar
+- Labels: "25 kr", "50 kr", "Free Delivery", "100 kr", "150 kr", "250 kr", "500 kr Gift Card"
+- Visual states:
+  - **Locked**: dimmed, `opacity-40`
+  - **Available** (can redeem): glowing primary color, subtle pulse animation
+  - **Next target**: highlighted with "Next reward in X pts" text
 
-### 3. Fetch Social Proof for Results
-- After products are fetched, query `showcase_reviews` or use the existing `use-social-proof` hook to get rating data for result products
-- Pass `socialProof` to ProductCard for star ratings
+**B. Clickable tier markers:**
+- On click, show a small popover/tooltip with:
+  - Reward name
+  - Cost in points
+  - "Redeem" button if available (links to rewards tab via `onSwitchTab("rewards")`)
+
+**C. "Rewards Available" CTA:**
+- When `canRedeem` is true, show animated badge with count of redeemable rewards
+- Clicking navigates to rewards store tab
+
+**D. "Next reward in X points" text** below bar
+
+### 4. Improve Recent Activity in `AccountOverviewPanel.tsx`
+
+- Add earned/spent icons (green up arrow / red down arrow) per history row
+- Slightly increase spacing
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/gift-finder/GiftFinderResults.tsx` | **New** — full results UI with AI header, sticky summary, badges, recommendations |
-| `src/components/gift-finder/GiftFinderSection.tsx` | Replace inline results with `<GiftFinderResults />`, pass tag names + callbacks |
+| `src/components/account/AccountOverviewPanel.tsx` | Fix gift card balance + active vouchers using `classifyVoucher` |
+| `src/components/account/AccountDashboard.tsx` | Fix active vouchers, replace rewards progress with interactive tier bar using `computeLoyaltyProgress` |
 
-### What's Deferred (Future Phases)
-- Price range / category / material filters (requires product metadata not currently queried)
-- Admin-configurable ranking weights and badge rules
-- Bundle suggestions (requires bundle data model)
-- Analytics event tracking
-- "Why this result?" expandable info
-- AI chat integration
+No database changes needed.
 

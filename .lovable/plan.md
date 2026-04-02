@@ -1,117 +1,91 @@
 
 
-# Rewards Store, Vouchers & Discounts — Admin-Controlled Visual System
+# Account Page — Modular Admin-Controlled System
 
 ## Current State
-- **Rewards catalog is 100% hardcoded** as `REWARD_CATALOG` array in `Account.tsx` (8 items: fixed discounts, gift card, free shipping, gift wrap)
-- The `vouchers` DB table exists but only stores definitions matched by the hardcoded catalog during redemption
-- Admin can manage `discount_codes` via `AdminDiscounts.tsx` but cannot manage reward catalog items
-- No admin UI for voucher/reward tile styling, layout, or configuration
-- No analytics for reward usage beyond basic voucher report in AdminReports
+- Account.tsx is a 1766-line monolith with 5 hardcoded tabs: Orders, Custom Requests, Rewards Store, My Vouchers, Settings
+- All layout, tab order, visibility, labels, icons, and styling are hardcoded
+- No admin configuration exists for the account page
+- Logic for orders, vouchers, custom orders, rewards, settings all lives in one file
 
-## Architecture Decision
-Replace the hardcoded `REWARD_CATALOG` with DB-driven rewards from the existing `vouchers` table, and add a new `rewards_store_config` key in `site_settings` for visual/layout customization.
+## Architecture
 
----
-
-## Phase 1 — Dynamic Rewards Catalog + Admin Editor (this round)
-
-### 1. Upgrade `vouchers` table schema
-Add columns to support full admin control per reward:
-- `badge_text` (text, nullable) — e.g. "Popular", "Best Value"
-- `icon_key` (text, nullable) — Lucide icon name
-- `image_url` (text, nullable) — optional card image
-- `sort_order` (integer, default 0)
-- `reward_type` (text, default 'fixed_discount') — enum-like: fixed_discount, percentage, gift_card, free_shipping, gift_wrap, custom
-- `usage_limit_per_user` (integer, nullable)
-- `global_usage_limit` (integer, nullable)
-- `expiry_days` (integer, nullable) — days until voucher expires after redemption
-
-### 2. Admin Rewards Manager page
-New tab or section in AdminDiscounts (or separate page) with:
-- CRUD for voucher/reward catalog items
-- Editable fields: name, description, points_cost, discount_value, discount_type, reward_type, badge, icon, image, sort_order, active/inactive, usage limits, expiry
-- Preview card showing how the reward tile will look
-- Drag-to-reorder (up/down buttons)
-
-### 3. Replace hardcoded `REWARD_CATALOG` in Account.tsx
-- Fetch active vouchers from `vouchers` table instead of using the static array
-- Render dynamically with all new fields (badge, icon, image, sort_order)
-- Keep existing `redeemReward` logic but adapt to use DB voucher rows directly
-- Remove the `REWARD_CATALOG` constant entirely
-
-### 4. Rewards Store visual config (site_settings)
-Store in `site_settings` key `rewards_store_config`:
+Store account page configuration in `site_settings` under key `account_page_config`:
 ```json
 {
-  "columns": 2,
-  "layout": "grid",
-  "title": "Rewards Store",
-  "subtitle": "Redeem your points for exclusive rewards",
-  "emptyStateText": "No rewards available right now.",
-  "insufficientPointsText": "You need {needed} more points",
-  "cardStyle": {
-    "borderColor": "",
-    "borderRadius": 12,
+  "modules": [
+    { "id": "orders", "label": "Orders", "icon": "Package", "visible": true, "order": 0 },
+    { "id": "custom-requests", "label": "Custom Requests", "icon": "MessageSquare", "visible": true, "order": 1 },
+    { "id": "rewards", "label": "Rewards Store", "icon": "Gift", "visible": true, "order": 2 },
+    { "id": "vouchers", "label": "My Vouchers", "icon": "Star", "visible": true, "order": 3 },
+    { "id": "settings", "label": "Settings", "icon": "Settings", "visible": true, "order": 4 }
+  ],
+  "defaultTab": "orders",
+  "showLoyaltySummary": true,
+  "overviewTiles": ["points", "activeVouchers", "totalOrders", "giftCardBalance"],
+  "style": {
+    "cardBorder": "primary/20",
     "hoverAnimation": "lift",
-    "showBadge": true,
-    "ctaText": "Redeem"
+    "tabStyle": "pills"
   }
 }
 ```
-Add a "Rewards Store" sub-tab in AdminSettings (or AdminDiscounts) to edit these visual settings.
 
-### 5. Redemption UX improvements
-- Add confirmation dialog before redeem (with reward preview + points cost)
-- Success animation (confetti-like pulse or checkmark)
-- Toast notification on success/failure
-- Show "You need X more points" on insufficient balance
-- Points balance displayed prominently above reward grid
+## Phase 1 — Modular Refactor + Admin Editor (this round)
 
-### 6. Basic analytics in admin
-Add to AdminReports or as section in AdminDiscounts:
-- Most redeemed rewards (by voucher name)
-- Total points spent across all users
-- Active vs used reward count
-- Unused/expiring rewards count
+### 1. Split Account.tsx into module components
+Extract each tab's content into its own component file to make Account.tsx manageable:
 
----
+| New File | Content |
+|---|---|
+| `src/components/account/AccountOverviewPanel.tsx` | Points balance, earned/spent tiles, activity history |
+| `src/components/account/OrdersModule.tsx` | Order list with timeline, reorder, review |
+| `src/components/account/CustomOrdersModule.tsx` | Custom orders with conversation, quotes, fee handling |
+| `src/components/account/RewardsModule.tsx` | Rewards store grid (already DB-driven) |
+| `src/components/account/VouchersModule.tsx` | Active/used vouchers with gifting |
+| `src/components/account/SettingsModule.tsx` | Shipping address + language preference |
 
-## Technical Details
+Each module receives the same props interface: `{ user, overview, refetchOverview, tt }`.
+Account.tsx becomes a thin shell that fetches config, renders tabs dynamically, and delegates to modules.
 
-### Database migration
-```sql
-ALTER TABLE public.vouchers
-  ADD COLUMN IF NOT EXISTS badge_text text,
-  ADD COLUMN IF NOT EXISTS icon_key text,
-  ADD COLUMN IF NOT EXISTS image_url text,
-  ADD COLUMN IF NOT EXISTS sort_order integer DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS reward_type text DEFAULT 'fixed_discount',
-  ADD COLUMN IF NOT EXISTS usage_limit_per_user integer,
-  ADD COLUMN IF NOT EXISTS global_usage_limit integer,
-  ADD COLUMN IF NOT EXISTS expiry_days integer;
-```
+### 2. Dynamic tab rendering in Account.tsx
+- Fetch `account_page_config` from `site_settings` on mount
+- Render only `visible: true` modules in `order` sequence
+- Use configured `label` and `icon` for tab buttons
+- Default to hardcoded fallback if no config exists (backward compatible)
+- Support `defaultTab` from config
 
-### Files to create
+### 3. Account Page Editor in AdminSettings
+Add an "Account Page" tab to AdminSettings with:
+- **Module manager**: list of all modules with toggle visible/hidden, editable label, icon picker, up/down reorder
+- **Overview tiles**: toggle which summary tiles show (points, vouchers, orders, gift card balance)
+- **Behavior**: default tab selector, toggle loyalty summary visibility
+- **Style**: card border color, hover animation choice (lift/glow/none), tab style (pills/underline)
+- Persisted via `upsertSetting("account_page_config", ...)`
+
+### 4. Account Overview Panel upgrade
+Make the top loyalty summary area configurable:
+- Show/hide based on `showLoyaltySummary` config
+- Configurable overview tiles (points balance, active vouchers count, total orders, gift card total balance)
+- Each tile styled with the admin-configured border/animation settings
+
+## Files to create
 | File | Purpose |
 |---|---|
-| `src/components/admin/RewardsStoreEditor.tsx` | Admin CRUD + visual config for reward catalog |
+| `src/components/account/AccountOverviewPanel.tsx` | Loyalty summary + configurable overview tiles |
+| `src/components/account/OrdersModule.tsx` | Orders tab content |
+| `src/components/account/CustomOrdersModule.tsx` | Custom requests tab content |
+| `src/components/account/RewardsModule.tsx` | Rewards store tab content |
+| `src/components/account/VouchersModule.tsx` | Vouchers tab content |
+| `src/components/account/SettingsModule.tsx` | Settings tab content |
+| `src/components/account/types.ts` | Shared types and interfaces |
 
-### Files to modify
+## Files to modify
 | File | Change |
 |---|---|
-| `src/pages/Account.tsx` | Remove `REWARD_CATALOG`, fetch from `vouchers` table, use dynamic config from `site_settings` |
-| `src/pages/admin/AdminDiscounts.tsx` | Add "Rewards" tab linking to RewardsStoreEditor |
-| `src/pages/admin/AdminReports.tsx` | Add rewards analytics section |
+| `src/pages/Account.tsx` | Slim down to ~200 lines: fetch config, render dynamic tabs, delegate to modules |
+| `src/pages/admin/AdminSettings.tsx` | Add "Account Page" tab with module manager |
 
-### No new tables needed
-- Uses existing `vouchers` table (extended with new columns)
-- Uses existing `site_settings` for visual config
-- Uses existing `user_vouchers` for redemption tracking
-
-## Phase 2 (follow-up)
-- Full tile visual customization (gradients, shadows, glow, animations per card)
-- Gift card designer UI
-- Integration with checkout savings panel
-- Campaign/scheduling for rewards availability
+## No database changes needed
+- Uses existing `site_settings` table for config storage
 

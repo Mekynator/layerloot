@@ -37,16 +37,19 @@ type FooterSettings = {
   quick_links_title?: LocalizedText;
   account_title?: LocalizedText;
   contact_title?: LocalizedText;
+  policies_title?: LocalizedText;
   copyright_text?: LocalizedText;
   show_quick_links?: boolean;
   show_account_links?: boolean;
   show_contact_block?: boolean;
+  show_policies?: boolean;
   show_logo_icon?: boolean;
   show_logo_text?: boolean;
   logo_height_px?: number;
   auth_link_label?: LocalizedText;
   account_link_label?: LocalizedText;
   orders_link_label?: LocalizedText;
+  policy_links?: Array<{ label: LocalizedText; path: string }>;
 };
 
 const defaultContact: ContactSettings = {

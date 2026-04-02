@@ -56,6 +56,7 @@ import CreationDetail from "./pages/CreationDetail";
 import ChatWidget from "./components/ChatWidget";
 import PromotionPopup from "./components/PromotionPopup";
 import GiftClaimPopup from "./components/GiftClaimPopup";
+import { CampaignThemeProvider } from "./components/campaign/CampaignThemeProvider";
 
 const queryClient = new QueryClient({
   defaultOptions: {

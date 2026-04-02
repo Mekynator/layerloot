@@ -586,11 +586,17 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
       return <CarouselBlock block={block} />;
     case "video":
       return <VideoBlock block={block} />;
-    case "banner":
+    case "banner": {
+      const BnrIcon = c.icon ? iconForName(c.icon, null) : null;
       return withSection(
         block,
         "py-3 border-y border-border/20",
         <div className="container flex items-center justify-center gap-3 text-foreground">
+          {BnrIcon && (
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
+              <BnrIcon className="h-4 w-4 text-primary" style={c.iconColor ? { color: c.iconColor } : undefined} />
+            </div>
+          )}
           {c.badge && (
             <span className="rounded-lg bg-primary/15 px-2.5 py-0.5 font-display text-[10px] uppercase tracking-wider text-primary">
               {getLocalizedValue(c.badge)}
@@ -599,8 +605,14 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
           <span className="font-display text-sm uppercase tracking-widest text-foreground/90">
             {getLocalizedValue(c.heading || c.title, tr("blocks.banner.title", "Banner"))}
           </span>
+          {c.button_text && (
+            <Button variant="outline" size="sm" className="ml-2 h-7 text-[10px] font-display uppercase">
+              {getLocalizedValue(c.button_text)}
+            </Button>
+          )}
         </div>,
       );
+    }
     case "cta":
       return <CtaBlock block={block} />;
     case "button":

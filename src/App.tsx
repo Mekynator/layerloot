@@ -48,6 +48,7 @@ import AdminChatSettings from "./pages/admin/AdminChatSettings";
 import AdminChatAnalytics from "./pages/admin/AdminChatAnalytics";
 import AdminChat from "./pages/admin/AdminChat";
 import AdminAutomations from "./pages/admin/AdminAutomations";
+import AdminInstagram from "./pages/admin/AdminInstagram";
 import DynamicPage from "./pages/DynamicPage";
 import CreateYourOwn from "./pages/CreateYourOwn";
 import Policies from "./pages/Policies";

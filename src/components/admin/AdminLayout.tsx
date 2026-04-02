@@ -66,6 +66,7 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const { isAdmin, loading, user } = useAuth();
+  const { hasPermission } = useAdminPermissions();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);

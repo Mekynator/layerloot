@@ -791,14 +791,6 @@ function AdvancedStyleEditor({ content, patchContent }: { content: Record<string
         value={content.backgroundImage || ""}
         onChange={(v) => patchContent("backgroundImage", v)}
       />
-      {(content.backgroundImage || content.bg_image) && (
-        <SliderField
-          label="Image Opacity"
-          value={content.bgImageOpacity ?? 100}
-          onChange={(v) => patchContent("bgImageOpacity", v)}
-          min={0} max={100} step={5} unit="%"
-        />
-      )}
 
       {/* Spacing */}
       <div className="space-y-2">
@@ -819,8 +811,6 @@ function AdvancedStyleEditor({ content, patchContent }: { content: Record<string
         </div>
       </div>
 
-      {/* Border Radius (moved to Border tab) */}
-
       {/* Gap */}
       <SliderField
         label="Content Gap"
@@ -828,22 +818,6 @@ function AdvancedStyleEditor({ content, patchContent }: { content: Record<string
         onChange={(v) => patchContent("gap", v)}
         min={0} max={60} step={4}
       />
-
-      {/* Shadow */}
-      <div>
-        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Shadow</Label>
-        <Select value={content.shadow || "none"} onValueChange={(v) => patchContent("shadow", v)}>
-          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">None</SelectItem>
-            <SelectItem value="sm">Small</SelectItem>
-            <SelectItem value="md">Medium</SelectItem>
-            <SelectItem value="lg">Large</SelectItem>
-            <SelectItem value="xl">Extra Large</SelectItem>
-            <SelectItem value="2xl">2XL</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
 
       {/* Section Width */}
       <div>
@@ -867,15 +841,15 @@ function AdvancedStyleEditor({ content, patchContent }: { content: Record<string
         min={0} max={800} step={20}
       />
 
-      {/* Opacity */}
+      {/* Section Opacity */}
       <SliderField
-        label="Opacity"
+        label="Section Opacity"
         value={content.opacity ?? 100}
         onChange={(v) => patchContent("opacity", v)}
         min={0} max={100} step={5} unit="%"
       />
 
-      {/* Overlay Color + Opacity (for all blocks) */}
+      {/* Overlay Color + Opacity */}
       <ColorPickerField
         label="Overlay Color"
         value={content.overlayColor || ""}

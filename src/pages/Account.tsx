@@ -121,13 +121,16 @@ interface CustomOrderMessage {
 }
 
 type RewardCatalogItem = {
-  key: string;
+  id: string;
   name: string;
-  description: string;
-  pointsCost: number;
-  discountType: string;
-  discountValue: number;
-  badge?: string;
+  description: string | null;
+  points_cost: number;
+  discount_type: string;
+  discount_value: number;
+  badge_text?: string | null;
+  icon_key?: string | null;
+  reward_type: string;
+  sort_order: number;
 };
 
 type AccountTab = "orders" | "custom-requests" | "rewards" | "vouchers" | "settings";

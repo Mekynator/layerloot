@@ -163,34 +163,40 @@ export type Database = {
       content_revisions: {
         Row: {
           action: string
+          change_summary: string | null
           content_id: string
           content_type: string
           created_at: string
           created_by: string | null
           id: string
           page: string | null
+          restored_from_revision_id: string | null
           revision_data: Json
           revision_number: number
         }
         Insert: {
           action?: string
+          change_summary?: string | null
           content_id: string
           content_type: string
           created_at?: string
           created_by?: string | null
           id?: string
           page?: string | null
+          restored_from_revision_id?: string | null
           revision_data: Json
           revision_number?: number
         }
         Update: {
           action?: string
+          change_summary?: string | null
           content_id?: string
           content_type?: string
           created_at?: string
           created_by?: string | null
           id?: string
           page?: string | null
+          restored_from_revision_id?: string | null
           revision_data?: Json
           revision_number?: number
         }
@@ -1412,6 +1418,7 @@ export type Database = {
           page: string
           published_at: string | null
           published_by: string | null
+          scheduled_publish_at: string | null
           sort_order: number
           title: string | null
           updated_at: string
@@ -1428,6 +1435,7 @@ export type Database = {
           page?: string
           published_at?: string | null
           published_by?: string | null
+          scheduled_publish_at?: string | null
           sort_order?: number
           title?: string | null
           updated_at?: string
@@ -1444,6 +1452,7 @@ export type Database = {
           page?: string
           published_at?: string | null
           published_by?: string | null
+          scheduled_publish_at?: string | null
           sort_order?: number
           title?: string | null
           updated_at?: string
@@ -1527,6 +1536,7 @@ export type Database = {
           key: string
           published_at: string | null
           published_by: string | null
+          scheduled_publish_at: string | null
           updated_at: string
           updated_by: string | null
           value: Json
@@ -1538,6 +1548,7 @@ export type Database = {
           key: string
           published_at?: string | null
           published_by?: string | null
+          scheduled_publish_at?: string | null
           updated_at?: string
           updated_by?: string | null
           value?: Json
@@ -1549,6 +1560,7 @@ export type Database = {
           key?: string
           published_at?: string | null
           published_by?: string | null
+          scheduled_publish_at?: string | null
           updated_at?: string
           updated_by?: string | null
           value?: Json

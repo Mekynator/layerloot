@@ -35,6 +35,8 @@ import AdminRevenue from "./pages/admin/AdminRevenue";
 import VisualEditor from "./pages/admin/VisualEditor";
 import AdminBackgrounds from "./pages/admin/AdminBackgrounds";
 import AdminLogin from "./pages/admin/AdminLogin";
+import AdminActivity from "./pages/admin/AdminActivity";
+import AdminUsers from "./pages/admin/AdminUsers";
 import AdminRoute from "./components/admin/AdminRoute";
 import DynamicPage from "./pages/DynamicPage";
 import CreateYourOwn from "./pages/CreateYourOwn";

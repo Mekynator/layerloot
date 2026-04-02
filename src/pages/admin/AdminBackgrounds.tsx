@@ -14,6 +14,11 @@ import {
   type BackgroundSizeMode, type TransitionType, type MotionEffect, type BlendMode, type AttachmentMode,
   normalizeSettings, DEFAULT_SETTINGS, SETTING_KEY, pageKeyFromPath,
 } from "@/components/admin/PageBackgroundEditor";
+import { Badge } from "@/components/ui/badge";
+import {
+  saveDraftSetting, loadDraftSetting, discardDraftSetting, publishDraftSetting,
+  type DraftStatus,
+} from "@/hooks/use-draft-publish";
 
 const PAGES = [
   { key: "__global__", label: "Global (All Pages)" },

@@ -119,7 +119,7 @@ const AdminProductPreview = () => {
             </span>
             {preview.compare_at_price && Number(preview.compare_at_price) > Number(preview.price) && (
               <span className="text-lg text-muted-foreground line-through">
-                {formatDKK(Number(preview.compare_at_price))}
+                {formatPrice(Number(preview.compare_at_price))}
               </span>
             )}
           </div>

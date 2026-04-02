@@ -117,15 +117,15 @@ export function useProductAdmin() {
 
     // Log revision of current live state
     const revNum = await getNextRevNum(productId);
-    await supabase.from("content_revisions").insert({
+    await supabase.from("content_revisions").insert([{
       content_type: "product",
       content_id: productId,
-      revision_data: snapshotProduct(current),
+      revision_data: snapshotProduct(current) as any,
       revision_number: revNum,
       action: "publish",
       change_summary: draft ? "Published draft changes" : "Initial publish",
       created_by: userId,
-    });
+    }]);
 
     // Promote draft_data if exists, otherwise just mark as published
     const updatePayload: any = {

@@ -310,12 +310,8 @@ const sectionStyle = (content: any): CSSProperties => {
   if (content?.marginTop !== undefined) style.marginTop = `${Number(content.marginTop) || 0}px`;
   if (content?.marginBottom !== undefined) style.marginBottom = `${Number(content.marginBottom) || 0}px`;
 
-  // Background image (static, not slideshow)
-  if (!content?._slideshow?.enabled && (content?.backgroundImage || content?.bg_image)) {
-    style.backgroundImage = `url(${content.backgroundImage || content.bg_image})`;
-    style.backgroundSize = "cover";
-    style.backgroundPosition = "center";
-  }
+  // Background image is now rendered as a separate layer in withSection for opacity control
+  // Only set if no slideshow and no separate layer needed (fallback removed - always use layer)
 
   // Min height
   if (content?.minHeight) style.minHeight = `${Number(content.minHeight)}px`;

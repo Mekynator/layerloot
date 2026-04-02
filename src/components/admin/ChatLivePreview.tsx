@@ -226,13 +226,13 @@ export default function ChatLivePreview({ config }: ChatLivePreviewProps) {
                   {config.window.avatarUrl ? (
                     <img src={config.window.avatarUrl} alt="" className="h-4 w-4 rounded-full object-cover" />
                   ) : (
-                    <Bot className="h-4 w-4 text-primary-foreground" />
+                    <Bot className="h-4 w-4" style={{ color: (config.window as any).headerTextColor || "hsl(var(--primary-foreground))" }} />
                   )}
-                  <span className="text-xs font-bold uppercase tracking-wider text-primary-foreground">
+                  <span className="text-xs font-bold uppercase tracking-wider" style={{ color: (config.window as any).headerTextColor || "hsl(var(--primary-foreground))" }}>
                     {getStr(config.window.brandName) || "Assistant"}
                   </span>
                 </div>
-                <button onClick={() => setPreviewState("closed")} className="text-primary-foreground/70 hover:text-primary-foreground">
+                <button onClick={() => setPreviewState("closed")} style={{ color: (config.window as any).headerTextColor ? `${(config.window as any).headerTextColor}B3` : undefined }} className="text-primary-foreground/70 hover:text-primary-foreground">
                   <X className="h-3.5 w-3.5" />
                 </button>
               </div>

@@ -115,7 +115,7 @@ const AdminProductPreview = () => {
 
           <div className="flex items-baseline gap-3">
             <span className="font-display text-2xl font-bold text-primary">
-              {formatDKK(Number(preview.price))}
+              {formatPrice(Number(preview.price))}
             </span>
             {preview.compare_at_price && Number(preview.compare_at_price) > Number(preview.price) && (
               <span className="text-lg text-muted-foreground line-through">

@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 import { useVisualEditor } from "@/contexts/VisualEditorContext";
 import { Plus, Eye, EyeOff, Copy, Trash2, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { cn } from "@/lib/utils";
 import { getBlockSchema, getInlineTextKeys } from "./editable-schema";
 

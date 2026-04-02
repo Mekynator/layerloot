@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Save, ChevronUp, ChevronDown, Eye, EyeOff, GripVertical, Package } from "lucide-react";
+import type { AccountPageConfig } from "@/components/account/types";
+import { DEFAULT_ACCOUNT_CONFIG } from "@/components/account/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

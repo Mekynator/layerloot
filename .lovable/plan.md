@@ -1,132 +1,108 @@
 
 
-# Database & Data Layer: Proper Draft/Published Architecture
+# Connect All Admin Editors to Draft/Preview/Publish Architecture
 
 ## Current State
-- Drafts stored as JSON blobs in `site_settings` using key conventions (`draft_blocks_{page}`, `draft_setting_{key}`)
-- No audit trail (who edited, who published, when)
-- No revision history — publishing overwrites live content permanently
-- No proper DB-level separation between draft and published states
-- Works functionally but not scalable or auditable
+The draft/publish system is already working for:
+- **Visual Editor** (blocks) — via `VisualEditorContext.tsx` + `use-draft-publish.ts`
+- **Backgrounds** — via `AdminBackgrounds.tsx` using `saveDraftSetting`/`publishDraftSetting`
+
+Still writing **directly to live `site_settings.value`** (bypassing draft):
+- **AdminSettings.tsx** — `upsertSetting()` writes directly to `value` for: contact, store, promo popup, footer, branding, policies, account page config, dashboard shortcuts, sidebar config
+- **NavLinkEditor.tsx** — saves header/footer nav links directly via `.upsert()` to `value`
+- **PageBackgroundEditor.tsx** (dialog version) — still writes directly to `value`
+- **RewardsStoreEditor.tsx** — writes directly to `vouchers` table (not site_settings, lower priority)
 
 ## Architecture
 
-### Strategy: Column-level draft storage + revision history table
+### Strategy: Unified `useDraftSettings` hook + per-editor integration
 
-Add `draft_content`/`draft_value` columns directly on `site_blocks` and `site_settings` instead of storing drafts as separate key-value entries. This keeps queries simple, avoids key-naming conventions, and enables proper indexing. Add a `content_revisions` table for historical snapshots.
+Create a reusable React hook `useDraftSettings(key)` that wraps the existing `loadDraftSetting`/`saveDraftSetting`/`publishDraftSetting`/`discardDraftSetting` functions and exposes a clean API for any settings editor. Then connect each admin editor to use it.
 
-### Migration 1: Extend `site_blocks`
+### Scope classification
 
-```sql
-ALTER TABLE public.site_blocks
-  ADD COLUMN IF NOT EXISTS draft_content jsonb DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS has_draft boolean NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS published_at timestamptz,
-  ADD COLUMN IF NOT EXISTS published_by uuid,
-  ADD COLUMN IF NOT EXISTS updated_by uuid;
+**Storefront-affecting settings (must use draft/publish):**
+- `contact` — contact info shown in footer
+- `store` — store name, currency
+- `branding` — logo config
+- `footer_settings` — footer layout/labels
+- `promotion_popup` — promo popup config
+- `policy_*` — legal pages content
+- `account_page_config` — account page layout
+- `header_nav_links` / `footer_nav_links` — navigation
+- `page_background_global` — already connected
+
+**Admin-only settings (keep saving directly, not public-facing):**
+- `admin_dashboard_shortcuts` — admin internal
+- `admin_sidebar_config` — admin internal
+
+## Implementation Plan
+
+### 1. Create `useDraftSettings` hook
+New file: `src/hooks/use-draft-settings.ts`
+
+A reusable hook that takes a settings key and returns:
+```typescript
+{
+  value: T,           // draft if exists, else live
+  liveValue: T,       // always live
+  hasDraft: boolean,
+  draftStatus: DraftStatus,
+  loading: boolean,
+  setValue: (v: T) => void,       // update local state
+  saveDraft: () => Promise<void>, // persist to draft_value column
+  publish: () => Promise<void>,   // promote draft_value → value
+  discard: () => Promise<void>,   // clear draft_value, reload live
+}
 ```
 
-- `content` remains the published/live column (public reads this — no change)
-- `draft_content` holds pending edits (NULL = no draft)
-- `has_draft` for fast filtering
-- `published_at/by` and `updated_by` for audit
+This eliminates repeated draft logic in every editor.
 
-### Migration 2: Extend `site_settings`
+### 2. Create `DraftActionBar` component
+New file: `src/components/admin/DraftActionBar.tsx`
 
-```sql
-ALTER TABLE public.site_settings
-  ADD COLUMN IF NOT EXISTS draft_value jsonb DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS has_draft boolean NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS published_at timestamptz,
-  ADD COLUMN IF NOT EXISTS published_by uuid,
-  ADD COLUMN IF NOT EXISTS updated_by uuid;
-```
+A shared UI bar with Save Draft / Publish / Discard Draft / status badge. Used by all settings editors for visual consistency.
 
-Same pattern — `value` is published, `draft_value` is pending.
+### 3. Refactor AdminSettings.tsx
+- Replace `upsertSetting()` with draft-based saves for storefront settings
+- Use multiple `useDraftSettings` instances for each config key
+- Keep `admin_dashboard_shortcuts` and `admin_sidebar_config` saving directly (admin-internal)
+- Add `DraftActionBar` with Save Draft / Publish / Discard buttons
+- Split save into "Save Draft" (all storefront settings to draft_value) and "Publish" (promote all to value)
 
-### Migration 3: Create `content_revisions` table
+### 4. Refactor NavLinkEditor.tsx
+- Replace direct `.upsert()` with `saveDraftSetting` / `publishDraftSetting`
+- Add draft status badge and Publish button
+- Load from draft_value when available
 
-```sql
-CREATE TABLE public.content_revisions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  content_type text NOT NULL,        -- 'site_block', 'site_setting'
-  content_id text NOT NULL,          -- block UUID or setting key
-  page text,                         -- page slug for blocks
-  revision_data jsonb NOT NULL,      -- snapshot of content/value at publish time
-  revision_number integer NOT NULL DEFAULT 1,
-  action text NOT NULL DEFAULT 'publish', -- 'publish', 'revert', 'create'
-  created_by uuid,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT unique_revision UNIQUE (content_type, content_id, revision_number)
-);
+### 5. Update PageBackgroundEditor.tsx (dialog)
+- Replace direct `.upsert()` to `value` with `saveDraftSetting`
+- Or deprecate the dialog in favor of the AdminBackgrounds page (which is already connected)
 
-ALTER TABLE public.content_revisions ENABLE ROW LEVEL SECURITY;
+### 6. Preview frame consistency
+- `EditorPreviewFrame` already loads via iframe with `?editorPreview=1`
+- The iframe renders blocks from `site_blocks` where the public query reads `content` column
+- For settings-based preview, the iframe currently reads live `value` — update `GlobalSectionRenderer` and `PageBackgroundSlideshow` to check for `draft_value` when `editorPreview=1` param is present
+- This ensures preview reflects draft settings too
 
-CREATE POLICY "Admins manage revisions"
-  ON public.content_revisions FOR ALL
-  TO authenticated
-  USING (has_role(auth.uid(), 'admin'::app_role));
+### 7. Public query safety
+- Public pages already read only `content` (blocks) and `value` (settings) — no changes needed
+- The `draft_value` / `draft_content` columns are never read by public components
+- Verify `GlobalSectionRenderer.tsx`, `use-page-blocks.ts`, `PageBackgroundSlideshow.tsx`, `use-storefront.ts` all read `value`/`content` only — confirmed, no changes needed
 
-CREATE INDEX idx_revisions_lookup
-  ON public.content_revisions (content_type, content_id, revision_number DESC);
-```
-
-### Migration 4: Clean up old draft keys
-
-Migrate existing `draft_blocks_*` and `draft_setting_*` entries from `site_settings` into the new columns, then delete those rows.
-
-```sql
--- This will be handled in the code layer during the transition
--- Delete stale draft keys after migration
-DELETE FROM public.site_settings WHERE key LIKE 'draft_blocks_%' OR key LIKE 'draft_setting_%';
-```
-
-## Code Changes
-
-### 1. Rewrite `src/hooks/use-draft-publish.ts`
-Replace key-based draft storage with column-based operations:
-
-- **`saveDraftBlocks(page, blocks, userId)`** → For each block: update `draft_content` + set `has_draft = true` + `updated_by`. For new blocks: insert with `draft_content` set and `content` as empty, mark `has_draft = true`.
-- **`loadDraftBlocks(page)`** → Query `site_blocks` where `page = X` and use `COALESCE(draft_content, content)` for admin view. Return `has_draft` status.
-- **`publishDraftBlocks(page, userId)`** → Copy `draft_content` → `content`, clear `draft_content`, set `has_draft = false`, set `published_at = now()`, `published_by = userId`. Insert revision into `content_revisions`.
-- **`discardDraftBlocks(page)`** → Set `draft_content = NULL`, `has_draft = false` for all blocks on page. Delete any blocks that only existed as drafts (where `content` is empty/default).
-- Same pattern for `saveDraftSetting`, `publishDraftSetting`, `discardDraftSetting`.
-- **`revertToRevision(contentType, contentId, revisionNumber)`** → Load revision data and apply as new published content.
-- **`usePageDraftStatus(page)`** → Query `SELECT EXISTS(... has_draft = true ...)` instead of checking for key existence.
-
-### 2. Update `src/contexts/VisualEditorContext.tsx`
-- `fetchBlocks`: Load blocks with `draft_content` for admin view using `COALESCE(draft_content, content)` 
-- `save`: Write to `draft_content` column on each block instead of serializing to a settings key
-- `publish`: Call updated `publishDraftBlocks` which writes revisions
-- `discardDraft`: Call updated `discardDraftBlocks`
-- Pass `user.id` for audit fields
-
-### 3. Update `src/pages/admin/AdminBackgrounds.tsx`
-- Save: Write to `draft_value` column on the settings row instead of a separate key
-- Publish: Copy `draft_value` → `value`, write revision
-- Discard: Clear `draft_value`
-
-### 4. Public queries remain unchanged
-- `src/hooks/use-page-blocks.ts` reads `content` column — still correct
-- `src/components/layout/PageBackgroundSlideshow.tsx` reads `value` column — still correct  
-- `src/components/layout/GlobalSectionRenderer.tsx` reads published blocks — still correct
-- No public-facing code changes needed
+## Files to create
+| File | Purpose |
+|---|---|
+| `src/hooks/use-draft-settings.ts` | Reusable hook wrapping draft setting operations |
+| `src/components/admin/DraftActionBar.tsx` | Shared Save Draft / Publish / Discard UI bar |
 
 ## Files to modify
 | File | Change |
 |---|---|
-| `src/hooks/use-draft-publish.ts` | Full rewrite: column-based draft ops + revision logging |
-| `src/contexts/VisualEditorContext.tsx` | Update save/publish/discard to use new column-based API |
-| `src/pages/admin/AdminBackgrounds.tsx` | Update save/publish/discard for settings draft columns |
+| `src/pages/admin/AdminSettings.tsx` | Replace `upsertSetting` with draft flow for storefront settings, add DraftActionBar |
+| `src/components/admin/NavLinkEditor.tsx` | Use draft save/publish instead of direct upsert |
+| `src/components/admin/PageBackgroundEditor.tsx` | Use draft save instead of direct upsert |
 
-## Files unchanged (public layer)
-- `src/hooks/use-page-blocks.ts` — reads `content`, unaffected
-- `src/components/layout/PageBackgroundSlideshow.tsx` — reads `value`, unaffected
-- `src/components/layout/GlobalSectionRenderer.tsx` — reads published blocks, unaffected
-
-## Database changes summary
-- **Alter** `site_blocks`: +5 columns (draft_content, has_draft, published_at, published_by, updated_by)
-- **Alter** `site_settings`: +5 columns (draft_value, has_draft, published_at, published_by, updated_by)
-- **Create** `content_revisions` table with admin-only RLS
-- **Delete** legacy `draft_blocks_*` / `draft_setting_*` rows from site_settings
+## No database changes needed
+All draft columns already exist on `site_settings` from the previous migration.
 

@@ -1,80 +1,95 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard,
-  Package,
-  Tags,
-  ShoppingCart,
-  Users,
-  Truck,
-  Layers,
-  ArrowLeft,
-  Star,
-  FileText,
-  Settings,
-  Menu,
-  X,
-  Box,
-  TicketPercent,
-  Palette,
-  Calculator,
-  TrendingUp,
-  Megaphone,
-  BarChart3,
-  Wallet,
+  LayoutDashboard, Tags, ArrowLeft, Layers, Menu, X,
+  Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
+  Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone,
+  BarChart3, Wallet,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 
-const coreLinks = [
-  { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/admin/orders", label: "Orders", icon: ShoppingCart },
-  { to: "/admin/custom-orders", label: "Custom Orders", icon: Box },
-  { to: "/admin/products", label: "Products", icon: Package },
-  { to: "/admin/categories", label: "Categories & Tags", icon: Tags },
-  { to: "/admin/clients", label: "Customers", icon: Users },
-  { to: "/admin/editor", label: "Page Editor", icon: FileText },
-  { to: "/admin/settings", label: "Settings", icon: Settings },
-] as const;
+const ICON_MAP: Record<string, typeof Package> = {
+  LayoutDashboard, Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
+  Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone, BarChart3, Wallet, Tags, Layers,
+};
 
-const toolLinks = [
-  { to: "/admin/discounts", label: "Discounts", icon: TicketPercent },
-  { to: "/admin/reviews", label: "Reviews", icon: Star },
-  { to: "/admin/showcases", label: "Showcases", icon: Palette },
-  { to: "/admin/shipping", label: "Shipping", icon: Truck },
-  { to: "/admin/pricing", label: "Pricing", icon: Calculator },
-  { to: "/admin/growth", label: "Growth", icon: TrendingUp },
-  { to: "/admin/campaigns", label: "Campaigns", icon: Megaphone },
-  { to: "/admin/revenue", label: "Revenue Engine", icon: Wallet },
-  { to: "/admin/reports", label: "Reports", icon: BarChart3 },
-] as const;
+export interface SidebarItem {
+  id: string;
+  to: string;
+  label: string;
+  icon: string;
+  visible: boolean;
+}
+
+export interface SidebarConfig {
+  groups: { name: string; items: SidebarItem[] }[];
+}
+
+const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
+  groups: [
+    {
+      name: "Core",
+      items: [
+        { id: "dashboard", to: "/admin", label: "Dashboard", icon: "LayoutDashboard", visible: true },
+        { id: "categories", to: "/admin/categories", label: "Categories & Tags", icon: "Tags", visible: true },
+        { id: "editor", to: "/admin/editor", label: "Page Editor", icon: "FileText", visible: true },
+        { id: "settings", to: "/admin/settings", label: "Settings", icon: "Settings", visible: true },
+      ],
+    },
+    {
+      name: "Tools",
+      items: [
+        { id: "discounts", to: "/admin/discounts", label: "Discounts", icon: "TicketPercent", visible: true },
+        { id: "shipping", to: "/admin/shipping", label: "Shipping", icon: "Truck", visible: true },
+        { id: "pricing", to: "/admin/pricing", label: "Pricing", icon: "Calculator", visible: true },
+        { id: "growth", to: "/admin/growth", label: "Growth", icon: "TrendingUp", visible: true },
+        { id: "campaigns", to: "/admin/campaigns", label: "Campaigns", icon: "Megaphone", visible: true },
+        { id: "revenue", to: "/admin/revenue", label: "Revenue Engine", icon: "Wallet", visible: true },
+        { id: "reports", to: "/admin/reports", label: "Reports", icon: "BarChart3", visible: true },
+      ],
+    },
+  ],
+};
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const { isAdmin, loading, user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarConfig, setSidebarConfig] = useState<SidebarConfig>(DEFAULT_SIDEBAR_CONFIG);
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) navigate("/");
   }, [isAdmin, loading, user, navigate]);
 
+  useEffect(() => { setMobileOpen(false); }, [location.pathname]);
+
   useEffect(() => {
-    setMobileOpen(false);
-  }, [location.pathname]);
+    supabase.from("site_settings").select("value").eq("key", "admin_sidebar_config").maybeSingle()
+      .then(({ data: row }) => {
+        if (row?.value && typeof row.value === "object" && (row.value as any).groups) {
+          setSidebarConfig(row.value as unknown as SidebarConfig);
+        }
+      });
+  }, []);
 
   if (loading || !isAdmin) return null;
 
   const isActive = (to: string) =>
     location.pathname === to || (to !== "/admin" && location.pathname.startsWith(`${to}/`));
 
-  const renderLinks = (links: readonly { to: string; label: string; icon: any }[]) =>
-    links.map(({ to, label, icon: Icon }) => {
-      const active = isActive(to);
+  const allItems = sidebarConfig.groups.flatMap(g => g.items);
+
+  const renderLinks = (items: SidebarItem[]) =>
+    items.filter(i => i.visible).map((item) => {
+      const active = isActive(item.to);
+      const Icon = ICON_MAP[item.icon] || Package;
       return (
         <Link
-          key={to}
-          to={to}
+          key={item.id}
+          to={item.to}
           className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
             active
               ? "bg-primary/10 text-primary"
@@ -82,14 +97,13 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           }`}
         >
           <Icon className="h-4 w-4 shrink-0" />
-          {label}
+          {item.label}
         </Link>
       );
     });
 
   const navContent = (
     <div className="flex h-full flex-col">
-      {/* Header */}
       <div className="flex h-14 items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <Layers className="h-5 w-5 text-primary" />
@@ -102,22 +116,18 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         </Button>
       </div>
 
-      {/* Core Navigation */}
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
-        <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
-          Core
-        </p>
-        {renderLinks(coreLinks)}
-
-        <div className="my-3 border-t border-sidebar-border/50" />
-
-        <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
-          Tools
-        </p>
-        {renderLinks(toolLinks)}
+        {sidebarConfig.groups.map((group, gi) => (
+          <div key={group.name}>
+            {gi > 0 && <div className="my-3 border-t border-sidebar-border/50" />}
+            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
+              {group.name}
+            </p>
+            {renderLinks(group.items)}
+          </div>
+        ))}
       </nav>
 
-      {/* Back to Store */}
       <div className="border-t border-sidebar-border/30 p-3">
         <Link
           to="/"
@@ -131,7 +141,6 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)]">
-      {/* Mobile top bar */}
       <div className="fixed left-0 right-0 top-16 z-40 flex h-12 items-center bg-sidebar/95 backdrop-blur-md px-4 lg:hidden">
         <Button
           variant="ghost"
@@ -142,11 +151,10 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           <Menu className="h-5 w-5" />
         </Button>
         <span className="ml-2 font-display text-sm font-bold uppercase tracking-wider text-sidebar-foreground">
-          {[...coreLinks, ...toolLinks].find((l) => isActive(l.to))?.label || "Admin"}
+          {allItems.find((l) => isActive(l.to))?.label || "Admin"}
         </span>
       </div>
 
-      {/* Mobile overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
@@ -154,7 +162,6 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         </div>
       )}
 
-      {/* Desktop sidebar */}
       <aside className="hidden w-56 shrink-0 flex-col bg-sidebar lg:flex">
         {navContent}
       </aside>
@@ -164,4 +171,5 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+export { DEFAULT_SIDEBAR_CONFIG, ICON_MAP as SIDEBAR_ICON_MAP };
 export default AdminLayout;

@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import {
   DollarSign, Package, ShoppingCart, Users, Download, Calendar, Star,
   MessageSquareMore, Palette, TicketPercent, Truck, Tags, FileText,
-  Settings, TrendingUp, AlertTriangle, Gift, Award, Box,
+  Settings, TrendingUp, AlertTriangle, Box,
   Clock, CheckCircle, Zap, BarChart3, Activity, Eye,
-  ArrowRight, Bell,
+  ArrowRight, Bell, Calculator, Megaphone, Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,6 +21,41 @@ import { Link } from "react-router-dom";
 const CHART_COLORS = [
   "hsl(var(--primary))", "hsl(160,60%,45%)", "hsl(45,90%,55%)",
   "hsl(280,60%,55%)", "hsl(0,70%,55%)", "hsl(200,70%,50%)",
+];
+
+const TILE_CLASS = "rounded-xl border border-primary/20 shadow-[0_0_12px_-4px_hsl(var(--primary)/0.15)] transition-all duration-200 hover:border-primary/35 hover:shadow-[0_0_20px_-4px_hsl(var(--primary)/0.25)]";
+
+const ICON_MAP: Record<string, typeof Package> = {
+  Package, ShoppingCart, Box, Palette, TicketPercent, Tags, Truck, FileText,
+  Star, Users, BarChart3, Settings, TrendingUp, Megaphone, Wallet, Calculator,
+  MessageSquareMore, Calendar, Eye,
+};
+
+export interface DashboardShortcut {
+  id: string;
+  label: string;
+  icon: string;
+  to: string;
+  visible: boolean;
+}
+
+const DEFAULT_SHORTCUTS: DashboardShortcut[] = [
+  { id: "products", label: "Products", icon: "Package", to: "/admin/products", visible: true },
+  { id: "orders", label: "Orders", icon: "ShoppingCart", to: "/admin/orders", visible: true },
+  { id: "custom-orders", label: "Custom Orders", icon: "Box", to: "/admin/custom-orders", visible: true },
+  { id: "showcases", label: "Showcases", icon: "Palette", to: "/admin/showcases", visible: true },
+  { id: "discounts", label: "Discounts", icon: "TicketPercent", to: "/admin/discounts", visible: true },
+  { id: "categories", label: "Categories", icon: "Tags", to: "/admin/categories", visible: true },
+  { id: "shipping", label: "Shipping", icon: "Truck", to: "/admin/shipping", visible: true },
+  { id: "editor", label: "Page Editor", icon: "FileText", to: "/admin/editor", visible: true },
+  { id: "reviews", label: "Reviews", icon: "Star", to: "/admin/reviews", visible: true },
+  { id: "clients", label: "Users", icon: "Users", to: "/admin/clients", visible: true },
+  { id: "reports", label: "Reports", icon: "BarChart3", to: "/admin/reports", visible: true },
+  { id: "settings", label: "Settings", icon: "Settings", to: "/admin/settings", visible: true },
+  { id: "growth", label: "Growth", icon: "TrendingUp", to: "/admin/growth", visible: true },
+  { id: "campaigns", label: "Campaigns", icon: "Megaphone", to: "/admin/campaigns", visible: true },
+  { id: "revenue", label: "Revenue Engine", icon: "Wallet", to: "/admin/revenue", visible: true },
+  { id: "pricing", label: "Pricing", icon: "Calculator", to: "/admin/pricing", visible: true },
 ];
 
 /* ─── Activity Feed ─── */
@@ -86,7 +121,7 @@ const QuickAction = ({ icon: Icon, label, count, to, severity }: {
     info: "bg-primary/10 text-primary hover:bg-primary/15",
   };
   return (
-    <Link to={to} className={`group flex items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 ${colors[severity]}`}>
+    <Link to={to} className={`group flex items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 ${colors[severity]} ${TILE_CLASS}`}>
       <Icon className="h-4 w-4 shrink-0" />
       <span className="flex-1 text-sm font-medium text-foreground">{label}</span>
       <span className="rounded-full bg-foreground/5 px-2.5 py-0.5 text-xs font-bold">{count}</span>
@@ -106,7 +141,7 @@ const KpiCard = ({ label, value, icon: Icon, sub, to, accent = "primary" }: {
     purple: "text-purple-400 bg-purple-500/10",
   };
   const content = (
-    <div className="rounded-xl bg-card/40 p-4 transition-all duration-200 hover:bg-card/60">
+    <div className={`${TILE_CLASS} bg-card/40 p-4`}>
       <div className="flex items-center gap-2 mb-2">
         <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${accentMap[accent]}`}>
           <Icon className="h-4 w-4" />
@@ -122,7 +157,7 @@ const KpiCard = ({ label, value, icon: Icon, sub, to, accent = "primary" }: {
 };
 
 const MiniChart = ({ title, icon: Icon, children }: { title: string; icon: typeof TrendingUp; children: React.ReactNode }) => (
-  <div className="rounded-xl bg-card/40 p-4">
+  <div className={`${TILE_CLASS} bg-card/40 p-4`}>
     <div className="flex items-center gap-2 mb-3">
       <Icon className="h-3.5 w-3.5 text-primary" />
       <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
@@ -136,6 +171,16 @@ const Dashboard = () => {
   const [period, setPeriod] = useState<Period>("30d");
   const { data, loading } = useAdminDashboard(period);
   const activity = useActivityFeed();
+  const [shortcuts, setShortcuts] = useState<DashboardShortcut[]>(DEFAULT_SHORTCUTS);
+
+  useEffect(() => {
+    supabase.from("site_settings").select("value").eq("key", "admin_dashboard_shortcuts").maybeSingle()
+      .then(({ data: row }) => {
+        if (row?.value && Array.isArray(row.value)) {
+          setShortcuts(row.value as unknown as DashboardShortcut[]);
+        }
+      });
+  }, []);
 
   const exportCSV = () => {
     const rows = [["Order ID", "Total", "Status", "Date"]];
@@ -149,6 +194,8 @@ const Dashboard = () => {
     a.download = "orders-report.csv";
     a.click();
   };
+
+  const visibleShortcuts = shortcuts.filter(s => s.visible);
 
   return (
     <AdminLayout>
@@ -189,7 +236,7 @@ const Dashboard = () => {
         <>
           {/* ── ACTION CENTER ── */}
           {(data.pendingOrders > 0 || data.quotesAwaiting > 0 || data.pendingReviews > 0 || data.pendingShowcases > 0 || data.lowStockProducts.length > 0) && (
-            <div className="mb-6 rounded-xl bg-card/30 p-4">
+            <div className={`mb-6 ${TILE_CLASS} bg-card/30 p-4`}>
               <SectionTitle icon={Bell} title="Needs Your Attention" />
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 <QuickAction icon={ShoppingCart} label="Pending orders" count={data.pendingOrders} to="/admin/orders" severity={data.pendingOrders > 3 ? "urgent" : "warning"} />
@@ -203,15 +250,13 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* ── KPI GRID ── */}
-          <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {/* ── KPI GRID (removed Loyalty Points & Vouchers Used) ── */}
+          <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <KpiCard label="Revenue" value={`${data.revenue.toFixed(0)} kr`} icon={DollarSign} sub={`Avg: ${data.avgOrderValue.toFixed(0)} kr`} accent="green" />
             <KpiCard label="Orders" value={data.ordersCount} icon={ShoppingCart} sub={`${data.pendingOrders} pending`} to="/admin/orders" />
             <KpiCard label="Custom Orders" value={data.customOrdersActive} icon={Box} sub={`${data.quotesAwaiting} awaiting reply`} to="/admin/custom-orders" accent="purple" />
             <KpiCard label="Customers" value={data.clientsCount} icon={Users} sub="Registered" to="/admin/clients" />
             <KpiCard label="Products" value={data.productsCount} icon={Package} sub="Active" to="/admin/products" />
-            <KpiCard label="Loyalty Points" value={data.loyaltyPointsIssued.toLocaleString()} icon={Award} sub="Total issued" accent="amber" />
-            <KpiCard label="Vouchers Used" value={data.vouchersRedeemed} icon={Gift} sub="Redeemed" accent="purple" />
             <KpiCard label="Reviews" value={data.pendingReviews} icon={Star} sub="Pending approval" to="/admin/reviews" accent="amber" />
           </div>
 
@@ -287,7 +332,7 @@ const Dashboard = () => {
             </MiniChart>
 
             {/* Activity Stream */}
-            <div className="rounded-xl bg-card/40 p-4">
+            <div className={`${TILE_CLASS} bg-card/40 p-4`}>
               <div className="flex items-center gap-2 mb-3">
                 <Activity className="h-3.5 w-3.5 text-primary" />
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Recent Activity</p>
@@ -315,7 +360,7 @@ const Dashboard = () => {
 
           {/* ── RECENT ORDERS & LOW STOCK ── */}
           <div className="mb-6 grid gap-4 lg:grid-cols-2">
-            <div className="rounded-xl bg-card/40 p-4">
+            <div className={`${TILE_CLASS} bg-card/40 p-4`}>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Clock className="h-3.5 w-3.5 text-primary" />
@@ -347,7 +392,7 @@ const Dashboard = () => {
               )}
             </div>
 
-            <div className="rounded-xl bg-card/40 p-4">
+            <div className={`${TILE_CLASS} bg-card/40 p-4`}>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
@@ -375,48 +420,20 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* ── SMART INSIGHTS ── */}
-          {data.insights.length > 0 && (
-            <div className="mb-6 rounded-xl bg-card/30 p-4">
-              <SectionTitle icon={Zap} title="Smart Insights" />
-              <div className="grid gap-2 sm:grid-cols-2">
-                {data.insights.map((ins, i) => {
-                  const colors = { positive: "text-emerald-400", neutral: "text-primary", warning: "text-amber-400" };
-                  return (
-                    <div key={i} className="flex items-start gap-2 rounded-lg bg-background/20 px-3 py-2">
-                      <Zap className={`mt-0.5 h-3 w-3 shrink-0 ${colors[ins.type]}`} />
-                      <p className="text-xs text-foreground/80">{ins.message}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* ── QUICK NAVIGATION ── */}
-          <div className="rounded-xl bg-card/30 p-4">
-            <SectionTitle icon={Eye} title="Quick Navigation" />
+          {/* ── DYNAMIC SHORTCUTS (replaces Quick Navigation) ── */}
+          <div className={`${TILE_CLASS} bg-card/30 p-4`}>
+            <SectionTitle icon={Eye} title="Management Shortcuts" />
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
-              {[
-                { label: "Products", icon: Package, to: "/admin/products" },
-                { label: "Orders", icon: ShoppingCart, to: "/admin/orders" },
-                { label: "Custom Orders", icon: Box, to: "/admin/custom-orders" },
-                { label: "Showcases", icon: Palette, to: "/admin/showcases" },
-                { label: "Discounts", icon: TicketPercent, to: "/admin/discounts" },
-                { label: "Categories", icon: Tags, to: "/admin/categories" },
-                { label: "Shipping", icon: Truck, to: "/admin/shipping" },
-                { label: "Page Editor", icon: FileText, to: "/admin/editor" },
-                { label: "Reviews", icon: Star, to: "/admin/reviews" },
-                { label: "Users", icon: Users, to: "/admin/clients" },
-                { label: "Reports", icon: BarChart3, to: "/admin/reports" },
-                { label: "Settings", icon: Settings, to: "/admin/settings" },
-              ].map(({ label, icon: Icon, to }) => (
-                <Link key={to} to={to}
-                  className="flex flex-col items-center gap-1.5 rounded-lg bg-background/20 p-3 text-center transition-all duration-200 hover:bg-primary/10 hover:text-primary">
-                  <Icon className="h-4 w-4 text-primary" />
-                  <span className="text-[10px] font-medium text-muted-foreground">{label}</span>
-                </Link>
-              ))}
+              {visibleShortcuts.map((sc) => {
+                const Icon = ICON_MAP[sc.icon] || Package;
+                return (
+                  <Link key={sc.id} to={sc.to}
+                    className={`flex flex-col items-center gap-1.5 rounded-lg bg-background/20 p-3 text-center transition-all duration-200 hover:bg-primary/10 hover:text-primary border border-primary/10 hover:border-primary/30`}>
+                    <Icon className="h-4 w-4 text-primary" />
+                    <span className="text-[10px] font-medium text-muted-foreground">{sc.label}</span>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </>
@@ -425,4 +442,6 @@ const Dashboard = () => {
   );
 };
 
+export { DEFAULT_SHORTCUTS, ICON_MAP };
+export type { DashboardShortcut };
 export default Dashboard;

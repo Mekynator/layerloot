@@ -547,21 +547,16 @@ const AdminProducts = () => {
       </Dialog>
 
       {/* Revision History Panel */}
-      {historyProductId && (
-        <RevisionHistoryPanel
-          contentType="product"
-          contentId={historyProductId}
-          onClose={() => setHistoryProductId(null)}
-          onRevert={async (revisionId) => {
-            if (!user?.id) return;
-            const ok = await productAdmin.restoreProductRevision(historyProductId, revisionId, user.id);
-            if (ok) {
-              setHistoryProductId(null);
-              await fetchProducts();
-            }
-          }}
-        />
-      )}
+      <RevisionHistoryPanel
+        open={!!historyProductId}
+        onOpenChange={(o) => { if (!o) setHistoryProductId(null); }}
+        contentType="product"
+        contentId={historyProductId ?? undefined}
+        onRevisionRestored={async () => {
+          setHistoryProductId(null);
+          await fetchProducts();
+        }}
+      />
 
       {/* Schedule Publish Dialog */}
       <SchedulePublishDialog

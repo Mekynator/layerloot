@@ -796,10 +796,19 @@ export default function AdminChat() {
               </div>
             </CardContent>
           </Card>
+            </div>
+            <div className="hidden xl:block w-[400px] shrink-0">
+              <div className="sticky top-4">
+                <ChatLivePreview config={config} />
+              </div>
+            </div>
+          </div>
         </TabsContent>
 
         {/* ─── QUICK REPLIES ─── */}
-        <TabsContent value="quickreplies" className="space-y-4">
+        <TabsContent value="quickreplies">
+          <div className="flex gap-6">
+            <div className="flex-1 min-w-0 space-y-4">
           <Card><CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="font-display text-sm uppercase">Quick Replies</CardTitle>
             <Button size="sm" variant="outline" onClick={addQuickReply}><Plus className="mr-1 h-3 w-3" /> Add</Button>

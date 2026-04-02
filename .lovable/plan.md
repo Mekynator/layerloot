@@ -1,186 +1,185 @@
 
 
-# Media Manager, Asset Versioning & Reusable Content Library
+# Translation Management System & Multilingual CMS
 
-## Summary
-Add a centralized media management system, a reusable content library, and integrate both into existing editors via a media picker dialog. This replaces scattered upload-only inputs with a unified asset workflow.
+## Current State
+- 5 locale files (en, da, de, es, ro) with ~575 keys each for static UI text
+- `tr()` helper resolves multilingual objects `{ en: "...", da: "..." }` in CMS content
+- `ai_translations` table exists but is unused in frontend code
+- CMS blocks store content as JSON — some fields already use multilingual objects
+- Draft/publish system operates on `content` / `draft_content` columns with no locale dimension
+- No admin UI for managing translations
 
-## Database Changes
+## Architecture
 
-### Migration: Create `media_assets` and `reusable_blocks` tables
+### Data Model
+CMS content already supports multilingual via `tr()` — block content fields can be `string` or `{ en: "...", da: "..." }`. The system needs:
 
-**`media_assets`** — central registry for all uploaded media:
-- `id` uuid PK
-- `file_name` text (sanitized storage name)
-- `original_name` text
-- `storage_bucket` text (default `editor-images`)
-- `storage_path` text (path within bucket)
-- `public_url` text
-- `alt_text` text
-- `title` text
-- `description` text
-- `tags` text[]
-- `media_type` text (`image`, `video`, `document`)
-- `mime_type` text
-- `width` int, `height` int (nullable)
-- `file_size_bytes` bigint
-- `folder` text (default `/`)
-- `uploaded_by` uuid
-- `is_archived` boolean (default false)
-- `usage_count` int (default 0, updated opportunistically)
-- `created_at`, `updated_at` timestamptz
-- RLS: admins full access, no public write
+1. **`translation_entries` table** — central registry for static UI translation keys (mirrors locale JSON files but allows DB-backed admin editing with draft/publish)
+2. Extend `ai_translations` table with `status`, `is_published`, `draft_text`, `source_hash` fields for tracking staleness and draft state
+3. No schema changes to `site_blocks` or `site_settings` — locale data lives inside the existing JSON content fields
 
-**`media_asset_versions`** — version history when an asset is replaced:
-- `id` uuid PK
-- `asset_id` uuid FK → media_assets
-- `version_number` int
-- `storage_path` text
-- `public_url` text
-- `file_size_bytes` bigint
-- `replaced_by` uuid (user)
-- `created_at` timestamptz
-- RLS: admin-only
+### Database Migration
 
-**`reusable_blocks`** — saved reusable content sections:
-- `id` uuid PK
-- `name` text
-- `description` text
-- `block_type` text
-- `content` jsonb (the block content snapshot)
-- `thumbnail_url` text
-- `tags` text[]
-- `created_by` uuid
-- `updated_by` uuid
-- `is_archived` boolean (default false)
-- `created_at`, `updated_at` timestamptz
-- RLS: admin-only
+```sql
+-- Translation entries for static UI keys (database-backed locale management)
+CREATE TABLE public.translation_entries (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  namespace text NOT NULL DEFAULT 'common',
+  key text NOT NULL,
+  locale text NOT NULL,
+  value text NOT NULL DEFAULT '',
+  draft_value text,
+  has_draft boolean NOT NULL DEFAULT false,
+  is_published boolean NOT NULL DEFAULT true,
+  source_hash text,
+  status text NOT NULL DEFAULT 'published', -- published, draft, missing, outdated
+  updated_by uuid,
+  published_at timestamptz,
+  published_by uuid,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (namespace, key, locale)
+);
+ALTER TABLE public.translation_entries ENABLE ROW LEVEL SECURITY;
 
-No changes to existing tables. The `editor-images` storage bucket continues to be the physical store.
+CREATE POLICY "Admins manage translations" ON public.translation_entries
+  FOR ALL TO authenticated
+  USING (has_role(auth.uid(), 'admin'::app_role) OR has_role(auth.uid(), 'super_admin'::app_role) OR has_role(auth.uid(), 'editor'::app_role))
+  WITH CHECK (has_role(auth.uid(), 'admin'::app_role) OR has_role(auth.uid(), 'super_admin'::app_role) OR has_role(auth.uid(), 'editor'::app_role));
 
-## New Files
+CREATE POLICY "Public read published translations" ON public.translation_entries
+  FOR SELECT TO public USING (is_published = true AND has_draft = false);
 
-### 1. `src/hooks/use-media-library.ts`
-React Query-based hook for media operations:
-- `useMediaAssets(filters)` — paginated query with search, folder, type filters
-- `uploadMediaAsset(file, metadata)` — uploads to `editor-images` bucket, inserts `media_assets` row, returns asset
-- `replaceMediaAsset(assetId, newFile)` — archives current version to `media_asset_versions`, uploads replacement
-- `archiveMediaAsset(assetId)` — soft-delete (sets `is_archived = true`)
-- `restoreAssetVersion(versionId)` — restores previous version as current
-- `updateAssetMetadata(assetId, patch)` — update alt_text, title, tags, folder
+CREATE TRIGGER set_translation_entries_updated_at
+  BEFORE UPDATE ON public.translation_entries
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
-### 2. `src/components/admin/media/MediaLibraryPage.tsx`
-Full admin page for browsing/managing media:
-- Grid/list toggle with thumbnail previews
-- Search bar, folder filter sidebar, type filter chips
-- Upload dropzone (multi-file)
-- Asset detail panel (metadata editing, version history, usage info)
-- Archive/restore actions with usage warnings
-- Pagination
-
-### 3. `src/components/admin/media/MediaPickerDialog.tsx`
-Modal dialog for selecting/uploading media from within editors:
-- Opens as a dialog over the current editor
-- Browse existing assets or upload new
-- Search + filter
-- Click to select → returns `public_url` to the caller via `onSelect(url)` callback
-- "Upload new" tab for quick inline upload
-
-### 4. `src/components/admin/media/AssetDetailPanel.tsx`
-Side panel or expandable card showing:
-- Full preview
-- Metadata editing form (alt text, title, tags, folder)
-- Version history list with restore buttons
-- Usage references (basic: which pages/blocks reference this URL)
-
-### 5. `src/pages/admin/AdminMedia.tsx`
-Route page wrapper rendering `MediaLibraryPage` inside `AdminLayout`.
-
-### 6. `src/components/admin/reusable/ReusableBlocksLibrary.tsx`
-Admin page for managing reusable content blocks:
-- Grid of saved reusable blocks with thumbnail + name
-- Create from existing block ("Save as reusable")
-- Edit reusable block content
-- Archive/restore
-- Tags + search
-
-### 7. `src/components/admin/reusable/InsertReusableDialog.tsx`
-Dialog for inserting a reusable block into a page:
-- Browse library
-- Choice: "Insert as linked" vs "Insert as copy"
-- Linked: stores `reusable_block_id` reference in block content; updates propagate on publish
-- Copy: snapshots content into a new independent block
-
-### 8. `src/pages/admin/AdminReusableBlocks.tsx`
-Route page wrapper for the reusable blocks library.
-
-## Modified Files
-
-### `src/components/admin/editor/controls/ImageUploadField.tsx`
-- Add "Browse Library" button that opens `MediaPickerDialog`
-- On upload, also create a `media_assets` row (dual-write: storage + DB record)
-- Keep existing drag-drop and URL input as fallbacks
-
-### `src/components/admin/AdminLayout.tsx`
-- Add "Media Library" sidebar item under Core group (icon: `ImageIcon`, permission: `media.manage`)
-- Add "Reusable Blocks" sidebar item under Core group (icon: `Box`, permission: `content.edit`)
-
-### `src/App.tsx`
-- Add routes: `/admin/media` → `AdminMedia`, `/admin/reusable-blocks` → `AdminReusableBlocks`
-- Both wrapped in `AdminRoute` with appropriate permissions
-
-### `src/contexts/VisualEditorContext.tsx`
-- Add `saveAsReusable(blockId)` action that saves selected block to `reusable_blocks`
-- Add `insertReusableBlock(reusableId, mode: 'linked' | 'copy', atIndex)` action
-
-### `src/components/admin/editor/EditorToolbar.tsx` or `LayersPanel.tsx`
-- Add "Save as Reusable" context action on blocks
-- Add "Insert from Library" button that opens `InsertReusableDialog`
-
-### Database migration for permissions seed
-- Add `media.manage` permission for `super_admin`, `admin`, `editor` roles
-
-## Architecture Notes
-
-### Media picker flow
-```text
-Editor (ImageUploadField / block settings)
-  → "Browse Library" button
-  → MediaPickerDialog opens
-  → User browses/uploads/selects
-  → onSelect(publicUrl) called
-  → Editor field updated with URL
-  → Draft saved normally
+-- Seed translations.manage permission
+INSERT INTO public.admin_permissions (role, permission) VALUES
+  ('super_admin', 'translations.manage'),
+  ('admin', 'translations.manage'),
+  ('editor', 'translations.manage')
+ON CONFLICT DO NOTHING;
 ```
 
-### Linked reusable blocks
-- Block content stores `{ _reusableId: "uuid", ...snapshotContent }`
-- On publish, if `_reusableId` exists, content is refreshed from the reusable block's latest `content`
-- On "detach", `_reusableId` is removed and content becomes independent
+### New Files
 
-### Usage tracking
-- Opportunistic: when MediaPickerDialog selects an asset, increment `usage_count`
-- Deep scan not required initially; a background utility can be added later
+**1. `src/pages/admin/AdminTranslations.tsx`**
+Main translation management page with:
+- Tab layout: "Static Keys" | "CMS Content" | "Overview"
+- Static Keys tab: table of all translation keys grouped by namespace, editable per locale, shows status badges (published/draft/missing/outdated)
+- CMS Content tab: list of pages/blocks with their translatable fields, per-locale editing
+- Overview tab: completion progress per language, missing/outdated counts
+- Filters: by locale, status, namespace, search
+- Bulk actions: mark outdated, publish all drafts for a locale
+- Import from locale JSON files (seed DB from existing files)
+- Draft/publish per entry via DraftActionBar pattern
 
-### Draft/publish compatibility
-- Media assets themselves are immediately available (no draft state on raw files)
-- Using a different asset in a block/setting remains a draft change until published
-- Reusable block edits follow the same draft/publish pattern as regular blocks
+**2. `src/hooks/use-translation-manager.ts`**
+Hook for translation CRUD:
+- `useTranslationEntries(filters)` — paginated query
+- `useTranslationStats()` — per-locale completion stats
+- `saveDraftTranslation(key, locale, value)` — draft save
+- `publishTranslations(locale?, namespace?)` — publish drafts
+- `discardDraftTranslations(locale?, namespace?)` — discard
+- `markOutdated(key)` — when source content changes, mark all non-source locales as outdated
+- `importFromLocaleFiles()` — seed DB from JSON files
+- `getCmsTranslatableFields(page)` — extract translatable text fields from block content
 
-## Permission mapping
+**3. `src/components/admin/translations/TranslationKeyEditor.tsx`**
+Inline editor component for a single translation key across all locales:
+- Shows source (EN) text
+- Side-by-side locale inputs
+- Status badges per locale
+- Save draft / publish actions
+
+**4. `src/components/admin/translations/CmsTranslationPanel.tsx`**
+Panel for editing CMS block content translations:
+- Lists translatable fields from block content
+- Per-locale text inputs
+- Shows when a field is using fallback (EN) vs has a real translation
+- Integrates with `updateBlockContent` from VisualEditorContext
+
+**5. `src/components/admin/translations/TranslationOverview.tsx`**
+Dashboard showing:
+- Per-language completion percentage
+- Missing translations count
+- Outdated translations count
+- Quick links to fix issues
+
+### Modified Files
+
+**`src/App.tsx`**
+- Add route: `/admin/translations` → `AdminTranslations` with `requiredPermission="translations.manage"`
+
+**`src/components/admin/AdminLayout.tsx`**
+- Add "Translations" sidebar item under Core group (icon: `Globe`, permission: `translations.manage`)
+
+**`src/contexts/VisualEditorContext.tsx`**
+- Add `previewLocale` state (defaults to current i18n language)
+- Add `setPreviewLocale(locale)` action
+- Pass preview locale to EditorCanvas for locale-aware rendering
+
+**`src/components/admin/editor/EditorToolbar.tsx`**
+- Add locale switcher dropdown in toolbar for preview locale selection
+- Shows current preview language with flag/label
+
+**`src/components/admin/BlockRenderer.tsx`**
+- Update `tr()` calls to respect preview locale when in editor context
+- Add `previewLocale` prop support for rendering blocks in a specific language
+
+**`src/lib/translate.ts`**
+- Add `trWithLocale(value, locale, fallback)` variant that accepts explicit locale override
+- Used by editor preview to render in selected locale without changing global i18n state
+
+**`src/hooks/use-draft-publish.ts`**
+- No structural changes — CMS locale content lives inside the existing `content`/`draft_content` JSON fields as multilingual objects
+
+### How It Works
+
+**Static UI text flow:**
+1. Admin opens Translations page → sees all keys from locale files
+2. Edits a value for DA → saved as `draft_value` in `translation_entries`
+3. Preview shows draft value for DA
+4. Publishes → `value` updated, `draft_value` cleared
+5. Public site reads published `value` (or falls back to locale JSON files)
+
+**CMS content flow:**
+1. Block content field `heading` stores `{ en: "Hello", da: "Hej" }`
+2. Admin switches preview locale to DA → sees "Hej" in canvas
+3. Admin edits DA text in CMS Translation Panel → updates draft_content's multilingual object
+4. Draft save preserves changes; publish promotes to live content
+5. Public `tr()` resolves correct locale from published `content` field
+
+**Fallback chain:**
+Published locale-specific text → Published EN text → Empty string
+
+**Outdated detection:**
+When EN source text changes, compute hash comparison against stored `source_hash` → mark other locales as "outdated"
+
+### Permission Mapping
 | Action | Permission |
 |---|---|
-| View/browse media | `media.manage` |
-| Upload/edit/archive media | `media.manage` |
-| Manage reusable blocks | `content.edit` |
-| Insert reusable blocks | `content.edit` |
+| View/edit translations | `translations.manage` |
+| Publish translations | `content.publish` |
+| Import/seed from files | `translations.manage` |
 
-## Implementation order
-1. Database migration (tables + permissions seed)
-2. `use-media-library.ts` hook
-3. `MediaPickerDialog` + `MediaLibraryPage` + route
-4. Integrate picker into `ImageUploadField`
-5. `ReusableBlocksLibrary` + `InsertReusableDialog` + route
-6. Integrate reusable blocks into Visual Editor context
-7. Sidebar + routing updates
+### Files Summary
+| Action | File |
+|---|---|
+| Create | `src/pages/admin/AdminTranslations.tsx` |
+| Create | `src/hooks/use-translation-manager.ts` |
+| Create | `src/components/admin/translations/TranslationKeyEditor.tsx` |
+| Create | `src/components/admin/translations/CmsTranslationPanel.tsx` |
+| Create | `src/components/admin/translations/TranslationOverview.tsx` |
+| Modify | `src/App.tsx` (add route) |
+| Modify | `src/components/admin/AdminLayout.tsx` (add sidebar item) |
+| Modify | `src/contexts/VisualEditorContext.tsx` (add previewLocale) |
+| Modify | `src/components/admin/editor/EditorToolbar.tsx` (add locale switcher) |
+| Modify | `src/lib/translate.ts` (add trWithLocale) |
+
+### Database Changes Summary
+- Create `translation_entries` table with draft/publish columns + RLS
+- Seed `translations.manage` permission for admin roles
 

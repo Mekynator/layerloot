@@ -48,6 +48,8 @@ export default function EditorToolbar({ onAddBlock, onPageSettings, onDeletePage
           value={activePage}
           onValueChange={(value) => {
             if (value === "__new__") { onPageSettings(); return; }
+            if (value === "__header__") { setActivePage("global_header"); return; }
+            if (value === "__footer__") { setActivePage("global_footer"); return; }
             setActivePage(value);
           }}
         >

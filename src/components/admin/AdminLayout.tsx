@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Tags, ArrowLeft, Layers, Menu, X,
   Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
   Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone,
-  BarChart3, Wallet,
+  BarChart3, Wallet, ImageIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";

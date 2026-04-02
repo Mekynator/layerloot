@@ -1,12 +1,15 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Package, Truck, Star, Heart, ShoppingCart, ArrowRight, Sparkles } from "lucide-react";
+import { Package, Truck, Star, Heart, ShoppingCart, ArrowRight, Sparkles, Gift, Zap } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import OrderTimeline from "@/components/orders/OrderTimeline";
 import type { AccountModuleProps, Order, CustomOrder, UserVoucher } from "./types";
-import { isCustomOrderDone } from "./types";
+import { isCustomOrderDone, classifyVoucher } from "./types";
+import { computeLoyaltyProgress, type RewardTier } from "@/hooks/use-loyalty-progress";
 import { useRememberedChoices } from "@/hooks/use-remembered-choices";
 import { useBehaviorTracking } from "@/hooks/use-behavior-tracking";
 import { useStorefrontCatalog } from "@/hooks/use-storefront";
@@ -19,8 +22,55 @@ interface Props extends AccountModuleProps {
   onSwitchTab: (tab: string) => void;
 }
 
+function TierMarker({ tier, balance, isNext, onRedeem }: { tier: RewardTier; balance: number; isNext: boolean; onRedeem: () => void }) {
+  const canRedeem = balance >= tier.pointsCost;
+  const locked = !canRedeem;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          className={`flex flex-col items-center gap-0.5 transition-all ${
+            canRedeem
+              ? "opacity-100 cursor-pointer"
+              : "opacity-40 cursor-pointer hover:opacity-60"
+          }`}
+        >
+          <div
+            className={`flex h-6 w-6 items-center justify-center rounded-full border-2 text-[9px] font-bold transition-all ${
+              canRedeem
+                ? "border-primary bg-primary text-primary-foreground shadow-[0_0_8px_hsl(var(--primary)/0.4)] animate-pulse"
+                : isNext
+                ? "border-primary/50 bg-primary/10 text-primary"
+                : "border-border bg-muted text-muted-foreground"
+            }`}
+          >
+            {tier.discountType === "free_shipping" ? <Truck className="h-3 w-3" /> : <Star className="h-3 w-3" />}
+          </div>
+          <span className={`text-[9px] font-medium whitespace-nowrap ${canRedeem ? "text-primary" : isNext ? "text-foreground" : "text-muted-foreground"}`}>
+            {tier.discountType === "free_shipping" ? "Free Ship" : tier.discountType === "gift_card" ? `${tier.discountValue} GC` : `${tier.discountValue} kr`}
+          </span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-48 p-3" side="top">
+        <p className="font-display text-sm font-bold">{tier.name}</p>
+        <p className="text-xs text-muted-foreground mt-1">{tier.pointsCost} points</p>
+        {canRedeem ? (
+          <Button size="sm" className="mt-2 w-full text-xs" onClick={onRedeem}>
+            <Gift className="mr-1 h-3 w-3" /> Redeem
+          </Button>
+        ) : (
+          <p className="mt-2 text-xs text-muted-foreground">{tier.pointsCost - balance} more points needed</p>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function AccountDashboard({ overview, tt, orders, customOrders, userVouchers, onSwitchTab }: Props) {
   const pointsBalance = overview?.pointsBalance ?? 0;
+  const pointsEarned = overview?.pointsEarned ?? 0;
+  const pointsSpent = overview?.pointsSpent ?? 0;
   const { choices } = useRememberedChoices();
   const { getInterestProfile } = useBehaviorTracking();
   const profile = getInterestProfile();
@@ -29,12 +79,10 @@ export default function AccountDashboard({ overview, tt, orders, customOrders, u
 
   const latestOrder = orders[0];
   const activeCustomOrders = customOrders.filter(o => !isCustomOrderDone(o));
-  const activeVouchers = userVouchers.filter(v => !v.is_used && !v.used_at);
+  const activeVouchers = userVouchers.filter(v => classifyVoucher(v) === "active");
 
-  // Next reward milestone
-  const rewardMilestones = [50, 100, 200, 500, 1000];
-  const nextMilestone = rewardMilestones.find(m => m > pointsBalance) ?? rewardMilestones[rewardMilestones.length - 1];
-  const progressPercent = Math.min((pointsBalance / nextMilestone) * 100, 100);
+  // Use real loyalty progress
+  const loyalty = computeLoyaltyProgress(pointsBalance, pointsEarned, pointsSpent);
 
   // Recommended products based on behavior
   const recommendedProducts = products
@@ -83,25 +131,61 @@ export default function AccountDashboard({ overview, tt, orders, customOrders, u
           </CardContent>
         </Card>
 
-        {/* Rewards Progress */}
+        {/* Rewards Progress — Interactive Tier Bar */}
         <Card className="border-primary/10">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center justify-between font-display text-sm uppercase">
               <span className="flex items-center gap-2"><Star className="h-4 w-4 text-primary" /> {tt("account.dashboard.rewards", "Rewards Progress")}</span>
-              <Button variant="ghost" size="sm" className="text-xs" onClick={() => onSwitchTab("rewards")}>
-                {tt("account.dashboard.rewardsStore", "Store")} <ArrowRight className="ml-1 h-3 w-3" />
-              </Button>
+              <div className="flex items-center gap-2">
+                {loyalty.canRedeem && (
+                  <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} transition={{ type: "spring" }}>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="text-[10px] uppercase tracking-wider gap-1"
+                      onClick={() => onSwitchTab("rewards")}
+                    >
+                      <Zap className="h-3 w-3" />
+                      {loyalty.redeemableRewards.length} {tt("account.dashboard.rewardsAvailable", "Rewards")}
+                    </Button>
+                  </motion.div>
+                )}
+                <Button variant="ghost" size="sm" className="text-xs" onClick={() => onSwitchTab("rewards")}>
+                  {tt("account.dashboard.rewardsStore", "Store")} <ArrowRight className="ml-1 h-3 w-3" />
+                </Button>
+              </div>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
             <div className="flex items-end justify-between">
               <div>
                 <p className="font-display text-3xl font-bold text-primary">{pointsBalance}</p>
                 <p className="text-xs text-muted-foreground">{tt("account.dashboard.pointsAvailable", "points available")}</p>
               </div>
-              <p className="text-xs text-muted-foreground">{nextMilestone - pointsBalance} {tt("account.dashboard.toNextReward", "to next milestone")}</p>
+              {loyalty.nextReward && loyalty.pointsToNext > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-semibold text-primary">{loyalty.pointsToNext}</span> {tt("account.dashboard.toNextReward", "to next reward")}
+                </p>
+              )}
             </div>
-            <Progress value={progressPercent} className="h-2" />
+
+            {/* Progress bar */}
+            <Progress value={loyalty.progressPercent} className="h-2.5" />
+
+            {/* Tier markers row */}
+            <div className="flex items-start justify-between gap-1 overflow-x-auto pb-1">
+              {loyalty.allTiers.map(tier => (
+                <TierMarker
+                  key={tier.key}
+                  tier={tier}
+                  balance={pointsBalance}
+                  isNext={loyalty.nextReward?.key === tier.key}
+                  onRedeem={() => onSwitchTab("rewards")}
+                />
+              ))}
+            </div>
+
+            {/* Active voucher badges */}
             {activeVouchers.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {activeVouchers.slice(0, 3).map(v => (

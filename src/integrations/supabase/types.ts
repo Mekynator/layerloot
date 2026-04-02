@@ -146,6 +146,101 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_logs: {
+        Row: {
+          actions_executed: Json
+          created_at: string
+          id: string
+          page: string | null
+          session_id: string
+          trigger_event: string
+          user_id: string | null
+          workflow_id: string
+        }
+        Insert: {
+          actions_executed?: Json
+          created_at?: string
+          id?: string
+          page?: string | null
+          session_id: string
+          trigger_event: string
+          user_id?: string | null
+          workflow_id: string
+        }
+        Update: {
+          actions_executed?: Json
+          created_at?: string
+          id?: string
+          page?: string | null
+          session_id?: string
+          trigger_event?: string
+          user_id?: string | null
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_logs_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "automation_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_workflows: {
+        Row: {
+          actions: Json
+          campaign_id: string | null
+          conditions: Json
+          cooldown_seconds: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          max_fires_per_session: number
+          name: string
+          priority: number
+          trigger_config: Json
+          trigger_event: string
+          updated_at: string
+        }
+        Insert: {
+          actions?: Json
+          campaign_id?: string | null
+          conditions?: Json
+          cooldown_seconds?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          max_fires_per_session?: number
+          name: string
+          priority?: number
+          trigger_config?: Json
+          trigger_event: string
+          updated_at?: string
+        }
+        Update: {
+          actions?: Json
+          campaign_id?: string | null
+          conditions?: Json
+          cooldown_seconds?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          max_fires_per_session?: number
+          name?: string
+          priority?: number
+          trigger_config?: Json
+          trigger_event?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       campaigns: {
         Row: {
           banner_config: Json

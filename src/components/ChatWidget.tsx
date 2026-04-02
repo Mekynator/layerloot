@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
-
+import { useCampaign } from "@/components/campaign/CampaignThemeProvider";
+import { useChatSettings } from "@/hooks/use-chat-settings";
 type Msg = {
   id: string;
   role: "user" | "assistant";

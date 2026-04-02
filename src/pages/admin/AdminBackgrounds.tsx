@@ -599,6 +599,44 @@ export default function AdminBackgrounds() {
   );
 }
 
+function DraftActionButtons({ bgDraftStatus, saving, publishingBg, uploading, onSave, onPublish, onDiscard }: {
+  bgDraftStatus: DraftStatus; saving: boolean; publishingBg: boolean; uploading?: boolean;
+  onSave: () => void; onPublish: () => void; onDiscard: () => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        {bgDraftStatus === "draft" && (
+          <Badge variant="outline" className="gap-1 border-blue-500/50 bg-blue-500/10 text-blue-400 text-[10px]">
+            <Eye className="h-3 w-3" /> Draft
+          </Badge>
+        )}
+        {bgDraftStatus === "published" && (
+          <Badge variant="outline" className="gap-1 border-emerald-500/50 bg-emerald-500/10 text-emerald-400 text-[10px]">
+            <CheckCircle2 className="h-3 w-3" /> Published
+          </Badge>
+        )}
+      </div>
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={onSave} disabled={saving || uploading} className="flex-1 gap-1.5 font-display uppercase tracking-wider">
+          <Save className="h-4 w-4" />
+          {saving ? "Saving..." : "Save Draft"}
+        </Button>
+        <Button onClick={onPublish} disabled={publishingBg || saving} className="flex-1 gap-1.5 font-display uppercase tracking-wider">
+          <Upload className="h-4 w-4" />
+          {publishingBg ? "Publishing..." : "Publish"}
+        </Button>
+      </div>
+      {bgDraftStatus === "draft" && (
+        <Button variant="ghost" onClick={onDiscard} className="w-full gap-1.5 text-xs text-muted-foreground hover:text-destructive">
+          <RotateCcw className="h-3.5 w-3.5" /> Discard Draft & Revert to Published
+        </Button>
+      )}
+    </div>
+  );
+}
+
+
 function SliderRow({ label, value, min = 0, max = 100, step = 1, suffix = "", onChange }: {
   label: string; value: number; min?: number; max?: number; step?: number; suffix?: string;
   onChange: (v: number) => void;

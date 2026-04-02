@@ -54,14 +54,33 @@ const AdminOrders = () => {
   const fetchOrders = async () => {
     const { data, error } = await supabase
       .from("orders")
-      .select("id, user_id, status, subtotal, shipping_cost, total, created_at, tracking_number, tracking_url, notes, profiles!orders_user_id_fkey(full_name)" as any)
+      .select("id, user_id, status, subtotal, shipping_cost, total, created_at, tracking_number, tracking_url, notes")
       .order("created_at", { ascending: false });
 
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
       return;
     }
-    setOrders((data as any as StoreOrder[]) ?? []);
+
+    const orders = (data ?? []) as any[];
+
+    // Fetch profile names for orders with user_id
+    const userIds = [...new Set(orders.map(o => o.user_id).filter(Boolean))];
+    let profileMap: Record<string, string> = {};
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", userIds);
+      (profiles ?? []).forEach((p: any) => {
+        profileMap[p.user_id] = p.full_name ?? "";
+      });
+    }
+
+    setOrders(orders.map(o => ({
+      ...o,
+      profiles: o.user_id ? { full_name: profileMap[o.user_id] || null } : null,
+    })) as StoreOrder[]);
   };
 
   useEffect(() => { fetchOrders(); }, []);

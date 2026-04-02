@@ -288,16 +288,16 @@ export function useProductAdmin() {
 
     // Log restoration
     const revNum = await getNextRevNum(productId);
-    await supabase.from("content_revisions").insert({
+    await supabase.from("content_revisions").insert([{
       content_type: "product",
       content_id: productId,
-      revision_data: revisionData,
+      revision_data: revisionData as any,
       revision_number: revNum,
       action: "restore",
       change_summary: `Restored from revision #${revision.revision_number}`,
       restored_from_revision_id: revisionId,
       created_by: userId,
-    });
+    }]);
 
     toast({ title: "Revision restored as draft" });
     return true;

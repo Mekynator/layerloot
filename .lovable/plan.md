@@ -1,156 +1,155 @@
 
 
-# Product Catalog Workflow with Draft/Publish Architecture
+# Admin Operations Workflow: Orders, Custom Orders & Communications
+
+## Summary
+Restructure the admin portal to clearly separate **operations** (orders, custom orders, fulfillment, communications) from **content/CMS** and **commerce/catalog**. Improve order detail workspaces, add internal notes separation, richer status workflows, production timelines, and activity logging.
 
 ## Current State
-- Products table uses `is_active` boolean as only visibility control — changes are live immediately
-- `AdminProducts.tsx` writes directly to the `products` table with no draft layer
-- `use-storefront.ts` queries `products` with `.eq("is_active", true)` — no draft/published distinction
-- No product revision history, no scheduled publishing, no product status system
-- Variants (`product_variants`) also have no draft support
+- `AdminOrders.tsx` (463 lines): merges store + custom orders in one table, basic dialog for details
+- `AdminCustomOrders.tsx` (1473 lines): extensive custom order workflow with messages, quoting, 3D preview — already quite capable
+- `custom_order_messages` table exists with `sender_role` (user/admin/system) and `message_type` (note/quote/counter_offer/status_update/system)
+- `order_status_history` table exists for store orders
+- `OrderTimeline` component shows 4 public stages (Received, Printing, Finishing, Shipped)
+- Sidebar has no "Operations" group — orders/custom orders are not in the default sidebar config
+- `logAdminActivity()` helper exists but is not called from order workflows
+- No internal notes table separate from customer messages
+- No dedicated order detail page (uses dialog)
 
-## Architecture Approach
-Mirror the existing `site_blocks` draft pattern: add `draft_data` (jsonb), `has_draft`, `published_at`, `published_by`, `scheduled_publish_at`, and a `status` column to the `products` table. Admin reads draft_data when available; public storefront reads only the base columns when `status = 'published'`.
+## Architecture
 
-## Database Changes
-
-### Migration: Extend `products` table for draft/publish
-
-```sql
--- Add draft/publish columns to products
-ALTER TABLE public.products
-  ADD COLUMN IF NOT EXISTS draft_data jsonb,
-  ADD COLUMN IF NOT EXISTS has_draft boolean NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS published_at timestamptz,
-  ADD COLUMN IF NOT EXISTS published_by uuid,
-  ADD COLUMN IF NOT EXISTS updated_by uuid,
-  ADD COLUMN IF NOT EXISTS scheduled_publish_at timestamptz,
-  ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'published',
-  ADD COLUMN IF NOT EXISTS archived_at timestamptz;
-
--- Index for scheduled publish job
-CREATE INDEX IF NOT EXISTS idx_products_scheduled
-  ON public.products (scheduled_publish_at)
-  WHERE scheduled_publish_at IS NOT NULL AND has_draft = true;
-
--- Seed products.manage permission
-INSERT INTO public.admin_permissions (role, permission) VALUES
-  ('super_admin', 'products.manage'),
-  ('admin', 'products.manage'),
-  ('editor', 'products.manage')
-ON CONFLICT DO NOTHING;
-
-INSERT INTO public.admin_permissions (role, permission) VALUES
-  ('super_admin', 'products.publish'),
-  ('admin', 'products.publish')
-ON CONFLICT DO NOTHING;
-```
-
-`draft_data` stores a full snapshot of all editable product fields (name, description, price, images, stock, etc.) as a JSON object. When an admin edits a product, changes go into `draft_data` instead of the live columns. Publishing promotes `draft_data` values into the real columns and clears the draft.
-
-`status` values: `draft` (never published), `published`, `unpublished`, `archived`, `scheduled`.
-
-### Extend `process-scheduled-publish` edge function
-Add a products query alongside the existing blocks/settings queries to auto-promote products whose `scheduled_publish_at <= now()`.
-
-## New Files
-
-### 1. `src/hooks/use-product-admin.ts`
-Product admin hook providing:
-- `loadAdminProduct(id)` — returns product with draft_data merged if present
-- `saveDraftProduct(id, data, userId)` — writes to `draft_data`, sets `has_draft = true`
-- `publishProduct(id, userId)` — promotes `draft_data` into live columns, logs revision, clears draft
-- `unpublishProduct(id)` — sets `status = 'unpublished'`, `is_active = false`
-- `archiveProduct(id)` — sets `status = 'archived'`, `archived_at`
-- `scheduleProductPublish(id, date)` — sets `scheduled_publish_at`
-- `loadProductRevisions(id)` — fetches from `content_revisions` where `content_type = 'product'`
-- `restoreProductRevision(id, revisionNumber, asDraft)` — restores old version
-
-### 2. `src/pages/admin/AdminProductPreview.tsx`
-A route `/admin/products/:productId/preview` that renders a read-only product detail view using draft_data. Shows exactly how the product will appear on the storefront before publishing. Reuses existing `ProductDetail` rendering components but feeds them draft data.
-
-## Modified Files
-
-### `src/pages/admin/AdminProducts.tsx`
-Major refactor:
-- Replace direct `supabase.from("products").update()` with `saveDraftProduct()`
-- Add status column in product table showing: Published, Draft, Unpublished, Archived, Scheduled
-- Add status filter dropdown
-- Replace "Active/Draft" toggle with proper status badges
-- Add "Publish" / "Unpublish" / "Archive" action buttons per product
-- Add "Preview" link → opens `AdminProductPreview`
-- Add "History" button → opens `RevisionHistoryPanel` for product
-- Add "Schedule" option on publish
-- Add confirmation dialog for destructive actions (delete, archive, price changes)
-- Show draft indicator when product has unpublished changes
-
-### `src/hooks/use-storefront.ts`
-Update public storefront queries:
-- Change `.eq("is_active", true)` to `.eq("status", "published").eq("is_active", true)` so draft/unpublished/archived products never appear publicly
-- Same for `useProductDetailQuery` — add status check
-
-### `src/App.tsx`
-- Add route: `/admin/products/:productId/preview` → `AdminProductPreview`
-
-### `supabase/functions/process-scheduled-publish/index.ts`
-- Add products scheduled publish processing alongside existing blocks/settings logic
-
-## How Draft/Publish Works for Products
+### Sidebar Reorganization
+Restructure `DEFAULT_SIDEBAR_CONFIG` into 4 groups:
 
 ```text
-Admin edits product
-  → Changes saved to products.draft_data (JSON snapshot)
-  → products.has_draft = true
-  → Live storefront unchanged
-
-Admin clicks "Preview"
-  → AdminProductPreview reads draft_data
-  → Renders product as it will appear
-
-Admin clicks "Publish"
-  → draft_data fields promoted to live columns (name, price, images, etc.)
-  → Revision logged to content_revisions (content_type = 'product')
-  → draft_data cleared, has_draft = false
-  → products.published_at set
-  → Live storefront now shows updated product
-
-Admin clicks "Schedule"
-  → scheduled_publish_at set
-  → process-scheduled-publish edge function promotes at scheduled time
+Content:     Dashboard, Page Editor, Media, Reusable Blocks, Translations, Backgrounds, Settings
+Commerce:    Products, Categories, Discounts, Pricing, Showcases
+Operations:  Orders, Custom Orders, Clients
+Tools:       Shipping, Growth, Campaigns, Revenue, Reports
+System:      Activity Log, Admin Users
 ```
 
-## Product Status Logic
+### Database Changes
 
-| Status | `is_active` | `status` | Storefront visible |
-|---|---|---|---|
-| Published | true | published | Yes |
-| Draft (new) | false | draft | No |
-| Unpublished | false | unpublished | No |
-| Archived | false | archived | No |
-| Scheduled | true/false | scheduled | No (until publish time) |
+**New table: `admin_internal_notes`** — for staff-only notes on any entity:
+- `id` uuid PK
+- `entity_type` text (order, custom_order, product, customer)
+- `entity_id` text
+- `user_id` uuid (author)
+- `note` text
+- `is_pinned` boolean default false
+- `created_at` timestamptz
+- RLS: admin-only (read/write)
 
-## Revision History
-Uses existing `content_revisions` table with `content_type = 'product'` and `content_id = product.id`. Each publish creates a revision snapshot. Rollback restores as draft for re-review.
+**Seed permissions:**
+- `orders.manage` for super_admin, admin, support
+- `custom_orders.manage` for super_admin, admin, support
 
-## Permission Mapping
+No schema changes to `orders` or `custom_orders` tables — the existing columns and statuses are sufficient. The richer status set will be handled in the UI layer using the existing `status` text column.
+
+### New Files
+
+**1. `src/pages/admin/AdminOrderDetail.tsx`**
+Full-page order detail workspace (replaces dialog) for store orders:
+- Customer info, items list, totals
+- Status management with expanded statuses: new, paid, processing, printing, finishing, packed, shipped, delivered, completed, cancelled, refunded, on_hold
+- Tracking number/URL editing
+- Internal notes panel (from `admin_internal_notes`)
+- Order status history timeline (from `order_status_history`)
+- Activity log integration (calls `logAdminActivity` on status changes)
+- Payment state display
+- Notes visible vs internal separation
+
+**2. `src/pages/admin/AdminCustomOrderDetail.tsx`**
+Full-page custom order detail workspace (extracts from current dialog):
+- All current custom order detail functionality moved from dialog to dedicated page
+- Customer info, uploaded files, 3D preview
+- Quote workflow (prepare, send, accept/decline counter)
+- Communication thread with clear visual separation:
+  - Customer messages (left-aligned)
+  - Admin messages (right-aligned)
+  - System/status updates (centered, muted)
+  - Internal notes (separate tab/section, never shown to customer)
+- Production timeline with expanded stages
+- Payment status panel
+- File attachments view
+- Activity log integration
+
+**3. `src/hooks/use-admin-notes.ts`**
+Hook for internal notes CRUD:
+- `useAdminNotes(entityType, entityId)` — fetch notes
+- `addNote(text)` — insert note + log activity
+- `deleteNote(noteId)` — soft indication only
+- `togglePin(noteId)` — pin/unpin
+
+### Modified Files
+
+**`src/components/admin/AdminLayout.tsx`**
+- Restructure sidebar groups: Content, Commerce, Operations, Tools, System
+- Add Orders (ShoppingCart icon) and Custom Orders (Package icon) under Operations
+- Add Clients under Operations
+- Move Products, Categories, Discounts, Pricing, Showcases under Commerce
+
+**`src/pages/admin/AdminOrders.tsx`**
+Major refactor:
+- Remove custom orders from this page (they have their own section)
+- Add search (by order ID, customer name/email)
+- Add date range filter
+- Add payment status filter
+- Expand status set in UI
+- Replace detail dialog with navigation to `/admin/orders/:orderId`
+- Add status badges with colors
+- Add activity logging on status changes
+- Add bulk quick-action buttons (mark shipped, mark completed)
+
+**`src/pages/admin/AdminCustomOrders.tsx`**
+Refactor:
+- Keep list view but simplify
+- Move detail view to `/admin/custom-orders/:orderId` (new page)
+- Add search by name/email/ID
+- Add status filter
+- Navigate to detail page instead of opening dialog
+
+**`src/App.tsx`**
+- Add routes: `/admin/orders/:orderId` → `AdminOrderDetail`
+- Add routes: `/admin/custom-orders/:orderId` → `AdminCustomOrderDetail`
+
+**`src/components/orders/OrderTimeline.tsx`**
+- Add more internal stages for admin view (review, quality check, packed)
+- Add `adminMode` prop that shows all stages vs customer-safe subset
+- Customer view remains: Received → Printing → Finishing → Shipped
+
+### Activity Logging Integration
+Add `logAdminActivity()` calls for:
+- Order status changed
+- Custom order status changed
+- Quote sent
+- Customer message sent
+- Internal note added
+- Production stage updated
+- Payment status changed
+- Tracking info updated
+
+### Permission Mapping
 | Action | Permission |
 |---|---|
-| Edit product drafts | `products.manage` |
-| Publish / unpublish products | `products.publish` |
-| Archive / delete products | `products.publish` |
-| View product admin | `products.manage` |
+| View/manage orders | `orders.manage` |
+| View/manage custom orders | `custom_orders.manage` |
+| View customers | `customers.view` |
 
 ## Files Summary
 | Action | File |
 |---|---|
-| Create | `src/hooks/use-product-admin.ts` |
-| Create | `src/pages/admin/AdminProductPreview.tsx` |
-| Modify | `src/pages/admin/AdminProducts.tsx` (draft workflow, status UI, actions) |
-| Modify | `src/hooks/use-storefront.ts` (add status filter to public queries) |
-| Modify | `src/App.tsx` (add preview route) |
-| Modify | `supabase/functions/process-scheduled-publish/index.ts` (add products) |
+| Create | `src/pages/admin/AdminOrderDetail.tsx` |
+| Create | `src/pages/admin/AdminCustomOrderDetail.tsx` |
+| Create | `src/hooks/use-admin-notes.ts` |
+| Modify | `src/components/admin/AdminLayout.tsx` (reorganize sidebar) |
+| Modify | `src/pages/admin/AdminOrders.tsx` (store-only, search, link to detail) |
+| Modify | `src/pages/admin/AdminCustomOrders.tsx` (simplify, link to detail) |
+| Modify | `src/App.tsx` (add detail routes) |
+| Modify | `src/components/orders/OrderTimeline.tsx` (admin mode stages) |
 
 ## Database Changes Summary
-- **Alter** `products`: +`draft_data`, +`has_draft`, +`published_at`, +`published_by`, +`updated_by`, +`scheduled_publish_at`, +`status`, +`archived_at`
-- **Seed** `products.manage` and `products.publish` permissions
+- **Create** `admin_internal_notes` table with admin-only RLS
+- **Seed** `orders.manage` and `custom_orders.manage` permissions
 

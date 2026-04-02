@@ -85,8 +85,11 @@ const AccountOverviewPanel = ({ overview, tt, config }: Props) => {
                 </div>
               ) : (
                 loyaltyHistory.slice(0, 8).map(row => (
-                  <div key={row.id} className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3">
-                    <div className="min-w-0">
+                  <div key={row.id} className="flex items-center gap-3 rounded-xl border border-border bg-background/60 px-4 py-3">
+                    <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${row.points >= 0 ? "bg-green-500/10" : "bg-destructive/10"}`}>
+                      {row.points >= 0 ? <TrendingUp className="h-3.5 w-3.5 text-green-600" /> : <TrendingDown className="h-3.5 w-3.5 text-destructive" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
                       <p className="truncate text-sm text-foreground">{row.reason || tt("account.points.pointsUpdate", "Points update")}</p>
                       <p className="text-xs text-muted-foreground">{new Date(row.created_at).toLocaleString()}</p>
                     </div>

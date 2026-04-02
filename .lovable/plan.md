@@ -1,75 +1,153 @@
 
 
-# Redesign User Custom Order Page (Customer View)
+# Custom Order Automation System
 
 ## Current State
-Custom orders are displayed inside `CustomOrdersModule.tsx` (269 lines) as expandable cards within the Account page. The current UX shows raw parsed fields, a flat message list, and basic badges. No progress timeline, no conversation state awareness, no media links support, and no "next steps" guidance.
+- Custom orders have manual status changes with basic system messages on status change and quote send
+- `automation_workflows` table already exists for a general IF→THEN engine (used for storefront behavior automations)
+- `AdminAutomations.tsx` is a placeholder page
+- No SLA tracking, no reminders, no canned templates, no auto-close logic
+- Notifications rely on `seenState` polling — no push/real-time notifications
+
+## Approach
+Build a **dedicated custom order automation layer** as a new database table + edge function + admin config UI, separate from the general `automation_workflows` (which handles storefront behavior). This keeps the system focused, configurable, and avoids overcomplicating the existing automation engine.
 
 ## Plan
 
-### 1. Rewrite `src/components/account/CustomOrdersModule.tsx`
+### 1. Database Migration — New Tables
 
-**A. Order Header + Progress Timeline**
-- Add a custom order timeline (similar to `OrderTimeline` but for custom order statuses):
-  - Steps: Received → Reviewing → Quoted → In Production → Completed → Shipped
-  - Map `order.status` + `order.production_status` to the correct step
-  - Reuse the horizontal timeline pattern from `OrderTimeline.tsx` with the same glow/animation styling
-- Show order type badge, status badge, and date in the header
+**A. `custom_order_automation_rules`** — configurable automation rules
+| Column | Type | Purpose |
+|--------|------|---------|
+| id | uuid PK | |
+| trigger_event | text | e.g. `status_changed`, `quote_sent`, `no_customer_reply`, `production_update`, `conversation_closed` |
+| trigger_config | jsonb | conditions like `{from_status, to_status, delay_days}` |
+| actions | jsonb | array of actions: `[{type: "system_message", template: "..."}, {type: "notify_user"}, {type: "notify_admin"}]` |
+| is_active | boolean | toggle on/off |
+| sort_order | int | priority |
+| name | text | display name |
+| created_at / updated_at | timestamptz | |
 
-**B. Request Details (clean version)**
-- Reuse the `parseCustomOrderDescription` utility already in types.ts
-- Render as clean label/value grid (material, color, quality, quantity, scale, customer notes)
-- Remove raw `<pre>` block (line 164) — replace with formatted fields
-- Add collapsible "Your Files / Attachments" section:
-  - Show `model_filename` + link to `model_url`
-  - Image preview from metadata `reference_image_url` if available
-  - Collapsed by default using `Collapsible` component
+RLS: admin-only CRUD, no public access.
 
-**C. Quoting Section (prominent card)**
-- Show quoted price, request fee status, final agreed price
-- Display dynamic status messages: "Waiting for admin quote", "Quote available — action required", "Quote accepted", "In production"
-- Keep Accept/Decline quote buttons (existing logic lines 205-213)
-- Keep Pay Now flow (existing logic lines 224-238)
-- Remove raw "Negotiation State" sub-section — replace with clean summary
+**B. `custom_order_sla_tracking`** — deadline/SLA per order
+| Column | Type | Purpose |
+|--------|------|---------|
+| id | uuid PK | |
+| custom_order_id | uuid FK | |
+| stage | text | current stage being tracked |
+| entered_at | timestamptz | when stage started |
+| deadline_at | timestamptz | SLA deadline |
+| resolved_at | timestamptz | when stage completed |
+| sla_status | text | `on_track`, `warning`, `overdue` |
 
-**D. Communication (core redesign)**
-- Chat-style layout with proper message bubbles:
-  - Admin messages: right-aligned or left with branded avatar (Sparkles icon like admin page)
-  - User messages: opposite side
-  - System messages: centered, italic, muted
-- Timestamps on each message
-- Support media links in messages:
-  - Detect video links (youtube, vimeo, or `📹` prefix from admin) → show "View Model Video" button
-  - Detect image URLs → show inline preview thumbnail
-- Respect conversation status:
-  - If `metadata.conversation_status === "closed"`: disable input, show "Conversation closed" message
-  - If open: show compose area with send button
-- Auto-scroll to latest message
+RLS: admin-only.
 
-**E. "Next Steps" Guidance Banner**
-- Dynamic contextual message based on order state:
-  - `pending` + fee unpaid → "Pay the request fee to get started"
-  - `pending`/`reviewing` → "Your request is being reviewed by our team"
-  - `quoted` + pending response → "You have a quote waiting — review and accept"
-  - `accepted` + awaiting_payment → "Complete payment to start production"
-  - `in_production` → "Your order is being crafted"
-  - `completed`/`shipped` → "Your order is on its way!"
-- Styled as a highlighted info banner at the top of each expanded order
+**C. `custom_order_message_templates`** — canned message templates
+| Column | Type | Purpose |
+|--------|------|---------|
+| id | uuid PK | |
+| trigger_key | text | e.g. `status_reviewing`, `quote_sent`, `production_started` |
+| title | text | display name |
+| template | text | message body with `{{placeholders}}` |
+| is_active | boolean | |
+| sort_order | int | |
 
-**F. Status Badges (simplified)**
-- Show Order Status, Payment Status, Production Status as color-coded badges
-- Use existing `customStatusBadgeColors` mapping
+RLS: admin CRUD, authenticated read.
 
-### 2. Files Changed
+**D. Add `unread_by_admin` and `unread_by_user` columns to `custom_orders`**
+- Boolean flags to track unread state for notification badges
+- Updated by message insert logic
+
+### 2. Edge Function — `process-custom-order-automations`
+
+A scheduled edge function (pg_cron, every 5 min) that:
+- Checks for time-based triggers: quote not responded in X days, order stuck in stage, auto-close after completion
+- Executes actions: insert system messages, update unread flags, update SLA status
+- Logs execution to `admin_activity_log`
+
+### 3. Client-Side Automation Hook — `use-custom-order-automation.ts`
+
+Runs **immediately** on status change / quote send (not waiting for cron):
+- Looks up matching `custom_order_automation_rules` for the trigger event
+- Executes instant actions: insert system message, set unread flags
+- Called from `AdminCustomOrderDetail.tsx` after save/quote/production update
+
+### 4. SLA Tracking Integration
+
+**In `AdminCustomOrderDetail.tsx`:**
+- Show SLA indicator card (green/yellow/red) based on `custom_order_sla_tracking`
+- Show time-in-stage, total turnaround
+- Auto-insert SLA row when stage changes
+
+**In `AdminCustomOrders.tsx` list:**
+- Add SLA status badge column (color dot)
+
+### 5. Message Templates Admin UI
+
+**New: `src/components/admin/CustomOrderTemplatesEditor.tsx`**
+- CRUD for `custom_order_message_templates`
+- Edit template text with placeholder support
+- Preview rendered message
+
+**In `AdminCustomOrderDetail.tsx`:**
+- Add "Use template" dropdown in communication area
+- Selecting a template pre-fills the message input
+
+### 6. Automation Rules Admin UI
+
+**New section in `AdminSettings.tsx` or dedicated tab:**
+- List all `custom_order_automation_rules`
+- Toggle active/inactive
+- Edit trigger conditions and actions
+- Configure SLA thresholds (e.g., warning at 48h, overdue at 72h)
+- Configure auto-close delay
+- Configure reminder delays
+
+### 7. Unread/Notification Badges
+
+**`AdminCustomOrders.tsx`:**
+- Show unread dot on orders with `unread_by_admin = true`
+
+**`CustomOrdersModule.tsx` (user side):**
+- Show unread dot on orders with `unread_by_user = true`
+- Clear unread when expanded
+
+**Mark as read logic:**
+- Admin views order → set `unread_by_admin = false`
+- User expands order → set `unread_by_user = false`
+
+### 8. Auto-Close Conversation
+
+- Add rule: when status = `completed` or `cancelled` AND no messages for X days → auto-close
+- Handled by the scheduled edge function
+- Inserts system message "Conversation automatically closed"
+
+### 9. Seed Default Rules & Templates
+
+Insert default automation rules and message templates via the migration:
+- Status → Reviewing: "Your request is now under review."
+- Status → Quoted: "A quote is now available for your custom order."
+- Quote accepted: "Quote accepted — preparing for production."
+- Production started: "Your order is now in production."
+- Shipped: "Your order has been shipped!"
+- Completed: "Your order is complete."
+- Reminder: quote not responded in 3 days
+
+### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/account/CustomOrdersModule.tsx` | Full redesign — timeline, clean details, chat UI, media support, conversation state, next-steps guidance |
+| **Migration** | Create 3 new tables + add 2 columns to `custom_orders` + seed defaults |
+| `supabase/functions/process-custom-order-automations/index.ts` | **New** — scheduled cron function |
+| `src/hooks/use-custom-order-automation.ts` | **New** — instant trigger execution |
+| `src/components/admin/CustomOrderTemplatesEditor.tsx` | **New** — template CRUD |
+| `src/pages/admin/AdminCustomOrderDetail.tsx` | Add SLA card, template dropdown, call automation hook on save |
+| `src/pages/admin/AdminCustomOrders.tsx` | Add unread badge, SLA column |
+| `src/components/account/CustomOrdersModule.tsx` | Unread clearing, improved notification dots |
+| `src/pages/admin/AdminSettings.tsx` | Add automation rules config section |
 
-### 3. No Database Changes
-All needed fields (`metadata.conversation_status`, `metadata.video_link`, `metadata.picture_link`) are already stored as JSONB. Message detection for media links is done client-side by pattern matching.
-
-### 4. Scope Boundaries
-- **Included**: Timeline, clean details, chat redesign, media link support, conversation closed state, next-steps banner, collapsible attachments
-- **Deferred**: Real-time updates (requires Supabase realtime subscription), email notifications for new messages, file upload in chat, AI chat assistance
+### Scope Boundaries
+- **Included**: Automation rules engine, SLA tracking, message templates, unread badges, auto-system-messages, auto-close, scheduled reminders, admin config UI
+- **Deferred**: Email notifications (future phase using existing email infra), real-time subscriptions, AI-powered suggestions
 

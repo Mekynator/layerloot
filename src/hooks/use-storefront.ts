@@ -220,6 +220,7 @@ async function fetchProductDetail(slug: string): Promise<ProductDetailData | nul
         "id, name, slug, description, price, compare_at_price, images, is_featured, category_id, model_url, created_at, stock",
       )
       .eq("is_active", true)
+      .eq("status", "published")
       .neq("id", product.id)
       .limit(4),
   ]);

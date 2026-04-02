@@ -93,6 +93,7 @@ const AppShell = () => {
           <Route path="/admin" element={<AdminRoute><Dashboard /></AdminRoute>} />
           <Route path="/admin/products" element={<AdminRoute requiredPermission="products.manage"><AdminProducts /></AdminRoute>} />
           <Route path="/admin/products/:productId/variants" element={<AdminRoute requiredPermission="products.manage"><AdminVariants /></AdminRoute>} />
+          <Route path="/admin/products/:productId/preview" element={<AdminRoute requiredPermission="products.manage"><AdminProductPreview /></AdminRoute>} />
           <Route path="/admin/categories" element={<AdminRoute requiredPermission="categories.manage"><AdminCategories /></AdminRoute>} />
           <Route path="/admin/orders" element={<AdminRoute requiredPermission="orders.manage"><AdminOrders /></AdminRoute>} />
           <Route path="/admin/clients" element={<AdminRoute requiredPermission="customers.view"><AdminClients /></AdminRoute>} />

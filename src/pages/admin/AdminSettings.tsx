@@ -113,7 +113,6 @@ const PersonalizationSettings = () => {
     </div>
   );
 };
-import CustomOrderTemplatesEditor from "@/components/admin/CustomOrderTemplatesEditor";
 
 /* ─── Types ─── */
 interface PromoConfig {

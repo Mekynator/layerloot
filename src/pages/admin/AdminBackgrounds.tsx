@@ -99,29 +99,51 @@ export default function AdminBackgrounds() {
 
   const isGlobal = selectedPage === "__global__";
 
-  // Load settings for selected page
+  // Load settings for selected page (check draft first, then live)
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     const key = settingKeyForPage(selectedPage);
 
-    supabase.from("site_settings").select("value").eq("key", key).maybeSingle()
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        setLoading(false);
-        if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    (async () => {
+      // Check for draft first
+      const draftVal = await loadDraftSetting(key);
+      if (cancelled) return;
 
+      if (draftVal) {
+        // Load from draft
+        setBgDraftStatus("draft");
         if (isGlobal) {
-          setForm(normalizeSettings(data?.value));
+          setForm(normalizeSettings(draftVal));
           setOverrideMode("custom");
         } else {
-          const val = data?.value as any;
-          const mode: PageOverrideMode = val?.mode || "inherit";
+          const mode: PageOverrideMode = draftVal?.mode || "inherit";
           setOverrideMode(mode);
-          setForm(mode === "custom" ? normalizeSettings(val) : DEFAULT_SETTINGS);
+          setForm(mode === "custom" ? normalizeSettings(draftVal) : DEFAULT_SETTINGS);
         }
         setPreviewIndex(0);
-      });
+        setLoading(false);
+        return;
+      }
+
+      // No draft, load live
+      setBgDraftStatus("published");
+      const { data, error } = await supabase.from("site_settings").select("value").eq("key", key).maybeSingle();
+      if (cancelled) return;
+      setLoading(false);
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+
+      if (isGlobal) {
+        setForm(normalizeSettings(data?.value));
+        setOverrideMode("custom");
+      } else {
+        const val = data?.value as any;
+        const mode: PageOverrideMode = val?.mode || "inherit";
+        setOverrideMode(mode);
+        setForm(mode === "custom" ? normalizeSettings(val) : DEFAULT_SETTINGS);
+      }
+      setPreviewIndex(0);
+    })();
 
     return () => { cancelled = true; };
   }, [selectedPage]);

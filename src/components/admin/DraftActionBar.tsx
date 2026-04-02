@@ -27,6 +27,7 @@ export default function DraftActionBar({
   onDiscard,
   onPreview,
   disabled,
+  canPublish = true,
   className = "",
 }: DraftActionBarProps) {
   const hasDraft = status === "draft" || status === "unpublished_changes";

@@ -3,10 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import i18n, { resolveLanguage, LANGUAGE_STORAGE_KEY } from "@/lib/i18n";
 
+type AdminRole = "super_admin" | "admin" | "editor" | "support" | null;
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   isAdmin: boolean;
+  adminRole: AdminRole;
   loading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -19,6 +22,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [adminRole, setAdminRole] = useState<AdminRole>(null);
   const [loading, setLoading] = useState(true);
 
   const syncLanguage = async (userId: string) => {
@@ -37,6 +41,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, resolved);
   };
 
+  const ADMIN_ROLES = new Set(["super_admin", "admin", "editor", "support"]);
+
   const checkAdminRole = async (authUser: User) => {
     const roleFromMetadata = authUser.app_metadata?.role;
     const rolesFromMetadata = authUser.app_metadata?.roles;
@@ -46,22 +52,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (isMetadataAdmin) {
       setIsAdmin(true);
+      setAdminRole("admin");
       return;
     }
 
     const { data, error } = await supabase
       .from("user_roles")
       .select("role")
-      .eq("user_id", authUser.id)
-      .eq("role", "admin")
-      .maybeSingle();
+      .eq("user_id", authUser.id);
 
-    if (error) {
+    if (error || !data) {
       setIsAdmin(false);
+      setAdminRole(null);
       return;
     }
 
-    setIsAdmin(!!data);
+    const adminRoleRow = data.find((r: any) => ADMIN_ROLES.has(r.role));
+    if (adminRoleRow) {
+      setIsAdmin(true);
+      setAdminRole(adminRoleRow.role as AdminRole);
+    } else {
+      setIsAdmin(false);
+      setAdminRole(null);
+    }
   };
 
   useEffect(() => {
@@ -114,10 +127,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setSession(null);
     setIsAdmin(false);
+    setAdminRole(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, isAdmin, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, isAdmin, adminRole, loading, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

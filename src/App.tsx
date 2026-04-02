@@ -35,6 +35,8 @@ import AdminRevenue from "./pages/admin/AdminRevenue";
 import VisualEditor from "./pages/admin/VisualEditor";
 import AdminBackgrounds from "./pages/admin/AdminBackgrounds";
 import AdminLogin from "./pages/admin/AdminLogin";
+import AdminActivity from "./pages/admin/AdminActivity";
+import AdminUsers from "./pages/admin/AdminUsers";
 import AdminRoute from "./components/admin/AdminRoute";
 import DynamicPage from "./pages/DynamicPage";
 import CreateYourOwn from "./pages/CreateYourOwn";
@@ -85,25 +87,27 @@ const AppShell = () => {
           <Route path="/creations/:slug" element={<CreationDetail />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<AdminRoute><Dashboard /></AdminRoute>} />
-          <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
-          <Route path="/admin/products/:productId/variants" element={<AdminRoute><AdminVariants /></AdminRoute>} />
-          <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
-          <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
-          <Route path="/admin/clients" element={<AdminRoute><AdminClients /></AdminRoute>} />
-          <Route path="/admin/shipping" element={<AdminRoute><AdminShipping /></AdminRoute>} />
-          <Route path="/admin/custom-orders" element={<AdminRoute><AdminCustomOrders /></AdminRoute>} />
-          <Route path="/admin/discounts" element={<AdminRoute><AdminDiscounts /></AdminRoute>} />
-          <Route path="/admin/reviews" element={<AdminRoute><AdminReviews /></AdminRoute>} />
-          <Route path="/admin/showcases" element={<AdminRoute><AdminShowcases /></AdminRoute>} />
-          <Route path="/admin/pricing" element={<AdminRoute><AdminPricing /></AdminRoute>} />
-          <Route path="/admin/growth" element={<AdminRoute><AdminGrowth /></AdminRoute>} />
-          <Route path="/admin/campaigns" element={<AdminRoute><AdminCampaigns /></AdminRoute>} />
-          <Route path="/admin/reports" element={<AdminRoute><AdminReports /></AdminRoute>} />
-          <Route path="/admin/revenue" element={<AdminRoute><AdminRevenue /></AdminRoute>} />
-          <Route path="/admin/content" element={<AdminRoute><AdminContent /></AdminRoute>} />
-          <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
-          <Route path="/admin/editor" element={<AdminRoute><VisualEditor /></AdminRoute>} />
-          <Route path="/admin/backgrounds" element={<AdminRoute><AdminBackgrounds /></AdminRoute>} />
+          <Route path="/admin/products" element={<AdminRoute requiredPermission="products.manage"><AdminProducts /></AdminRoute>} />
+          <Route path="/admin/products/:productId/variants" element={<AdminRoute requiredPermission="products.manage"><AdminVariants /></AdminRoute>} />
+          <Route path="/admin/categories" element={<AdminRoute requiredPermission="categories.manage"><AdminCategories /></AdminRoute>} />
+          <Route path="/admin/orders" element={<AdminRoute requiredPermission="orders.manage"><AdminOrders /></AdminRoute>} />
+          <Route path="/admin/clients" element={<AdminRoute requiredPermission="customers.view"><AdminClients /></AdminRoute>} />
+          <Route path="/admin/shipping" element={<AdminRoute requiredPermission="shipping.manage"><AdminShipping /></AdminRoute>} />
+          <Route path="/admin/custom-orders" element={<AdminRoute requiredPermission="custom_orders.manage"><AdminCustomOrders /></AdminRoute>} />
+          <Route path="/admin/discounts" element={<AdminRoute requiredPermission="discounts.manage"><AdminDiscounts /></AdminRoute>} />
+          <Route path="/admin/reviews" element={<AdminRoute requiredPermission="reviews.manage"><AdminReviews /></AdminRoute>} />
+          <Route path="/admin/showcases" element={<AdminRoute requiredPermission="showcases.manage"><AdminShowcases /></AdminRoute>} />
+          <Route path="/admin/pricing" element={<AdminRoute requiredPermission="pricing.manage"><AdminPricing /></AdminRoute>} />
+          <Route path="/admin/growth" element={<AdminRoute requiredPermission="campaigns.manage"><AdminGrowth /></AdminRoute>} />
+          <Route path="/admin/campaigns" element={<AdminRoute requiredPermission="campaigns.manage"><AdminCampaigns /></AdminRoute>} />
+          <Route path="/admin/reports" element={<AdminRoute requiredPermission="reports.view"><AdminReports /></AdminRoute>} />
+          <Route path="/admin/revenue" element={<AdminRoute requiredPermission="revenue.view"><AdminRevenue /></AdminRoute>} />
+          <Route path="/admin/content" element={<AdminRoute requiredPermission="content.edit"><AdminContent /></AdminRoute>} />
+          <Route path="/admin/settings" element={<AdminRoute requiredPermission="settings.view"><AdminSettings /></AdminRoute>} />
+          <Route path="/admin/editor" element={<AdminRoute requiredPermission="content.edit"><VisualEditor /></AdminRoute>} />
+          <Route path="/admin/backgrounds" element={<AdminRoute requiredPermission="backgrounds.manage"><AdminBackgrounds /></AdminRoute>} />
+          <Route path="/admin/activity" element={<AdminRoute requiredPermission="reports.view"><AdminActivity /></AdminRoute>} />
+          <Route path="/admin/users" element={<AdminRoute requiredPermission="*"><AdminUsers /></AdminRoute>} />
           <Route path="/policies/:slug" element={<Policies />} />
           <Route path="/pages/:slug" element={<DynamicPage />} />
           <Route path="/:slug" element={<DynamicPage />} />

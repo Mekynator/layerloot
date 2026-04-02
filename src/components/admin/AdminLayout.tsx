@@ -4,15 +4,17 @@ import {
   LayoutDashboard, Tags, ArrowLeft, Layers, Menu, X,
   Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
   Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone,
-  BarChart3, Wallet, ImageIcon,
+  BarChart3, Wallet, ImageIcon, Shield, Activity,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdminPermissions } from "@/hooks/use-admin-permissions";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
 const ICON_MAP: Record<string, typeof Package> = {
   LayoutDashboard, Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
-  Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone, BarChart3, Wallet, Tags, Layers, ImageIcon,
+  Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone, BarChart3,
+  Wallet, Tags, Layers, ImageIcon, Shield, Activity,
 };
 
 export interface SidebarItem {
@@ -21,6 +23,7 @@ export interface SidebarItem {
   label: string;
   icon: string;
   visible: boolean;
+  permission?: string;
 }
 
 export interface SidebarConfig {
@@ -33,22 +36,29 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
       name: "Core",
       items: [
         { id: "dashboard", to: "/admin", label: "Dashboard", icon: "LayoutDashboard", visible: true },
-        { id: "categories", to: "/admin/categories", label: "Categories & Tags", icon: "Tags", visible: true },
-        { id: "editor", to: "/admin/editor", label: "Page Editor", icon: "FileText", visible: true },
-        { id: "backgrounds", to: "/admin/backgrounds", label: "Backgrounds", icon: "ImageIcon", visible: true },
-        { id: "settings", to: "/admin/settings", label: "Settings", icon: "Settings", visible: true },
+        { id: "categories", to: "/admin/categories", label: "Categories & Tags", icon: "Tags", visible: true, permission: "categories.manage" },
+        { id: "editor", to: "/admin/editor", label: "Page Editor", icon: "FileText", visible: true, permission: "content.edit" },
+        { id: "backgrounds", to: "/admin/backgrounds", label: "Backgrounds", icon: "ImageIcon", visible: true, permission: "backgrounds.manage" },
+        { id: "settings", to: "/admin/settings", label: "Settings", icon: "Settings", visible: true, permission: "settings.view" },
       ],
     },
     {
       name: "Tools",
       items: [
-        { id: "discounts", to: "/admin/discounts", label: "Discounts", icon: "TicketPercent", visible: true },
-        { id: "shipping", to: "/admin/shipping", label: "Shipping", icon: "Truck", visible: true },
-        { id: "pricing", to: "/admin/pricing", label: "Pricing", icon: "Calculator", visible: true },
-        { id: "growth", to: "/admin/growth", label: "Growth", icon: "TrendingUp", visible: true },
-        { id: "campaigns", to: "/admin/campaigns", label: "Campaigns", icon: "Megaphone", visible: true },
-        { id: "revenue", to: "/admin/revenue", label: "Revenue Engine", icon: "Wallet", visible: true },
-        { id: "reports", to: "/admin/reports", label: "Reports", icon: "BarChart3", visible: true },
+        { id: "discounts", to: "/admin/discounts", label: "Discounts", icon: "TicketPercent", visible: true, permission: "discounts.manage" },
+        { id: "shipping", to: "/admin/shipping", label: "Shipping", icon: "Truck", visible: true, permission: "shipping.manage" },
+        { id: "pricing", to: "/admin/pricing", label: "Pricing", icon: "Calculator", visible: true, permission: "pricing.manage" },
+        { id: "growth", to: "/admin/growth", label: "Growth", icon: "TrendingUp", visible: true, permission: "campaigns.manage" },
+        { id: "campaigns", to: "/admin/campaigns", label: "Campaigns", icon: "Megaphone", visible: true, permission: "campaigns.manage" },
+        { id: "revenue", to: "/admin/revenue", label: "Revenue Engine", icon: "Wallet", visible: true, permission: "revenue.view" },
+        { id: "reports", to: "/admin/reports", label: "Reports", icon: "BarChart3", visible: true, permission: "reports.view" },
+      ],
+    },
+    {
+      name: "System",
+      items: [
+        { id: "activity", to: "/admin/activity", label: "Activity Log", icon: "Activity", visible: true, permission: "reports.view" },
+        { id: "users", to: "/admin/users", label: "Admin Users", icon: "Shield", visible: true, permission: "*" },
       ],
     },
   ],
@@ -56,6 +66,7 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const { isAdmin, loading, user } = useAuth();
+  const { hasPermission } = useAdminPermissions();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -84,7 +95,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const allItems = sidebarConfig.groups.flatMap(g => g.items);
 
   const renderLinks = (items: SidebarItem[]) =>
-    items.filter(i => i.visible).map((item) => {
+    items.filter(i => i.visible && (!i.permission || hasPermission(i.permission))).map((item) => {
       const active = isActive(item.to);
       const Icon = ICON_MAP[item.icon] || Package;
       return (

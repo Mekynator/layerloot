@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trash2, Plus, ArrowUp, ArrowDown, X, Palette, Type, Settings2, Layers, Monitor, Tablet, Smartphone, MousePointerClick } from "lucide-react";
+import { Trash2, Plus, ArrowUp, ArrowDown, X, Palette, Type, Settings2, Layers, Monitor, Tablet, Smartphone, MousePointerClick, Square } from "lucide-react";
 import { useVisualEditor, type SelectedElement } from "@/contexts/VisualEditorContext";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
 import SliderField from "./controls/SliderField";
@@ -16,6 +16,8 @@ import ColorPickerField from "./controls/ColorPickerField";
 import ImageUploadField from "./controls/ImageUploadField";
 import IconPickerField from "./controls/IconPickerField";
 import TypographyControls from "./controls/TypographyControls";
+import BorderControls from "./controls/BorderControls";
+import BackgroundSlideshowControls from "./controls/BackgroundSlideshowControls";
 import { getBlockSchema, type EditableNode } from "./editable-schema";
 
 const getRepeaterKey = (blockType?: string) => {

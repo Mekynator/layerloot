@@ -518,19 +518,22 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
   switch (block.block_type) {
     case "hero":
       return <HeroBlock block={block} />;
-    case "shipping_banner":
+    case "shipping_banner": {
+      const BannerIcon = iconForName(c.icon, Truck);
+      const bannerIconSize = c.iconSize ? `h-[${c.iconSize}px] w-[${c.iconSize}px]` : "h-4 w-4";
       return withSection(
         block,
         "py-3 border-y border-border/20",
         <div className="container flex items-center justify-center gap-2 text-foreground">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
-            <Truck className="h-4 w-4 text-primary" />
+            <BannerIcon className={`${bannerIconSize} text-primary`} style={c.iconColor ? { color: c.iconColor } : undefined} />
           </div>
           <span className="font-display text-sm uppercase tracking-widest text-foreground/90">
             {getLocalizedValue(c.text, tr("blocks.shippingBanner.text", "Free shipping on orders over 500 kr"))}
           </span>
         </div>,
       );
+    }
     case "entry_cards":
       return <EntryCardsBlock block={block} disableAnimations={disableAnimations} />;
     case "categories":

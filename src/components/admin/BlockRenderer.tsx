@@ -246,7 +246,7 @@ const resolveButtons = (
       iconPosition: button?.iconPosition || "left",
       variant: button?.variant || "default",
       visible: button?.visible !== false,
-      ...resolveItemAction(button),
+      ...resolveItemAction(button, button?.link),
     })) as BlockButton[];
   }
 

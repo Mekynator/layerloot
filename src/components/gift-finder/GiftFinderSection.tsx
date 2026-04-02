@@ -54,7 +54,9 @@ type GiftFinderLink = {
 
 export default function GiftFinderSection() {
   const { t } = useTranslation();
+  const { choices } = useRememberedChoices();
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [tagsLoaded, setTagsLoaded] = useState(false);
   const [tags, setTags] = useState<GiftFinderTag[]>([]);
   const [products, setProducts] = useState<(GiftFinderProduct & { matchScore: number })[]>([]);
   const [loading, setLoading] = useState(false);

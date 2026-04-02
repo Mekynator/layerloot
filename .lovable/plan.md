@@ -1,129 +1,140 @@
 
 
-# Role-Based, Action-Focused Admin Dashboard
+# AI Chat Analytics, Training & Optimization Dashboard
 
-## Summary
-Rebuild the dashboard into a modular, role-aware control center that shows each admin user only what's relevant to their role, prioritizing actionable items over static reporting.
+## Overview
+
+Build a comprehensive analytics, training, and optimization system for the AI chat, adding database tables for conversation tracking, a Q&A knowledge base, and a multi-tab admin dashboard.
 
 ## Architecture
 
-### Widget System
-Each dashboard section becomes a self-contained widget component. A configuration map defines which widgets appear for which roles:
-
 ```text
-Widget                  | super_admin | admin | editor | support
-─────────────────────────────────────────────────────────────────
-ActionCenter (queues)   |     ✓       |   ✓   |   ✗    |   ✓
-KPI tiles               |     ✓       |   ✓   |   ✗    |   ✗
-ContentStatus           |     ✓       |   ✓   |   ✓    |   ✗
-OperationsQueue         |     ✓       |   ✓   |   ✗    |   ✓
-QuickShortcuts          |     ✓       |   ✓   |   ✓    |   ✓
-RecentActivity          |     ✓       |   ✓   |   ✓    |   ✓
-TranslationStatus       |     ✓       |   ✓   |   ✓    |   ✗
-ProductAttention        |     ✓       |   ✓   |   ✗    |   ✗
-Charts                  |     ✓       |   ✓   |   ✗    |   ✗
+┌─────────────────────────────────────────────────┐
+│  ChatWidget (frontend)                          │
+│  ├─ Tracks: session start, messages, clicks     │
+│  └─ Sends events → chat_analytics table         │
+├─────────────────────────────────────────────────┤
+│  chat edge function                             │
+│  ├─ Fetches Q&A knowledge base for system prompt│
+│  └─ Logs conversations → chat_conversations     │
+├─────────────────────────────────────────────────┤
+│  AdminChatAnalytics page (new)                  │
+│  ├─ Analytics Dashboard tab                     │
+│  ├─ Conversation Logs tab                       │
+│  ├─ Knowledge Base / Training tab               │
+│  ├─ Performance Health tab                      │
+│  └─ Testing Sandbox tab                         │
+└─────────────────────────────────────────────────┘
 ```
 
-### Data Hook Enhancement
-Extend `use-admin-dashboard.ts` to also fetch:
-- Draft content counts (site_blocks with `has_draft = true`)
-- Scheduled publishes (site_blocks + products with `scheduled_publish_at` set)
-- Products with `status = 'draft'` (unpublished)
-- Unanswered custom order messages (messages where last message is from customer)
-- Translation stats (missing/outdated from `translation_entries`)
-- Admin activity log entries (recent from `admin_activity_log`)
-- Orders on hold, awaiting shipment counts
+## Database Changes (3 new tables)
 
-## New Files
+### 1. `chat_conversations`
+Stores every AI chat session with messages and metadata for admin review.
 
-### `src/components/admin/dashboard/DashboardWidget.tsx`
-Wrapper component providing consistent card styling, title, optional link, and role-visibility check. All widgets use this wrapper.
+| Column | Type | Purpose |
+|--------|------|---------|
+| id | uuid PK | |
+| session_id | text | Client-generated session ID |
+| user_id | uuid nullable | Logged-in user |
+| messages | jsonb | Full message array |
+| page | text | Page where chat started |
+| campaign_id | text nullable | Active campaign |
+| language | text | User language |
+| started_at | timestamptz | Session start |
+| ended_at | timestamptz nullable | Session end |
+| message_count | int | Total messages |
+| outcome | text | 'converted', 'abandoned', 'resolved', 'unknown' |
+| metadata | jsonb | Cart snapshot, quick replies clicked, products viewed |
+| admin_flags | jsonb | Flagged, useful/not useful markers |
+| created_at | timestamptz | |
 
-### `src/components/admin/dashboard/ActionCenterWidget.tsx`
-Top-priority queue widget showing urgent items:
-- Pending orders, quotes awaiting, customer replies, reviews pending, showcases pending, low stock, on-hold orders
-- Each item links to filtered admin page
-- Color-coded severity
+RLS: Admins full access. Service role insert. No public read.
 
-### `src/components/admin/dashboard/ContentStatusWidget.tsx`
-For editor/admin roles:
-- Draft blocks pending publish (count + link)
-- Scheduled publishes upcoming
-- Recently published content
-- Draft products not yet published
+### 2. `chat_analytics_events`
+Lightweight event tracking for aggregation.
 
-### `src/components/admin/dashboard/OperationsWidget.tsx`
-For support/admin/super_admin:
-- Orders needing shipment
-- Orders on hold
-- Custom orders needing quote
-- Unanswered customer messages
-- Production queue summary
+| Column | Type | Purpose |
+|--------|------|---------|
+| id | uuid PK | |
+| session_id | text | Links to conversation |
+| event_type | text | 'open', 'message', 'quick_reply_click', 'product_click', 'conversion', 'close' |
+| event_data | jsonb | Event-specific payload |
+| page | text | |
+| campaign_id | text nullable | |
+| user_id | uuid nullable | |
+| created_at | timestamptz | |
 
-### `src/components/admin/dashboard/TranslationWidget.tsx`
-For editor/admin:
-- Missing translations by locale
-- Outdated translations count
-- Link to translation manager
+RLS: Admins read. Service role insert.
 
-### `src/components/admin/dashboard/ProductAttentionWidget.tsx`
-For admin/super_admin:
-- Draft products
-- Low stock products
-- Hidden/unpublished products count
+### 3. `chat_knowledge_base`
+Q&A pairs for AI training / preferred responses.
 
-### `src/components/admin/dashboard/QuickActionsWidget.tsx`
-Role-filtered shortcut grid. Each shortcut has a `permission` field; only shortcuts the user has permission for are shown. Replaces current flat grid with role-aware filtering.
+| Column | Type | Purpose |
+|--------|------|---------|
+| id | uuid PK | |
+| question | text | Pattern/question |
+| answer | text | Preferred response |
+| category | text | 'products', 'shipping', 'materials', 'custom_orders', 'rewards', 'general' |
+| is_active | boolean | |
+| priority | int | Higher = used first |
+| created_by | uuid | |
+| created_at / updated_at | timestamptz | |
 
-### `src/components/admin/dashboard/RecentActivityWidget.tsx`
-Reads from `admin_activity_log` instead of fabricating events from orders/reviews. Shows real admin actions with role-based filtering.
+RLS: Admins full CRUD. Public read active entries (for edge function).
 
-## Modified Files
+## Implementation Steps
 
-### `src/hooks/use-admin-dashboard.ts`
-Add to `DashboardData`:
-- `draftBlocksCount`, `scheduledPublishCount`, `draftProductsCount`
-- `ordersAwaitingShipment`, `ordersOnHold`
-- `unansweredCustomMessages`
-- `missingTranslations`, `outdatedTranslations`
+### Step 1: Database migration
+Create all 3 tables with RLS policies.
 
-Add parallel queries for these counts using lightweight `head: true` count queries.
+### Step 2: Frontend event tracking (`ChatWidget.tsx`)
+- On chat open: insert `open` event
+- On message send: insert `message` event
+- On quick reply click: insert `quick_reply_click` event
+- On product link click in AI response: insert `product_click` event
+- On session end (close/navigate away): upsert conversation record with full messages
+- Use `navigator.sendBeacon` or fire-and-forget fetch for non-blocking tracking
 
-### `src/pages/admin/Dashboard.tsx`
-Complete rewrite:
-- Import `useAdminPermissions` to get `adminRole` and `hasPermission`
-- Compose dashboard from widget components based on role config
-- Remove inline chart/tile definitions (moved to widget components)
-- Layout: action center → KPIs → content/operations row → charts → activity → shortcuts
-- Greeting header with role label
-- Keep period selector for KPI/chart widgets
+### Step 3: Edge function updates (`chat/index.ts`)
+- Fetch active `chat_knowledge_base` entries and inject into system prompt as a "Preferred Q&A" section
+- Log conversation to `chat_conversations` table after generating response (fire-and-forget)
 
-## Widget Rendering Logic
+### Step 4: Admin Analytics Dashboard page
+New page: `src/pages/admin/AdminChatAnalytics.tsx` with tabs:
 
-```typescript
-const ROLE_WIDGETS: Record<AdminRole, string[]> = {
-  super_admin: ["action", "kpi", "content", "operations", "product", "translation", "charts", "activity", "shortcuts"],
-  admin: ["action", "kpi", "content", "operations", "product", "translation", "charts", "activity", "shortcuts"],
-  editor: ["content", "translation", "activity", "shortcuts"],
-  support: ["action", "operations", "activity", "shortcuts"],
-};
-```
+**Tab 1 — Dashboard**: Stat tiles (total chats, unique users, conversion rate, avg messages), charts (chats over time, top pages, top questions), quick reply performance table, product recommendation clicks.
 
-Dashboard renders widgets in order, skipping any not in the role's list.
+**Tab 2 — Conversations**: Searchable/filterable table of all conversations. Click to expand full chat log. Filters: date range, page, user, campaign, outcome. Flag/mark useful buttons.
 
-## Files Summary
-| Action | File |
-|---|---|
-| Create | `src/components/admin/dashboard/DashboardWidget.tsx` |
-| Create | `src/components/admin/dashboard/ActionCenterWidget.tsx` |
-| Create | `src/components/admin/dashboard/ContentStatusWidget.tsx` |
-| Create | `src/components/admin/dashboard/OperationsWidget.tsx` |
-| Create | `src/components/admin/dashboard/TranslationWidget.tsx` |
-| Create | `src/components/admin/dashboard/ProductAttentionWidget.tsx` |
-| Create | `src/components/admin/dashboard/QuickActionsWidget.tsx` |
-| Create | `src/components/admin/dashboard/RecentActivityWidget.tsx` |
-| Modify | `src/hooks/use-admin-dashboard.ts` (add draft/scheduled/ops counts) |
-| Modify | `src/pages/admin/Dashboard.tsx` (role-based widget composition) |
+**Tab 3 — Knowledge Base (Training)**: CRUD interface for Q&A pairs. Categories, priority sorting, active toggle. Bulk import. "Add from conversation" quick action.
 
-No database changes required — all data comes from existing tables.
+**Tab 4 — Health & Insights**: Health score cards (engagement, conversion, response quality). Alert cards for issues (high abandonment, unanswered questions). Top unanswered questions list.
+
+**Tab 5 — Testing Sandbox**: Embedded chat preview. Page/campaign/tone selector. Test conversations without affecting analytics. Uses same edge function with `test_mode` flag.
+
+### Step 5: Route registration
+Add `/admin/chat-analytics` route in `App.tsx` with admin guard.
+
+### Step 6: Sidebar navigation
+Add "AI Analytics" link to admin sidebar.
+
+## Technical Details
+
+- Analytics queries use `supabase.from("chat_analytics_events")` with date filtering and `.select()` aggregations
+- Conversation logging from ChatWidget uses the anon key (insert-only RLS)
+- Knowledge base entries are fetched in the edge function alongside existing chat config
+- Health scores are computed client-side from event aggregates (no extra DB functions needed)
+- Testing sandbox reuses the existing ChatWidget component with a `sandboxMode` prop that skips analytics logging
+
+## Files to Create/Modify
+
+| File | Action |
+|------|--------|
+| Migration SQL | Create 3 tables |
+| `src/pages/admin/AdminChatAnalytics.tsx` | New — full dashboard |
+| `src/components/ChatWidget.tsx` | Add event tracking |
+| `supabase/functions/chat/index.ts` | Add knowledge base fetch, conversation logging |
+| `src/App.tsx` | Add route |
+| `src/components/admin/AdminLayout.tsx` | Add sidebar link |
 

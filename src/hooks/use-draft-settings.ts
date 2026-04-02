@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { loadDraftSetting, saveDraftSetting, publishDraftSetting, discardDraftSetting } from "./use-draft-publish";
+import {
+  loadDraftSetting, saveDraftSetting, publishDraftSetting, discardDraftSetting,
+  scheduleSettingPublish, cancelSettingSchedule,
+} from "./use-draft-publish";
 import type { DraftStatus } from "./use-draft-publish";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -10,10 +13,13 @@ interface UseDraftSettingsReturn<T> {
   draftStatus: DraftStatus;
   loading: boolean;
   dirty: boolean;
+  scheduledAt: string | null;
   setValue: (v: T | ((prev: T) => T)) => void;
   saveDraft: (userId?: string) => Promise<boolean>;
   publish: (userId?: string) => Promise<boolean>;
   discard: () => Promise<boolean>;
+  schedulePublish: (date: Date) => Promise<boolean>;
+  cancelSchedule: () => Promise<boolean>;
   reload: () => Promise<void>;
 }
 
@@ -23,6 +29,7 @@ export function useDraftSettings<T>(key: string, defaultValue: T): UseDraftSetti
   const [hasDraft, setHasDraft] = useState(false);
   const [loading, setLoading] = useState(true);
   const [dirty, setDirty] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -86,7 +93,24 @@ export function useDraftSettings<T>(key: string, defaultValue: T): UseDraftSetti
     return ok;
   }, [key, liveValue]);
 
-  const draftStatus: DraftStatus = hasDraft || dirty ? "draft" : "published";
+  const draftStatus: DraftStatus = scheduledAt ? "scheduled" : (hasDraft || dirty ? "draft" : "published");
 
-  return { value, liveValue, hasDraft, draftStatus, loading, dirty, setValue, saveDraft, publish, discard, reload: load };
+  const doSchedulePublish = useCallback(async (date: Date) => {
+    // Save draft first if dirty
+    if (dirty) {
+      const saved = await saveDraftSetting(key, value);
+      if (!saved) return false;
+    }
+    const ok = await scheduleSettingPublish(key, date);
+    if (ok) { setScheduledAt(date.toISOString()); setDirty(false); }
+    return ok;
+  }, [key, value, dirty]);
+
+  const doCancelSchedule = useCallback(async () => {
+    const ok = await cancelSettingSchedule(key);
+    if (ok) setScheduledAt(null);
+    return ok;
+  }, [key]);
+
+  return { value, liveValue, hasDraft, draftStatus, loading, dirty, scheduledAt, setValue, saveDraft, publish, discard, schedulePublish: doSchedulePublish, cancelSchedule: doCancelSchedule, reload: load };
 }

@@ -6,7 +6,7 @@ import type { SiteBlock } from "@/components/admin/BlockRenderer";
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
-export type DraftStatus = "published" | "draft" | "unpublished_changes";
+export type DraftStatus = "published" | "draft" | "unpublished_changes" | "scheduled";
 
 /* ------------------------------------------------------------------ */
 /*  Revision helpers                                                   */
@@ -291,7 +291,7 @@ export async function discardDraftSetting(settingsKey: string): Promise<boolean>
 /* ------------------------------------------------------------------ */
 /*  Revert to a previous revision                                      */
 /* ------------------------------------------------------------------ */
-export async function revertToRevision(contentType: string, contentId: string, revisionNumber: number, userId?: string): Promise<boolean> {
+export async function revertToRevision(contentType: string, contentId: string, revisionNumber: number, userId?: string, restoreAsDraft = false): Promise<boolean> {
   try {
     const { data, error } = await supabase
       .from("content_revisions")
@@ -303,34 +303,117 @@ export async function revertToRevision(contentType: string, contentId: string, r
     if (error || !data) throw error || new Error("Revision not found");
 
     if (contentType === "site_block") {
-      // Log current state as revision before reverting
       const { data: current } = await supabase.from("site_blocks").select("content").eq("id", contentId).single();
       if (current) await insertRevision("site_block", contentId, current.content, "revert", userId, data.page);
 
-      await supabase.from("site_blocks").update({
-        content: data.revision_data,
-        draft_content: null,
-        has_draft: false,
-        published_at: new Date().toISOString(),
-        published_by: userId ?? null,
-      } as any).eq("id", contentId);
+      if (restoreAsDraft) {
+        await supabase.from("site_blocks").update({
+          draft_content: data.revision_data,
+          has_draft: true,
+          updated_by: userId ?? null,
+        } as any).eq("id", contentId);
+      } else {
+        await supabase.from("site_blocks").update({
+          content: data.revision_data,
+          draft_content: null,
+          has_draft: false,
+          published_at: new Date().toISOString(),
+          published_by: userId ?? null,
+        } as any).eq("id", contentId);
+      }
     } else if (contentType === "site_setting") {
       const { data: current } = await supabase.from("site_settings").select("value").eq("key", contentId).single();
       if (current) await insertRevision("site_setting", contentId, current.value, "revert", userId);
 
-      await supabase.from("site_settings").update({
-        value: data.revision_data,
-        draft_value: null,
-        has_draft: false,
-        published_at: new Date().toISOString(),
-        published_by: userId ?? null,
-      } as any).eq("key", contentId);
+      if (restoreAsDraft) {
+        await supabase.from("site_settings").update({
+          draft_value: data.revision_data,
+          has_draft: true,
+          updated_by: userId ?? null,
+        } as any).eq("key", contentId);
+      } else {
+        await supabase.from("site_settings").update({
+          value: data.revision_data,
+          draft_value: null,
+          has_draft: false,
+          published_at: new Date().toISOString(),
+          published_by: userId ?? null,
+        } as any).eq("key", contentId);
+      }
     }
 
-    toast.success("Reverted successfully");
+    toast.success(restoreAsDraft ? "Restored as draft" : "Reverted successfully");
     return true;
   } catch (err: any) {
     toast.error(`Revert failed: ${err.message}`);
+    return false;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Scheduling helpers                                                 */
+/* ------------------------------------------------------------------ */
+
+export async function scheduleBlocksPublish(page: string, scheduledAt: Date, userId?: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("site_blocks")
+      .update({ scheduled_publish_at: scheduledAt.toISOString() } as any)
+      .eq("page", page)
+      .eq("has_draft", true);
+    if (error) throw error;
+    toast.success(`Scheduled for ${scheduledAt.toLocaleString()}`);
+    return true;
+  } catch (err: any) {
+    toast.error(`Schedule failed: ${err.message}`);
+    return false;
+  }
+}
+
+export async function cancelBlocksSchedule(page: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("site_blocks")
+      .update({ scheduled_publish_at: null } as any)
+      .eq("page", page)
+      .eq("has_draft", true);
+    if (error) throw error;
+    toast.success("Schedule cancelled");
+    return true;
+  } catch (err: any) {
+    toast.error(`Cancel failed: ${err.message}`);
+    return false;
+  }
+}
+
+export async function scheduleSettingPublish(key: string, scheduledAt: Date): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("site_settings")
+      .update({ scheduled_publish_at: scheduledAt.toISOString() } as any)
+      .eq("key", key)
+      .eq("has_draft", true);
+    if (error) throw error;
+    toast.success(`Scheduled for ${scheduledAt.toLocaleString()}`);
+    return true;
+  } catch (err: any) {
+    toast.error(`Schedule failed: ${err.message}`);
+    return false;
+  }
+}
+
+export async function cancelSettingSchedule(key: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("site_settings")
+      .update({ scheduled_publish_at: null } as any)
+      .eq("key", key)
+      .eq("has_draft", true);
+    if (error) throw error;
+    toast.success("Schedule cancelled");
+    return true;
+  } catch (err: any) {
+    toast.error(`Cancel failed: ${err.message}`);
     return false;
   }
 }
@@ -341,19 +424,23 @@ export async function revertToRevision(contentType: string, contentId: string, r
 export function usePageDraftStatus(page: string) {
   const [status, setStatus] = useState<DraftStatus>("published");
   const [loading, setLoading] = useState(true);
+  const [scheduledAt, setScheduledAt] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     const { data } = await supabase
       .from("site_blocks")
-      .select("id")
+      .select("id, scheduled_publish_at")
       .eq("page", page)
       .eq("has_draft", true)
       .limit(1);
-    setStatus((data && data.length > 0) ? "draft" : "published");
+    const hasDraft = data && data.length > 0;
+    const scheduled = hasDraft ? (data[0] as any).scheduled_publish_at : null;
+    setScheduledAt(scheduled);
+    setStatus(scheduled ? "scheduled" : hasDraft ? "draft" : "published");
     setLoading(false);
   }, [page]);
 
   useEffect(() => { void refresh(); }, [refresh]);
 
-  return { status, loading, refresh };
+  return { status, loading, scheduledAt, refresh };
 }

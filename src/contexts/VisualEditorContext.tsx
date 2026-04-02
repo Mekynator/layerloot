@@ -5,6 +5,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import {
   loadAdminBlocks, saveDraftBlocks, discardDraftBlocks, publishDraftBlocks,
+  scheduleBlocksPublish, cancelBlocksSchedule,
   type DraftStatus,
 } from "@/hooks/use-draft-publish";
 import { useAuth } from "@/contexts/AuthContext";
@@ -70,6 +71,11 @@ interface EditorState {
   publishing: boolean;
   discardDraft: () => Promise<void>;
   draftStatus: DraftStatus;
+
+  // Scheduling
+  schedulePublish: (date: Date) => Promise<void>;
+  cancelSchedule: () => Promise<void>;
+  scheduledAt: string | null;
 
   // Undo/Redo
   undo: () => void;
@@ -208,6 +214,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   const [inlineEditingKey, setInlineEditingKey] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [draftStatus, setDraftStatus] = useState<DraftStatus>("published");
+  const [scheduledAt, setScheduledAt] = useState<string | null>(null);
 
   const selectElement = useCallback((el: SelectedElement | null) => {
     setSelectedElement(el);
@@ -237,9 +244,20 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     const sorted = sortBlocks(blocks);
     setSavedBlocks(sorted);
 
+    // Check for scheduled_publish_at on any draft block
+    const { data: schedData } = await supabase
+      .from("site_blocks")
+      .select("scheduled_publish_at")
+      .eq("page", page)
+      .eq("has_draft", true)
+      .not("scheduled_publish_at", "is", null)
+      .limit(1);
+    const schedAt = (schedData && schedData.length > 0) ? (schedData[0] as any).scheduled_publish_at : null;
+    setScheduledAt(schedAt);
+
     if (hasDraft) {
       setDraftBlocks(sorted);
-      setDraftStatus("draft");
+      setDraftStatus(schedAt ? "scheduled" : "draft");
     } else {
       setDraftBlocks(sorted);
       setDraftStatus("published");
@@ -431,6 +449,22 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     toast.info("Draft discarded — reverted to published version");
   }, [activePage, fetchBlocks]);
 
+  // Schedule publish
+  const schedulePublishFn = useCallback(async (date: Date) => {
+    // Save draft first if dirty
+    const currentPageBlocks = sortBlocks(draftBlocks.filter(b => b.page === activePage));
+    await saveDraftBlocks(activePage, currentPageBlocks, user?.id);
+    await scheduleBlocksPublish(activePage, date, user?.id);
+    setScheduledAt(date.toISOString());
+    setDraftStatus("scheduled");
+  }, [draftBlocks, activePage, user]);
+
+  const cancelScheduleFn = useCallback(async () => {
+    await cancelBlocksSchedule(activePage);
+    setScheduledAt(null);
+    setDraftStatus("draft");
+  }, [activePage]);
+
   const discardChanges = useCallback(() => {
     setDraftBlocks(savedBlocks);
     undoStack.current = [];
@@ -490,6 +524,9 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     publishing,
     discardDraft,
     draftStatus,
+    schedulePublish: schedulePublishFn,
+    cancelSchedule: cancelScheduleFn,
+    scheduledAt,
     undo,
     redo,
     canUndo,
@@ -499,7 +536,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     frontendPages,
     globalPages,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [pages, activePage, selectedPage, pageBlocks, savedBlocks, isDirty, selectedBlockId, selectedBlock, hoveredBlockId, saving, publishing, draftStatus, viewport, frontendPages, globalPages, undoVersion, selectedElement, inlineEditingKey]);
+  }), [pages, activePage, selectedPage, pageBlocks, savedBlocks, isDirty, selectedBlockId, selectedBlock, hoveredBlockId, saving, publishing, draftStatus, scheduledAt, viewport, frontendPages, globalPages, undoVersion, selectedElement, inlineEditingKey]);
 
   return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;
 }

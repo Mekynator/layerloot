@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
-import { ArrowDown, ArrowUp, ImagePlus, Trash2, Play, Pause, Copy, RotateCcw, Save, Upload, CheckCircle2, Eye, AlertCircle } from "lucide-react";
+import { ArrowDown, ArrowUp, ImagePlus, Trash2, Play, Pause, Copy, RotateCcw, Save, Upload, CheckCircle2, Eye, AlertCircle, History, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,8 +17,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
   saveDraftSetting, loadDraftSetting, discardDraftSetting, publishDraftSetting,
+  scheduleSettingPublish, cancelSettingSchedule,
   type DraftStatus,
 } from "@/hooks/use-draft-publish";
+import RevisionHistoryPanel from "@/components/admin/RevisionHistoryPanel";
+import SchedulePublishDialog from "@/components/admin/SchedulePublishDialog";
 
 const PAGES = [
   { key: "__global__", label: "Global (All Pages)" },
@@ -572,6 +575,7 @@ export default function AdminBackgrounds() {
               onSave={save}
               onPublish={publishBg}
               onDiscard={discardBgDraft}
+              settingsKey={settingKeyForPage(selectedPage)}
             />
           </div>
         ) : overrideMode === "disabled" ? (
@@ -579,14 +583,14 @@ export default function AdminBackgrounds() {
             <div className={CARD} style={CARD_SHADOW}>
               <p className="text-sm text-muted-foreground">Background is disabled for this page.</p>
             </div>
-            <DraftActionButtons bgDraftStatus={bgDraftStatus} saving={saving} publishingBg={publishingBg} onSave={save} onPublish={publishBg} onDiscard={discardBgDraft} />
+            <DraftActionButtons bgDraftStatus={bgDraftStatus} saving={saving} publishingBg={publishingBg} onSave={save} onPublish={publishBg} onDiscard={discardBgDraft} settingsKey={settingKeyForPage(selectedPage)} />
           </div>
         ) : (
           <div className="space-y-4">
             <div className={CARD} style={CARD_SHADOW}>
               <p className="text-sm text-muted-foreground">This page inherits the global background.</p>
             </div>
-            <DraftActionButtons bgDraftStatus={bgDraftStatus} saving={saving} publishingBg={publishingBg} onSave={save} onPublish={publishBg} onDiscard={discardBgDraft} />
+            <DraftActionButtons bgDraftStatus={bgDraftStatus} saving={saving} publishingBg={publishingBg} onSave={save} onPublish={publishBg} onDiscard={discardBgDraft} settingsKey={settingKeyForPage(selectedPage)} />
           </div>
         )}
       </div>
@@ -594,13 +598,21 @@ export default function AdminBackgrounds() {
   );
 }
 
-function DraftActionButtons({ bgDraftStatus, saving, publishingBg, uploading, onSave, onPublish, onDiscard }: {
+function DraftActionButtons({ bgDraftStatus, saving, publishingBg, uploading, onSave, onPublish, onDiscard, settingsKey }: {
   bgDraftStatus: DraftStatus; saving: boolean; publishingBg: boolean; uploading?: boolean;
-  onSave: () => void; onPublish: () => void; onDiscard: () => void;
+  onSave: () => void; onPublish: () => void; onDiscard: () => void; settingsKey?: string;
 }) {
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
+        {bgDraftStatus === "scheduled" && (
+          <Badge variant="outline" className="gap-1 border-blue-500/50 bg-blue-500/10 text-blue-400 text-[10px]">
+            <Clock className="h-3 w-3" /> Scheduled
+          </Badge>
+        )}
         {bgDraftStatus === "draft" && (
           <Badge variant="outline" className="gap-1 border-blue-500/50 bg-blue-500/10 text-blue-400 text-[10px]">
             <Eye className="h-3 w-3" /> Draft
@@ -613,6 +625,11 @@ function DraftActionButtons({ bgDraftStatus, saving, publishingBg, uploading, on
         )}
       </div>
       <div className="flex gap-2">
+        {settingsKey && (
+          <Button variant="outline" size="icon" onClick={() => setHistoryOpen(true)} className="h-10 w-10" title="Revision History">
+            <History className="h-4 w-4" />
+          </Button>
+        )}
         <Button variant="outline" onClick={onSave} disabled={saving || uploading} className="flex-1 gap-1.5 font-display uppercase tracking-wider">
           <Save className="h-4 w-4" />
           {saving ? "Saving..." : "Save Draft"}
@@ -621,11 +638,39 @@ function DraftActionButtons({ bgDraftStatus, saving, publishingBg, uploading, on
           <Upload className="h-4 w-4" />
           {publishingBg ? "Publishing..." : "Publish"}
         </Button>
+        {settingsKey && (
+          <Button variant="outline" size="icon" onClick={() => setScheduleOpen(true)} className="h-10 w-10" title="Schedule Publish">
+            <Clock className="h-4 w-4" />
+          </Button>
+        )}
       </div>
       {bgDraftStatus === "draft" && (
         <Button variant="ghost" onClick={onDiscard} className="w-full gap-1.5 text-xs text-muted-foreground hover:text-destructive">
           <RotateCcw className="h-3.5 w-3.5" /> Discard Draft & Revert to Published
         </Button>
+      )}
+
+      {settingsKey && (
+        <>
+          <RevisionHistoryPanel
+            open={historyOpen}
+            onOpenChange={setHistoryOpen}
+            contentType="site_setting"
+            contentId={settingsKey}
+            onRevisionRestored={() => window.location.reload()}
+          />
+          <SchedulePublishDialog
+            open={scheduleOpen}
+            onOpenChange={setScheduleOpen}
+            onSchedule={async (date) => {
+              await scheduleSettingPublish(settingsKey, date);
+            }}
+            onPublishNow={onPublish}
+            onCancelSchedule={async () => {
+              await cancelSettingSchedule(settingsKey);
+            }}
+          />
+        </>
       )}
     </div>
   );

@@ -149,6 +149,10 @@ type InstagramMediaItem = {
   permalink?: string;
   thumbnail_url?: string;
   username?: string;
+  is_reel?: boolean;
+  is_story?: boolean;
+  timestamp?: string;
+  expires_at?: string;
 };
 
 export interface SiteBlock {

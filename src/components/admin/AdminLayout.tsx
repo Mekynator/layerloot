@@ -95,7 +95,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const allItems = sidebarConfig.groups.flatMap(g => g.items);
 
   const renderLinks = (items: SidebarItem[]) =>
-    items.filter(i => i.visible).map((item) => {
+    items.filter(i => i.visible && (!i.permission || hasPermission(i.permission))).map((item) => {
       const active = isActive(item.to);
       const Icon = ICON_MAP[item.icon] || Package;
       return (

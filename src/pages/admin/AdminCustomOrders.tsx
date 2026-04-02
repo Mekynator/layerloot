@@ -26,6 +26,7 @@ interface CustomOrder {
   production_status: string;
   request_fee_status?: string;
   metadata?: Record<string, any> | null;
+  unread_by_admin?: boolean;
 }
 
 type ViewGroup = "in-production" | "done";

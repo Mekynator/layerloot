@@ -54,7 +54,7 @@ export default function EditorCanvas() {
 
   return (
     <div className="flex h-full flex-col bg-muted/20" onClick={handleCanvasClick}>
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-y-auto">
         <div className="flex justify-center p-4">
           <div
             ref={canvasRef}
@@ -111,7 +111,7 @@ export default function EditorCanvas() {
             )}
           </div>
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

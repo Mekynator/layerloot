@@ -1,82 +1,94 @@
 
 
-# Visual Editor Controls UX Overhaul
+# Checkout, Discount & Rewards System Upgrade
 
-## Summary
-Replace all technical inputs (raw hex, raw URLs, icon name strings, bare number fields) with visual controls: color pickers, sliders, image upload zones, and a searchable icon grid picker. Create 4 reusable control components in a new `controls/` directory, then rewire `SettingsPanel.tsx` to use them everywhere.
+## Current State
+- Cart page has inline discount selection via a basic `<select>` dropdown or manual code input
+- `use-cart-account-data.ts` fetches vouchers/gift cards from `user_vouchers` table
+- `create-checkout` edge function resolves one voucher/gift card and creates a Stripe coupon
+- `stripe-webhook` marks vouchers used on payment completion
+- No stacking support, no validation feedback, no admin checkout config, no savings recommendations
+- `discount_codes` table exists but is separate from the voucher system — not used at checkout
+- Gift card partial balance deduction sets balance to 0 (no partial tracking)
 
-## New Files
+## Phase 1 — Core Checkout Savings Panel (this round)
 
-### 1. `src/components/admin/editor/controls/SliderField.tsx`
-- Labeled slider with value display (e.g. "24px", "50%")
-- Props: `label`, `value`, `onChange`, `min`, `max`, `step`, `unit` (px/%)
-- Shows current value badge next to label
-- Optional small numeric input for precision typing
+### 1. New `CheckoutSavingsPanel` component
+Replace the inline discount area in `Cart.tsx` with a dedicated component containing:
+- **Manual code input** with Apply button and validation feedback
+- **Available vouchers/rewards** as selectable cards (not a dropdown) showing type icon, value, and impact preview
+- **Gift card section** showing balance and partial-apply slider
+- **Applied savings summary** with remove buttons and clear breakdown
+- **Best savings suggestion** banner ("This voucher saves you more")
 
-### 2. `src/components/admin/editor/controls/ColorPickerField.tsx`
-- Popover trigger showing a color swatch + hex text
-- Inside popover: native `<input type="color">` picker, hex text input, opacity slider (optional)
-- Row of 8 theme swatches (brand colors from tailwind config + common: white, black, transparent)
-- Recently used colors stored in localStorage (last 6)
-- Instant `onChange` on every interaction
+### 2. Upgrade `useCartAccountData` hook
+- Merge `discount_codes` into the available options (public codes the user can apply by entering them)
+- Return typed categories: `vouchers`, `giftCards`, `freeShippingRewards`
+- Add validation metadata: min order, expiry, eligibility status, reason if ineligible
+- Calculate "best option" recommendation per category
 
-### 3. `src/components/admin/editor/controls/ImageUploadField.tsx`
-- Default state: dashed-border drop zone with upload icon + "Click or drag to upload"
-- Uploads to Supabase storage bucket `editor-images` (public)
-- After upload: shows thumbnail preview with Replace and Remove buttons
-- Falls back to URL input in a collapsible "Advanced" section
-- Props: `value` (URL string), `onChange`, `label`
+### 3. New `useCheckoutSavings` hook
+Central state manager for applied savings:
+- Track multiple applied items (respecting stacking rules)
+- Validate each against cart state (subtotal, items, categories)
+- Compute combined discount amount, shipping discount, gift card deduction
+- Return clear line items for summary display
+- Stacking rules initially hardcoded: 1 discount/voucher + 1 gift card + free shipping allowed
 
-### 4. `src/components/admin/editor/controls/IconPickerField.tsx`
-- Button trigger showing current icon preview + name
-- Opens a Popover with:
-  - Search input at top
-  - Grid of ~80+ icons from lucide-react rendered as actual icons
-  - Click to select, closes popover
-  - Categories: Shopping, Delivery, Security, Social, 3D/Printing, Navigation, Communication, Media, Status, UI
-- Expanded icon list (from current 21 to ~80+): add `Clock, CreditCard, DollarSign, MapPin, Phone, Globe, Camera, Image, Video, Play, Pause, Download, Share2, ThumbsUp, Award, Zap, Flame, Lock, Unlock, Eye, EyeOff, Bell, MessageCircle, Send, Search, Filter, Settings, Sliders, BarChart3, PieChart, TrendingUp, Users, UserPlus, User, LogIn, LogOut, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ChevronRight, ChevronDown, ExternalLink, Link, Layers, Grid, List, LayoutGrid, Bookmark, Tag, Calendar, FileText, Folder, Printer, Cpu, Box, Boxes, Cuboid, Cog, Paintbrush, Brush, Palette, Sun, Moon, Cloud, Wifi, Database, Server, Terminal, Code, Rocket, Target, Flag, Trophy, Medal, Crown, Gem, Diamond, Scissors, Ruler, Pencil, Edit, Copy, Clipboard, RefreshCw, RotateCcw, Maximize, Minimize, Move, Grip, Menu, MoreHorizontal, MoreVertical, Info, AlertCircle, AlertTriangle, XCircle, CheckCircle, HelpCircle, CircleDot`
+### 4. Update Cart.tsx order summary
+- Replace current discount calculation with `useCheckoutSavings` output
+- Show line items: subtotal, shipping, discount (with label), gift card deduction, total
+- Animate savings amount with green highlight
+- Show "You saved X" badge when savings > 0
 
-### 5. Storage migration
-- Create `editor-images` public bucket via SQL migration
-- RLS: authenticated users can upload to their own folder, public read access
+### 5. Update `create-checkout` edge function
+- Accept array of applied savings (discount code + voucher code + gift card code)
+- Validate all server-side
+- Calculate combined Stripe discount
+- Store all applied items in session metadata
+- Support partial gift card deduction (update balance, not mark as used)
 
-## Changes to `SettingsPanel.tsx`
+### 6. Update `stripe-webhook`
+- Handle partial gift card balance updates (deduct amount, keep usable if balance remains)
+- Store applied savings details in order metadata
+- Support multiple voucher/discount tracking per order
 
-### Content tab replacements
-- **Hero `bg_image`**: raw URL input → `ImageUploadField`
-- **Hero overlay**: already a slider (keep, but wrap in `SliderField` for consistency)
-- **Hero button icons**: `Select` dropdown → `IconPickerField`
-- **CTA `bg_image`**: raw URL input → `ImageUploadField`
-- **Entry cards icon**: `Select` → `IconPickerField`
-- **Entry cards image**: raw URL → `ImageUploadField`
-- **Trust badges icon**: `Select` → `IconPickerField`
-- **How it works icon**: `Select` → `IconPickerField`
-- **Image/carousel items image**: raw URL → `ImageUploadField`
-- **Banner background image**: raw URL → `ImageUploadField`
-- **Number inputs** (limit, itemsToShow): → `SliderField` with appropriate ranges
+## Phase 2 — Admin Controls & Stacking Engine (follow-up)
+- Admin stacking rules configuration (stored in `site_settings`)
+- Admin checkout UI customization (titles, colors, labels)
+- Discount scheduling and campaign linking
+- Analytics dashboard for discount usage
 
-### Style tab replacements
-- **Background color**: raw input + native color → `ColorPickerField`
-- **Text color**: raw input + native color → `ColorPickerField`
-- **Background image**: raw URL → `ImageUploadField`
-- **All padding/margin sliders**: wrap in `SliderField` for consistent label+value display
-- **Border radius**: wrap in `SliderField`
-- **Opacity**: wrap in `SliderField` with `%` unit
+## Phase 3 — Refund Readiness & Advanced Features (follow-up)
+- Refund reversal logic (restore vouchers, gift card balance, points)
+- Account page savings history
+- Advanced validation (product/category exclusions)
 
-### Responsive tab
-- **Font scale slider**: wrap in `SliderField`
-- **Padding override**: wrap in `SliderField`
+---
 
-## Implementation Order
-1. Create `editor-images` storage bucket (migration)
-2. Build the 4 control components in parallel
-3. Rewire SettingsPanel to use new controls throughout
-4. Remove `ICON_OPTIONS` constant, replace with expanded list in IconPickerField
+## Technical Details
 
-## Technical Notes
-- All controls are small, self-contained components with no external dependencies beyond existing UI primitives (Popover, Slider, Input, ScrollArea)
-- ColorPickerField uses native `<input type="color">` for the gradient picker (no heavy library needed)
-- ImageUploadField uses existing `supabase` client for storage uploads
-- IconPickerField imports `icons` object from `lucide-react` for dynamic rendering
-- No breaking changes to block content schema -- same keys, just better UI to edit them
+### Files to create
+| File | Purpose |
+|---|---|
+| `src/components/cart/CheckoutSavingsPanel.tsx` | Main savings UI with code input, voucher cards, gift card apply, summary |
+| `src/hooks/useCheckoutSavings.ts` | State machine for applied savings, validation, stacking, totals |
+
+### Files to modify
+| File | Change |
+|---|---|
+| `src/hooks/use-cart-account-data.ts` | Add discount_codes fetch, categorize by type, add validation metadata |
+| `src/pages/Cart.tsx` | Replace inline discount area with `CheckoutSavingsPanel`, use `useCheckoutSavings` for totals |
+| `supabase/functions/create-checkout/index.ts` | Accept multiple savings, validate all, partial gift card support |
+| `supabase/functions/stripe-webhook/index.ts` | Partial gift card balance update, multi-savings metadata storage |
+
+### Database changes
+- Add `discount_metadata` jsonb column to `orders` table to store applied savings details
+- No new tables needed — uses existing `discount_codes`, `user_vouchers`, `vouchers`
+
+### Stacking rules (Phase 1 defaults)
+- Max 1 discount code OR 1 voucher reward
+- Max 1 gift card (partial allowed)
+- Free shipping stacks with everything
+- Points discount stacks with everything
 

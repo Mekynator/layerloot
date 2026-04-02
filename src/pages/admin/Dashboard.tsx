@@ -28,7 +28,7 @@ const TILE_CLASS = "rounded-xl border border-primary/20 shadow-[0_0_12px_-4px_hs
 const ICON_MAP: Record<string, typeof Package> = {
   Package, ShoppingCart, Box, Palette, TicketPercent, Tags, Truck, FileText,
   Star, Users, BarChart3, Settings, TrendingUp, Megaphone, Wallet, Calculator,
-  MessageSquareMore, Calendar, Eye,
+  MessageSquareMore, Calendar, Eye, ImageIcon,
 };
 
 export interface DashboardShortcut {

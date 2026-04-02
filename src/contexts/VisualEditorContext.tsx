@@ -203,7 +203,8 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   const [saving, setSaving] = useState(false);
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
-  const [inlineEditingKey, setInlineEditingKey] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [draftStatus, setDraftStatus] = useState<DraftStatus>("published");
 
   const selectElement = useCallback((el: SelectedElement | null) => {
     setSelectedElement(el);

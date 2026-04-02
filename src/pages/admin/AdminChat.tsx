@@ -848,80 +848,69 @@ export default function AdminChat() {
         {/* ─── APPEARANCE ─── */}
         <TabsContent value="appearance">
           <div className="flex gap-6">
-            <div className="flex-1 min-w-0 space-y-6">
-          {/* General */}
-          <Card><CardHeader><CardTitle className="font-display text-sm uppercase">Global</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3"><Switch checked={config.enabled} onCheckedChange={v => set("enabled", v)} /><Label>Enable AI Chat Widget</Label></div>
-              <div><Label className="text-xs">Brand Name</Label><Input value={getStr(config.window.brandName)} onChange={e => setNested("window", "brandName", setStr(config.window.brandName, e.target.value))} /></div>
-              <ImageUploadPlaceholder label="Avatar" value={config.window.avatarUrl ?? ""} onChange={v => setNested("window", "avatarUrl", v)} />
-              <div><Label className="text-xs">Disabled Pages</Label><Input value={config.disabledPages.join(", ")} onChange={e => set("disabledPages", e.target.value.split(",").map(s => s.trim()).filter(Boolean))} placeholder="/admin, /auth" /></div>
-            </CardContent>
-          </Card>
+            <div className="flex-1 min-w-0 space-y-4">
 
-          {/* Launcher */}
-          <Card><CardHeader><CardTitle className="font-display text-sm uppercase">Launcher Button</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div><Label className="text-xs">Position</Label>
-                  <Select value={config.launcher.position} onValueChange={v => setNested("launcher", "position", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="bottom-right">Bottom Right</SelectItem><SelectItem value="bottom-left">Bottom Left</SelectItem></SelectContent></Select></div>
-                <div><Label className="text-xs">Icon Style</Label>
-                  <Select value={config.launcher.icon} onValueChange={v => setNested("launcher", "icon", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="message">Message</SelectItem><SelectItem value="bot">Bot</SelectItem><SelectItem value="sparkle">Sparkle</SelectItem><SelectItem value="custom">Custom Image</SelectItem></SelectContent></Select></div>
-              </div>
-              {config.launcher.icon === "custom" && <ImageUploadPlaceholder label="Custom Icon" value={config.launcher.customIconUrl ?? ""} onChange={v => setNested("launcher", "customIconUrl", v)} />}
-              <div><Label className="text-xs">Size: {config.launcher.size}px</Label><Slider value={[config.launcher.size]} onValueChange={([v]) => setNested("launcher", "size", v)} min={40} max={80} step={2} /></div>
-              <div><Label className="text-xs">Bottom Offset: {config.launcher.bottomOffset}px</Label><Slider value={[config.launcher.bottomOffset]} onValueChange={([v]) => setNested("launcher", "bottomOffset", v)} min={8} max={80} step={4} /></div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <ColorPickerField label="Background Color" value={config.launcher.bgColor ?? ""} onChange={v => setNested("launcher", "bgColor", v)} placeholder="var(--primary)" />
-                <ColorPickerField label="Icon Color" value={config.launcher.iconColor ?? ""} onChange={v => setNested("launcher", "iconColor", v)} />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <ColorPickerField label="Glow Color" value={config.launcher.glowColor ?? ""} onChange={v => setNested("launcher", "glowColor", v)} />
-                <ColorPickerField label="Border Color" value={config.launcher.borderColor ?? ""} onChange={v => setNested("launcher", "borderColor", v)} />
-              </div>
-              <Separator />
-              <div className="flex flex-wrap gap-6">
-                <div className="flex items-center gap-2"><Switch checked={config.launcher.shadow} onCheckedChange={v => setNested("launcher", "shadow", v)} /><Label className="text-xs">Shadow</Label></div>
-                <div className="flex items-center gap-2"><Switch checked={config.launcher.pulseAnimation} onCheckedChange={v => setNested("launcher", "pulseAnimation", v)} /><Label className="text-xs">Pulse</Label></div>
-                <div className="flex items-center gap-2"><Switch checked={config.launcher.showUnreadBadge} onCheckedChange={v => setNested("launcher", "showUnreadBadge", v)} /><Label className="text-xs">Unread Badge</Label></div>
-                <div className="flex items-center gap-2"><Switch checked={config.launcher.showLabel} onCheckedChange={v => setNested("launcher", "showLabel", v)} /><Label className="text-xs">Show Label</Label></div>
-              </div>
-              {config.launcher.showLabel && <div><Label className="text-xs">Label Text</Label><Input value={getStr(config.launcher.labelText)} onChange={e => setNested("launcher", "labelText", e.target.value)} /></div>}
-              <div><Label className="text-xs">Hover Animation</Label>
-                <Select value={config.launcher.hoverAnimation} onValueChange={v => setNested("launcher", "hoverAnimation", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="lift">Lift</SelectItem><SelectItem value="scale">Scale</SelectItem><SelectItem value="glow">Glow</SelectItem><SelectItem value="none">None</SelectItem></SelectContent></Select></div>
-              <Separator />
-              <div><Label className="text-xs">Tooltip Text</Label><Input value={getStr(config.launcher.tooltipText)} onChange={e => setNested("launcher", "tooltipText", e.target.value)} /></div>
-              <div><Label className="text-xs">Tooltip Delay: {config.launcher.tooltipDelay / 1000}s</Label><Slider value={[config.launcher.tooltipDelay]} onValueChange={([v]) => setNested("launcher", "tooltipDelay", v)} min={1000} max={30000} step={1000} /></div>
-            </CardContent>
-          </Card>
+              <CollapsibleSection title="Global" icon={Settings2} defaultOpen={true}>
+                <div className="flex items-center gap-3"><Switch checked={config.enabled} onCheckedChange={v => set("enabled", v)} /><Label>Enable AI Chat Widget</Label></div>
+                <div><Label className="text-xs">Brand Name</Label><Input value={getStr(config.window.brandName)} onChange={e => setNested("window", "brandName", setStr(config.window.brandName, e.target.value))} /></div>
+                <ImageUploadPlaceholder label="Avatar" value={config.window.avatarUrl ?? ""} onChange={v => setNested("window", "avatarUrl", v)} />
+                <div><Label className="text-xs">Disabled Pages</Label><Input value={config.disabledPages.join(", ")} onChange={e => set("disabledPages", e.target.value.split(",").map(s => s.trim()).filter(Boolean))} placeholder="/admin, /auth" /></div>
+              </CollapsibleSection>
 
-          {/* Window */}
-          <Card><CardHeader><CardTitle className="font-display text-sm uppercase">Chat Window</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div><Label className="text-xs">Width: {config.window.width}px</Label><Slider value={[config.window.width]} onValueChange={([v]) => setNested("window", "width", v)} min={300} max={600} step={10} /></div>
-                <div><Label className="text-xs">Height</Label><Input value={config.window.height} onChange={e => setNested("window", "height", e.target.value)} placeholder="52vh" /></div>
-              </div>
-              <div><Label className="text-xs">Border Radius: {config.window.borderRadius}px</Label><Slider value={[config.window.borderRadius]} onValueChange={([v]) => setNested("window", "borderRadius", v)} min={0} max={40} step={2} /></div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <ColorPickerField label="Background Color" value={config.window.bgColor ?? ""} onChange={v => setNested("window", "bgColor", v)} />
-                <ColorPickerField label="Border Color" value={config.window.borderColor ?? ""} onChange={v => setNested("window", "borderColor", v)} />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <ColorPickerField label="Header BG" value={config.window.headerBgColor ?? ""} onChange={v => setNested("window", "headerBgColor", v)} />
-                <ColorPickerField label="Send Button Color" value={config.window.sendButtonColor ?? ""} onChange={v => setNested("window", "sendButtonColor", v)} />
-              </div>
-              <div><Label className="text-xs">Opacity: {config.window.opacity}%</Label><Slider value={[config.window.opacity]} onValueChange={([v]) => setNested("window", "opacity", v)} min={50} max={100} step={5} /></div>
-              <div className="flex items-center gap-2"><Switch checked={config.window.glassEffect} onCheckedChange={v => setNested("window", "glassEffect", v)} /><Label className="text-xs">Glass Effect</Label></div>
-              <div><Label className="text-xs">Input Placeholder</Label><Input value={getStr(config.window.inputPlaceholder)} onChange={e => setNested("window", "inputPlaceholder", e.target.value)} /></div>
-              <div><Label className="text-xs">Empty State Text</Label><Input value={getStr(config.window.emptyStateText)} onChange={e => setNested("window", "emptyStateText", e.target.value)} /></div>
-            </CardContent>
-          </Card>
+              <CollapsibleSection title="Launcher Button" icon={MessageCircle} defaultOpen={false}>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div><Label className="text-xs">Position</Label>
+                    <Select value={config.launcher.position} onValueChange={v => setNested("launcher", "position", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="bottom-right">Bottom Right</SelectItem><SelectItem value="bottom-left">Bottom Left</SelectItem></SelectContent></Select></div>
+                  <div><Label className="text-xs">Icon Style</Label>
+                    <Select value={config.launcher.icon} onValueChange={v => setNested("launcher", "icon", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="message">Message</SelectItem><SelectItem value="bot">Bot</SelectItem><SelectItem value="sparkle">Sparkle</SelectItem><SelectItem value="custom">Custom Image</SelectItem></SelectContent></Select></div>
+                </div>
+                {config.launcher.icon === "custom" && <ImageUploadPlaceholder label="Custom Icon" value={config.launcher.customIconUrl ?? ""} onChange={v => setNested("launcher", "customIconUrl", v)} />}
+                <div><Label className="text-xs">Size: {config.launcher.size}px</Label><Slider value={[config.launcher.size]} onValueChange={([v]) => setNested("launcher", "size", v)} min={40} max={80} step={2} /></div>
+                <div><Label className="text-xs">Bottom Offset: {config.launcher.bottomOffset}px</Label><Slider value={[config.launcher.bottomOffset]} onValueChange={([v]) => setNested("launcher", "bottomOffset", v)} min={8} max={80} step={4} /></div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <ColorPickerField label="Background Color" value={config.launcher.bgColor ?? ""} onChange={v => setNested("launcher", "bgColor", v)} placeholder="var(--primary)" />
+                  <ColorPickerField label="Icon Color" value={config.launcher.iconColor ?? ""} onChange={v => setNested("launcher", "iconColor", v)} />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <ColorPickerField label="Glow Color" value={config.launcher.glowColor ?? ""} onChange={v => setNested("launcher", "glowColor", v)} />
+                  <ColorPickerField label="Border Color" value={config.launcher.borderColor ?? ""} onChange={v => setNested("launcher", "borderColor", v)} />
+                </div>
+                <Separator />
+                <div className="flex flex-wrap gap-6">
+                  <div className="flex items-center gap-2"><Switch checked={config.launcher.shadow} onCheckedChange={v => setNested("launcher", "shadow", v)} /><Label className="text-xs">Shadow</Label></div>
+                  <div className="flex items-center gap-2"><Switch checked={config.launcher.pulseAnimation} onCheckedChange={v => setNested("launcher", "pulseAnimation", v)} /><Label className="text-xs">Pulse</Label></div>
+                  <div className="flex items-center gap-2"><Switch checked={config.launcher.showUnreadBadge} onCheckedChange={v => setNested("launcher", "showUnreadBadge", v)} /><Label className="text-xs">Unread Badge</Label></div>
+                  <div className="flex items-center gap-2"><Switch checked={config.launcher.showLabel} onCheckedChange={v => setNested("launcher", "showLabel", v)} /><Label className="text-xs">Show Label</Label></div>
+                </div>
+                {config.launcher.showLabel && <div><Label className="text-xs">Label Text</Label><Input value={getStr(config.launcher.labelText)} onChange={e => setNested("launcher", "labelText", e.target.value)} /></div>}
+                <div><Label className="text-xs">Hover Animation</Label>
+                  <Select value={config.launcher.hoverAnimation} onValueChange={v => setNested("launcher", "hoverAnimation", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="lift">Lift</SelectItem><SelectItem value="scale">Scale</SelectItem><SelectItem value="glow">Glow</SelectItem><SelectItem value="none">None</SelectItem></SelectContent></Select></div>
+                <Separator />
+                <div><Label className="text-xs">Tooltip Text</Label><Input value={getStr(config.launcher.tooltipText)} onChange={e => setNested("launcher", "tooltipText", e.target.value)} /></div>
+                <div><Label className="text-xs">Tooltip Delay: {config.launcher.tooltipDelay / 1000}s</Label><Slider value={[config.launcher.tooltipDelay]} onValueChange={([v]) => setNested("launcher", "tooltipDelay", v)} min={1000} max={30000} step={1000} /></div>
+              </CollapsibleSection>
 
-          {/* Bubbles */}
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card><CardHeader><CardTitle className="font-display text-sm uppercase">AI Messages</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
+              <CollapsibleSection title="Chat Window" icon={Eye} defaultOpen={false}>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div><Label className="text-xs">Width: {config.window.width}px</Label><Slider value={[config.window.width]} onValueChange={([v]) => setNested("window", "width", v)} min={300} max={600} step={10} /></div>
+                  <div><Label className="text-xs">Height</Label><Input value={config.window.height} onChange={e => setNested("window", "height", e.target.value)} placeholder="52vh" /></div>
+                </div>
+                <div><Label className="text-xs">Border Radius: {config.window.borderRadius}px</Label><Slider value={[config.window.borderRadius]} onValueChange={([v]) => setNested("window", "borderRadius", v)} min={0} max={40} step={2} /></div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <ColorPickerField label="Background Color" value={config.window.bgColor ?? ""} onChange={v => setNested("window", "bgColor", v)} />
+                  <ColorPickerField label="Border Color" value={config.window.borderColor ?? ""} onChange={v => setNested("window", "borderColor", v)} />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <ColorPickerField label="Header BG" value={config.window.headerBgColor ?? ""} onChange={v => setNested("window", "headerBgColor", v)} />
+                  <ColorPickerField label="Send Button Color" value={config.window.sendButtonColor ?? ""} onChange={v => setNested("window", "sendButtonColor", v)} />
+                </div>
+                <div><Label className="text-xs">Opacity: {config.window.opacity}%</Label><Slider value={[config.window.opacity]} onValueChange={([v]) => setNested("window", "opacity", v)} min={50} max={100} step={5} /></div>
+                <div className="flex items-center gap-2"><Switch checked={config.window.glassEffect} onCheckedChange={v => setNested("window", "glassEffect", v)} /><Label className="text-xs">Glass Effect</Label></div>
+                <div><Label className="text-xs">Input Placeholder</Label><Input value={getStr(config.window.inputPlaceholder)} onChange={e => setNested("window", "inputPlaceholder", e.target.value)} /></div>
+                <div><Label className="text-xs">Empty State Text</Label><Input value={getStr(config.window.emptyStateText)} onChange={e => setNested("window", "emptyStateText", e.target.value)} /></div>
+              </CollapsibleSection>
+
+              <CollapsibleSection title="AI Message Bubbles" icon={Bot} defaultOpen={false}>
                 <ColorPickerField label="BG Color" value={config.bubbles.ai.bgColor ?? ""} onChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, ai: { ...p.bubbles.ai, bgColor: v } } }))} />
                 <ColorPickerField label="Text Color" value={config.bubbles.ai.textColor ?? ""} onChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, ai: { ...p.bubbles.ai, textColor: v } } }))} />
                 <div><Label className="text-xs">Border Radius: {config.bubbles.ai.borderRadius}px</Label><Slider value={[config.bubbles.ai.borderRadius]} onValueChange={([v]) => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, ai: { ...p.bubbles.ai, borderRadius: v } } }))} min={0} max={24} step={2} /></div>
@@ -930,10 +919,9 @@ export default function AdminChat() {
                   <div className="flex items-center gap-2"><Switch checked={config.bubbles.ai.showTimestamp} onCheckedChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, ai: { ...p.bubbles.ai, showTimestamp: v } } }))} /><Label className="text-xs">Timestamp</Label></div>
                   <div className="flex items-center gap-2"><Switch checked={config.bubbles.ai.shadow} onCheckedChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, ai: { ...p.bubbles.ai, shadow: v } } }))} /><Label className="text-xs">Shadow</Label></div>
                 </div>
-              </CardContent>
-            </Card>
-            <Card><CardHeader><CardTitle className="font-display text-sm uppercase">User Messages</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
+              </CollapsibleSection>
+
+              <CollapsibleSection title="User Message Bubbles" icon={User} defaultOpen={false}>
                 <ColorPickerField label="BG Color" value={config.bubbles.user.bgColor ?? ""} onChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, user: { ...p.bubbles.user, bgColor: v } } }))} />
                 <ColorPickerField label="Text Color" value={config.bubbles.user.textColor ?? ""} onChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, user: { ...p.bubbles.user, textColor: v } } }))} />
                 <div><Label className="text-xs">Border Radius: {config.bubbles.user.borderRadius}px</Label><Slider value={[config.bubbles.user.borderRadius]} onValueChange={([v]) => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, user: { ...p.bubbles.user, borderRadius: v } } }))} min={0} max={24} step={2} /></div>
@@ -942,39 +930,36 @@ export default function AdminChat() {
                   <div className="flex items-center gap-2"><Switch checked={config.bubbles.user.showTimestamp} onCheckedChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, user: { ...p.bubbles.user, showTimestamp: v } } }))} /><Label className="text-xs">Timestamp</Label></div>
                   <div className="flex items-center gap-2"><Switch checked={config.bubbles.user.shadow} onCheckedChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, user: { ...p.bubbles.user, shadow: v } } }))} /><Label className="text-xs">Shadow</Label></div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-          <Card><CardHeader><CardTitle className="font-display text-sm uppercase">Effects</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div><Label className="text-xs">Typing Indicator</Label>
-                  <Select value={config.bubbles.typingIndicator} onValueChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, typingIndicator: v as any } }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="dots">Dots</SelectItem><SelectItem value="pulse">Pulse</SelectItem><SelectItem value="wave">Wave</SelectItem></SelectContent></Select></div>
-                <div><Label className="text-xs">Message Animation</Label>
-                  <Select value={config.bubbles.messageAnimation} onValueChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, messageAnimation: v as any } }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="fade">Fade</SelectItem><SelectItem value="slide">Slide</SelectItem><SelectItem value="none">None</SelectItem></SelectContent></Select></div>
-              </div>
-            </CardContent>
-          </Card>
+              </CollapsibleSection>
 
-          {/* Responsive */}
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card><CardHeader><CardTitle className="font-display text-sm uppercase">Desktop</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                <div><Label className="text-xs">Position</Label><Input value={config.responsive.desktop.position} onChange={e => setConfig(p => ({ ...p, responsive: { ...p.responsive, desktop: { ...p.responsive.desktop, position: e.target.value } } }))} /></div>
-                <div><Label className="text-xs">Size: {config.responsive.desktop.size}px</Label><Slider value={[config.responsive.desktop.size]} onValueChange={([v]) => setConfig(p => ({ ...p, responsive: { ...p.responsive, desktop: { ...p.responsive.desktop, size: v } } }))} min={40} max={80} step={2} /></div>
-                <div><Label className="text-xs">Window Height</Label><Input value={config.responsive.desktop.windowHeight} onChange={e => setConfig(p => ({ ...p, responsive: { ...p.responsive, desktop: { ...p.responsive.desktop, windowHeight: e.target.value } } }))} /></div>
-              </CardContent>
-            </Card>
-            <Card><CardHeader><CardTitle className="font-display text-sm uppercase">Mobile</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                <div><Label className="text-xs">Position</Label><Input value={config.responsive.mobile.position} onChange={e => setConfig(p => ({ ...p, responsive: { ...p.responsive, mobile: { ...p.responsive.mobile, position: e.target.value } } }))} /></div>
-                <div><Label className="text-xs">Size: {config.responsive.mobile.size}px</Label><Slider value={[config.responsive.mobile.size]} onValueChange={([v]) => setConfig(p => ({ ...p, responsive: { ...p.responsive, mobile: { ...p.responsive.mobile, size: v } } }))} min={36} max={64} step={2} /></div>
-                <div><Label className="text-xs">Window Height</Label><Input value={config.responsive.mobile.windowHeight} onChange={e => setConfig(p => ({ ...p, responsive: { ...p.responsive, mobile: { ...p.responsive.mobile, windowHeight: e.target.value } } }))} /></div>
-                <div><Label className="text-xs">Minimized Style</Label>
-                  <Select value={config.responsive.mobile.minimizedStyle} onValueChange={v => setConfig(p => ({ ...p, responsive: { ...p.responsive, mobile: { ...p.responsive.mobile, minimizedStyle: v as any } } }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="fab">FAB</SelectItem><SelectItem value="bar">Bar</SelectItem></SelectContent></Select></div>
-              </CardContent>
-            </Card>
-          </div>
+              <CollapsibleSection title="Effects & Animations" icon={Sparkles} defaultOpen={false}>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div><Label className="text-xs">Typing Indicator</Label>
+                    <Select value={config.bubbles.typingIndicator} onValueChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, typingIndicator: v as any } }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="dots">Dots</SelectItem><SelectItem value="pulse">Pulse</SelectItem><SelectItem value="wave">Wave</SelectItem></SelectContent></Select></div>
+                  <div><Label className="text-xs">Message Animation</Label>
+                    <Select value={config.bubbles.messageAnimation} onValueChange={v => setConfig(p => ({ ...p, bubbles: { ...p.bubbles, messageAnimation: v as any } }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="fade">Fade</SelectItem><SelectItem value="slide">Slide</SelectItem><SelectItem value="none">None</SelectItem></SelectContent></Select></div>
+                </div>
+              </CollapsibleSection>
+
+              <CollapsibleSection title="Responsive / Desktop & Mobile" icon={Sparkles} defaultOpen={false}>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase">Desktop</p>
+                    <div><Label className="text-xs">Position</Label><Input value={config.responsive.desktop.position} onChange={e => setConfig(p => ({ ...p, responsive: { ...p.responsive, desktop: { ...p.responsive.desktop, position: e.target.value } } }))} /></div>
+                    <div><Label className="text-xs">Size: {config.responsive.desktop.size}px</Label><Slider value={[config.responsive.desktop.size]} onValueChange={([v]) => setConfig(p => ({ ...p, responsive: { ...p.responsive, desktop: { ...p.responsive.desktop, size: v } } }))} min={40} max={80} step={2} /></div>
+                    <div><Label className="text-xs">Window Height</Label><Input value={config.responsive.desktop.windowHeight} onChange={e => setConfig(p => ({ ...p, responsive: { ...p.responsive, desktop: { ...p.responsive.desktop, windowHeight: e.target.value } } }))} /></div>
+                  </div>
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase">Mobile</p>
+                    <div><Label className="text-xs">Position</Label><Input value={config.responsive.mobile.position} onChange={e => setConfig(p => ({ ...p, responsive: { ...p.responsive, mobile: { ...p.responsive.mobile, position: e.target.value } } }))} /></div>
+                    <div><Label className="text-xs">Size: {config.responsive.mobile.size}px</Label><Slider value={[config.responsive.mobile.size]} onValueChange={([v]) => setConfig(p => ({ ...p, responsive: { ...p.responsive, mobile: { ...p.responsive.mobile, size: v } } }))} min={36} max={64} step={2} /></div>
+                    <div><Label className="text-xs">Window Height</Label><Input value={config.responsive.mobile.windowHeight} onChange={e => setConfig(p => ({ ...p, responsive: { ...p.responsive, mobile: { ...p.responsive.mobile, windowHeight: e.target.value } } }))} /></div>
+                    <div><Label className="text-xs">Minimized Style</Label>
+                      <Select value={config.responsive.mobile.minimizedStyle} onValueChange={v => setConfig(p => ({ ...p, responsive: { ...p.responsive, mobile: { ...p.responsive.mobile, minimizedStyle: v as any } } }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="fab">FAB</SelectItem><SelectItem value="bar">Bar</SelectItem></SelectContent></Select></div>
+                  </div>
+                </div>
+              </CollapsibleSection>
+
             </div>
             <div className="hidden xl:block w-[400px] shrink-0">
               <div className="sticky top-4">

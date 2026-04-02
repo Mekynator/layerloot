@@ -70,16 +70,28 @@ const defaultFooterSettings: FooterSettings = {
   quick_links_title: "Quick Links",
   account_title: "Account",
   contact_title: "Contact",
+  policies_title: "Policies",
   copyright_text: "All rights reserved.",
   show_quick_links: true,
   show_account_links: true,
   show_contact_block: true,
+  show_policies: true,
   show_logo_icon: true,
   show_logo_text: true,
   logo_height_px: 32,
   auth_link_label: "Login / Register",
   account_link_label: "My Account",
   orders_link_label: "Order History",
+  policy_links: [
+    { label: "Returns Policy", path: "/policies/returns-policy" },
+    { label: "Cancellation Policy", path: "/policies/cancellation-policy" },
+    { label: "Refund Policy", path: "/policies/refund-policy" },
+    { label: "Privacy Policy", path: "/policies/privacy-policy" },
+    { label: "Terms of Service", path: "/policies/terms-of-service" },
+    { label: "Safety Regulations", path: "/policies/safety-regulations" },
+    { label: "Intellectual Property", path: "/policies/intellectual-property" },
+    { label: "Shipping Policy", path: "/policies/shipping-policy" },
+  ],
 };
 
 const normalizePath = (value?: string | null) => {

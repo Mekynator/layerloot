@@ -175,6 +175,33 @@ export function detectCustomOrderType(order: CustomOrder): "custom-print" | "lit
   return "custom-print";
 }
 
+export type VoucherCategory = "active" | "gifted" | "used" | "expired";
+
+export function classifyVoucher(voucher: UserVoucher): VoucherCategory {
+  const gs = voucher.gift_status || "";
+  const remainingBalance = voucher.balance !== null ? Number(voucher.balance) : null;
+
+  // Expired / voided
+  if (gs === "cancelled") return "expired";
+
+  // Gifted away
+  if (
+    gs === "pending_claim" ||
+    gs === "gifted" ||
+    gs === "claimed" ||
+    !!voucher.recipient_email
+  ) return "gifted";
+
+  // Used / consumed
+  if (
+    voucher.is_used ||
+    !!voucher.used_at ||
+    (remainingBalance !== null && remainingBalance <= 0)
+  ) return "used";
+
+  return "active";
+}
+
 export function isVoucherUsedOrArchived(voucher: UserVoucher) {
   const remainingBalance = voucher.balance !== null ? Number(voucher.balance) : null;
   const gs = voucher.gift_status;

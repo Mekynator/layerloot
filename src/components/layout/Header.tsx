@@ -8,7 +8,8 @@ import logoImg from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavLinks } from "@/components/admin/NavLinkEditor";
+import { useNavLinks, type NavItem } from "@/components/admin/NavLinkEditor";
+import MegaMenuDropdown from "@/components/layout/MegaMenuDropdown";
 import { supabase } from "@/integrations/supabase/client";
 import GlobalSectionRenderer from "@/components/layout/GlobalSectionRenderer";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -254,6 +255,7 @@ const Header = () => {
           ...link,
           to: normalizePath(link.to),
           localizedLabel: getLocalizedValue(link.label, typeof link.label === "string" ? link.label : ""),
+          megaMenu: (link as NavItem).megaMenu,
         })),
     [navLinks, i18n.resolvedLanguage, i18n.language, user],
   );
@@ -308,24 +310,40 @@ const Header = () => {
 
           {headerSettings.desktop_nav_enabled && (
             <nav className="hidden items-center gap-1 md:flex">
-              {desktopLinks.map((link) => (
-                <Link
-                  key={`${link.to}-${link.localizedLabel}`}
-                  to={link.to}
-                  className={`relative px-4 py-2 font-display text-sm uppercase tracking-widest transition-all duration-200 rounded-lg hover:bg-accent/10 ${
-                    isActiveLink(location.pathname, link.to) ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {link.localizedLabel}
-                  {isActiveLink(location.pathname, link.to) && (
-                    <motion.div
-                      layoutId="nav-indicator"
-                      className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full bg-primary"
-                      transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
-                    />
-                  )}
-                </Link>
-              ))}
+              {desktopLinks.map((link) => {
+                const linkEl = (
+                  <Link
+                    key={`${link.to}-${link.localizedLabel}`}
+                    to={link.to}
+                    className={`relative px-4 py-2 font-display text-sm uppercase tracking-widest transition-all duration-200 rounded-lg hover:bg-accent/10 ${
+                      isActiveLink(location.pathname, link.to) ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {link.localizedLabel}
+                    {isActiveLink(location.pathname, link.to) && (
+                      <motion.div
+                        layoutId="nav-indicator"
+                        className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full bg-primary"
+                        transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
+                      />
+                    )}
+                  </Link>
+                );
+
+                if (link.megaMenu?.enabled) {
+                  return (
+                    <MegaMenuDropdown
+                      key={`mega-${link.to}-${link.localizedLabel}`}
+                      config={link.megaMenu}
+                      linkTo={link.to}
+                    >
+                      {linkEl}
+                    </MegaMenuDropdown>
+                  );
+                }
+
+                return linkEl;
+              })}
             </nav>
           )}
 

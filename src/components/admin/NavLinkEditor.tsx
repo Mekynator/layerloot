@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { GripVertical, Plus, Trash2, Save, FileText } from "lucide-react";
+import { GripVertical, Plus, Trash2, Save, FileText, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -16,6 +17,18 @@ import { Badge } from "@/components/ui/badge";
 type NavSource = "manual" | "site_page";
 type LocalizedText = string | Partial<Record<SupportedLanguage, string>>;
 
+export interface MegaMenuConfig {
+  enabled: boolean;
+  layout: "categories" | "featured" | "full";
+  featuredProductIds?: string[];
+  bannerImageUrl?: string;
+  bannerLink?: string;
+  bannerText?: string;
+  showCategories?: boolean;
+  showNewArrivals?: boolean;
+  showBestSellers?: boolean;
+}
+
 export interface NavItem {
   label: LocalizedText;
   to: string;
@@ -23,6 +36,7 @@ export interface NavItem {
   pageId?: string;
   openInNewTab?: boolean;
   visible?: boolean;
+  megaMenu?: MegaMenuConfig;
 }
 
 type NavEditorItem = {
@@ -32,6 +46,7 @@ type NavEditorItem = {
   pageId?: string;
   openInNewTab?: boolean;
   visible?: boolean;
+  megaMenu?: MegaMenuConfig;
 };
 
 type SitePageOption = {
@@ -187,6 +202,7 @@ const toEditorItem = (item: NavItem): NavEditorItem => ({
   pageId: item.pageId,
   openInNewTab: Boolean(item.openInNewTab),
   visible: item.visible !== false,
+  megaMenu: item.megaMenu,
 });
 
 const buildPageLabelMap = (
@@ -234,6 +250,125 @@ function useStoredNavLinks(key: "nav_links" | "footer_nav_links", fallback: NavE
 
 export const useNavLinks = () => useStoredNavLinks("nav_links", defaultHeaderNav);
 export const useFooterNavLinks = () => useStoredNavLinks("footer_nav_links", defaultFooterNav);
+
+const MegaMenuSettings = ({
+  megaMenu,
+  onChange,
+}: {
+  megaMenu?: MegaMenuConfig;
+  onChange: (config: MegaMenuConfig) => void;
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  const config: MegaMenuConfig = megaMenu || {
+    enabled: false,
+    layout: "full",
+    showCategories: true,
+    showNewArrivals: true,
+    showBestSellers: true,
+  };
+
+  const update = (partial: Partial<MegaMenuConfig>) => onChange({ ...config, ...partial });
+
+  return (
+    <div className="rounded-md border border-border bg-muted/10 p-2 space-y-2">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between text-xs font-medium text-muted-foreground hover:text-foreground"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <span>Mega Menu</span>
+        <div className="flex items-center gap-2">
+          {config.enabled && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+          {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="space-y-2 pt-1">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs">Enable Mega Menu</Label>
+            <Switch checked={config.enabled} onCheckedChange={(v) => update({ enabled: v })} />
+          </div>
+
+          {config.enabled && (
+            <>
+              <div>
+                <Label className="text-xs">Layout</Label>
+                <Select value={config.layout} onValueChange={(v: "categories" | "featured" | "full") => update({ layout: v })}>
+                  <SelectTrigger className="h-8 text-xs mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="categories">Categories only</SelectItem>
+                    <SelectItem value="featured">Featured products</SelectItem>
+                    <SelectItem value="full">Full (categories + products + banner)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <label className="flex items-center gap-2 text-xs">
+                <input type="checkbox" checked={config.showCategories !== false} onChange={(e) => update({ showCategories: e.target.checked })} />
+                Show categories
+              </label>
+
+              <label className="flex items-center gap-2 text-xs">
+                <input type="checkbox" checked={config.showNewArrivals !== false} onChange={(e) => update({ showNewArrivals: e.target.checked })} />
+                Show "New Arrivals"
+              </label>
+
+              <label className="flex items-center gap-2 text-xs">
+                <input type="checkbox" checked={config.showBestSellers !== false} onChange={(e) => update({ showBestSellers: e.target.checked })} />
+                Show "Best Sellers"
+              </label>
+
+              {config.layout === "full" && (
+                <>
+                  <div>
+                    <Label className="text-xs">Banner Image URL</Label>
+                    <Input
+                      value={config.bannerImageUrl || ""}
+                      onChange={(e) => update({ bannerImageUrl: e.target.value })}
+                      placeholder="https://..."
+                      className="h-8 text-xs mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Banner Link</Label>
+                    <Input
+                      value={config.bannerLink || ""}
+                      onChange={(e) => update({ bannerLink: e.target.value })}
+                      placeholder="/products"
+                      className="h-8 text-xs mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Banner CTA Text</Label>
+                    <Input
+                      value={config.bannerText || ""}
+                      onChange={(e) => update({ bannerText: e.target.value })}
+                      placeholder="Shop the collection"
+                      className="h-8 text-xs mt-1"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div>
+                <Label className="text-xs">Featured Product IDs (comma-separated)</Label>
+                <Input
+                  value={(config.featuredProductIds || []).join(", ")}
+                  onChange={(e) => update({ featuredProductIds: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })}
+                  placeholder="product-uuid-1, product-uuid-2"
+                  className="h-8 text-xs mt-1"
+                />
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const NavLinkEditor = () => {
   const [mode, setMode] = useState<"header" | "footer">("header");
@@ -302,6 +437,7 @@ const NavLinkEditor = () => {
     pageId: item.pageId,
     openInNewTab: Boolean(item.openInNewTab),
     visible: item.visible !== false,
+    megaMenu: item.megaMenu,
   }));
 
   const save = async () => {
@@ -561,6 +697,18 @@ const NavLinkEditor = () => {
                       New tab
                     </label>
                   </div>
+
+                  {/* Mega Menu Settings */}
+                  <MegaMenuSettings
+                    megaMenu={link.megaMenu}
+                    onChange={(config) => {
+                      setLinks((prev) => {
+                        const updated = [...prev];
+                        updated[i] = { ...updated[i], megaMenu: config };
+                        return updated;
+                      });
+                    }}
+                  />
                 </div>
 
                 <Button

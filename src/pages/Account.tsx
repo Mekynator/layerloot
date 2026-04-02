@@ -227,20 +227,6 @@ function parseCustomOrderDescription(description: string) {
   return { customerDescription, ...parsed };
 }
 
-function findMatchingVoucher(catalogItem: RewardCatalogItem, vouchers: Voucher[]) {
-  return vouchers.find((voucher) => {
-    if (catalogItem.discountType === "free_shipping") {
-      return voucher.discount_type === "free_shipping";
-    }
-
-    return (
-      voucher.discount_type === catalogItem.discountType &&
-      Number(voucher.discount_value) === Number(catalogItem.discountValue) &&
-      Number(voucher.points_cost) === Number(catalogItem.pointsCost)
-    );
-  });
-}
-
 function getNotificationsStorageKey(userId: string) {
   return `layerloot_account_notifications_${userId}`;
 }

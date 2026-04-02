@@ -90,7 +90,7 @@ const AdminCategories = () => {
   const fetchGiftFinderTags = async () => {
     const { data, error } = await supabase
       .from("gift_finder_tags")
-      .select("id, name, slug, icon_key, sort_order, is_active")
+      .select("id, name, slug, icon_key, sort_order, is_active, image_url, image_opacity, image_fit")
       .order("sort_order", { ascending: true })
       .order("name", { ascending: true });
 

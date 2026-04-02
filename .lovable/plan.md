@@ -1,123 +1,186 @@
 
 
-# Revision History, Rollback & Scheduled Publishing
+# Media Manager, Asset Versioning & Reusable Content Library
 
-## Current State
-- `content_revisions` table already exists with `content_type`, `content_id`, `page`, `revision_data`, `revision_number`, `action`, `created_by`, `created_at`
-- `revertToRevision()` function exists in `use-draft-publish.ts` — reverts directly to published (no restore-as-draft option)
-- No scheduled publishing support
-- No revision history UI
-- No `scheduled_publish_at` field anywhere
+## Summary
+Add a centralized media management system, a reusable content library, and integrate both into existing editors via a media picker dialog. This replaces scattered upload-only inputs with a unified asset workflow.
 
 ## Database Changes
 
-### Migration 1: Extend `content_revisions` + add scheduling to blocks/settings
+### Migration: Create `media_assets` and `reusable_blocks` tables
 
-```sql
--- Add metadata to content_revisions for richer history
-ALTER TABLE public.content_revisions
-  ADD COLUMN IF NOT EXISTS change_summary text,
-  ADD COLUMN IF NOT EXISTS restored_from_revision_id uuid;
+**`media_assets`** — central registry for all uploaded media:
+- `id` uuid PK
+- `file_name` text (sanitized storage name)
+- `original_name` text
+- `storage_bucket` text (default `editor-images`)
+- `storage_path` text (path within bucket)
+- `public_url` text
+- `alt_text` text
+- `title` text
+- `description` text
+- `tags` text[]
+- `media_type` text (`image`, `video`, `document`)
+- `mime_type` text
+- `width` int, `height` int (nullable)
+- `file_size_bytes` bigint
+- `folder` text (default `/`)
+- `uploaded_by` uuid
+- `is_archived` boolean (default false)
+- `usage_count` int (default 0, updated opportunistically)
+- `created_at`, `updated_at` timestamptz
+- RLS: admins full access, no public write
 
--- Add scheduled publishing to site_blocks
-ALTER TABLE public.site_blocks
-  ADD COLUMN IF NOT EXISTS scheduled_publish_at timestamptz;
+**`media_asset_versions`** — version history when an asset is replaced:
+- `id` uuid PK
+- `asset_id` uuid FK → media_assets
+- `version_number` int
+- `storage_path` text
+- `public_url` text
+- `file_size_bytes` bigint
+- `replaced_by` uuid (user)
+- `created_at` timestamptz
+- RLS: admin-only
 
--- Add scheduled publishing to site_settings
-ALTER TABLE public.site_settings
-  ADD COLUMN IF NOT EXISTS scheduled_publish_at timestamptz;
+**`reusable_blocks`** — saved reusable content sections:
+- `id` uuid PK
+- `name` text
+- `description` text
+- `block_type` text
+- `content` jsonb (the block content snapshot)
+- `thumbnail_url` text
+- `tags` text[]
+- `created_by` uuid
+- `updated_by` uuid
+- `is_archived` boolean (default false)
+- `created_at`, `updated_at` timestamptz
+- RLS: admin-only
 
--- Index for the scheduled publish job
-CREATE INDEX IF NOT EXISTS idx_blocks_scheduled
-  ON public.site_blocks (scheduled_publish_at)
-  WHERE scheduled_publish_at IS NOT NULL AND has_draft = true;
+No changes to existing tables. The `editor-images` storage bucket continues to be the physical store.
 
-CREATE INDEX IF NOT EXISTS idx_settings_scheduled
-  ON public.site_settings (scheduled_publish_at)
-  WHERE scheduled_publish_at IS NOT NULL AND has_draft = true;
+## New Files
+
+### 1. `src/hooks/use-media-library.ts`
+React Query-based hook for media operations:
+- `useMediaAssets(filters)` — paginated query with search, folder, type filters
+- `uploadMediaAsset(file, metadata)` — uploads to `editor-images` bucket, inserts `media_assets` row, returns asset
+- `replaceMediaAsset(assetId, newFile)` — archives current version to `media_asset_versions`, uploads replacement
+- `archiveMediaAsset(assetId)` — soft-delete (sets `is_archived = true`)
+- `restoreAssetVersion(versionId)` — restores previous version as current
+- `updateAssetMetadata(assetId, patch)` — update alt_text, title, tags, folder
+
+### 2. `src/components/admin/media/MediaLibraryPage.tsx`
+Full admin page for browsing/managing media:
+- Grid/list toggle with thumbnail previews
+- Search bar, folder filter sidebar, type filter chips
+- Upload dropzone (multi-file)
+- Asset detail panel (metadata editing, version history, usage info)
+- Archive/restore actions with usage warnings
+- Pagination
+
+### 3. `src/components/admin/media/MediaPickerDialog.tsx`
+Modal dialog for selecting/uploading media from within editors:
+- Opens as a dialog over the current editor
+- Browse existing assets or upload new
+- Search + filter
+- Click to select → returns `public_url` to the caller via `onSelect(url)` callback
+- "Upload new" tab for quick inline upload
+
+### 4. `src/components/admin/media/AssetDetailPanel.tsx`
+Side panel or expandable card showing:
+- Full preview
+- Metadata editing form (alt text, title, tags, folder)
+- Version history list with restore buttons
+- Usage references (basic: which pages/blocks reference this URL)
+
+### 5. `src/pages/admin/AdminMedia.tsx`
+Route page wrapper rendering `MediaLibraryPage` inside `AdminLayout`.
+
+### 6. `src/components/admin/reusable/ReusableBlocksLibrary.tsx`
+Admin page for managing reusable content blocks:
+- Grid of saved reusable blocks with thumbnail + name
+- Create from existing block ("Save as reusable")
+- Edit reusable block content
+- Archive/restore
+- Tags + search
+
+### 7. `src/components/admin/reusable/InsertReusableDialog.tsx`
+Dialog for inserting a reusable block into a page:
+- Browse library
+- Choice: "Insert as linked" vs "Insert as copy"
+- Linked: stores `reusable_block_id` reference in block content; updates propagate on publish
+- Copy: snapshots content into a new independent block
+
+### 8. `src/pages/admin/AdminReusableBlocks.tsx`
+Route page wrapper for the reusable blocks library.
+
+## Modified Files
+
+### `src/components/admin/editor/controls/ImageUploadField.tsx`
+- Add "Browse Library" button that opens `MediaPickerDialog`
+- On upload, also create a `media_assets` row (dual-write: storage + DB record)
+- Keep existing drag-drop and URL input as fallbacks
+
+### `src/components/admin/AdminLayout.tsx`
+- Add "Media Library" sidebar item under Core group (icon: `ImageIcon`, permission: `media.manage`)
+- Add "Reusable Blocks" sidebar item under Core group (icon: `Box`, permission: `content.edit`)
+
+### `src/App.tsx`
+- Add routes: `/admin/media` → `AdminMedia`, `/admin/reusable-blocks` → `AdminReusableBlocks`
+- Both wrapped in `AdminRoute` with appropriate permissions
+
+### `src/contexts/VisualEditorContext.tsx`
+- Add `saveAsReusable(blockId)` action that saves selected block to `reusable_blocks`
+- Add `insertReusableBlock(reusableId, mode: 'linked' | 'copy', atIndex)` action
+
+### `src/components/admin/editor/EditorToolbar.tsx` or `LayersPanel.tsx`
+- Add "Save as Reusable" context action on blocks
+- Add "Insert from Library" button that opens `InsertReusableDialog`
+
+### Database migration for permissions seed
+- Add `media.manage` permission for `super_admin`, `admin`, `editor` roles
+
+## Architecture Notes
+
+### Media picker flow
+```text
+Editor (ImageUploadField / block settings)
+  → "Browse Library" button
+  → MediaPickerDialog opens
+  → User browses/uploads/selects
+  → onSelect(publicUrl) called
+  → Editor field updated with URL
+  → Draft saved normally
 ```
 
-### Edge Function: `process-scheduled-publish`
-A cron-triggered edge function that:
-1. Queries `site_blocks` and `site_settings` where `scheduled_publish_at <= now()` and `has_draft = true`
-2. For each match: promotes `draft_content` → `content` (or `draft_value` → `value`), logs revision, clears draft state
-3. Scheduled via `pg_cron` to run every minute
+### Linked reusable blocks
+- Block content stores `{ _reusableId: "uuid", ...snapshotContent }`
+- On publish, if `_reusableId` exists, content is refreshed from the reusable block's latest `content`
+- On "detach", `_reusableId` is removed and content becomes independent
 
-## Code Changes
+### Usage tracking
+- Opportunistic: when MediaPickerDialog selects an asset, increment `usage_count`
+- Deep scan not required initially; a background utility can be added later
 
-### 1. Update `use-draft-publish.ts`
-- Add `saveDraftBlocksScheduled(page, blocks, scheduledAt, userId)` — same as `saveDraftBlocks` but also sets `scheduled_publish_at`
-- Add `saveDraftSettingScheduled(key, value, scheduledAt, userId)` — same pattern for settings
-- Add `cancelSchedule(contentType, contentId)` — clears `scheduled_publish_at`
-- Update `revertToRevision` to support "restore as draft" mode (creates draft_content from revision instead of publishing directly)
-- Add `loadRevisions(contentType, contentId)` — fetches revision history for a content item
-- Add `loadPageRevisions(page)` — fetches all revisions for blocks on a page
+### Draft/publish compatibility
+- Media assets themselves are immediately available (no draft state on raw files)
+- Using a different asset in a block/setting remains a draft change until published
+- Reusable block edits follow the same draft/publish pattern as regular blocks
 
-### 2. New: `src/components/admin/RevisionHistoryPanel.tsx`
-A slide-out panel or dialog showing revision history for the current page/setting:
-- Table of revisions: revision number, action (publish/revert/delete), created_by, created_at, change_summary
-- Badge showing which is current published
-- "Restore as Draft" button on each revision row
-- "Restore & Publish" button (super_admin/admin only)
-- Filterable by action type
-
-### 3. New: `src/components/admin/SchedulePublishDialog.tsx`
-A dialog for scheduling:
-- Date/time picker for `scheduled_publish_at`
-- Shows current timezone
-- Actions: "Schedule", "Cancel Schedule", "Publish Now Instead"
-- Status badge: "Scheduled for [date]"
-
-### 4. Update `EditorToolbar.tsx`
-- Add "History" button → opens `RevisionHistoryPanel`
-- Add dropdown to Publish button: "Publish Now" / "Schedule Publish"
-- Show "Scheduled for [date]" badge when content is scheduled
-- Extend `DraftStatus` type to include `"scheduled"`
-
-### 5. Update `VisualEditorContext.tsx`
-- Add `schedulePublish(date)` action
-- Add `cancelSchedule()` action
-- Track `scheduledAt` state from block data
-- Add `revisions` state for history panel
-
-### 6. Update `DraftActionBar.tsx`
-- Add optional `scheduledAt` prop
-- Add "Schedule" button option
-- Show "Scheduled for [date]" status badge
-- Connect to `RevisionHistoryPanel` via optional `onViewHistory` prop
-
-### 7. Update `AdminBackgrounds.tsx`
-- Add "History" button to view revision history for background settings
-- Add schedule option to publish controls
-
-### 8. Update `use-draft-settings.ts`
-- Add `schedulePublish(date, userId)` method
-- Add `cancelSchedule()` method
-- Track `scheduledAt` from the loaded setting row
-
-### 9. Edge function: `supabase/functions/process-scheduled-publish/index.ts`
-- Uses service_role key to query and promote scheduled content
-- Logs activity for each auto-publish
-- Inserts revision records
-- Set up cron job via `pg_cron` + `pg_net`
-
-## Files Summary
-
-| Action | File |
+## Permission mapping
+| Action | Permission |
 |---|---|
-| Create | `src/components/admin/RevisionHistoryPanel.tsx` |
-| Create | `src/components/admin/SchedulePublishDialog.tsx` |
-| Create | `supabase/functions/process-scheduled-publish/index.ts` |
-| Modify | `src/hooks/use-draft-publish.ts` (add schedule helpers, restore-as-draft, load revisions) |
-| Modify | `src/hooks/use-draft-settings.ts` (add schedule support) |
-| Modify | `src/contexts/VisualEditorContext.tsx` (add schedule/history state) |
-| Modify | `src/components/admin/editor/EditorToolbar.tsx` (add History + Schedule buttons) |
-| Modify | `src/components/admin/DraftActionBar.tsx` (add schedule/history props) |
-| Modify | `src/pages/admin/AdminBackgrounds.tsx` (add history + schedule UI) |
+| View/browse media | `media.manage` |
+| Upload/edit/archive media | `media.manage` |
+| Manage reusable blocks | `content.edit` |
+| Insert reusable blocks | `content.edit` |
 
-## Database changes summary
-- **Alter** `content_revisions`: +`change_summary`, +`restored_from_revision_id`
-- **Alter** `site_blocks`: +`scheduled_publish_at`
-- **Alter** `site_settings`: +`scheduled_publish_at`
-- **Create** edge function `process-scheduled-publish` + cron job
+## Implementation order
+1. Database migration (tables + permissions seed)
+2. `use-media-library.ts` hook
+3. `MediaPickerDialog` + `MediaLibraryPage` + route
+4. Integrate picker into `ImageUploadField`
+5. `ReusableBlocksLibrary` + `InsertReusableDialog` + route
+6. Integrate reusable blocks into Visual Editor context
+7. Sidebar + routing updates
 

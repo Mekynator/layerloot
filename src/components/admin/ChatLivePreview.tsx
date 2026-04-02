@@ -172,20 +172,20 @@ export default function ChatLivePreview({ config }: ChatLivePreviewProps) {
             <button
               onClick={() => setPreviewState("open")}
               className="relative flex items-center justify-center rounded-full text-primary-foreground shadow-xl transition-transform hover:scale-105"
-              style={{
-                width: launcherSize,
-                height: launcherSize,
-                backgroundColor: config.launcher.bgColor ? `hsl(${config.launcher.bgColor})` : "hsl(var(--primary))",
-                color: config.launcher.iconColor ? `hsl(${config.launcher.iconColor})` : undefined,
-                borderColor: config.launcher.borderColor ? `hsl(${config.launcher.borderColor})` : undefined,
-                borderWidth: config.launcher.borderColor ? 2 : 0,
-                boxShadow: config.launcher.shadow
-                  ? config.launcher.glowColor
-                    ? `0 8px 30px hsl(${config.launcher.glowColor} / 0.4)`
-                    : "0 8px 30px hsl(var(--primary) / 0.35)"
-                  : "none",
-                animation: config.launcher.pulseAnimation ? "pulse 2s infinite" : undefined,
-              }}
+                style={{
+                  width: launcherSize,
+                  height: launcherSize,
+                  backgroundColor: config.launcher.bgColor || "hsl(var(--primary))",
+                  color: config.launcher.iconColor || undefined,
+                  borderColor: config.launcher.borderColor || undefined,
+                  borderWidth: config.launcher.borderColor ? 2 : 0,
+                  boxShadow: config.launcher.shadow
+                    ? config.launcher.glowColor
+                      ? `0 8px 30px ${config.launcher.glowColor}40`
+                      : "0 8px 30px hsl(var(--primary) / 0.35)"
+                    : "none",
+                  animation: config.launcher.pulseAnimation ? "pulse 2s infinite" : undefined,
+                }}
             >
               <LauncherIcon icon={config.launcher.icon} customUrl={config.launcher.customIconUrl} size={launcherSize} />
               {config.launcher.showUnreadBadge && (

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { ShoppingCart, User, Menu, X, LogOut, Shield } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import MiniCart from "@/components/layout/MiniCart";
+import AccountDropdown from "@/components/layout/AccountDropdown";
 import logoImg from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
@@ -12,13 +14,7 @@ import GlobalSectionRenderer from "@/components/layout/GlobalSectionRenderer";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+// DropdownMenu no longer needed for account — using hover dropdown
 
 type BrandingSettings = {
   brand_name?: string;
@@ -145,7 +141,7 @@ const isActiveLink = (pathname: string, to: string) => {
 
 const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [adminAlerts, setAdminAlerts] = useState(0);
+  
   const [branding, setBranding] = useState<BrandingSettings>(defaultBranding);
   const [headerSettings, setHeaderSettings] = useState<HeaderSettings>(defaultHeaderSettings);
   const [hasAccountNotifications, setHasAccountNotifications] = useState(false);
@@ -157,7 +153,7 @@ const Header = () => {
 
   const location = useLocation();
   const { totalItems } = useCart();
-  const { user, isAdmin, signOut } = useAuth();
+  const { user } = useAuth();
   const navLinks = useNavLinks();
   const { t } = useTranslation();
   const cartButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -168,18 +164,6 @@ const Header = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  useEffect(() => {
-    const fetchAdminAlerts = async () => {
-      if (!isAdmin) { setAdminAlerts(0); return; }
-      const [ordersRes, customRes, reviewsRes] = await Promise.all([
-        supabase.from("orders").select("id", { count: "exact", head: true }).in("status", ["pending", "processing"]),
-        supabase.from("custom_orders").select("id", { count: "exact", head: true }).in("status", ["pending", "reviewing", "quoted", "accepted"]),
-        supabase.from("product_reviews").select("id", { count: "exact", head: true }).eq("is_approved", false),
-      ]);
-      setAdminAlerts((ordersRes.count ?? 0) + (customRes.count ?? 0) + (reviewsRes.count ?? 0));
-    };
-    void fetchAdminAlerts();
-  }, [isAdmin, user]);
 
   useEffect(() => {
     const fetchAccountNotifications = async () => {
@@ -347,35 +331,13 @@ const Header = () => {
 
           <div className="relative flex items-center gap-1">
             {headerSettings.show_cart_icon && (
-              <div className="relative">
-                <Link to="/cart">
-                  <motion.div
-                    animate={cartPulse ? { scale: [1, 0.92, 1.12, 1], rotate: [0, -6, 4, 0] } : { scale: 1, rotate: 0 }}
-                    transition={{ duration: 0.5, ease: "easeOut" }}
-                  >
-                    <Button
-                      ref={cartButtonRef}
-                      variant="ghost"
-                      size="icon"
-                      className={`relative text-muted-foreground transition-all hover:text-foreground ${
-                        cartGlow ? "shadow-[0_0_28px_hsl(var(--primary)/0.35)]" : ""
-                      }`}
-                      aria-label={t("nav.cart", "Cart")}
-                    >
-                      <ShoppingCart className="h-5 w-5" />
-                      {totalItems > 0 && (
-                        <motion.span
-                          key={totalItems}
-                          initial={{ scale: 0.7, opacity: 0.5 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-r from-primary to-accent text-[10px] font-bold text-primary-foreground"
-                        >
-                          {totalItems}
-                        </motion.span>
-                      )}
-                    </Button>
-                  </motion.div>
-                </Link>
+              <>
+                <MiniCart
+                  cartButtonRef={cartButtonRef}
+                  cartPulse={cartPulse}
+                  cartGlow={cartGlow}
+                  totalItems={totalItems}
+                />
                 <AnimatePresence>
                   {cartToast.visible && (
                     <motion.div
@@ -388,42 +350,13 @@ const Header = () => {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
+              </>
             )}
 
             <LanguageSwitcher />
 
-            {/* Admin icon removed — admin access is via /admin/login */}
-
             {headerSettings.show_account_icon && (
-              <>
-                {user ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-primary" aria-label={getLocalizedValue(headerSettings.account_label, t("nav.account", "My Account"))}>
-                        <User className="h-5 w-5" />
-                        {hasAccountNotifications && <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-primary animate-pulse" />}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="border-border/20 bg-card/90 backdrop-blur-2xl">
-                      <DropdownMenuItem asChild>
-                        <Link to="/account" className="cursor-pointer">{getLocalizedValue(headerSettings.account_label, t("nav.account", "My Account"))}</Link>
-                      </DropdownMenuItem>
-                      {/* Admin dropdown link removed — admin access is via /admin/login */}
-                      <DropdownMenuSeparator className="bg-border/20" />
-                      <DropdownMenuItem onClick={signOut} className="cursor-pointer">
-                        <LogOut className="mr-2 h-4 w-4" /> {getLocalizedValue(headerSettings.sign_out_label, t("nav.signOut", "Sign Out"))}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : (
-                  <Link to="/auth">
-                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary" aria-label={getLocalizedValue(headerSettings.auth_label, t("nav.login", "Login / Register"))}>
-                      <User className="h-5 w-5" />
-                    </Button>
-                  </Link>
-                )}
-              </>
+              <AccountDropdown hasNotifications={hasAccountNotifications} />
             )}
 
             {headerSettings.show_mobile_menu && (

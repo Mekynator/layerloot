@@ -1,56 +1,184 @@
-import { useState } from "react";
-import { Settings2, Palette, Box, Ruler, Sparkles, Trash2, Save } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Settings2, Palette, Box, Ruler, Sparkles, Trash2, Save, X, Tag, DollarSign } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useRememberedChoices, type RememberedChoices } from "@/hooks/use-remembered-choices";
+import { useProductOptions } from "@/hooks/use-product-options";
 import type { AccountModuleProps } from "./types";
 import { useToast } from "@/hooks/use-toast";
+import { formatPrice } from "@/lib/currency";
+
+/* Multi-select chip picker */
+const ChipPicker = ({
+  options,
+  selected,
+  onChange,
+  placeholder,
+}: {
+  options: string[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+  placeholder: string;
+}) => {
+  const [search, setSearch] = useState("");
+  const filtered = useMemo(
+    () => options.filter((o) => o.toLowerCase().includes(search.toLowerCase())),
+    [options, search],
+  );
+
+  const toggle = (val: string) => {
+    onChange(selected.includes(val) ? selected.filter((s) => s !== val) : [...selected, val]);
+  };
+
+  return (
+    <div className="space-y-2">
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selected.map((s) => (
+            <Badge key={s} variant="secondary" className="gap-1 text-[10px] pr-1 cursor-pointer hover:bg-destructive/10" onClick={() => toggle(s)}>
+              {s}
+              <X className="h-2.5 w-2.5" />
+            </Badge>
+          ))}
+        </div>
+      )}
+      {options.length > 6 && (
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={placeholder}
+          className="w-full rounded-lg border border-border/20 bg-muted/20 px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30"
+        />
+      )}
+      <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+        {filtered.map((opt) => (
+          <button
+            key={opt}
+            onClick={() => toggle(opt)}
+            className={`rounded-full px-2.5 py-1 text-[10px] font-medium border transition-all ${
+              selected.includes(opt)
+                ? "border-primary/40 bg-primary/10 text-primary"
+                : "border-border/20 bg-muted/20 text-muted-foreground hover:border-primary/20 hover:text-foreground"
+            }`}
+          >
+            {opt}
+          </button>
+        ))}
+        {filtered.length === 0 && (
+          <p className="text-[10px] text-muted-foreground/50 py-1">No options found</p>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const SavedPreferencesModule = ({ tt }: Pick<AccountModuleProps, "tt">) => {
   const { choices, saveChoice } = useRememberedChoices();
+  const { data: options, isLoading } = useProductOptions();
   const { toast } = useToast();
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<Partial<RememberedChoices>>({});
 
-  const startEditing = () => {
-    setDraft({
-      lastMaterial: choices.lastMaterial ?? "",
-      lastColor: choices.lastColor ?? "",
-      lastSize: choices.lastSize ?? "",
-      lastFinish: choices.lastFinish ?? "",
-    });
-    setEditing(true);
+  // Parse stored preferences (may be comma-separated strings or arrays)
+  const parseStored = (val?: string): string[] => {
+    if (!val) return [];
+    return val.split(",").map((v) => v.trim()).filter(Boolean);
   };
 
-  const saveEdits = () => {
-    if (draft.lastMaterial !== undefined) saveChoice("lastMaterial", draft.lastMaterial || undefined);
-    if (draft.lastColor !== undefined) saveChoice("lastColor", draft.lastColor || undefined);
-    if (draft.lastSize !== undefined) saveChoice("lastSize", draft.lastSize || undefined);
-    if (draft.lastFinish !== undefined) saveChoice("lastFinish", draft.lastFinish || undefined);
-    setEditing(false);
+  const [materials, setMaterials] = useState<string[]>(() => parseStored(choices.lastMaterial));
+  const [colors, setColors] = useState<string[]>(() => parseStored(choices.lastColor));
+  const [finishes, setFinishes] = useState<string[]>(() => parseStored(choices.lastFinish));
+  const [categories, setCategories] = useState<string[]>(() => parseStored(choices.lastSize)); // reuse lastSize for categories
+  const [priceRange, setPriceRange] = useState<[number, number]>([
+    choices.lastGiftSettings?.recipientAgeGroup ? Number(choices.lastGiftSettings.recipientAgeGroup) || 0 : 0,
+    choices.lastGiftSettings?.occasion ? Number(choices.lastGiftSettings.occasion) || 10000 : 10000,
+  ]);
+  const [dirty, setDirty] = useState(false);
+
+  const updateMaterials = (v: string[]) => { setMaterials(v); setDirty(true); };
+  const updateColors = (v: string[]) => { setColors(v); setDirty(true); };
+  const updateFinishes = (v: string[]) => { setFinishes(v); setDirty(true); };
+  const updateCategories = (v: string[]) => { setCategories(v); setDirty(true); };
+  const updatePrice = (v: number[]) => { setPriceRange([v[0], v[1]]); setDirty(true); };
+
+  const saveAll = () => {
+    saveChoice("lastMaterial", materials.length ? materials.join(", ") : undefined);
+    saveChoice("lastColor", colors.length ? colors.join(", ") : undefined);
+    saveChoice("lastFinish", finishes.length ? finishes.join(", ") : undefined);
+    saveChoice("lastSize", categories.length ? categories.join(", ") : undefined);
+    saveChoice("lastGiftSettings", {
+      recipientAgeGroup: String(priceRange[0]),
+      occasion: String(priceRange[1]),
+      recipientInterests: [],
+    });
+    setDirty(false);
     toast({ title: tt("account.preferences.saved", "Preferences saved!") });
   };
 
   const clearAll = () => {
+    setMaterials([]); setColors([]); setFinishes([]); setCategories([]);
+    setPriceRange([0, options?.priceRange.max || 10000]);
     saveChoice("lastMaterial", undefined);
     saveChoice("lastColor", undefined);
-    saveChoice("lastSize", undefined);
     saveChoice("lastFinish", undefined);
-    setEditing(false);
+    saveChoice("lastSize", undefined);
+    saveChoice("lastGiftSettings", undefined);
+    setDirty(false);
     toast({ title: tt("account.preferences.cleared", "Preferences cleared") });
   };
 
-  const hasSaved = choices.lastMaterial || choices.lastColor || choices.lastSize || choices.lastFinish;
+  const hasSaved = materials.length > 0 || colors.length > 0 || finishes.length > 0 || categories.length > 0;
 
-  const prefItems = [
-    { key: "lastMaterial" as const, label: tt("account.preferences.material", "Favorite Material"), icon: Box, value: choices.lastMaterial },
-    { key: "lastColor" as const, label: tt("account.preferences.color", "Preferred Color"), icon: Palette, value: choices.lastColor },
-    { key: "lastSize" as const, label: tt("account.preferences.size", "Preferred Size"), icon: Ruler, value: choices.lastSize },
-    { key: "lastFinish" as const, label: tt("account.preferences.finish", "Finishing Style"), icon: Sparkles, value: choices.lastFinish },
+  const sections = [
+    {
+      key: "materials",
+      label: tt("account.preferences.material", "Preferred Materials"),
+      icon: Box,
+      options: options?.materials ?? [],
+      selected: materials,
+      onChange: updateMaterials,
+    },
+    {
+      key: "colors",
+      label: tt("account.preferences.color", "Preferred Colors"),
+      icon: Palette,
+      options: options?.colors ?? [],
+      selected: colors,
+      onChange: updateColors,
+    },
+    {
+      key: "finishes",
+      label: tt("account.preferences.finish", "Preferred Finishes"),
+      icon: Sparkles,
+      options: options?.finishes ?? [],
+      selected: finishes,
+      onChange: updateFinishes,
+    },
+    {
+      key: "categories",
+      label: tt("account.preferences.categories", "Preferred Categories"),
+      icon: Tag,
+      options: (options?.categories ?? []).map((c) => c.name),
+      selected: categories,
+      onChange: updateCategories,
+    },
   ];
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 w-1/3 rounded bg-muted/30" />
+            <div className="h-20 rounded bg-muted/20" />
+            <div className="h-20 rounded bg-muted/20" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -60,64 +188,71 @@ const SavedPreferencesModule = ({ tt }: Pick<AccountModuleProps, "tt">) => {
             <Settings2 className="h-4 w-4 text-primary" /> {tt("account.preferences.title", "Saved Preferences")}
           </CardTitle>
           <div className="flex gap-2">
-            {hasSaved && !editing && (
+            {hasSaved && (
               <Button variant="ghost" size="sm" className="text-xs" onClick={clearAll}>
-                <Trash2 className="mr-1 h-3 w-3" /> {tt("account.preferences.clearAll", "Clear All")}
+                <Trash2 className="mr-1 h-3 w-3" /> {tt("account.preferences.clearAll", "Reset All")}
               </Button>
             )}
-            {editing ? (
-              <>
-                <Button variant="ghost" size="sm" className="text-xs" onClick={() => setEditing(false)}>
-                  {tt("common.cancel", "Cancel")}
-                </Button>
-                <Button size="sm" className="text-xs" onClick={saveEdits}>
-                  <Save className="mr-1 h-3 w-3" /> {tt("common.save", "Save")}
-                </Button>
-              </>
-            ) : (
-              <Button variant="outline" size="sm" className="text-xs" onClick={startEditing}>
-                {tt("account.preferences.edit", "Edit Preferences")}
+            {dirty && (
+              <Button size="sm" className="text-xs" onClick={saveAll}>
+                <Save className="mr-1 h-3 w-3" /> {tt("common.save", "Save")}
               </Button>
             )}
           </div>
         </CardHeader>
-        <CardContent>
-          {editing ? (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {prefItems.map(item => (
-                <div key={item.key} className="space-y-1">
-                  <Label className="text-xs flex items-center gap-1.5">
-                    <item.icon className="h-3 w-3 text-muted-foreground" /> {item.label}
-                  </Label>
-                  <Input
-                    value={(draft as any)[item.key] ?? ""}
-                    onChange={e => setDraft(prev => ({ ...prev, [item.key]: e.target.value }))}
-                    placeholder={tt("account.preferences.enterValue", "Enter value...")}
+        <CardContent className="space-y-4">
+          <p className="text-xs text-muted-foreground">
+            {tt("account.preferences.dynamicHint", "Select your preferences from available product options. These will be used for personalized recommendations.")}
+          </p>
+
+          {sections.map((section) => (
+            <Collapsible key={section.key} defaultOpen={section.selected.length > 0}>
+              <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-lg border border-border/10 bg-muted/10 px-3 py-2.5 text-left transition-colors hover:bg-muted/20">
+                <section.icon className="h-4 w-4 text-primary" />
+                <span className="flex-1 text-xs font-medium text-foreground">{section.label}</span>
+                {section.selected.length > 0 && (
+                  <Badge variant="secondary" className="text-[9px]">{section.selected.length}</Badge>
+                )}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-2 pl-6">
+                {section.options.length > 0 ? (
+                  <ChipPicker
+                    options={section.options}
+                    selected={section.selected}
+                    onChange={section.onChange}
+                    placeholder={tt("account.preferences.search", "Search...")}
                   />
+                ) : (
+                  <p className="text-[10px] text-muted-foreground/50 py-2">
+                    {tt("account.preferences.noOptions", "No options available yet.")}
+                  </p>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
+          ))}
+
+          {/* Price range */}
+          <Collapsible defaultOpen={priceRange[0] > 0 || priceRange[1] < (options?.priceRange.max || 10000)}>
+            <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-lg border border-border/10 bg-muted/10 px-3 py-2.5 text-left transition-colors hover:bg-muted/20">
+              <DollarSign className="h-4 w-4 text-primary" />
+              <span className="flex-1 text-xs font-medium text-foreground">{tt("account.preferences.priceRange", "Price Range")}</span>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3 pl-6 pr-2">
+              <div className="space-y-2">
+                <Slider
+                  min={options?.priceRange.min ?? 0}
+                  max={options?.priceRange.max ?? 10000}
+                  step={10}
+                  value={priceRange}
+                  onValueChange={updatePrice}
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>{formatPrice(priceRange[0])}</span>
+                  <span>{formatPrice(priceRange[1])}</span>
                 </div>
-              ))}
-            </div>
-          ) : hasSaved ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {prefItems.filter(item => item.value).map(item => (
-                <div key={item.key} className="flex items-center gap-3 rounded-xl border border-border/30 bg-muted/30 p-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                    <item.icon className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">{item.label}</p>
-                    <p className="text-sm font-medium">{item.value}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="py-8 text-center text-sm text-muted-foreground">
-              <Settings2 className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
-              <p>{tt("account.preferences.empty", "No saved preferences yet.")}</p>
-              <p className="text-xs mt-1">{tt("account.preferences.emptyHint", "Your material, color, and size choices will be remembered as you shop and configure products.")}</p>
-            </div>
-          )}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </CardContent>
       </Card>
 

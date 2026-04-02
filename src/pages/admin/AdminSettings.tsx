@@ -203,6 +203,7 @@ const AdminSettings = () => {
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="navigation">Navigation</TabsTrigger>
           <TabsTrigger value="account">Account Page</TabsTrigger>
+          <TabsTrigger value="automations">Automations</TabsTrigger>
         </TabsList>
 
         {/* ─── GENERAL ─── */}

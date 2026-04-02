@@ -199,8 +199,15 @@ const AdminCustomOrders = () => {
                   onClick={() => navigate(`/admin/custom-orders/${order.id}`)}
                 >
                   <TableCell>
-                    <p className="font-display text-sm font-semibold uppercase">{order.name}</p>
-                    <p className="text-xs text-muted-foreground">{order.email}</p>
+                    <div className="flex items-center gap-2">
+                      {order.unread_by_admin && (
+                        <span className="h-2 w-2 rounded-full bg-primary animate-pulse shrink-0" />
+                      )}
+                      <div>
+                        <p className="font-display text-sm font-semibold uppercase">{order.name}</p>
+                        <p className="text-xs text-muted-foreground">{order.email}</p>
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell>
                     {order.order_type === "lithophane" ? (

@@ -424,6 +424,7 @@ const ChatWidget = () => {
     const userMsg: Msg = { id: uid(), role: "user", content: text };
     const assistantMsgId = uid();
     const nextMessages = [...messages, userMsg];
+    trackChatEvent(forcedText ? "quick_reply_click" : "message", { text }, location.pathname, userId);
 
     setMessages([...nextMessages, { id: assistantMsgId, role: "assistant", content: "" }]);
     setInput("");

@@ -268,14 +268,14 @@ export default function ChatLivePreview({ config }: ChatLivePreviewProps) {
                       style={{
                         borderRadius: msg.role === "user" ? config.bubbles.user.borderRadius : config.bubbles.ai.borderRadius,
                         backgroundColor: msg.role === "user"
-                          ? config.bubbles.user.bgColor ? `hsl(${config.bubbles.user.bgColor})` : "hsl(var(--primary))"
-                          : config.bubbles.ai.bgColor ? `hsl(${config.bubbles.ai.bgColor})` : "hsl(var(--muted))",
+                          ? config.bubbles.user.bgColor || "hsl(var(--primary))"
+                          : config.bubbles.ai.bgColor || "hsl(var(--muted))",
                         color: msg.role === "user"
-                          ? config.bubbles.user.textColor ? `hsl(${config.bubbles.user.textColor})` : "hsl(var(--primary-foreground))"
-                          : config.bubbles.ai.textColor ? `hsl(${config.bubbles.ai.textColor})` : "hsl(var(--foreground))",
+                          ? config.bubbles.user.textColor || "hsl(var(--primary-foreground))"
+                          : config.bubbles.ai.textColor || "hsl(var(--foreground))",
                         borderColor: msg.role === "user"
-                          ? config.bubbles.user.borderColor ? `hsl(${config.bubbles.user.borderColor})` : undefined
-                          : config.bubbles.ai.borderColor ? `hsl(${config.bubbles.ai.borderColor})` : undefined,
+                          ? config.bubbles.user.borderColor || undefined
+                          : config.bubbles.ai.borderColor || undefined,
                         borderWidth: (msg.role === "user" ? config.bubbles.user.borderColor : config.bubbles.ai.borderColor) ? 1 : 0,
                         boxShadow: (msg.role === "user" ? config.bubbles.user.shadow : config.bubbles.ai.shadow) ? "0 2px 8px hsl(0 0% 0% / 0.1)" : undefined,
                       }}

@@ -9,6 +9,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import GiftFinderResults from "./GiftFinderResults";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   gamer: Gamepad2,
@@ -270,58 +271,17 @@ export default function GiftFinderSection() {
 
       {/* Results */}
       <div id="gift-finder-results">
-        {selectedTagIds.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-            {loading ? (
-              <div className="py-12 text-center text-muted-foreground">
-                <div className="mx-auto mb-3 h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                {t("create.searching", "Searching...")}
-              </div>
-            ) : products.length > 0 ? (
-              <>
-                <p className="text-center text-sm text-muted-foreground">
-                  {t("create.bestMatchesFirst", "Best matches first")}
-                </p>
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                  {products.map((product) => (
-                    <Link
-                      key={product.id}
-                      to={`/products/${product.slug}`}
-                      className="group overflow-hidden rounded-2xl border border-border/40 bg-card/60 transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-[0_8px_30px_-8px_hsl(var(--primary)/0.2)]"
-                    >
-                      {product.images?.[0] && (
-                        <div className="overflow-hidden">
-                          <img
-                            src={product.images[0]}
-                            alt={product.name}
-                            loading="lazy"
-                            className="aspect-square w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          />
-                        </div>
-                      )}
-                      <div className="space-y-1.5 p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="truncate text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                            {product.name}
-                          </p>
-                          <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
-                            {product.matchScore} {product.matchScore === 1 ? t("create.match", "match") : t("create.matches", "matches")}
-                          </span>
-                        </div>
-                        <p className="text-xs font-semibold text-primary">{product.price} kr</p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="py-12 text-center">
-                <Gift className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
-                <p className="text-muted-foreground">{t("create.noMatchYet", "No matches yet — try different vibes")}</p>
-              </div>
-            )}
-          </motion.div>
-        )}
+        <GiftFinderResults
+          selectedTagIds={selectedTagIds}
+          selectedTagNames={tags.filter((t) => selectedTagIds.includes(t.id)).map((t) => t.name)}
+          products={products}
+          loading={loading}
+          onClear={() => setSelectedTagIds([])}
+          onScrollToSelection={() => {
+            document.getElementById("gift-finder-results")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        />
       </div>
     </div>
   );

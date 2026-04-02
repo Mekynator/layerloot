@@ -255,6 +255,8 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
 
             <TabsContent value="style" className="space-y-3 mt-3">
               <AdvancedStyleEditor content={localContent} patchContent={patchContent} />
+              {/* Background Slideshow Controls */}
+              <BackgroundSlideshowControls content={localContent} patchContent={patchContent} />
               {/* Per-element typography when an element is selected */}
               {isElementSelected && selectedNodeKey && selectedNodeType === "text" && (
                 <div className="rounded-lg border border-primary/30 bg-primary/5 p-2">
@@ -265,6 +267,10 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
                   />
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="border" className="space-y-3 mt-3">
+              <BorderControls content={localContent} patchContent={patchContent} />
             </TabsContent>
 
             <TabsContent value="responsive" className="space-y-3 mt-3">

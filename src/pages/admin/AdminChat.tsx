@@ -1,12 +1,13 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import {
   Save, Plus, Trash2, GripVertical, Eye, MessageCircle,
   BarChart3, Users, TrendingUp, Brain, FlaskConical,
   Heart, AlertTriangle, Edit, Flag, ThumbsUp, ThumbsDown,
   ChevronDown, ChevronRight, Search, RefreshCw, Send, Bot, User,
-  Activity, Zap, Target, HelpCircle, BookOpen, X,
+  Activity, Zap, Target, HelpCircle, BookOpen, X, Undo2,
   Settings2, Palette, Volume2, FileText, Sparkles, Megaphone,
   Gauge, Wand2, LayoutTemplate, Check, Copy, ArrowRight,
+  ChevronsUpDown, ChevronsDownUp,
 } from "lucide-react";
 import ChatLivePreview from "@/components/admin/ChatLivePreview";
 import ColorPickerField from "@/components/admin/editor/controls/ColorPickerField";

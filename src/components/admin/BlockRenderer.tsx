@@ -725,14 +725,11 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
             viewport={{ once: true }}
             className={`mb-4 flex items-center gap-2 ${justifyClass(align)}`}
           >
-            {c.icon ? (
-              (() => {
-                const Icon = iconForName(c.icon, Printer);
-                return <Icon className="h-5 w-5 text-primary" />;
-              })()
-            ) : (
-              <Printer className="h-5 w-5 text-primary" />
-            )}
+            {(() => {
+              const Icon = iconForName(c.icon || "Printer", Printer);
+              const iconSizePx = c.iconSize || 20;
+              return <Icon style={{ width: iconSizePx, height: iconSizePx, color: c.iconColor || undefined }} className="text-primary" />;
+            })()}
             <span className="font-display text-sm uppercase tracking-widest text-primary">
               {getLocalizedValue(c.eyebrow || c.badge, tr("blocks.hero.eyebrow", "3D Printing Essentials"))}
             </span>

@@ -812,7 +812,15 @@ export default function AdminChat() {
           </h1>
           <p className="text-xs text-muted-foreground">Manage your AI assistant — appearance, behavior, training, analytics & testing</p>
         </div>
-        <Button onClick={save} disabled={saving} size="sm"><Save className="mr-1.5 h-4 w-4" /> {saving ? "Saving..." : "Save Settings"}</Button>
+        <div className="flex items-center gap-2">
+          {isDirty && (
+            <>
+              <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-500 animate-pulse">Unsaved changes</Badge>
+              <Button variant="outline" size="sm" onClick={revert}><Undo2 className="mr-1.5 h-3.5 w-3.5" /> Revert</Button>
+            </>
+          )}
+          <Button onClick={save} disabled={saving || !isDirty} size="sm"><Save className="mr-1.5 h-4 w-4" /> {saving ? "Saving..." : "Save Settings"}</Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">

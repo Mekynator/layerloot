@@ -121,7 +121,7 @@ const MegaMenuDropdown = ({ config, children, linkTo }: MegaMenuDropdownProps) =
       if (!hoveredCategoryId) return [];
       const { data } = await supabase
         .from("products")
-        .select("id, name, slug, price, image_url, category_id, is_featured, created_at")
+        .select("id, name, slug, price, images, category_id, is_featured, created_at")
         .eq("category_id", hoveredCategoryId)
         .order("created_at", { ascending: false })
         .limit(3);

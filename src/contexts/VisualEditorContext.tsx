@@ -4,9 +4,10 @@ import type { SiteBlock } from "@/components/admin/BlockRenderer";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import {
-  loadDraftBlocks, saveDraftBlocks, discardDraftBlocks, publishDraftBlocks,
+  loadAdminBlocks, saveDraftBlocks, discardDraftBlocks, publishDraftBlocks,
   type DraftStatus,
 } from "@/hooks/use-draft-publish";
+import { useAuth } from "@/contexts/AuthContext";
 
 type SitePage = Tables<"site_pages">;
 

@@ -27,3 +27,13 @@ export function tr(value: Localized, fallback = ""): string {
 
   return fallback;
 }
+
+/** Locale-explicit variant for editor preview without changing global i18n state */
+export function trWithLocale(value: Localized, locale: string, fallback = ""): string {
+  if (!value) return fallback;
+  if (typeof value === "string") return value;
+  const short = locale.toLowerCase().split("-")[0];
+  if (value[short]) return value[short];
+  if (value.en) return value.en;
+  return fallback;
+}

@@ -103,7 +103,7 @@ const MegaMenuDropdown = ({ config, children, linkTo }: MegaMenuDropdownProps) =
         // Fallback to newest
         const { data: newest } = await supabase
           .from("products")
-          .select("id, name, slug, price, image_url, category_id, is_featured, created_at")
+          .select("id, name, slug, price, images, category_id, is_featured, created_at")
           .order("created_at", { ascending: false })
           .limit(4);
         return (newest as Product[]) ?? [];

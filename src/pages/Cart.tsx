@@ -32,6 +32,8 @@ import GiftMode, { type GiftSettings } from "@/components/cart/GiftMode";
 import FreeShippingBar from "@/components/cart/FreeShippingBar";
 import CartUpsellSection from "@/components/smart/CartUpsellSection";
 import { useStorefrontCatalog } from "@/hooks/use-storefront";
+import CheckoutSavingsPanel from "@/components/cart/CheckoutSavingsPanel";
+import { useCheckoutSavings } from "@/hooks/useCheckoutSavings";
 
 const FREE_SHIPPING_THRESHOLD = 500;
 const BASE_SHIPPING_PRICE = 5.99;
@@ -67,12 +69,12 @@ export default function CartPage() {
   const cartItems = items as CartItemExt[];
 
   const [savedItems, setSavedItems] = useState<CartItemExt[]>([]);
-  const [selectedDiscountCode, setSelectedDiscountCode] = useState<string>("");
-  const [manualDiscountCode, setManualDiscountCode] = useState("");
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [recentlyChanged, setRecentlyChanged] = useState<Record<string, "inc" | "dec" | "added">>({});
   const [removingIds, setRemovingIds] = useState<string[]>([]);
   const [savedToast, setSavedToast] = useState<string>("");
+  const [manualCodeError, setManualCodeError] = useState<string | undefined>();
+  const [manualCodeLoading, setManualCodeLoading] = useState(false);
   const [giftSettings, setGiftSettings] = useState<GiftSettings>({
     enabled: false,
     personalMessage: "",
@@ -84,38 +86,12 @@ export default function CartPage() {
 
   const checkoutButtonRef = useRef<HTMLButtonElement | null>(null);
 
-  useEffect(() => {
-    const raw = localStorage.getItem("layerloot_saved_items");
-    if (raw) {
-      try {
-        setSavedItems(JSON.parse(raw));
-      } catch {
-        setSavedItems([]);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("layerloot_saved_items", JSON.stringify(savedItems));
-  }, [savedItems]);
-
-  useEffect(() => {
-    if (!savedToast) return;
-    const timer = window.setTimeout(() => setSavedToast(""), 1800);
-    return () => window.clearTimeout(timer);
-  }, [savedToast]);
-
-  const selectedDiscount = useMemo(() => {
-    return (accountData?.availableDiscountCodes ?? []).find((d) => d.code === selectedDiscountCode) ?? null;
-  }, [selectedDiscountCode, accountData?.availableDiscountCodes]);
-
   const availableDiscountCodes = accountData?.availableDiscountCodes ?? [];
   const pointsBalance = accountData?.pointsBalance ?? 0;
 
-  const shippingProgress = Math.min((totalPrice / FREE_SHIPPING_THRESHOLD) * 100, 100);
-  const remainingForFreeShipping = Math.max(FREE_SHIPPING_THRESHOLD - totalPrice, 0);
-
   const shippingCost = totalPrice >= FREE_SHIPPING_THRESHOLD || totalPrice === 0 ? 0 : BASE_SHIPPING_PRICE;
+
+  const savings = useCheckoutSavings(totalPrice, shippingCost, availableDiscountCodes);
 
   const GIFT_FEE_PER_ITEM = 10;
   const GIFT_WRAP_FEE = 25;
@@ -125,17 +101,14 @@ export default function CartPage() {
 
   const pointsToEarn = Math.floor(totalPrice / 4);
 
-  const discountAmount = useMemo(() => {
-    if (!selectedDiscount) return 0;
+  const shippingProgress = Math.min((totalPrice / FREE_SHIPPING_THRESHOLD) * 100, 100);
+  const remainingForFreeShipping = Math.max(FREE_SHIPPING_THRESHOLD - totalPrice, 0);
 
-    if (selectedDiscount.type === "percent") {
-      return Number(((totalPrice * selectedDiscount.value) / 100).toFixed(2));
-    }
-
-    return Math.min(selectedDiscount.value, totalPrice + shippingCost);
-  }, [selectedDiscount, totalPrice, shippingCost]);
-
-  const finalTotal = Math.max(totalPrice + shippingCost + giftFee + giftWrapFee - discountAmount, 0);
+  const effectiveShipping = Math.max(shippingCost - savings.summary.shippingDiscount, 0);
+  const finalTotal = Math.max(
+    totalPrice + effectiveShipping + giftFee + giftWrapFee - savings.summary.discountAmount - savings.summary.giftCardDeduction,
+    0,
+  );
 
   const recommendedProducts = useMemo(() => {
     const map = new Map<string, RecommendedProduct>();
@@ -188,9 +161,22 @@ export default function CartPage() {
     }, 220);
   };
 
+  const handleManualCode = (code: string) => {
+    setManualCodeError(undefined);
+    // Try to find it in available codes
+    const found = availableDiscountCodes.find((d) => d.code.toLowerCase() === code.toLowerCase());
+    if (found) {
+      const err = savings.applySaving(found);
+      if (err) setManualCodeError(err);
+    } else {
+      // For Phase 1, manual codes that aren't in user's account aren't supported yet
+      setManualCodeError(t("cart.codeNotFound", "Code not found in your account"));
+    }
+  };
+
   const handleCheckout = async () => {
     try {
-      if (!user && (selectedDiscountCode || manualDiscountCode.trim())) {
+      if (!user && savings.applied.length > 0) {
         toast({
           title: t("cart.signInRequired"),
           description: t("cart.signInForVoucher"),
@@ -209,6 +195,15 @@ export default function CartPage() {
         data: { session },
       } = await supabase.auth.getSession();
 
+      // Build applied savings for the edge function
+      const appliedSavings = savings.applied.map((a) => ({
+        code: a.code,
+        category: a.category,
+        appliedAmount: a.appliedAmount,
+        userVoucherId: a.userVoucherId,
+        voucherType: a.voucherType,
+      }));
+
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: {
           items: cartItems.map((item) => ({
@@ -222,8 +217,9 @@ export default function CartPage() {
             color: item.color || null,
             size: item.size || null,
           })),
-          discountCode: selectedDiscountCode || manualDiscountCode || null,
-          shippingCost,
+          appliedSavings,
+          discountCode: appliedSavings.find((s) => s.category === "voucher" || s.category === "discount")?.code || null,
+          shippingCost: effectiveShipping,
           giftMode: giftSettings.enabled
             ? {
                 personalMessage: giftSettings.personalMessage,
@@ -592,7 +588,7 @@ export default function CartPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">{t("cart.shipping")}</span>
                   <span className="font-display font-bold text-foreground">
-                    {shippingCost === 0 ? t("cart.free") : formatPrice(shippingCost)}
+                    {effectiveShipping === 0 ? t("cart.free") : formatPrice(effectiveShipping)}
                   </span>
                 </div>
 
@@ -610,48 +606,53 @@ export default function CartPage() {
                   </div>
                 )}
 
-                <div className="rounded-xl border border-border bg-background/50 p-3">
-                  <label className="mb-2 block text-sm font-medium text-foreground">{t("cart.discount")}</label>
-
-                  {availableDiscountCodes.length > 0 ? (
-                    <select
-                      value={selectedDiscountCode}
-                      onChange={(e) => {
-                        setSelectedDiscountCode(e.target.value);
-                        setManualDiscountCode("");
-                      }}
-                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none"
-                    >
-                      <option value="">{t("cart.chooseVoucher")}</option>
-                      {availableDiscountCodes.map((discount) => (
-                        <option key={discount.code} value={discount.code}>
-                          {discount.label}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      value={manualDiscountCode}
-                      onChange={(e) => setManualDiscountCode(e.target.value)}
-                      placeholder={t("cart.enterDiscountCode")}
-                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none"
-                    />
-                  )}
-
-                  {selectedDiscount && (
-                    <div className="mt-2 flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">{t("cart.applied")}</span>
-                      <span className="font-semibold text-primary">-{formatPrice(discountAmount)}</span>
-                    </div>
-                  )}
-                </div>
+                {/* Checkout Savings Panel */}
+                <CheckoutSavingsPanel
+                  available={availableDiscountCodes}
+                  applied={savings.applied}
+                  summary={savings.summary}
+                  categorized={savings.categorized}
+                  bestSuggestion={savings.bestSuggestion}
+                  canApply={savings.canApply}
+                  onApply={savings.applySaving}
+                  onRemove={savings.removeSaving}
+                  onManualCode={handleManualCode}
+                  manualCodeError={manualCodeError}
+                  manualCodeLoading={manualCodeLoading}
+                  giftCardSliderValue={savings.giftCardSliderValue}
+                  onGiftCardSliderChange={savings.setGiftCardSliderValue}
+                />
 
                 <div className="border-t border-border pt-4">
-                  {discountAmount > 0 && (
+                  {savings.summary.discountAmount > 0 && (
                     <div className="mb-2 flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">{t("cart.discount")}</span>
-                      <span className="font-display font-bold text-primary">-{formatPrice(discountAmount)}</span>
+                      <span className="font-display font-bold text-primary">-{formatPrice(savings.summary.discountAmount)}</span>
                     </div>
+                  )}
+
+                  {savings.summary.shippingDiscount > 0 && (
+                    <div className="mb-2 flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{t("cart.freeShipping", "Free shipping reward")}</span>
+                      <span className="font-display font-bold text-primary">-{formatPrice(savings.summary.shippingDiscount)}</span>
+                    </div>
+                  )}
+
+                  {savings.summary.giftCardDeduction > 0 && (
+                    <div className="mb-2 flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{t("cart.giftCardDeduction", "Gift card")}</span>
+                      <span className="font-display font-bold text-primary">-{formatPrice(savings.summary.giftCardDeduction)}</span>
+                    </div>
+                  )}
+
+                  {savings.summary.totalSavings > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mb-3 rounded-lg bg-emerald-500/10 px-3 py-1.5 text-center text-sm font-semibold text-emerald-600"
+                    >
+                      🎉 {t("cart.youSaved", "You save")} {formatPrice(savings.summary.totalSavings)}!
+                    </motion.div>
                   )}
 
                   <div className="flex items-center justify-between">

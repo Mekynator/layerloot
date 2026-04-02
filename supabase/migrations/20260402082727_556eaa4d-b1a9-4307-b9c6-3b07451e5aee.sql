@@ -1,0 +1,1 @@
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS discount_metadata jsonb DEFAULT NULL;

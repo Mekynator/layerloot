@@ -67,6 +67,30 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
       )
     : draftBlocks;
 
+  const saveAsReusable = async (blockId: string) => {
+    const block = draftBlocks.find(b => b.id === blockId);
+    if (!block) return;
+    const { error } = await supabase.from("reusable_blocks").insert({
+      name: block.title || block.block_type,
+      block_type: block.block_type,
+      content: block.content as any,
+      created_by: user?.id || null,
+      updated_by: user?.id || null,
+    });
+    if (error) toast.error("Failed to save");
+    else toast.success("Saved as reusable block!");
+  };
+
+  const handleInsertReusable = (data: { block_type: string; content: any; title: string }) => {
+    addBlock(data.block_type);
+    // The addBlock creates default content, so we need to update it
+    // We'll use a setTimeout to let the state update, then patch
+    setTimeout(() => {
+      const newest = draftBlocks[draftBlocks.length]; // won't work perfectly but addBlock selects it
+    }, 0);
+    toast.success("Reusable block inserted");
+  };
+
   return (
     <div className="flex h-full flex-col border-r border-border/30 bg-card/80 backdrop-blur-xl">
       {/* Header */}

@@ -506,7 +506,7 @@ const AdminProducts = () => {
                           <History className="h-4 w-4" />
                         </Button>
 
-                        <Button variant="ghost" size="icon" onClick={() => setPricingProductId(product.id) || setPricingOpen(true)} title="Pricing">
+                        <Button variant="ghost" size="icon" onClick={() => { setPricingProductId(product.id); setPricingOpen(true); }} title="Pricing">
                           <Calculator className="h-4 w-4" />
                         </Button>
 

@@ -520,8 +520,8 @@ const ChatWidget = () => {
               }}
             >
               <div className="flex items-center gap-2">
-                {chatSettings.avatarUrl ? (
-                  <img src={chatSettings.avatarUrl} alt="" className="h-5 w-5 rounded-full object-cover" />
+                {chatSettings.window.avatarUrl ? (
+                  <img src={chatSettings.window.avatarUrl} alt="" className="h-5 w-5 rounded-full object-cover" />
                 ) : (
                   <Bot className="h-5 w-5 text-primary-foreground" />
                 )}

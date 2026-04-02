@@ -253,8 +253,8 @@ const NavLinkEditor = () => {
 
   useEffect(() => {
     const load = async () => {
-      const [navRes, pagesRes] = await Promise.all([
-        supabase.from("site_settings").select("value").eq("key", storageKey).maybeSingle(),
+      const [draftResult, pagesRes] = await Promise.all([
+        loadDraftSetting(storageKey),
         supabase
           .from("site_pages")
           .select("id,name,title,full_path,slug,page_type,parent_id,show_in_header,show_in_footer,is_published")
@@ -262,11 +262,18 @@ const NavLinkEditor = () => {
           .order("sort_order", { ascending: true }),
       ]);
 
-      const storedItems = asNavItems(navRes.data?.value);
-      if (storedItems.length > 0) {
-        setLinks(storedItems.map(toEditorItem));
+      if (draftResult) {
+        const source = draftResult.hasDraft && draftResult.draft ? draftResult.draft : draftResult.live;
+        const storedItems = asNavItems(source);
+        setHasDraft(draftResult.hasDraft);
+        if (storedItems.length > 0) {
+          setLinks(storedItems.map(toEditorItem));
+        } else {
+          setLinks(fallbackLinks);
+        }
       } else {
         setLinks(fallbackLinks);
+        setHasDraft(false);
       }
 
       setSitePages((pagesRes.data as SitePageOption[]) ?? []);

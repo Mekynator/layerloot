@@ -34,6 +34,8 @@ import AdminReports from "./pages/admin/AdminReports";
 import AdminRevenue from "./pages/admin/AdminRevenue";
 import VisualEditor from "./pages/admin/VisualEditor";
 import AdminBackgrounds from "./pages/admin/AdminBackgrounds";
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminRoute from "./components/admin/AdminRoute";
 import DynamicPage from "./pages/DynamicPage";
 import CreateYourOwn from "./pages/CreateYourOwn";
 import Policies from "./pages/Policies";
@@ -81,26 +83,27 @@ const AppShell = () => {
           <Route path="/submit-design" element={<SubmitDesign />} />
           <Route path="/creations" element={<Creations />} />
           <Route path="/creations/:slug" element={<CreationDetail />} />
-          <Route path="/admin" element={<Dashboard />} />
-          <Route path="/admin/products" element={<AdminProducts />} />
-          <Route path="/admin/products/:productId/variants" element={<AdminVariants />} />
-          <Route path="/admin/categories" element={<AdminCategories />} />
-          <Route path="/admin/orders" element={<AdminOrders />} />
-          <Route path="/admin/clients" element={<AdminClients />} />
-          <Route path="/admin/shipping" element={<AdminShipping />} />
-          <Route path="/admin/custom-orders" element={<AdminCustomOrders />} />
-          <Route path="/admin/discounts" element={<AdminDiscounts />} />
-          <Route path="/admin/reviews" element={<AdminReviews />} />
-          <Route path="/admin/showcases" element={<AdminShowcases />} />
-          <Route path="/admin/pricing" element={<AdminPricing />} />
-          <Route path="/admin/growth" element={<AdminGrowth />} />
-          <Route path="/admin/campaigns" element={<AdminCampaigns />} />
-          <Route path="/admin/reports" element={<AdminReports />} />
-          <Route path="/admin/revenue" element={<AdminRevenue />} />
-          <Route path="/admin/content" element={<AdminContent />} />
-          <Route path="/admin/settings" element={<AdminSettings />} />
-          <Route path="/admin/editor" element={<VisualEditor />} />
-          <Route path="/admin/backgrounds" element={<AdminBackgrounds />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin" element={<AdminRoute><Dashboard /></AdminRoute>} />
+          <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
+          <Route path="/admin/products/:productId/variants" element={<AdminRoute><AdminVariants /></AdminRoute>} />
+          <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
+          <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
+          <Route path="/admin/clients" element={<AdminRoute><AdminClients /></AdminRoute>} />
+          <Route path="/admin/shipping" element={<AdminRoute><AdminShipping /></AdminRoute>} />
+          <Route path="/admin/custom-orders" element={<AdminRoute><AdminCustomOrders /></AdminRoute>} />
+          <Route path="/admin/discounts" element={<AdminRoute><AdminDiscounts /></AdminRoute>} />
+          <Route path="/admin/reviews" element={<AdminRoute><AdminReviews /></AdminRoute>} />
+          <Route path="/admin/showcases" element={<AdminRoute><AdminShowcases /></AdminRoute>} />
+          <Route path="/admin/pricing" element={<AdminRoute><AdminPricing /></AdminRoute>} />
+          <Route path="/admin/growth" element={<AdminRoute><AdminGrowth /></AdminRoute>} />
+          <Route path="/admin/campaigns" element={<AdminRoute><AdminCampaigns /></AdminRoute>} />
+          <Route path="/admin/reports" element={<AdminRoute><AdminReports /></AdminRoute>} />
+          <Route path="/admin/revenue" element={<AdminRoute><AdminRevenue /></AdminRoute>} />
+          <Route path="/admin/content" element={<AdminRoute><AdminContent /></AdminRoute>} />
+          <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+          <Route path="/admin/editor" element={<AdminRoute><VisualEditor /></AdminRoute>} />
+          <Route path="/admin/backgrounds" element={<AdminRoute><AdminBackgrounds /></AdminRoute>} />
           <Route path="/policies/:slug" element={<Policies />} />
           <Route path="/pages/:slug" element={<DynamicPage />} />
           <Route path="/:slug" element={<DynamicPage />} />

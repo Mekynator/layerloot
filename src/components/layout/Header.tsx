@@ -393,14 +393,7 @@ const Header = () => {
 
             <LanguageSwitcher />
 
-            {isAdmin && headerSettings.show_admin_icon && (
-              <Link to="/admin">
-                <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground" aria-label={getLocalizedValue(headerSettings.admin_label, t("nav.admin", "Admin"))}>
-                  <Shield className="h-5 w-5" />
-                  {adminAlerts > 0 && <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-primary animate-pulse" />}
-                </Button>
-              </Link>
-            )}
+            {/* Admin icon removed — admin access is via /admin/login */}
 
             {headerSettings.show_account_icon && (
               <>
@@ -416,11 +409,7 @@ const Header = () => {
                       <DropdownMenuItem asChild>
                         <Link to="/account" className="cursor-pointer">{getLocalizedValue(headerSettings.account_label, t("nav.account", "My Account"))}</Link>
                       </DropdownMenuItem>
-                      {isAdmin && (
-                        <DropdownMenuItem asChild>
-                          <Link to="/admin" className="cursor-pointer"><Shield className="mr-2 h-4 w-4" /> {getLocalizedValue(headerSettings.admin_label, t("nav.admin", "Admin"))}</Link>
-                        </DropdownMenuItem>
-                      )}
+                      {/* Admin dropdown link removed — admin access is via /admin/login */}
                       <DropdownMenuSeparator className="bg-border/20" />
                       <DropdownMenuItem onClick={signOut} className="cursor-pointer">
                         <LogOut className="mr-2 h-4 w-4" /> {getLocalizedValue(headerSettings.sign_out_label, t("nav.signOut", "Sign Out"))}
@@ -476,11 +465,7 @@ const Header = () => {
                   <Link to="/account" className="block py-3 font-display text-sm uppercase tracking-widest text-muted-foreground hover:text-primary">
                     {getLocalizedValue(headerSettings.mobile_account_label, getLocalizedValue(headerSettings.account_label, t("nav.account", "My Account")))}
                   </Link>
-                  {isAdmin && (
-                    <Link to="/admin" className="block py-3 font-display text-sm uppercase tracking-widest text-muted-foreground hover:text-primary">
-                      {getLocalizedValue(headerSettings.mobile_admin_label, getLocalizedValue(headerSettings.admin_label, t("nav.admin", "Admin")))}
-                    </Link>
-                  )}
+                  {/* Mobile admin link removed — admin access is via /admin/login */}
                 </>
               ) : (
                 <Link to="/auth" className="block py-3 font-display text-sm uppercase tracking-widest text-muted-foreground hover:text-primary">

@@ -42,6 +42,26 @@ const STATUS_TO_STEP_INDEX: Record<string, number> = {
   delivered: 3,
 };
 
+const ADMIN_STATUS_TO_STEP_INDEX: Record<string, number> = {
+  pending: 0,
+  confirmed: 0,
+  received: 0,
+  paid: 0,
+  reviewing: 1,
+  review: 1,
+  processing: 2,
+  printing: 2,
+  in_production: 2,
+  queued: 2,
+  finishing: 3,
+  quality_check: 4,
+  packed: 5,
+  shipped: 6,
+  delivered: 6,
+  completed: 6,
+  on_hold: 0,
+};
+
 export function mapOrderToTimelineSteps(
   status: string,
   productionStatus?: string,

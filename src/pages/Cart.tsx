@@ -161,9 +161,22 @@ export default function CartPage() {
     }, 220);
   };
 
+  const handleManualCode = (code: string) => {
+    setManualCodeError(undefined);
+    // Try to find it in available codes
+    const found = availableDiscountCodes.find((d) => d.code.toLowerCase() === code.toLowerCase());
+    if (found) {
+      const err = savings.applySaving(found);
+      if (err) setManualCodeError(err);
+    } else {
+      // For Phase 1, manual codes that aren't in user's account aren't supported yet
+      setManualCodeError(t("cart.codeNotFound", "Code not found in your account"));
+    }
+  };
+
   const handleCheckout = async () => {
     try {
-      if (!user && (selectedDiscountCode || manualDiscountCode.trim())) {
+      if (!user && savings.applied.length > 0) {
         toast({
           title: t("cart.signInRequired"),
           description: t("cart.signInForVoucher"),
@@ -182,6 +195,15 @@ export default function CartPage() {
         data: { session },
       } = await supabase.auth.getSession();
 
+      // Build applied savings for the edge function
+      const appliedSavings = savings.applied.map((a) => ({
+        code: a.code,
+        category: a.category,
+        appliedAmount: a.appliedAmount,
+        userVoucherId: a.userVoucherId,
+        voucherType: a.voucherType,
+      }));
+
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: {
           items: cartItems.map((item) => ({
@@ -195,8 +217,9 @@ export default function CartPage() {
             color: item.color || null,
             size: item.size || null,
           })),
-          discountCode: selectedDiscountCode || manualDiscountCode || null,
-          shippingCost,
+          appliedSavings,
+          discountCode: appliedSavings.find((s) => s.category === "voucher" || s.category === "discount")?.code || null,
+          shippingCost: effectiveShipping,
           giftMode: giftSettings.enabled
             ? {
                 personalMessage: giftSettings.personalMessage,

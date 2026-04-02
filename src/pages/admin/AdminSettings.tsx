@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Save, ChevronUp, ChevronDown, Eye, EyeOff, GripVertical } from "lucide-react";
+import { Save, ChevronUp, ChevronDown, Eye, EyeOff, GripVertical, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

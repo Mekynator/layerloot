@@ -443,5 +443,4 @@ const Dashboard = () => {
 };
 
 export { DEFAULT_SHORTCUTS, ICON_MAP };
-export type { DashboardShortcut };
 export default Dashboard;

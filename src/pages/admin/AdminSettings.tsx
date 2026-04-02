@@ -19,6 +19,8 @@ import { POLICY_KEYS } from "@/pages/Policies";
 import { useDraftSettings } from "@/hooks/use-draft-settings";
 import DraftActionBar from "@/components/admin/DraftActionBar";
 import { useAuth } from "@/contexts/AuthContext";
+import CustomOrderAutomationRulesEditor from "@/components/admin/CustomOrderAutomationRulesEditor";
+import CustomOrderTemplatesEditor from "@/components/admin/CustomOrderTemplatesEditor";
 
 /* ─── Types ─── */
 interface PromoConfig {

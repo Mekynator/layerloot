@@ -46,6 +46,7 @@ import AdminTranslations from "./pages/admin/AdminTranslations";
 import AdminRoute from "./components/admin/AdminRoute";
 import AdminChatSettings from "./pages/admin/AdminChatSettings";
 import AdminChatAnalytics from "./pages/admin/AdminChatAnalytics";
+import AdminChat from "./pages/admin/AdminChat";
 import DynamicPage from "./pages/DynamicPage";
 import CreateYourOwn from "./pages/CreateYourOwn";
 import Policies from "./pages/Policies";

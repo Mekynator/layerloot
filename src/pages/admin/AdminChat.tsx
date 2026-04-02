@@ -723,10 +723,19 @@ export default function AdminChat() {
               <div className="flex items-center gap-2"><Switch checked={config.tone.useEmoji} onCheckedChange={v => setNested("tone", "useEmoji", v)} /><Label className="text-xs">Use Emoji</Label></div>
             </CardContent>
           </Card>
+            </div>
+            <div className="hidden xl:block w-[400px] shrink-0">
+              <div className="sticky top-4">
+                <ChatLivePreview config={config} />
+              </div>
+            </div>
+          </div>
         </TabsContent>
 
         {/* ─── CONTEXT RULES ─── */}
-        <TabsContent value="context" className="space-y-4">
+        <TabsContent value="context">
+          <div className="flex gap-6">
+            <div className="flex-1 min-w-0 space-y-4">
           <Card><CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="font-display text-sm uppercase">Page-based Context Rules</CardTitle>
             <Button size="sm" variant="outline" onClick={addPageRule}><Plus className="mr-1 h-3 w-3" /> Add Rule</Button>

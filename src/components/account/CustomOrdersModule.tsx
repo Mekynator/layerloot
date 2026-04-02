@@ -231,6 +231,8 @@ const CustomOrdersModule = ({ user, tt, customOrders, customOrderMessages, seenS
     if (!message || !user) return;
     setSendingReply(true);
     const { error } = await supabase.from("custom_order_messages").insert({ custom_order_id: customOrderId, sender_role: "user", sender_user_id: user.id, message, message_type: "note" });
+    // Mark unread for admin
+    await supabase.from("custom_orders").update({ unread_by_admin: true } as any).eq("id", customOrderId);
     setSendingReply(false);
     if (error) { toast({ title: tt("common.error", "Error"), description: error.message, variant: "destructive" }); return; }
     setReplyMessage(prev => ({ ...prev, [customOrderId]: "" }));

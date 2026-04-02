@@ -269,6 +269,40 @@ async function streamChat({
   onDone();
 }
 
+const SESSION_ID_KEY = "layerloot-chat-session-id";
+
+function getChatSessionId() {
+  let id = sessionStorage.getItem(SESSION_ID_KEY);
+  if (!id) { id = uid(); sessionStorage.setItem(SESSION_ID_KEY, id); }
+  return id;
+}
+
+function trackChatEvent(eventType: string, eventData: any = {}, page?: string, userId?: string | null) {
+  const sessionId = getChatSessionId();
+  supabase.from("chat_analytics_events").insert({
+    session_id: sessionId,
+    event_type: eventType,
+    event_data: eventData,
+    page: page || window.location.pathname,
+    user_id: userId || null,
+  } as any).then(() => {});
+}
+
+function saveConversation(messages: Msg[], page: string, userId: string | null, outcome = "unknown") {
+  const sessionId = getChatSessionId();
+  const payload = {
+    session_id: sessionId,
+    user_id: userId,
+    messages: messages.map(m => ({ role: m.role, content: m.content })),
+    page,
+    language: navigator.language?.slice(0, 2) || "en",
+    message_count: messages.length,
+    outcome,
+    metadata: { cart: getCartSnapshot() },
+  };
+  supabase.from("chat_conversations").upsert(payload as any, { onConflict: "session_id" }).then(() => {});
+}
+
 const ChatWidget = () => {
   const location = useLocation();
   const scrollRef = useRef<HTMLDivElement>(null);

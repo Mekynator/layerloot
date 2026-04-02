@@ -35,3 +35,6 @@ verify_jwt = true
 
 [functions.process-scheduled-publish]
 verify_jwt = true
+
+[functions.process-custom-order-automations]
+verify_jwt = false

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { Save, ChevronUp, ChevronDown, Eye, EyeOff, GripVertical, Package } from "lucide-react";
 import type { AccountPageConfig } from "@/components/account/types";
 import { DEFAULT_ACCOUNT_CONFIG } from "@/components/account/types";
@@ -19,6 +19,8 @@ import { POLICY_KEYS } from "@/pages/Policies";
 import { useDraftSettings } from "@/hooks/use-draft-settings";
 import DraftActionBar from "@/components/admin/DraftActionBar";
 import { useAuth } from "@/contexts/AuthContext";
+import CustomOrderAutomationRulesEditor from "@/components/admin/CustomOrderAutomationRulesEditor";
+import CustomOrderTemplatesEditor from "@/components/admin/CustomOrderTemplatesEditor";
 
 /* ─── Types ─── */
 interface PromoConfig {
@@ -203,6 +205,7 @@ const AdminSettings = () => {
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="navigation">Navigation</TabsTrigger>
           <TabsTrigger value="account">Account Page</TabsTrigger>
+          <TabsTrigger value="automations">Automations</TabsTrigger>
         </TabsList>
 
         {/* ─── GENERAL ─── */}
@@ -486,6 +489,14 @@ const AdminSettings = () => {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* ─── AUTOMATIONS ─── */}
+        <TabsContent value="automations" className="space-y-6">
+          <Suspense fallback={<p className="text-sm text-muted-foreground py-4">Loading...</p>}>
+            <CustomOrderAutomationRulesEditor />
+            <CustomOrderTemplatesEditor />
+          </Suspense>
         </TabsContent>
       </Tabs>
     </AdminLayout>

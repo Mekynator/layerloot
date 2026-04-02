@@ -668,6 +668,75 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_order_automation_rules: {
+        Row: {
+          actions: Json
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          trigger_config: Json
+          trigger_event: string
+          updated_at: string
+        }
+        Insert: {
+          actions?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          trigger_config?: Json
+          trigger_event: string
+          updated_at?: string
+        }
+        Update: {
+          actions?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          trigger_config?: Json
+          trigger_event?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      custom_order_message_templates: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          sort_order: number
+          template: string
+          title: string
+          trigger_key: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          template: string
+          title: string
+          trigger_key: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          template?: string
+          title?: string
+          trigger_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       custom_order_messages: {
         Row: {
           created_at: string
@@ -819,6 +888,47 @@ export type Database = {
           },
         ]
       }
+      custom_order_sla_tracking: {
+        Row: {
+          created_at: string
+          custom_order_id: string
+          deadline_at: string | null
+          entered_at: string
+          id: string
+          resolved_at: string | null
+          sla_status: string
+          stage: string
+        }
+        Insert: {
+          created_at?: string
+          custom_order_id: string
+          deadline_at?: string | null
+          entered_at?: string
+          id?: string
+          resolved_at?: string | null
+          sla_status?: string
+          stage: string
+        }
+        Update: {
+          created_at?: string
+          custom_order_id?: string
+          deadline_at?: string | null
+          entered_at?: string
+          id?: string
+          resolved_at?: string | null
+          sla_status?: string
+          stage?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_order_sla_tracking_custom_order_id_fkey"
+            columns: ["custom_order_id"]
+            isOneToOne: false
+            referencedRelation: "custom_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custom_orders: {
         Row: {
           admin_notes: string | null
@@ -840,6 +950,8 @@ export type Database = {
           request_fee_status: string
           status: string
           stripe_checkout_session_id: string | null
+          unread_by_admin: boolean
+          unread_by_user: boolean
           updated_at: string
           user_id: string
         }
@@ -863,6 +975,8 @@ export type Database = {
           request_fee_status?: string
           status?: string
           stripe_checkout_session_id?: string | null
+          unread_by_admin?: boolean
+          unread_by_user?: boolean
           updated_at?: string
           user_id: string
         }
@@ -886,6 +1000,8 @@ export type Database = {
           request_fee_status?: string
           status?: string
           stripe_checkout_session_id?: string | null
+          unread_by_admin?: boolean
+          unread_by_user?: boolean
           updated_at?: string
           user_id?: string
         }

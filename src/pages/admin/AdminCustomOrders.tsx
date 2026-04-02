@@ -26,6 +26,7 @@ interface CustomOrder {
   production_status: string;
   request_fee_status?: string;
   metadata?: Record<string, any> | null;
+  unread_by_admin?: boolean;
 }
 
 type ViewGroup = "in-production" | "done";
@@ -61,7 +62,7 @@ const AdminCustomOrders = () => {
   useEffect(() => {
     supabase
       .from("custom_orders")
-      .select("id, name, email, description, model_filename, status, created_at, quoted_price, customer_offer_price, final_agreed_price, payment_status, production_status, request_fee_status, metadata")
+      .select("id, name, email, description, model_filename, status, created_at, quoted_price, customer_offer_price, final_agreed_price, payment_status, production_status, request_fee_status, metadata, unread_by_admin")
       .order("created_at", { ascending: false })
       .then(({ data }) => setOrders((data as CustomOrder[]) ?? []));
   }, []);
@@ -198,8 +199,15 @@ const AdminCustomOrders = () => {
                   onClick={() => navigate(`/admin/custom-orders/${order.id}`)}
                 >
                   <TableCell>
-                    <p className="font-display text-sm font-semibold uppercase">{order.name}</p>
-                    <p className="text-xs text-muted-foreground">{order.email}</p>
+                    <div className="flex items-center gap-2">
+                      {order.unread_by_admin && (
+                        <span className="h-2 w-2 rounded-full bg-primary animate-pulse shrink-0" />
+                      )}
+                      <div>
+                        <p className="font-display text-sm font-semibold uppercase">{order.name}</p>
+                        <p className="text-xs text-muted-foreground">{order.email}</p>
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell>
                     {order.order_type === "lithophane" ? (

@@ -221,6 +221,8 @@ const CustomOrdersModule = ({ user, tt, customOrders, customOrderMessages, seenS
   useEffect(() => {
     if (expandedCustomOrderId) {
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+      // Clear unread flag for user when expanding
+      supabase.from("custom_orders").update({ unread_by_user: false } as any).eq("id", expandedCustomOrderId).then(() => {});
     }
   }, [expandedCustomOrderId, customOrderMessages]);
 
@@ -229,6 +231,8 @@ const CustomOrdersModule = ({ user, tt, customOrders, customOrderMessages, seenS
     if (!message || !user) return;
     setSendingReply(true);
     const { error } = await supabase.from("custom_order_messages").insert({ custom_order_id: customOrderId, sender_role: "user", sender_user_id: user.id, message, message_type: "note" });
+    // Mark unread for admin
+    await supabase.from("custom_orders").update({ unread_by_admin: true } as any).eq("id", customOrderId);
     setSendingReply(false);
     if (error) { toast({ title: tt("common.error", "Error"), description: error.message, variant: "destructive" }); return; }
     setReplyMessage(prev => ({ ...prev, [customOrderId]: "" }));
@@ -253,6 +257,8 @@ const CustomOrdersModule = ({ user, tt, customOrders, customOrderMessages, seenS
   };
 
   const hasUnreadActivityForOrder = (order: CustomOrder) => {
+    // Check the new unread_by_user flag first
+    if ((order as any).unread_by_user) return true;
     const seenAt = seenState.customRequestsLastSeenAt;
     const latestForOrder = getLatestDate([order.created_at, order.updated_at, ...(customOrderMessages[order.id] || []).map(msg => msg.created_at)]);
     return isAfter(latestForOrder, seenAt);

@@ -4,7 +4,7 @@ import {
   ArrowLeft, Save, Send, Download, Pin, Trash2,
   DollarSign, ChevronDown, ChevronRight, Paperclip,
   Video, Image as ImageIcon, Lock, Unlock, MessageSquare,
-  Sparkles,
+  Sparkles, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,8 @@ import { useAdminNotes } from "@/hooks/use-admin-notes";
 import AdminLayout from "@/components/admin/AdminLayout";
 import ModelViewer from "@/components/ModelViewer";
 import { formatPrice } from "@/lib/currency";
+import { executeAutomation, trackSlaStage, DEFAULT_SLA_HOURS } from "@/hooks/use-custom-order-automation";
+import CustomOrderSlaCard from "@/components/admin/CustomOrderSlaCard";
 
 const STATUSES = [
   { value: "pending", label: "Pending", color: "bg-yellow-500/10 text-yellow-600 border-yellow-500/30" },
@@ -126,6 +128,7 @@ const AdminCustomOrderDetail = () => {
   const [conversationStatus, setConversationStatus] = useState<ConversationStatus>("open");
   const [videoLink, setVideoLink] = useState("");
   const [pictureLink, setPictureLink] = useState("");
+  const [messageTemplates, setMessageTemplates] = useState<{id: string; title: string; template: string; trigger_key: string}[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { notes: internalNotes, addNote, togglePin, deleteNote } = useAdminNotes("custom_order", orderId);
@@ -143,6 +146,10 @@ const AdminCustomOrderDetail = () => {
       if (meta?.conversation_status) setConversationStatus(meta.conversation_status);
       if (meta?.video_link) setVideoLink(meta.video_link);
       if (meta?.picture_link) setPictureLink(meta.picture_link);
+      // Mark as read by admin
+      if ((data as any).unread_by_admin) {
+        await supabase.from("custom_orders").update({ unread_by_admin: false } as any).eq("id", orderId);
+      }
     }
   };
 
@@ -156,9 +163,19 @@ const AdminCustomOrderDetail = () => {
     setMessages((data as CustomOrderMessage[]) ?? []);
   };
 
+  const loadTemplates = async () => {
+    const { data } = await supabase
+      .from("custom_order_message_templates" as any)
+      .select("id, title, template, trigger_key")
+      .eq("is_active", true)
+      .order("sort_order");
+    setMessageTemplates((data as any) ?? []);
+  };
+
   useEffect(() => {
     loadOrder();
     loadMessages();
+    loadTemplates();
   }, [orderId]);
 
   useEffect(() => {
@@ -205,6 +222,16 @@ const AdminCustomOrderDetail = () => {
         summary: `Custom order status: ${oldStatus} → ${statusUpdate}`,
         metadata: { old_status: oldStatus, new_status: statusUpdate },
       });
+      // Trigger automation rules
+      await executeAutomation({ orderId, triggerEvent: "status_changed", fromStatus: oldStatus, toStatus: statusUpdate });
+      // Track SLA
+      await trackSlaStage(orderId, statusUpdate, DEFAULT_SLA_HOURS[statusUpdate]);
+    }
+
+    const oldProd = order.production_status;
+    if (productionStatus !== oldProd) {
+      await executeAutomation({ orderId, triggerEvent: "production_changed", fromStatus: oldProd, toStatus: productionStatus });
+      await trackSlaStage(orderId, productionStatus, DEFAULT_SLA_HOURS[productionStatus]);
     }
 
     toast({ title: "Custom order saved" });
@@ -244,6 +271,10 @@ const AdminCustomOrderDetail = () => {
       metadata: { amount },
     });
 
+    // Trigger automation for quote
+    await executeAutomation({ orderId, triggerEvent: "quote_sent" });
+    await supabase.from("custom_orders").update({ unread_by_user: true } as any).eq("id", orderId);
+
     setThreadMessage("");
     toast({ title: "Quote sent" });
     setSaving(false);
@@ -277,6 +308,8 @@ const AdminCustomOrderDetail = () => {
 
     setThreadMessage("");
     toast({ title: "Message sent" });
+    // Mark unread for user
+    await supabase.from("custom_orders").update({ unread_by_user: true } as any).eq("id", orderId);
     setSaving(false);
     await loadMessages();
   };
@@ -499,17 +532,36 @@ const AdminCustomOrderDetail = () => {
                         Conversation closed · Replies disabled
                       </div>
                     ) : (
-                      <div className="flex gap-2">
-                        <Textarea
-                          placeholder="Write a message to customer…"
-                          value={threadMessage}
-                          onChange={(e) => setThreadMessage(e.target.value)}
-                          rows={2}
-                          className="flex-1"
-                        />
-                        <Button size="sm" onClick={sendAdminMessage} disabled={saving || !threadMessage.trim()} className="self-end h-10 px-4">
-                          <Send className="h-4 w-4" />
-                        </Button>
+                      <div className="space-y-2">
+                        {/* Template selector */}
+                        {messageTemplates.length > 0 && (
+                          <Select onValueChange={(v) => {
+                            const tpl = messageTemplates.find(t => t.id === v);
+                            if (tpl) setThreadMessage(tpl.template);
+                          }}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <FileText className="mr-1.5 h-3 w-3" />
+                              <SelectValue placeholder="Use template…" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {messageTemplates.map(t => (
+                                <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        <div className="flex gap-2">
+                          <Textarea
+                            placeholder="Write a message to customer…"
+                            value={threadMessage}
+                            onChange={(e) => setThreadMessage(e.target.value)}
+                            rows={2}
+                            className="flex-1"
+                          />
+                          <Button size="sm" onClick={sendAdminMessage} disabled={saving || !threadMessage.trim()} className="self-end h-10 px-4">
+                            <Send className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </TabsContent>
@@ -680,6 +732,9 @@ const AdminCustomOrderDetail = () => {
 
           {/* ── Sidebar ──────────────────────────────── */}
           <div className="space-y-5">
+            {/* SLA Tracking */}
+            <CustomOrderSlaCard orderId={orderId!} />
+
             {/* Status & Actions — no Admin Notes */}
             <Card>
               <CardHeader className="pb-3">

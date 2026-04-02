@@ -262,7 +262,6 @@ const AdminSettings = () => {
       <Tabs defaultValue="general" className="space-y-6">
         <TabsList>
           <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="footer">Footer</TabsTrigger>
           <TabsTrigger value="policies">Policies</TabsTrigger>
         </TabsList>
 
@@ -307,90 +306,6 @@ const AdminSettings = () => {
                 </div>
                 <div><Label className="text-xs">Image URL</Label><Input value={promo.image_url} onChange={(e) => setPromo({ ...promo, image_url: e.target.value })} /></div>
                 <div><Label className="text-xs">Dismiss Key</Label><Input value={promo.dismiss_key} onChange={(e) => setPromo({ ...promo, dismiss_key: e.target.value })} /></div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="footer" className="space-y-6">
-          <Card>
-            <CardHeader><CardTitle className="font-display text-sm uppercase">Footer Preview</CardTitle></CardHeader>
-            <CardContent>
-              <FooterPreview branding={branding} footer={footer} footerContact={footerContact} />
-            </CardContent>
-          </Card>
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader><CardTitle className="font-display text-sm uppercase">Footer Content</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                <div><Label className="text-xs">Description</Label><Textarea value={footer.description} onChange={(e) => setFooter({ ...footer, description: e.target.value })} rows={2} /></div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div><Label className="text-xs">Quick Links Title</Label><Input value={footer.quick_links_title} onChange={(e) => setFooter({ ...footer, quick_links_title: e.target.value })} /></div>
-                  <div><Label className="text-xs">Account Title</Label><Input value={footer.account_title} onChange={(e) => setFooter({ ...footer, account_title: e.target.value })} /></div>
-                </div>
-                <div><Label className="text-xs">Contact Title</Label><Input value={footer.contact_title} onChange={(e) => setFooter({ ...footer, contact_title: e.target.value })} /></div>
-                <div><Label className="text-xs">Copyright Text</Label><Input value={footer.copyright_text} onChange={(e) => setFooter({ ...footer, copyright_text: e.target.value })} /></div>
-                <div><Label className="text-xs">Logo Height (px)</Label><Input type="number" value={footer.logo_height_px} onChange={(e) => setFooter({ ...footer, logo_height_px: parseInt(e.target.value, 10) || 32 })} /></div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader><CardTitle className="font-display text-sm uppercase">Logo & Branding</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div><Label className="text-xs">Logo Text Left</Label><Input value={branding.logo_text_left} onChange={(e) => setBranding({ ...branding, logo_text_left: e.target.value })} /></div>
-                  <div><Label className="text-xs">Logo Text Right</Label><Input value={branding.logo_text_right} onChange={(e) => setBranding({ ...branding, logo_text_right: e.target.value })} /></div>
-                </div>
-                <div><Label className="text-xs">Logo Image URL</Label><Input value={branding.logo_image_url} onChange={(e) => setBranding({ ...branding, logo_image_url: e.target.value })} /></div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div><Label className="text-xs">Logo Link</Label><Input value={branding.logo_link} onChange={(e) => setBranding({ ...branding, logo_link: e.target.value })} /></div>
-                  <div><Label className="text-xs">Logo Alt</Label><Input value={branding.logo_alt} onChange={(e) => setBranding({ ...branding, logo_alt: e.target.value })} /></div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader><CardTitle className="font-display text-sm uppercase">Footer Links</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                <div><Label className="text-xs">Login / Register Label</Label><Input value={footer.auth_link_label} onChange={(e) => setFooter({ ...footer, auth_link_label: e.target.value })} /></div>
-                <div><Label className="text-xs">My Account Label</Label><Input value={footer.account_link_label} onChange={(e) => setFooter({ ...footer, account_link_label: e.target.value })} /></div>
-                <div><Label className="text-xs">Order History Label</Label><Input value={footer.orders_link_label} onChange={(e) => setFooter({ ...footer, orders_link_label: e.target.value })} /></div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader><CardTitle className="font-display text-sm uppercase">Contact Block</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                <div><Label className="text-xs">Contact Description</Label><Textarea value={footerContact.contact_description} onChange={(e) => setFooterContact({ ...footerContact, contact_description: e.target.value })} rows={2} /></div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div><Label className="text-xs">Email Label</Label><Input value={footerContact.email_label} onChange={(e) => setFooterContact({ ...footerContact, email_label: e.target.value })} /></div>
-                  <div><Label className="text-xs">Email</Label><Input value={footerContact.email} onChange={(e) => setFooterContact({ ...footerContact, email: e.target.value })} /></div>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div><Label className="text-xs">Phone Label</Label><Input value={footerContact.phone_label} onChange={(e) => setFooterContact({ ...footerContact, phone_label: e.target.value })} /></div>
-                  <div><Label className="text-xs">Phone</Label><Input value={footerContact.phone} onChange={(e) => setFooterContact({ ...footerContact, phone: e.target.value })} /></div>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div><Label className="text-xs">Address Label</Label><Input value={footerContact.address_label} onChange={(e) => setFooterContact({ ...footerContact, address_label: e.target.value })} /></div>
-                  <div><Label className="text-xs">Address</Label><Input value={footerContact.address} onChange={(e) => setFooterContact({ ...footerContact, address: e.target.value })} /></div>
-                </div>
-                <div><Label className="text-xs">Social Title</Label><Input value={footerContact.social_title} onChange={(e) => setFooterContact({ ...footerContact, social_title: e.target.value })} /></div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div><Label className="text-xs">Instagram URL</Label><Input value={footerContact.instagram_url} onChange={(e) => setFooterContact({ ...footerContact, instagram_url: e.target.value })} /></div>
-                  <div><Label className="text-xs">Facebook URL</Label><Input value={footerContact.facebook_url} onChange={(e) => setFooterContact({ ...footerContact, facebook_url: e.target.value })} /></div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader><CardTitle className="font-display text-sm uppercase">Section Visibility</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2"><Switch checked={footer.show_logo_icon} onCheckedChange={(v) => setFooter({ ...footer, show_logo_icon: v })} /><Label className="text-xs">Show Logo Icon</Label></div>
-                <div className="flex items-center gap-2"><Switch checked={footer.show_logo_text} onCheckedChange={(v) => setFooter({ ...footer, show_logo_text: v })} /><Label className="text-xs">Show Logo Text</Label></div>
-                <div className="flex items-center gap-2"><Switch checked={footer.show_quick_links} onCheckedChange={(v) => setFooter({ ...footer, show_quick_links: v })} /><Label className="text-xs">Show Quick Links</Label></div>
-                <div className="flex items-center gap-2"><Switch checked={footer.show_account_links} onCheckedChange={(v) => setFooter({ ...footer, show_account_links: v })} /><Label className="text-xs">Show Account Links</Label></div>
-                <div className="flex items-center gap-2"><Switch checked={footer.show_contact_block} onCheckedChange={(v) => setFooter({ ...footer, show_contact_block: v })} /><Label className="text-xs">Show Contact Block</Label></div>
               </CardContent>
             </Card>
           </div>

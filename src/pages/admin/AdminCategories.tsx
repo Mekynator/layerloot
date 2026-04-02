@@ -29,6 +29,9 @@ interface GiftFinderTag {
   icon_key: string | null;
   sort_order: number | null;
   is_active: boolean;
+  image_url: string | null;
+  image_opacity: number | null;
+  image_fit: string | null;
 }
 
 const emptyCategory = {

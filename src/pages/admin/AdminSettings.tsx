@@ -311,6 +311,7 @@ const AdminSettings = () => {
           </div>
         </TabsContent>
 
+        <TabsContent value="policies" className="space-y-6">
           <p className="text-sm text-muted-foreground">Edit your store policies below. Content supports Markdown formatting. Changes apply after saving.</p>
           <div className="grid gap-4">
             {POLICY_KEYS.map((policy) => {

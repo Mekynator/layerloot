@@ -24,6 +24,14 @@ type CheckoutItem = {
   size?: string | null;
 };
 
+type AppliedSavingInput = {
+  code: string;
+  category: "discount" | "voucher" | "gift_card" | "free_shipping";
+  appliedAmount: number;
+  userVoucherId?: string;
+  voucherType?: string;
+};
+
 type VoucherRow = {
   id: string;
   user_id: string;
@@ -40,15 +48,6 @@ type VoucherRow = {
     discount_type: string;
     discount_value: number;
   }[] | null;
-};
-
-type ResolvedVoucher = {
-  id: string;
-  code: string;
-  name: string;
-  voucherType: string;
-  discountAmount: number;
-  percentOff: number | null;
 };
 
 const serviceSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -86,72 +85,49 @@ function normalizeVoucherDefinition(voucher: VoucherRow["vouchers"]) {
   return Array.isArray(voucher) ? voucher[0] ?? null : voucher;
 }
 
-async function resolveVoucher(args: {
-  code: string;
-  userId: string;
-  userEmail: string | null;
-  shippingCost: number;
-  itemsSubtotal: number;
-}) {
+/** Validate a single applied saving server-side */
+async function validateAppliedSaving(
+  saving: AppliedSavingInput,
+  userId: string,
+  userEmail: string | null,
+) {
+  if (!saving.userVoucherId) return null; // manual code without voucher id - skip for now
+
   const { data, error } = await serviceSupabase
     .from("user_vouchers")
     .select("id, user_id, code, is_used, balance, recipient_email, vouchers(name, discount_type, discount_value)")
-    .eq("code", args.code)
+    .eq("id", saving.userVoucherId)
     .maybeSingle();
 
   if (error) throw error;
-  if (!data) throw new Error("Voucher not found");
+  if (!data) throw new Error(`Voucher ${saving.code} not found`);
 
   const row = data as VoucherRow;
   const voucher = normalizeVoucherDefinition(row.vouchers);
 
   if (!voucher) throw new Error("Voucher definition is missing");
-  if (row.is_used) throw new Error("This voucher has already been used");
+  if (row.is_used) throw new Error(`Voucher ${saving.code} has already been used`);
 
-  const normalizedEmail = (args.userEmail || "").trim().toLowerCase();
+  // Ownership check
+  const normalizedEmail = (userEmail || "").trim().toLowerCase();
   const recipientEmail = (row.recipient_email || "").trim().toLowerCase();
   const isRecipient = !!recipientEmail && recipientEmail === normalizedEmail;
-  const isOwnerWithUngiftedCard = row.user_id === args.userId && !row.recipient_email;
-  const isOwnerVoucher = row.user_id === args.userId;
+  const isOwner = row.user_id === userId;
 
   if (voucher.discount_type === "gift_card") {
-    if (!isRecipient && !isOwnerWithUngiftedCard) {
+    if (!isRecipient && !(isOwner && !row.recipient_email)) {
       throw new Error("This gift card is not available on your account");
     }
-  } else if (!isOwnerVoucher) {
+    const balance = Number(row.balance ?? voucher.discount_value ?? 0);
+    if (balance <= 0) throw new Error("This gift card has no balance left");
+    if (saving.appliedAmount > balance) {
+      throw new Error("Applied amount exceeds gift card balance");
+    }
+  } else if (!isOwner) {
     throw new Error("This voucher is not available on your account");
   }
 
-  let discountAmount = 0;
-  let percentOff: number | null = null;
-
-  if (voucher.discount_type === "percent_discount") {
-    percentOff = Math.max(0, Math.min(100, Number(voucher.discount_value ?? 0)));
-  } else if (voucher.discount_type === "free_shipping") {
-    if (args.shippingCost <= 0) {
-      throw new Error("Free delivery can only be used when shipping is charged");
-    }
-    discountAmount = Math.min(args.shippingCost, Math.max(0, Number(voucher.discount_value ?? args.shippingCost) || args.shippingCost));
-  } else if (voucher.discount_type === "gift_card") {
-    const availableBalance = Number(row.balance ?? voucher.discount_value ?? 0);
-    if (availableBalance <= 0) throw new Error("This gift card has no balance left");
-    discountAmount = Math.min(availableBalance, Math.max(args.itemsSubtotal + args.shippingCost, 0));
-  } else {
-    discountAmount = Math.min(Number(voucher.discount_value ?? 0), Math.max(args.itemsSubtotal + args.shippingCost, 0));
-  }
-
-  if (percentOff === null && discountAmount <= 0) {
-    throw new Error("This voucher cannot be applied to the current checkout");
-  }
-
-  return {
-    id: row.id,
-    code: row.code,
-    name: voucher.name,
-    voucherType: voucher.discount_type,
-    discountAmount,
-    percentOff,
-  } satisfies ResolvedVoucher;
+  return { row, voucher };
 }
 
 serve(async (req) => {
@@ -166,7 +142,9 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const items = Array.isArray(body?.items) ? (body.items as CheckoutItem[]) : [];
     const shippingCost = Math.max(0, Number(body?.shippingCost ?? 0));
-    const discountCode = typeof body?.discountCode === "string" ? body.discountCode.trim() : "";
+    const appliedSavings: AppliedSavingInput[] = Array.isArray(body?.appliedSavings) ? body.appliedSavings : [];
+    // Legacy single discount code support
+    const legacyDiscountCode = typeof body?.discountCode === "string" ? body.discountCode.trim() : "";
     const origin = req.headers.get("origin") || Deno.env.get("SITE_URL") || "http://localhost:5173";
     const normalizedOrigin = origin.endsWith("/") ? origin.slice(0, -1) : origin;
 
@@ -192,21 +170,29 @@ serve(async (req) => {
       return sum + qty * unit;
     }, 0);
 
-    let resolvedVoucher: ResolvedVoucher | null = null;
-    if (discountCode) {
-      if (!authUser) {
-        return jsonResponse({ error: "Sign in to use a voucher or gift card" }, 401);
-      }
-
-      resolvedVoucher = await resolveVoucher({
-        code: discountCode,
-        userId: authUser.id,
-        userEmail: authUser.email || null,
-        shippingCost,
-        itemsSubtotal,
-      });
+    // Validate all applied savings server-side
+    if (appliedSavings.length > 0 && !authUser) {
+      return jsonResponse({ error: "Sign in to use discounts and rewards" }, 401);
     }
 
+    let totalDiscountAmount = 0;
+    const validatedSavings: Array<AppliedSavingInput & { name?: string }> = [];
+
+    for (const saving of appliedSavings) {
+      await validateAppliedSaving(saving, authUser?.id || "", authUser?.email || null);
+      validatedSavings.push(saving);
+
+      if (saving.category !== "gift_card") {
+        totalDiscountAmount += saving.appliedAmount;
+      }
+    }
+
+    // Gift card deductions are handled as discount too for Stripe
+    const giftCardSaving = validatedSavings.find((s) => s.category === "gift_card");
+    const giftCardAmount = giftCardSaving?.appliedAmount ?? 0;
+    totalDiscountAmount += giftCardAmount;
+
+    // Build Stripe line items
     const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = items.map((item) => {
       const name = (item.name || "LayerLoot Product").slice(0, 120);
       const qty = Math.max(1, Math.floor(Number(item.quantity ?? 1)));
@@ -241,24 +227,26 @@ serve(async (req) => {
       });
     }
 
+    // Create Stripe coupon if there are savings
     let couponId: string | undefined;
-    if (resolvedVoucher) {
-      const coupon = await stripe.coupons.create(
-        resolvedVoucher.percentOff !== null
-          ? {
-              duration: "once",
-              percent_off: resolvedVoucher.percentOff,
-              name: resolvedVoucher.name,
-            }
-          : {
-              duration: "once",
-              amount_off: Math.round(resolvedVoucher.discountAmount * 100),
-              currency: "dkk",
-              name: resolvedVoucher.name,
-            },
-      );
+    if (totalDiscountAmount > 0) {
+      const coupon = await stripe.coupons.create({
+        duration: "once",
+        amount_off: Math.round(totalDiscountAmount * 100),
+        currency: "dkk",
+        name: validatedSavings.map((s) => s.code).join(" + "),
+      });
       couponId = coupon.id;
     }
+
+    // Build metadata for webhook
+    const savingsMetadata = JSON.stringify(validatedSavings.map((s) => ({
+      code: s.code,
+      category: s.category,
+      appliedAmount: s.appliedAmount,
+      userVoucherId: s.userVoucherId,
+      voucherType: s.voucherType,
+    })));
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -267,9 +255,13 @@ serve(async (req) => {
       line_items: lineItems,
       discounts: couponId ? [{ coupon: couponId }] : undefined,
       metadata: {
-        discount_code: resolvedVoucher?.code || "",
-        user_voucher_id: resolvedVoucher?.id || "",
-        voucher_type: resolvedVoucher?.voucherType || "",
+        applied_savings: savingsMetadata,
+        // Legacy fields for backward compat
+        discount_code: validatedSavings.find((s) => s.category === "voucher" || s.category === "discount")?.code || legacyDiscountCode || "",
+        user_voucher_id: validatedSavings.find((s) => s.category === "voucher" || s.category === "discount")?.userVoucherId || "",
+        voucher_type: validatedSavings.find((s) => s.category === "voucher" || s.category === "discount")?.voucherType || "",
+        gift_card_voucher_id: giftCardSaving?.userVoucherId || "",
+        gift_card_amount: String(giftCardAmount),
         source: "cart",
         user_id: authUser?.id || "",
       },

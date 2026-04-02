@@ -2,6 +2,14 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.0.0?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+type AppliedSavingMeta = {
+  code: string;
+  category: "discount" | "voucher" | "gift_card" | "free_shipping";
+  appliedAmount: number;
+  userVoucherId?: string;
+  voucherType?: string;
+};
+
 async function markVoucherUsed(supabase: any, userVoucherId: string, voucherType: string | undefined) {
   const updates: Record<string, any> = {
     is_used: true,
@@ -17,6 +25,35 @@ async function markVoucherUsed(supabase: any, userVoucherId: string, voucherType
     .update(updates)
     .eq("id", userVoucherId)
     .eq("is_used", false);
+}
+
+async function deductGiftCardBalance(supabase: any, userVoucherId: string, amount: number) {
+  // Get current balance
+  const { data: row } = await supabase
+    .from("user_vouchers")
+    .select("balance, vouchers(discount_value)")
+    .eq("id", userVoucherId)
+    .maybeSingle();
+
+  if (!row) return;
+
+  const currentBalance = Number(row.balance ?? row.vouchers?.discount_value ?? 0);
+  const newBalance = Math.max(0, currentBalance - amount);
+
+  const updates: Record<string, any> = {
+    balance: newBalance,
+  };
+
+  // If balance is zero, mark as used
+  if (newBalance <= 0) {
+    updates.is_used = true;
+    updates.used_at = new Date().toISOString();
+  }
+
+  await supabase
+    .from("user_vouchers")
+    .update(updates)
+    .eq("id", userVoucherId);
 }
 
 serve(async (req) => {
@@ -50,8 +87,6 @@ serve(async (req) => {
       const orderId = session.metadata?.order_id;
       const customOrderId = session.metadata?.custom_order_id;
       const source = session.metadata?.source;
-      const userVoucherId = session.metadata?.user_voucher_id;
-      const voucherType = session.metadata?.voucher_type;
 
       // Handle request fee payment (100 kr)
       if (type === "request_fee" && orderId) {
@@ -77,9 +112,38 @@ serve(async (req) => {
           .eq("id", customOrderId);
       }
 
-      // Handle cart voucher usage
-      if (source === "cart" && userVoucherId) {
-        await markVoucherUsed(supabase, userVoucherId, voucherType);
+      // Handle cart checkout with multi-savings
+      if (source === "cart") {
+        // Parse new multi-savings metadata
+        let appliedSavings: AppliedSavingMeta[] = [];
+        try {
+          const raw = session.metadata?.applied_savings;
+          if (raw) appliedSavings = JSON.parse(raw);
+        } catch {
+          // Fallback to legacy single voucher
+        }
+
+        if (appliedSavings.length > 0) {
+          // Process each applied saving
+          for (const saving of appliedSavings) {
+            if (!saving.userVoucherId) continue;
+
+            if (saving.category === "gift_card") {
+              // Partial deduction for gift cards
+              await deductGiftCardBalance(supabase, saving.userVoucherId, saving.appliedAmount);
+            } else {
+              // Mark discount/voucher/free_shipping as fully used
+              await markVoucherUsed(supabase, saving.userVoucherId, saving.voucherType);
+            }
+          }
+        } else {
+          // Legacy: single voucher handling
+          const userVoucherId = session.metadata?.user_voucher_id;
+          const voucherType = session.metadata?.voucher_type;
+          if (userVoucherId) {
+            await markVoucherUsed(supabase, userVoucherId, voucherType);
+          }
+        }
       }
     }
 

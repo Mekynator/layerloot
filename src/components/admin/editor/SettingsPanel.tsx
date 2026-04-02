@@ -300,21 +300,8 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Animation</Label>
-                <Select value={localContent.animation || "none"} onValueChange={(v) => patchContent("animation", v)}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="fadeUp">Fade Up</SelectItem>
-                    <SelectItem value="fadeIn">Fade In</SelectItem>
-                    <SelectItem value="slideLeft">Slide Left</SelectItem>
-                    <SelectItem value="slideRight">Slide Right</SelectItem>
-                    <SelectItem value="scaleIn">Scale In</SelectItem>
-                    <SelectItem value="blur">Blur In</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Animation & Motion Controls */}
+              <AnimationControls content={localContent} patchContent={patchContent} />
 
               <div>
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Anchor ID</Label>

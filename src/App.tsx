@@ -75,7 +75,7 @@ const AppShell = () => {
   const isAdminRoute = location.pathname.startsWith("/admin");
 
   return (
-    <>
+    <CampaignThemeProvider>
       <Layout>
         <Routes>
           <Route path="/" element={<Index />} />
@@ -104,7 +104,6 @@ const AppShell = () => {
           <Route path="/admin/custom-orders" element={<AdminRoute requiredPermission="custom_orders.manage"><AdminCustomOrders /></AdminRoute>} />
           <Route path="/admin/custom-orders/:orderId" element={<AdminRoute requiredPermission="custom_orders.manage"><AdminCustomOrderDetail /></AdminRoute>} />
           <Route path="/admin/shipping" element={<AdminRoute requiredPermission="shipping.manage"><AdminShipping /></AdminRoute>} />
-          <Route path="/admin/custom-orders" element={<AdminRoute requiredPermission="custom_orders.manage"><AdminCustomOrders /></AdminRoute>} />
           <Route path="/admin/discounts" element={<AdminRoute requiredPermission="discounts.manage"><AdminDiscounts /></AdminRoute>} />
           <Route path="/admin/reviews" element={<AdminRoute requiredPermission="reviews.manage"><AdminReviews /></AdminRoute>} />
           <Route path="/admin/showcases" element={<AdminRoute requiredPermission="showcases.manage"><AdminShowcases /></AdminRoute>} />
@@ -132,7 +131,7 @@ const AppShell = () => {
       {!isEditorPreview && !isAdminRoute && <ChatWidget />}
       {!isEditorPreview && !isAdminRoute && <PromotionPopup />}
       {!isEditorPreview && !isAdminRoute && <GiftClaimPopup />}
-    </>
+    </CampaignThemeProvider>
   );
 };
 

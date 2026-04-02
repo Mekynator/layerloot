@@ -29,6 +29,7 @@ export function useDraftSettings<T>(key: string, defaultValue: T): UseDraftSetti
   const [hasDraft, setHasDraft] = useState(false);
   const [loading, setLoading] = useState(true);
   const [dirty, setDirty] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);

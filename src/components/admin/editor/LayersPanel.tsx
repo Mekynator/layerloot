@@ -44,11 +44,14 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
     draftBlocks, selectedBlockId, hoveredBlockId,
     selectBlock, hoverBlock, selectedPage,
     deleteBlock, duplicateBlock, toggleBlockActive, moveBlock,
+    addBlock,
   } = useVisualEditor();
+  const { user } = useAuth();
 
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [reusableOpen, setReusableOpen] = useState(false);
 
   const handleDragEnd = useCallback(() => {
     if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {

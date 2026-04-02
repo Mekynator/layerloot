@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const ICON_MAP: Record<string, typeof Package> = {
   LayoutDashboard, Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
-  Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone, BarChart3, Wallet, Tags, Layers,
+  Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone, BarChart3, Wallet, Tags, Layers, ImageIcon,
 };
 
 export interface SidebarItem {

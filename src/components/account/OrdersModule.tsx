@@ -89,7 +89,7 @@ const OrdersModule = ({ user, tt, orders, seenState, refetchOverview }: Props) =
               </div>
               {reviewingOrderId === order.id && (
                 <div className="mt-4 border-t border-border pt-4 space-y-4">
-                  <OrderTimeline orderId={order.id} />
+                  <OrderTimeline status={order.status} />
                   <ToolReviewForm orderId={order.id} toolType={order.tool_type || undefined} />
                 </div>
               )}

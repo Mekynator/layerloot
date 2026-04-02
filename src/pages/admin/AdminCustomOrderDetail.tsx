@@ -222,6 +222,16 @@ const AdminCustomOrderDetail = () => {
         summary: `Custom order status: ${oldStatus} → ${statusUpdate}`,
         metadata: { old_status: oldStatus, new_status: statusUpdate },
       });
+      // Trigger automation rules
+      await executeAutomation({ orderId, triggerEvent: "status_changed", fromStatus: oldStatus, toStatus: statusUpdate });
+      // Track SLA
+      await trackSlaStage(orderId, statusUpdate, DEFAULT_SLA_HOURS[statusUpdate]);
+    }
+
+    const oldProd = order.production_status;
+    if (productionStatus !== oldProd) {
+      await executeAutomation({ orderId, triggerEvent: "production_changed", fromStatus: oldProd, toStatus: productionStatus });
+      await trackSlaStage(orderId, productionStatus, DEFAULT_SLA_HOURS[productionStatus]);
     }
 
     toast({ title: "Custom order saved" });

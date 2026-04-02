@@ -244,9 +244,20 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     const sorted = sortBlocks(blocks);
     setSavedBlocks(sorted);
 
+    // Check for scheduled_publish_at on any draft block
+    const { data: schedData } = await supabase
+      .from("site_blocks")
+      .select("scheduled_publish_at")
+      .eq("page", page)
+      .eq("has_draft", true)
+      .not("scheduled_publish_at", "is", null)
+      .limit(1);
+    const schedAt = (schedData && schedData.length > 0) ? (schedData[0] as any).scheduled_publish_at : null;
+    setScheduledAt(schedAt);
+
     if (hasDraft) {
       setDraftBlocks(sorted);
-      setDraftStatus("draft");
+      setDraftStatus(schedAt ? "scheduled" : "draft");
     } else {
       setDraftBlocks(sorted);
       setDraftStatus("published");

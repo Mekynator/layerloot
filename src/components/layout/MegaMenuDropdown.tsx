@@ -41,7 +41,7 @@ type Product = {
   name: string;
   slug: string;
   price: number;
-  image_url: string | null;
+  images: string[] | null;
   category_id: string | null;
   is_featured: boolean;
   created_at: string;

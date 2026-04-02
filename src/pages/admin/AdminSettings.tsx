@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Save, ChevronUp, ChevronDown, Eye, EyeOff, GripVertical, Package } from "lucide-react";
+import type { AccountPageConfig } from "@/components/account/types";
+import { DEFAULT_ACCOUNT_CONFIG } from "@/components/account/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,6 +68,7 @@ const AdminSettings = () => {
   const [policies, setPolicies] = useState<Record<string, { title: string; body: string }>>({});
   const [shortcuts, setShortcuts] = useState<DashboardShortcut[]>(DEFAULT_SHORTCUTS);
   const [sidebarConfig, setSidebarConfig] = useState<SidebarConfig>(DEFAULT_SIDEBAR_CONFIG);
+  const [accountConfig, setAccountConfig] = useState<AccountPageConfig>(DEFAULT_ACCOUNT_CONFIG);
 
   useEffect(() => {
     const load = async () => {
@@ -80,6 +83,7 @@ const AdminSettings = () => {
           if (s.key === "branding") setBranding({ ...defaultBranding, ...(s.value as any) });
           if (s.key === "admin_dashboard_shortcuts" && Array.isArray(s.value)) setShortcuts(s.value as unknown as DashboardShortcut[]);
           if (s.key === "admin_sidebar_config" && (s.value as any)?.groups) setSidebarConfig(s.value as unknown as SidebarConfig);
+          if (s.key === "account_page_config" && s.value) setAccountConfig({ ...DEFAULT_ACCOUNT_CONFIG, ...(s.value as any) });
           if (s.key.startsWith("policy_") && s.value) policyData[s.key] = s.value as { title: string; body: string };
         });
         setPolicies(policyData);
@@ -107,6 +111,7 @@ const AdminSettings = () => {
       upsertSetting("branding", branding),
       upsertSetting("admin_dashboard_shortcuts", shortcuts),
       upsertSetting("admin_sidebar_config", sidebarConfig),
+      upsertSetting("account_page_config", accountConfig),
       ...policyUpserts,
     ]);
     setSaving(false);
@@ -169,6 +174,7 @@ const AdminSettings = () => {
           <TabsTrigger value="policies">Policies</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="navigation">Navigation</TabsTrigger>
+          <TabsTrigger value="account">Account Page</TabsTrigger>
         </TabsList>
 
         {/* ─── GENERAL ─── */}
@@ -310,6 +316,126 @@ const AdminSettings = () => {
               </div>
             </div>
           ))}
+        </TabsContent>
+
+        {/* ─── ACCOUNT PAGE ─── */}
+        <TabsContent value="account" className="space-y-6">
+          <p className="text-sm text-muted-foreground">Manage the account page modules, layout, and behavior.</p>
+
+          <Card>
+            <CardHeader><CardTitle className="font-display text-sm uppercase">Modules</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {[...accountConfig.modules].sort((a, b) => a.order - b.order).map((mod, idx) => {
+                const Icon = { ...ICON_MAP, ...SIDEBAR_ICON_MAP }[mod.icon] || Package;
+                return (
+                  <div key={mod.id} className={`flex items-center gap-3 rounded-lg border border-border p-3 transition-opacity ${!mod.visible ? "opacity-50" : ""}`}>
+                    <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 shrink-0"><Icon className="h-3.5 w-3.5 text-primary" /></div>
+                    <Input value={mod.label} onChange={e => {
+                      const modules = [...accountConfig.modules];
+                      const i = modules.findIndex(m => m.id === mod.id);
+                      modules[i] = { ...modules[i], label: e.target.value };
+                      setAccountConfig({ ...accountConfig, modules });
+                    }} className="h-8 max-w-[160px] text-sm" />
+                    <Select value={mod.icon} onValueChange={v => {
+                      const modules = [...accountConfig.modules];
+                      const i = modules.findIndex(m => m.id === mod.id);
+                      modules[i] = { ...modules[i], icon: v };
+                      setAccountConfig({ ...accountConfig, modules });
+                    }}>
+                      <SelectTrigger className="h-8 w-[130px] text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>{AVAILABLE_ICONS.map(ic => <SelectItem key={ic} value={ic}>{ic}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <div className="ml-auto flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" disabled={idx === 0} onClick={() => {
+                        const modules = [...accountConfig.modules].sort((a, b) => a.order - b.order);
+                        if (idx === 0) return;
+                        const temp = modules[idx].order;
+                        modules[idx] = { ...modules[idx], order: modules[idx - 1].order };
+                        modules[idx - 1] = { ...modules[idx - 1], order: temp };
+                        setAccountConfig({ ...accountConfig, modules });
+                      }}><ChevronUp className="h-3 w-3" /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" disabled={idx === accountConfig.modules.length - 1} onClick={() => {
+                        const modules = [...accountConfig.modules].sort((a, b) => a.order - b.order);
+                        if (idx >= modules.length - 1) return;
+                        const temp = modules[idx].order;
+                        modules[idx] = { ...modules[idx], order: modules[idx + 1].order };
+                        modules[idx + 1] = { ...modules[idx + 1], order: temp };
+                        setAccountConfig({ ...accountConfig, modules });
+                      }}><ChevronDown className="h-3 w-3" /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+                        const modules = accountConfig.modules.map(m => m.id === mod.id ? { ...m, visible: !m.visible } : m);
+                        setAccountConfig({ ...accountConfig, modules });
+                      }}>
+                        {mod.visible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3 text-muted-foreground" />}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card>
+              <CardHeader><CardTitle className="font-display text-sm uppercase">Behavior</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <Label className="text-xs">Default Tab</Label>
+                  <Select value={accountConfig.defaultTab} onValueChange={v => setAccountConfig({ ...accountConfig, defaultTab: v as any })}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>{accountConfig.modules.map(m => <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={accountConfig.showLoyaltySummary} onCheckedChange={v => setAccountConfig({ ...accountConfig, showLoyaltySummary: v })} />
+                  <Label className="text-xs">Show Loyalty Summary</Label>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle className="font-display text-sm uppercase">Overview Tiles</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                {["points", "activeVouchers", "totalOrders", "giftCardBalance"].map(tile => (
+                  <div key={tile} className="flex items-center gap-2">
+                    <Switch checked={accountConfig.overviewTiles.includes(tile)} onCheckedChange={v => {
+                      const tiles = v ? [...accountConfig.overviewTiles, tile] : accountConfig.overviewTiles.filter(t => t !== tile);
+                      setAccountConfig({ ...accountConfig, overviewTiles: tiles });
+                    }} />
+                    <Label className="text-xs capitalize">{tile.replace(/([A-Z])/g, " $1").trim()}</Label>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle className="font-display text-sm uppercase">Style</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <Label className="text-xs">Hover Animation</Label>
+                  <Select value={accountConfig.style.hoverAnimation} onValueChange={v => setAccountConfig({ ...accountConfig, style: { ...accountConfig.style, hoverAnimation: v } })}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="lift">Lift</SelectItem>
+                      <SelectItem value="glow">Glow</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Tab Style</Label>
+                  <Select value={accountConfig.style.tabStyle} onValueChange={v => setAccountConfig({ ...accountConfig, style: { ...accountConfig.style, tabStyle: v } })}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pills">Pills</SelectItem>
+                      <SelectItem value="underline">Underline</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </AdminLayout>

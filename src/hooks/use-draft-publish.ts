@@ -6,7 +6,7 @@ import type { SiteBlock } from "@/components/admin/BlockRenderer";
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
-export type DraftStatus = "published" | "draft" | "unpublished_changes";
+export type DraftStatus = "published" | "draft" | "unpublished_changes" | "scheduled";
 
 /* ------------------------------------------------------------------ */
 /*  Revision helpers                                                   */

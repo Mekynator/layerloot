@@ -9,6 +9,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, type SupportedLanguage } from "@/lib/i18n";
 import i18n from "@/lib/i18n";
+import { saveDraftSetting, publishDraftSetting, loadDraftSetting, discardDraftSetting } from "@/hooks/use-draft-publish";
+import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from "@/components/ui/badge";
 
 type NavSource = "manual" | "site_page";
 type LocalizedText = string | Partial<Record<SupportedLanguage, string>>;
@@ -238,15 +241,20 @@ const NavLinkEditor = () => {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [sitePages, setSitePages] = useState<SitePageOption[]>([]);
   const [editingLanguage, setEditingLanguage] = useState<SupportedLanguage>(currentLang());
+  const [hasDraft, setHasDraft] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const userId = user?.id;
 
   const storageKey = mode === "header" ? "nav_links" : "footer_nav_links";
   const fallbackLinks = mode === "header" ? defaultHeaderNav : defaultFooterNav;
 
   useEffect(() => {
     const load = async () => {
-      const [navRes, pagesRes] = await Promise.all([
-        supabase.from("site_settings").select("value").eq("key", storageKey).maybeSingle(),
+      const [draftResult, pagesRes] = await Promise.all([
+        loadDraftSetting(storageKey),
         supabase
           .from("site_pages")
           .select("id,name,title,full_path,slug,page_type,parent_id,show_in_header,show_in_footer,is_published")
@@ -254,11 +262,18 @@ const NavLinkEditor = () => {
           .order("sort_order", { ascending: true }),
       ]);
 
-      const storedItems = asNavItems(navRes.data?.value);
-      if (storedItems.length > 0) {
-        setLinks(storedItems.map(toEditorItem));
+      if (draftResult) {
+        const source = draftResult.hasDraft && draftResult.draft ? draftResult.draft : draftResult.live;
+        const storedItems = asNavItems(source);
+        setHasDraft(draftResult.hasDraft);
+        if (storedItems.length > 0) {
+          setLinks(storedItems.map(toEditorItem));
+        } else {
+          setLinks(fallbackLinks);
+        }
       } else {
         setLinks(fallbackLinks);
+        setHasDraft(false);
       }
 
       setSitePages((pagesRes.data as SitePageOption[]) ?? []);
@@ -280,26 +295,50 @@ const NavLinkEditor = () => {
     [sitePages, editingLanguage],
   );
 
+  const buildPayload = (): NavItem[] => links.map((item) => ({
+    label: sanitizeLocalizedLabel(item.label),
+    to: normalizePath(item.to),
+    source: item.source,
+    pageId: item.pageId,
+    openInNewTab: Boolean(item.openInNewTab),
+    visible: item.visible !== false,
+  }));
+
   const save = async () => {
-    const payload: NavItem[] = links.map((item) => ({
-      label: sanitizeLocalizedLabel(item.label),
-      to: normalizePath(item.to),
-      source: item.source,
-      pageId: item.pageId,
-      openInNewTab: Boolean(item.openInNewTab),
-      visible: item.visible !== false,
-    }));
-
-    const { error } = await supabase
-      .from("site_settings")
-      .upsert({ key: storageKey, value: payload as any }, { onConflict: "key" });
-
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-      return;
+    setSaving(true);
+    const ok = await saveDraftSetting(storageKey, buildPayload(), userId);
+    setSaving(false);
+    if (ok) {
+      setHasDraft(true);
+      toast({ title: `${mode === "header" ? "Header" : "Footer"} navigation draft saved!` });
     }
+  };
 
-    toast({ title: `${mode === "header" ? "Header" : "Footer"} navigation saved!` });
+  const publish = async () => {
+    setPublishing(true);
+    const payload = buildPayload();
+    // Save draft first, then publish
+    await saveDraftSetting(storageKey, payload, userId);
+    const ok = await publishDraftSetting(storageKey, payload, userId);
+    setPublishing(false);
+    if (ok) {
+      setHasDraft(false);
+      toast({ title: `${mode === "header" ? "Header" : "Footer"} navigation published!` });
+    }
+  };
+
+  const discardDraft = async () => {
+    const ok = await discardDraftSetting(storageKey);
+    if (ok) {
+      setHasDraft(false);
+      toast({ title: "Draft discarded" });
+      // Reload live data
+      const result = await loadDraftSetting(storageKey);
+      if (result?.live) {
+        const storedItems = asNavItems(result.live);
+        setLinks(storedItems.length > 0 ? storedItems.map(toEditorItem) : fallbackLinks);
+      }
+    }
   };
 
   const addManualLink = () =>
@@ -546,8 +585,22 @@ const NavLinkEditor = () => {
             </Button>
           </div>
 
-          <Button onClick={save} className="w-full font-display uppercase tracking-wider">
-            <Save className="mr-1 h-4 w-4" /> Save Navigation
+          {hasDraft && (
+            <Button variant="ghost" size="sm" onClick={discardDraft} className="w-full text-xs text-muted-foreground hover:text-destructive">
+              Discard Draft
+            </Button>
+          )}
+
+          <Badge variant={hasDraft ? "secondary" : "outline"} className="mx-auto text-[10px] uppercase tracking-wider">
+            {hasDraft ? "Draft" : "Published"}
+          </Badge>
+
+          <Button onClick={save} disabled={saving} variant="outline" className="w-full font-display uppercase tracking-wider">
+            <Save className="mr-1 h-4 w-4" /> {saving ? "Saving..." : "Save Draft"}
+          </Button>
+
+          <Button onClick={publish} disabled={publishing} className="w-full font-display uppercase tracking-wider">
+            <Save className="mr-1 h-4 w-4" /> {publishing ? "Publishing..." : "Publish"}
           </Button>
 
           <div className="space-y-2 rounded-lg border border-border p-3">

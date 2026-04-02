@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Save, Undo2, Redo2, Plus, Monitor, Tablet, Smartphone,
   X, AlertCircle, Settings2, Trash2, ExternalLink, Eye, Upload, RotateCcw, CheckCircle2,
-  History, Clock, ChevronDown,
+  History, Clock, ChevronDown, Globe,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";

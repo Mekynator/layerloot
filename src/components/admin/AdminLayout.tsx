@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Tags, ArrowLeft, Layers, Menu, X,
   Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
   Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone,
-  BarChart3, Wallet, ImageIcon, Shield, Activity, Globe,
+  BarChart3, Wallet, ImageIcon, Shield, Activity, Globe, MessageCircle,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminPermissions } from "@/hooks/use-admin-permissions";
@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 const ICON_MAP: Record<string, typeof Package> = {
   LayoutDashboard, Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
   Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone, BarChart3,
-  Wallet, Tags, Layers, ImageIcon, Shield, Activity, Globe,
+  Wallet, Tags, Layers, ImageIcon, Shield, Activity, Globe, MessageCircle,
 };
 
 export interface SidebarItem {
@@ -66,6 +66,7 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
       name: "Tools",
       items: [
         { id: "shipping", to: "/admin/shipping", label: "Shipping", icon: "Truck", visible: true, permission: "shipping.manage" },
+        { id: "chat", to: "/admin/chat", label: "AI Chat", icon: "MessageCircle", visible: true, permission: "settings.view" },
         { id: "growth", to: "/admin/growth", label: "Growth", icon: "TrendingUp", visible: true, permission: "campaigns.manage" },
         { id: "campaigns", to: "/admin/campaigns", label: "Campaigns", icon: "Megaphone", visible: true, permission: "campaigns.manage" },
         { id: "revenue", to: "/admin/revenue", label: "Revenue Engine", icon: "Wallet", visible: true, permission: "revenue.view" },

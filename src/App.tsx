@@ -46,6 +46,8 @@ import AdminTranslations from "./pages/admin/AdminTranslations";
 import AdminRoute from "./components/admin/AdminRoute";
 import AdminChatSettings from "./pages/admin/AdminChatSettings";
 import AdminChatAnalytics from "./pages/admin/AdminChatAnalytics";
+import AdminChat from "./pages/admin/AdminChat";
+import AdminAutomations from "./pages/admin/AdminAutomations";
 import DynamicPage from "./pages/DynamicPage";
 import CreateYourOwn from "./pages/CreateYourOwn";
 import Policies from "./pages/Policies";
@@ -116,14 +118,16 @@ const AppShell = () => {
           <Route path="/admin/revenue" element={<AdminRoute requiredPermission="revenue.view"><AdminRevenue /></AdminRoute>} />
           <Route path="/admin/content" element={<AdminRoute requiredPermission="content.edit"><AdminContent /></AdminRoute>} />
           <Route path="/admin/settings" element={<AdminRoute requiredPermission="settings.view"><AdminSettings /></AdminRoute>} />
-          <Route path="/admin/chat-settings" element={<AdminRoute requiredPermission="settings.view"><AdminChatSettings /></AdminRoute>} />
-          <Route path="/admin/chat-analytics" element={<AdminRoute requiredPermission="reports.view"><AdminChatAnalytics /></AdminRoute>} />
+          <Route path="/admin/chat" element={<AdminRoute requiredPermission="settings.view"><AdminChat /></AdminRoute>} />
+          <Route path="/admin/chat-settings" element={<AdminRoute requiredPermission="settings.view"><AdminChat /></AdminRoute>} />
+          <Route path="/admin/chat-analytics" element={<AdminRoute requiredPermission="settings.view"><AdminChat /></AdminRoute>} />
           <Route path="/admin/editor" element={<AdminRoute requiredPermission="content.edit"><VisualEditor /></AdminRoute>} />
           <Route path="/admin/backgrounds" element={<AdminRoute requiredPermission="backgrounds.manage"><AdminBackgrounds /></AdminRoute>} />
           <Route path="/admin/media" element={<AdminRoute requiredPermission="media.manage"><AdminMedia /></AdminRoute>} />
           <Route path="/admin/reusable-blocks" element={<AdminRoute requiredPermission="content.edit"><AdminReusableBlocks /></AdminRoute>} />
           <Route path="/admin/translations" element={<AdminRoute requiredPermission="translations.manage"><AdminTranslations /></AdminRoute>} />
           <Route path="/admin/activity" element={<AdminRoute requiredPermission="reports.view"><AdminActivity /></AdminRoute>} />
+          <Route path="/admin/automations" element={<AdminRoute requiredPermission="campaigns.manage"><AdminAutomations /></AdminRoute>} />
           <Route path="/admin/users" element={<AdminRoute requiredPermission="*"><AdminUsers /></AdminRoute>} />
           <Route path="/policies/:slug" element={<Policies />} />
           <Route path="/pages/:slug" element={<DynamicPage />} />

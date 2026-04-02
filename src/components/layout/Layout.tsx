@@ -49,6 +49,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
       </div>
       {!isCartPage && !isEditorPreview && <FloatingCartSummary />}
       <AchievementToast achievement={currentAchievement} onDismiss={dismiss} />
+      {!isEditorPreview && <ScrollProgress />}
     </div>
   );
 };

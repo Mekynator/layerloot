@@ -116,13 +116,9 @@ const Contact = () => {
         beforeFormBlocks.map((block) => <div key={block.id}>{renderBlock(block)}</div>)
       )}
 
+      {/* Contact form – functional core, always rendered */}
       <section className="py-16">
         <div className="container max-w-4xl">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <h1 className="mb-2 font-display text-4xl font-bold uppercase text-foreground">{t("contact.title")}</h1>
-            <p className="mb-12 text-muted-foreground">{t("contact.subtitle")}</p>
-          </motion.div>
-
           <div className="grid gap-12 md:grid-cols-2">
             <motion.form
               onSubmit={handleSubmit}

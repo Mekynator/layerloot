@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Star, History, ChevronDown, ChevronUp, Package, Gift, CreditCard } from "lucide-react";
+import { Star, History, ChevronDown, ChevronUp, Package, Gift, CreditCard, TrendingUp, TrendingDown } from "lucide-react";
 import { motion } from "framer-motion";
-import type { AccountModuleProps, AccountPageConfig } from "./types";
+import type { AccountModuleProps, AccountPageConfig, UserVoucher } from "./types";
+import { classifyVoucher } from "./types";
 
 interface Props extends AccountModuleProps {
   config: AccountPageConfig;
@@ -20,11 +21,12 @@ const AccountOverviewPanel = ({ overview, tt, config }: Props) => {
   }>;
 
   const tiles = config.overviewTiles;
-  const activeVouchersCount = (overview?.userVouchers ?? []).filter((v: any) => !v.is_used && !v.used_at).length;
+  const allUserVouchers = (overview?.userVouchers ?? []) as UserVoucher[];
+  const activeVouchersCount = allUserVouchers.filter(v => classifyVoucher(v) === "active").length;
   const totalOrders = (overview?.orders ?? []).length;
-  const giftCardBalance = (overview?.userVouchers ?? [])
-    .filter((v: any) => v.vouchers?.discount_type === "gift_card" && !v.is_used && Number(v.balance ?? 0) > 0)
-    .reduce((sum: number, v: any) => sum + Number(v.balance ?? 0), 0);
+  const giftCardBalance = allUserVouchers
+    .filter(v => classifyVoucher(v) === "active" && v.vouchers?.discount_type === "gift_card" && Number(v.balance ?? 0) > 0)
+    .reduce((sum: number, v) => sum + Number(v.balance ?? 0), 0);
 
   const tileData: Record<string, { label: string; value: string | number; icon: any }> = {
     points: { label: tt("account.points.earnedTotal", "Earned total"), value: pointsEarned, icon: Star },
@@ -83,8 +85,11 @@ const AccountOverviewPanel = ({ overview, tt, config }: Props) => {
                 </div>
               ) : (
                 loyaltyHistory.slice(0, 8).map(row => (
-                  <div key={row.id} className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3">
-                    <div className="min-w-0">
+                  <div key={row.id} className="flex items-center gap-3 rounded-xl border border-border bg-background/60 px-4 py-3">
+                    <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${row.points >= 0 ? "bg-green-500/10" : "bg-destructive/10"}`}>
+                      {row.points >= 0 ? <TrendingUp className="h-3.5 w-3.5 text-green-600" /> : <TrendingDown className="h-3.5 w-3.5 text-destructive" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
                       <p className="truncate text-sm text-foreground">{row.reason || tt("account.points.pointsUpdate", "Points update")}</p>
                       <p className="text-xs text-muted-foreground">{new Date(row.created_at).toLocaleString()}</p>
                     </div>

@@ -78,9 +78,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    let initialised = false;
+
+    // 1. Restore session from storage first — this is the source of truth
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        checkAdminRole(session.user);
+        syncLanguage(session.user.id);
+      }
+      initialised = true;
+      setLoading(false);
+    });
+
+    // 2. Listen for subsequent auth changes (sign-in, sign-out, token refresh)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Skip the INITIAL_SESSION event that fires before getSession resolves
+      if (!initialised && _event === "INITIAL_SESSION") return;
+
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -88,16 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         syncLanguage(session.user.id);
       } else {
         setIsAdmin(false);
-      }
-      setLoading(false);
-    });
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        checkAdminRole(session.user);
-        syncLanguage(session.user.id);
+        setAdminRole(null);
       }
       setLoading(false);
     });

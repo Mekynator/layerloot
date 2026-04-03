@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Package, Truck, Star, Heart, ShoppingCart, ArrowRight, Sparkles, Gift, Zap } from "lucide-react";
+import { Package, Truck, Star, Heart, ShoppingCart, ArrowRight, Sparkles, Gift, Zap, Plus, RotateCcw, Eye } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +12,8 @@ import { computeLoyaltyProgress, type RewardTier } from "@/hooks/use-loyalty-pro
 import { useRememberedChoices } from "@/hooks/use-remembered-choices";
 import { useBehaviorTracking } from "@/hooks/use-behavior-tracking";
 import { useStorefrontCatalog } from "@/hooks/use-storefront";
+import { useRecentlyViewedProducts } from "@/hooks/use-recently-viewed";
+import { formatPrice } from "@/lib/currency";
 import { motion } from "framer-motion";
 
 interface Props extends AccountModuleProps {
@@ -24,16 +25,13 @@ interface Props extends AccountModuleProps {
 
 function TierMarker({ tier, balance, isNext, onRedeem }: { tier: RewardTier; balance: number; isNext: boolean; onRedeem: () => void }) {
   const canRedeem = balance >= tier.pointsCost;
-  const locked = !canRedeem;
 
   return (
     <Popover>
       <PopoverTrigger asChild>
         <button
           className={`flex flex-col items-center gap-0.5 transition-all ${
-            canRedeem
-              ? "opacity-100 cursor-pointer"
-              : "opacity-40 cursor-pointer hover:opacity-60"
+            canRedeem ? "opacity-100 cursor-pointer" : "opacity-40 cursor-pointer hover:opacity-60"
           }`}
         >
           <div
@@ -76,21 +74,48 @@ export default function AccountDashboard({ overview, tt, orders, customOrders, u
   const profile = getInterestProfile();
   const { data: catalogData } = useStorefrontCatalog();
   const products = catalogData?.products ?? [];
+  const { recentProducts } = useRecentlyViewedProducts();
 
   const latestOrder = orders[0];
   const activeCustomOrders = customOrders.filter(o => !isCustomOrderDone(o));
   const activeVouchers = userVouchers.filter(v => classifyVoucher(v) === "active");
-
-  // Use real loyalty progress
   const loyalty = computeLoyaltyProgress(pointsBalance, pointsEarned, pointsSpent);
 
-  // Recommended products based on behavior
   const recommendedProducts = products
     .filter(p => !profile.recentProductIds.includes(p.id))
     .slice(0, 4);
 
+  // Quick actions
+  const quickActions = [
+    latestOrder && { label: tt("account.dashboard.trackOrder", "Track Order"), icon: Truck, onClick: () => onSwitchTab("orders") },
+    { label: tt("account.dashboard.createCustom", "New Custom Request"), icon: Plus, link: "/create-your-own" },
+    { label: tt("account.dashboard.viewRewards", "View Rewards"), icon: Star, onClick: () => onSwitchTab("rewards") },
+    latestOrder && { label: tt("account.dashboard.reorderPrevious", "Reorder Previous"), icon: RotateCcw, onClick: () => onSwitchTab("orders") },
+  ].filter(Boolean) as { label: string; icon: any; onClick?: () => void; link?: string }[];
+
   return (
     <div className="space-y-6">
+      {/* Quick Actions */}
+      <div className="flex flex-wrap gap-2">
+        {quickActions.map((action, i) => (
+          <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+            {action.link ? (
+              <Link to={action.link}>
+                <Button variant="outline" size="sm" className="font-display text-xs uppercase tracking-wider border-primary/20 hover:border-primary/40 hover:bg-primary/5">
+                  <action.icon className="mr-1.5 h-3.5 w-3.5 text-primary" />
+                  {action.label}
+                </Button>
+              </Link>
+            ) : (
+              <Button variant="outline" size="sm" onClick={action.onClick} className="font-display text-xs uppercase tracking-wider border-primary/20 hover:border-primary/40 hover:bg-primary/5">
+                <action.icon className="mr-1.5 h-3.5 w-3.5 text-primary" />
+                {action.label}
+              </Button>
+            )}
+          </motion.div>
+        ))}
+      </div>
+
       {/* Row 1: Order Timeline + Rewards Progress */}
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Latest Order */}
@@ -111,7 +136,7 @@ export default function AccountDashboard({ overview, tt, orders, customOrders, u
                     <p className="text-xs text-muted-foreground">
                       #{latestOrder.id.slice(0, 8)} · {new Date(latestOrder.created_at).toLocaleDateString()}
                     </p>
-                    <p className="font-display text-lg font-bold text-primary">{Number(latestOrder.total).toFixed(2)} kr</p>
+                    <p className="font-display text-lg font-bold text-primary">{formatPrice(Number(latestOrder.total))}</p>
                   </div>
                   <Badge variant="outline" className="uppercase text-[10px]">{latestOrder.status}</Badge>
                 </div>
@@ -131,7 +156,7 @@ export default function AccountDashboard({ overview, tt, orders, customOrders, u
           </CardContent>
         </Card>
 
-        {/* Rewards Progress — Interactive Tier Bar */}
+        {/* Rewards Progress */}
         <Card className="border-primary/10">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center justify-between font-display text-sm uppercase">
@@ -139,12 +164,7 @@ export default function AccountDashboard({ overview, tt, orders, customOrders, u
               <div className="flex items-center gap-2">
                 {loyalty.canRedeem && (
                   <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} transition={{ type: "spring" }}>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      className="text-[10px] uppercase tracking-wider gap-1"
-                      onClick={() => onSwitchTab("rewards")}
-                    >
+                    <Button variant="default" size="sm" className="text-[10px] uppercase tracking-wider gap-1" onClick={() => onSwitchTab("rewards")}>
                       <Zap className="h-3 w-3" />
                       {loyalty.redeemableRewards.length} {tt("account.dashboard.rewardsAvailable", "Rewards")}
                     </Button>
@@ -168,30 +188,16 @@ export default function AccountDashboard({ overview, tt, orders, customOrders, u
                 </p>
               )}
             </div>
-
-            {/* Progress bar */}
             <Progress value={loyalty.progressPercent} className="h-2.5" />
-
-            {/* Tier markers row */}
             <div className="flex items-start justify-between gap-1 overflow-x-auto pb-1">
               {loyalty.allTiers.map(tier => (
-                <TierMarker
-                  key={tier.key}
-                  tier={tier}
-                  balance={pointsBalance}
-                  isNext={loyalty.nextReward?.key === tier.key}
-                  onRedeem={() => onSwitchTab("rewards")}
-                />
+                <TierMarker key={tier.key} tier={tier} balance={pointsBalance} isNext={loyalty.nextReward?.key === tier.key} onRedeem={() => onSwitchTab("rewards")} />
               ))}
             </div>
-
-            {/* Active voucher badges */}
             {activeVouchers.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {activeVouchers.slice(0, 3).map(v => (
-                  <Badge key={v.id} variant="secondary" className="text-[10px]">
-                    {v.vouchers?.name ?? v.code}
-                  </Badge>
+                  <Badge key={v.id} variant="secondary" className="text-[10px]">{v.vouchers?.name ?? v.code}</Badge>
                 ))}
                 {activeVouchers.length > 3 && <Badge variant="outline" className="text-[10px]">+{activeVouchers.length - 3} more</Badge>}
               </div>
@@ -202,7 +208,6 @@ export default function AccountDashboard({ overview, tt, orders, customOrders, u
 
       {/* Row 2: Custom Orders + Saved Preferences */}
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* Custom Orders Status */}
         <Card className="border-primary/10">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center justify-between font-display text-sm uppercase">
@@ -222,7 +227,7 @@ export default function AccountDashboard({ overview, tt, orders, customOrders, u
                       <p className="text-xs text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      {order.quoted_price && <span className="text-xs font-bold text-primary">{order.quoted_price} kr</span>}
+                      {order.quoted_price && <span className="text-xs font-bold text-primary">{formatPrice(Number(order.quoted_price))}</span>}
                       <Badge variant="outline" className="text-[10px] uppercase">{order.status}</Badge>
                     </div>
                   </div>
@@ -236,12 +241,11 @@ export default function AccountDashboard({ overview, tt, orders, customOrders, u
           </CardContent>
         </Card>
 
-        {/* Saved Preferences */}
         <Card className="border-primary/10">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center justify-between font-display text-sm uppercase">
               <span className="flex items-center gap-2"><Heart className="h-4 w-4 text-primary" /> {tt("account.dashboard.preferences", "Your Preferences")}</span>
-              <Button variant="ghost" size="sm" className="text-xs" onClick={() => onSwitchTab("settings")}>
+              <Button variant="ghost" size="sm" className="text-xs" onClick={() => onSwitchTab("preferences")}>
                 {tt("account.dashboard.edit", "Edit")} <ArrowRight className="ml-1 h-3 w-3" />
               </Button>
             </CardTitle>
@@ -263,7 +267,35 @@ export default function AccountDashboard({ overview, tt, orders, customOrders, u
         </Card>
       </div>
 
-      {/* Row 3: Recommended Products */}
+      {/* Row 3: Recently Viewed */}
+      {recentProducts.length >= 2 && (
+        <Card className="border-primary/10">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 font-display text-sm uppercase">
+              <Eye className="h-4 w-4 text-primary" /> {tt("account.dashboard.recentlyViewed", "Recently Viewed")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+              {recentProducts.slice(0, 4).map((product, i) => (
+                <motion.div key={product.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+                  <Link to={`/products/${product.slug}`} className="group block">
+                    <div className="aspect-square overflow-hidden rounded-xl bg-muted">
+                      {product.image && (
+                        <img src={product.image} alt={product.name} className="h-full w-full object-cover transition-transform group-hover:scale-105" loading="lazy" />
+                      )}
+                    </div>
+                    <p className="mt-2 truncate text-xs font-medium">{product.name}</p>
+                    <p className="text-xs font-bold text-primary">{formatPrice(product.price)}</p>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Row 4: Recommended Products */}
       {recommendedProducts.length >= 2 && (
         <Card className="border-primary/10">
           <CardHeader className="pb-2">
@@ -282,7 +314,7 @@ export default function AccountDashboard({ overview, tt, orders, customOrders, u
                       )}
                     </div>
                     <p className="mt-2 truncate text-xs font-medium">{product.name}</p>
-                    <p className="text-xs font-bold text-primary">{product.price} kr</p>
+                    <p className="text-xs font-bold text-primary">{formatPrice(product.price)}</p>
                   </Link>
                 </motion.div>
               ))}

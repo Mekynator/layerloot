@@ -63,6 +63,8 @@ const AdminOrderDetail = () => {
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [newNote, setNewNote] = useState("");
+  const [invoice, setInvoice] = useState<{ invoice_number: string; invoice_url: string } | null>(null);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
 
   const { notes: internalNotes, addNote, togglePin, deleteNote } = useAdminNotes("order", orderId);
 

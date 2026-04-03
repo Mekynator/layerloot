@@ -78,6 +78,17 @@ const Contact = () => {
 
       if (error) throw error;
 
+      // Send auto-reply confirmation email
+      const ticketNumber = `TK-${Date.now().toString(36).toUpperCase()}`;
+      await supabase.functions.invoke("send-transactional-email", {
+        body: {
+          templateName: "contact-auto-reply",
+          recipientEmail: email,
+          idempotencyKey: `contact-reply-${ticketNumber}`,
+          templateData: { name, ticketNumber, ticketSubject: subject, ticketMessage: message, replyTimeEstimate: "1-2 business days" },
+        },
+      });
+
       toast({
         title: t("contact.messageSent"),
         description: t("contact.messageSentDesc"),

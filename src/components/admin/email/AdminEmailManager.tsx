@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
-import { Mail, Zap, Plus, Trash2, Save, ToggleLeft, ToggleRight, ChevronRight, Pencil } from "lucide-react";
+import { Mail, Zap, Plus, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,7 +31,7 @@ export default function AdminEmailManager() {
       .order("sort_order");
     const raw = (data as any as any[]) ?? [];
 
-    const mapped: EmailTemplate[] = raw.map((r: any) => ({
+    const dbTemplates: EmailTemplate[] = raw.map((r: any) => ({
       ...DEFAULT_TEMPLATE,
       id: r.id,
       name: r.title,
@@ -43,12 +41,25 @@ export default function AdminEmailManager() {
       body: r.template,
       created_at: r.created_at,
       updated_at: r.updated_at,
-      ...(r.extended_config ? JSON.parse(r.extended_config) : {}),
       ...(TEMPLATE_DEFAULTS[r.trigger_key] || {}),
       ...(r.extended_config ? JSON.parse(r.extended_config) : {}),
     }));
 
-    setTemplates(mapped);
+    // Merge in defaults that don't have a DB row
+    const dbKeys = new Set(dbTemplates.map(t => t.trigger_key));
+    let sortIdx = dbTemplates.length;
+    const defaultTemplates: EmailTemplate[] = Object.entries(TEMPLATE_DEFAULTS)
+      .filter(([key]) => !dbKeys.has(key))
+      .map(([key, defaults]) => ({
+        ...DEFAULT_TEMPLATE,
+        id: `default-${key}`,
+        name: defaults.name || key,
+        trigger_key: key,
+        sort_order: sortIdx++,
+        ...defaults,
+      } as EmailTemplate));
+
+    setTemplates([...dbTemplates, ...defaultTemplates]);
   };
 
   const loadAutomations = async () => {
@@ -65,23 +76,45 @@ export default function AdminEmailManager() {
 
   const saveTemplate = async (t: EmailTemplate) => {
     const { id, name, trigger_key, is_active, body, sort_order, created_at, updated_at, ...extended } = t;
-    const { error } = await supabase
-      .from("custom_order_message_templates" as any)
-      .update({
-        title: name,
-        trigger_key,
-        is_active,
-        template: body,
-        extended_config: JSON.stringify(extended)
-      } as any)
-      .eq("id", id);
+    const isDefault = id.startsWith('default-');
 
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    if (isDefault) {
+      // Insert new DB row
+      const { error } = await supabase
+        .from("custom_order_message_templates" as any)
+        .insert({
+          trigger_key,
+          title: name,
+          template: body,
+          is_active,
+          sort_order,
+          extended_config: JSON.stringify(extended),
+        } as any);
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Template saved" });
+        setEditingTemplate(null);
+        loadTemplates();
+      }
     } else {
-      toast({ title: "Template saved" });
-      setEditingTemplate(null);
-      loadTemplates();
+      const { error } = await supabase
+        .from("custom_order_message_templates" as any)
+        .update({
+          title: name,
+          trigger_key,
+          is_active,
+          template: body,
+          extended_config: JSON.stringify(extended),
+        } as any)
+        .eq("id", id);
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Template saved" });
+        setEditingTemplate(null);
+        loadTemplates();
+      }
     }
   };
 
@@ -99,19 +132,23 @@ export default function AdminEmailManager() {
   };
 
   const deleteTemplate = async (id: string) => {
+    if (id.startsWith('default-')) return;
     await supabase.from("custom_order_message_templates" as any).delete().eq("id", id);
     toast({ title: "Template deleted" });
     loadTemplates();
   };
 
   const duplicateTemplate = async (t: EmailTemplate) => {
+    const { name, trigger_key, body, ...extended } = t;
+    const { id: _id, sort_order: _so, created_at: _ca, updated_at: _ua, is_active, ...rest } = extended;
     const { error } = await supabase
       .from("custom_order_message_templates" as any)
       .insert({
-        trigger_key: t.trigger_key + "-copy",
-        title: t.name + " (Copy)",
-        template: t.body,
+        trigger_key: trigger_key + "-copy",
+        title: name + " (Copy)",
+        template: body,
         sort_order: templates.length,
+        extended_config: JSON.stringify(rest),
       } as any);
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else { toast({ title: "Template duplicated" }); setEditingTemplate(null); loadTemplates(); }
@@ -129,14 +166,19 @@ export default function AdminEmailManager() {
   };
 
   const templateIcon = (key: string) => {
-    if (key.includes('order') || key.includes('receipt')) return '📦';
-    if (key.includes('welcome') || key.includes('account')) return '👋';
-    if (key.includes('password') || key.includes('verification')) return '🔐';
-    if (key.includes('contact') || key.includes('ticket')) return '💬';
-    if (key.includes('shipping') || key.includes('delivered')) return '🚚';
-    if (key.includes('gift')) return '🎁';
+    if (key.includes('verification') || key.includes('account')) return '🔐';
+    if (key.includes('password') || key.includes('forgot')) return '🔑';
+    if (key.includes('welcome')) return '👋';
+    if (key.includes('order-confirmation')) return '📦';
+    if (key.includes('receipt') || key.includes('invoice')) return '🧾';
+    if (key.includes('custom-order') || key.includes('custom')) return '🎨';
     if (key.includes('quote')) return '💰';
     if (key.includes('payment')) return '✅';
+    if (key.includes('shipping')) return '🚚';
+    if (key.includes('delivered')) return '📬';
+    if (key.includes('contact') || key.includes('ticket')) return '💬';
+    if (key.includes('gift')) return '🎁';
+    if (key.includes('admin')) return '🔔';
     return '✉️';
   };
 
@@ -208,6 +250,11 @@ export default function AdminEmailManager() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium truncate">{t.name}</span>
+                        {t.id.startsWith('default-') && (
+                          <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 shrink-0 border-amber-500/50 text-amber-600">
+                            Default
+                          </Badge>
+                        )}
                         <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 shrink-0">
                           {t.trigger_key}
                         </Badge>

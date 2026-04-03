@@ -9,6 +9,8 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import type { EmailTemplate } from "./types";
 import { TEMPLATE_DEFAULTS } from "./types";
 import EmailLivePreview from "./EmailLivePreview";

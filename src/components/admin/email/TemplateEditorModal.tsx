@@ -163,6 +163,9 @@ export default function TemplateEditorModal({ template: initial, open, onClose, 
                 <Copy className="mr-1 h-3 w-3" /> Duplicate
               </Button>
             )}
+            <Button size="sm" variant="outline" onClick={handleTestSend} disabled={sendingTest} className="h-7 text-[11px]">
+              <Send className="mr-1 h-3 w-3" /> {sendingTest ? 'Sending...' : 'Test Send'}
+            </Button>
             <Button size="sm" onClick={handleSave} disabled={saving} className="h-7 text-[11px]">
               <Save className="mr-1 h-3 w-3" /> {saving ? 'Saving...' : 'Save'}
             </Button>

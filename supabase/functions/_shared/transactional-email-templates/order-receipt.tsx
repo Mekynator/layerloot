@@ -18,7 +18,7 @@ interface Props {
   invoiceDownloadUrl?: string
 }
 
-const OrderReceiptEmail = ({ name, invoiceNumber, invoiceDate, orderNumber, subtotal, discountAmount, shippingAmount, taxAmount, grandTotal }: Props) => (
+const OrderReceiptEmail = ({ name, invoiceNumber, invoiceDate, orderNumber, subtotal, discountAmount, shippingAmount, taxAmount, grandTotal, invoiceDownloadUrl }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>Here is your payment confirmation and order summary.</Preview>

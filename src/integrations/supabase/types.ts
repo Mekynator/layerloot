@@ -707,6 +707,7 @@ export type Database = {
       custom_order_message_templates: {
         Row: {
           created_at: string
+          extended_config: string | null
           id: string
           is_active: boolean
           sort_order: number
@@ -717,6 +718,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          extended_config?: string | null
           id?: string
           is_active?: boolean
           sort_order?: number
@@ -727,6 +729,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          extended_config?: string | null
           id?: string
           is_active?: boolean
           sort_order?: number

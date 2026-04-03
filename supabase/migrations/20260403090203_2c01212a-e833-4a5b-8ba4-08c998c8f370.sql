@@ -1,0 +1,1 @@
+ALTER TABLE public.custom_order_message_templates ADD COLUMN IF NOT EXISTS extended_config TEXT;

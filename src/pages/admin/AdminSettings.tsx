@@ -19,8 +19,7 @@ import { POLICY_KEYS } from "@/pages/Policies";
 import { useDraftSettings } from "@/hooks/use-draft-settings";
 import DraftActionBar from "@/components/admin/DraftActionBar";
 import { useAuth } from "@/contexts/AuthContext";
-import CustomOrderAutomationRulesEditor from "@/components/admin/CustomOrderAutomationRulesEditor";
-import CustomOrderTemplatesEditor from "@/components/admin/CustomOrderTemplatesEditor";
+import AdminEmailManager from "@/components/admin/email/AdminEmailManager";
 import { Slider } from "@/components/ui/slider";
 import { parsePersonalizationWeights, type PersonalizationWeights } from "@/hooks/use-personalization-engine";
 
@@ -592,8 +591,7 @@ const AdminSettings = () => {
         {/* ─── AUTOMATIONS ─── */}
         <TabsContent value="automations" className="space-y-6">
           <Suspense fallback={<p className="text-sm text-muted-foreground py-4">Loading...</p>}>
-            <CustomOrderAutomationRulesEditor />
-            <CustomOrderTemplatesEditor />
+            <AdminEmailManager />
           </Suspense>
         </TabsContent>
       </Tabs>

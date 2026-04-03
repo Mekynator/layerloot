@@ -49,7 +49,7 @@ export default function EmailLivePreview({ template: t }: Props) {
       '{{quantity}}': '1',
     };
     let result = text || '';
-    Object.entries(map).forEach(([k, v]) => { result = result.replaceAll(k, v); });
+    Object.entries(map).forEach(([k, v]) => { result = result.split(k).join(v); });
     return result;
   };
 

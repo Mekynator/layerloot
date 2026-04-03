@@ -1336,6 +1336,41 @@ export type Database = {
         }
         Relationships: []
       }
+      invoices: {
+        Row: {
+          created_at: string
+          id: string
+          invoice_date: string
+          invoice_number: string
+          order_id: string
+          pdf_path: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invoice_date?: string
+          invoice_number: string
+          order_id: string
+          pdf_path?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          order_id?: string
+          pdf_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loyalty_points: {
         Row: {
           created_at: string
@@ -2691,6 +2726,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      generate_invoice_number: { Args: never; Returns: string }
       get_user_points_balance: { Args: { _user_id: string }; Returns: number }
       has_permission: {
         Args: { _permission: string; _user_id: string }

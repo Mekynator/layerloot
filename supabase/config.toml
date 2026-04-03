@@ -1,40 +1,31 @@
 project_id = "mjvwltgomifrsivtzaki"
 
-[functions.generate-receipt]
-verify_jwt = false
-
-[functions.chat]
-verify_jwt = false
-
-[functions.create-checkout]
-verify_jwt = false
-
-[functions.create-request-fee-checkout]
-verify_jwt = false
-
-[functions.create-custom-order-checkout]
-verify_jwt = false
-
-[functions.stripe-webhook]
-verify_jwt = false
-
-[functions.chat-context]
-verify_jwt = false
-
-[functions.send-gift-card]
-verify_jwt = false
-
-[functions.claim-gift-card]
-verify_jwt = false
-
-[functions.admin-users]
-verify_jwt = false
-
-[functions.process-email-queue]
-verify_jwt = true
-
-[functions.process-scheduled-publish]
-verify_jwt = true
-
-[functions.process-custom-order-automations]
-verify_jwt = false
+[functions]
+  [functions.admin-users]
+    verify_jwt = false
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.chat]
+    verify_jwt = false
+  [functions.chat-context]
+    verify_jwt = false
+  [functions.claim-gift-card]
+    verify_jwt = false
+  [functions.create-checkout]
+    verify_jwt = false
+  [functions.create-custom-order-checkout]
+    verify_jwt = false
+  [functions.create-request-fee-checkout]
+    verify_jwt = false
+  [functions.generate-receipt]
+    verify_jwt = false
+  [functions.process-custom-order-automations]
+    verify_jwt = false
+  [functions.process-email-queue]
+    verify_jwt = true
+  [functions.process-scheduled-publish]
+    verify_jwt = true
+  [functions.send-gift-card]
+    verify_jwt = false
+  [functions.stripe-webhook]
+    verify_jwt = false

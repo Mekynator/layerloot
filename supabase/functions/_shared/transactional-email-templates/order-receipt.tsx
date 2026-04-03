@@ -15,9 +15,10 @@ interface Props {
   shippingAmount?: string
   taxAmount?: string
   grandTotal?: string
+  invoiceDownloadUrl?: string
 }
 
-const OrderReceiptEmail = ({ name, invoiceNumber, invoiceDate, orderNumber, subtotal, discountAmount, shippingAmount, taxAmount, grandTotal }: Props) => (
+const OrderReceiptEmail = ({ name, invoiceNumber, invoiceDate, orderNumber, subtotal, discountAmount, shippingAmount, taxAmount, grandTotal, invoiceDownloadUrl }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>Here is your payment confirmation and order summary.</Preview>
@@ -44,7 +45,14 @@ const OrderReceiptEmail = ({ name, invoiceNumber, invoiceDate, orderNumber, subt
             <Text style={detailLabel}>Total</Text><Text style={totalValue}>{grandTotal || '—'}</Text>
           </Section>
 
-          <Section style={btnWrap}><Button style={btn} href="https://layerloot.neuraltune.me/account">View my order</Button></Section>
+          <Section style={btnWrap}>
+            <Button style={btn} href="https://layerloot.neuraltune.me/account">View my order</Button>
+          </Section>
+          {invoiceDownloadUrl && (
+            <Section style={btnWrap}>
+              <Button style={{...btn, backgroundColor: '#0f172a'}} href={invoiceDownloadUrl}>Download Invoice (PDF)</Button>
+            </Section>
+          )}
         </Section>
         <Hr style={hr} />
         <Section style={foot}>

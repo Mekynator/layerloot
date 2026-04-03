@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Truck, Save, Pin, Trash2 } from "lucide-react";
+import { ArrowLeft, Truck, Save, Pin, Trash2, FileText, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,6 +63,8 @@ const AdminOrderDetail = () => {
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [newNote, setNewNote] = useState("");
+  const [invoice, setInvoice] = useState<{ invoice_number: string; invoice_url: string } | null>(null);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
 
   const { notes: internalNotes, addNote, togglePin, deleteNote } = useAdminNotes("order", orderId);
 
@@ -87,6 +89,16 @@ const AdminOrderDetail = () => {
       }
       setItems((itemsRes.data as OrderItem[]) ?? []);
       setHistory((historyRes.data as StatusHistoryEntry[]) ?? []);
+
+      // Load existing invoice
+      try {
+        const { data: invData } = await supabase.functions.invoke("generate-invoice", {
+          body: { order_id: orderId },
+        });
+        if (invData?.invoice_number) {
+          setInvoice({ invoice_number: invData.invoice_number, invoice_url: invData.invoice_url });
+        }
+      } catch { /* no invoice yet */ }
     };
     load();
   }, [orderId]);
@@ -325,6 +337,53 @@ const AdminOrderDetail = () => {
                 <Button onClick={handleSave} disabled={saving} className="w-full font-display uppercase tracking-wider text-xs">
                   <Save className="mr-2 h-4 w-4" />
                   Save Changes
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Invoice */}
+            <Card>
+              <CardHeader><CardTitle className="font-display text-sm uppercase">Invoice</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                {invoice ? (
+                  <>
+                    <p className="text-sm"><span className="text-muted-foreground">Invoice #:</span> {invoice.invoice_number}</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full font-display text-xs uppercase tracking-wider"
+                      onClick={() => invoice.invoice_url && window.open(invoice.invoice_url, "_blank")}
+                    >
+                      <FileText className="mr-2 h-4 w-4" /> Download Invoice
+                    </Button>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No invoice generated yet.</p>
+                )}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full font-display text-xs uppercase tracking-wider"
+                  disabled={invoiceLoading}
+                  onClick={async () => {
+                    setInvoiceLoading(true);
+                    try {
+                      const { data } = await supabase.functions.invoke("generate-invoice", {
+                        body: { order_id: orderId, regenerate: !!invoice },
+                      });
+                      if (data?.invoice_number) {
+                        setInvoice({ invoice_number: data.invoice_number, invoice_url: data.invoice_url });
+                        toast({ title: invoice ? "Invoice regenerated" : "Invoice generated" });
+                      }
+                    } catch {
+                      toast({ title: "Error", description: "Failed to generate invoice.", variant: "destructive" });
+                    } finally {
+                      setInvoiceLoading(false);
+                    }
+                  }}
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${invoiceLoading ? "animate-spin" : ""}`} />
+                  {invoice ? "Regenerate Invoice" : "Generate Invoice"}
                 </Button>
               </CardContent>
             </Card>

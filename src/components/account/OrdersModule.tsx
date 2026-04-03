@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Truck, Eye } from "lucide-react";
+import { Truck, Eye, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useReorder } from "@/hooks/use-reorder";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import ToolReviewForm from "@/components/reviews/ToolReviewForm";
 import OrderTimeline from "@/components/orders/OrderTimeline";
 import type { AccountModuleProps, Order, SeenState } from "./types";
@@ -20,6 +21,26 @@ const OrdersModule = ({ user, tt, orders, seenState, refetchOverview }: Props) =
   const { reorder, reorderingId } = useReorder();
   const { toast } = useToast();
   const [reviewingOrderId, setReviewingOrderId] = useState<string | null>(null);
+  const [downloadingInvoice, setDownloadingInvoice] = useState<string | null>(null);
+
+  const handleDownloadInvoice = async (orderId: string) => {
+    setDownloadingInvoice(orderId);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-invoice", {
+        body: { order_id: orderId },
+      });
+      if (error) throw error;
+      if (data?.invoice_url) {
+        window.open(data.invoice_url, "_blank");
+      } else {
+        toast({ title: "Invoice not available", description: "Could not generate invoice.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to download invoice.", variant: "destructive" });
+    } finally {
+      setDownloadingInvoice(null);
+    }
+  };
 
   if (orders.length === 0) {
     return (
@@ -67,6 +88,16 @@ const OrdersModule = ({ user, tt, orders, seenState, refetchOverview }: Props) =
                       {order.tool_type === "lithophane" ? "Lithophane" : "Custom Print"}
                     </Badge>
                   )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDownloadInvoice(order.id)}
+                    disabled={downloadingInvoice === order.id}
+                    className="font-display text-xs uppercase tracking-wider"
+                  >
+                    <FileText className="mr-1 h-3 w-3" />
+                    {downloadingInvoice === order.id ? "..." : tt("account.orders.invoice", "Invoice")}
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"

@@ -91,6 +91,8 @@ const AppShell = () => {
           <Route path="/contact" element={<Contact />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/unsubscribe" element={<Unsubscribe />} />
           <Route path="/account" element={<Account />} />
           <Route path="/orders/:orderId" element={<OrderTracking />} />
           <Route path="/create" element={<CreateYourOwn />} />

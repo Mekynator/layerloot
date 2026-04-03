@@ -12,6 +12,8 @@ import ProductDetail from "./pages/ProductDetail";
 import Contact from "./pages/Contact";
 import Cart from "./pages/Cart";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
+import Unsubscribe from "./pages/Unsubscribe";
 import Account from "./pages/Account";
 import OrderTracking from "./pages/OrderTracking";
 import Dashboard from "./pages/admin/Dashboard";

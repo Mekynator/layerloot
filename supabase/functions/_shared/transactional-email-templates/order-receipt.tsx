@@ -15,6 +15,7 @@ interface Props {
   shippingAmount?: string
   taxAmount?: string
   grandTotal?: string
+  invoiceDownloadUrl?: string
 }
 
 const OrderReceiptEmail = ({ name, invoiceNumber, invoiceDate, orderNumber, subtotal, discountAmount, shippingAmount, taxAmount, grandTotal }: Props) => (

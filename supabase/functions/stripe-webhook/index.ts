@@ -181,6 +181,17 @@ serve(async (req) => {
         const sessionId = session.id;
 
         if (customerEmail) {
+          // Generate invoice PDF
+          let invoiceUrl: string | undefined;
+          try {
+            const invoiceRes = await supabase.functions.invoke('generate-invoice', {
+              body: { order_id: sessionId },
+            });
+            invoiceUrl = invoiceRes.data?.invoice_url;
+          } catch (err) {
+            console.error('Invoice generation failed:', err);
+          }
+
           await triggerEmail(supabase, 'order-confirmation', customerEmail, `order-confirm-${sessionId}`, {
             name: customerName,
             orderNumber: sessionId.slice(-8).toUpperCase(),
@@ -189,6 +200,7 @@ serve(async (req) => {
             name: customerName,
             orderNumber: sessionId.slice(-8).toUpperCase(),
             grandTotal: session.amount_total ? `${(session.amount_total / 100).toFixed(2)} kr` : undefined,
+            invoiceDownloadUrl: invoiceUrl,
           });
         }
       }

@@ -331,6 +331,55 @@ const AdminOrderDetail = () => {
               </CardContent>
             </Card>
 
+            {/* Invoice */}
+            <Card>
+              <CardHeader><CardTitle className="font-display text-sm uppercase">Invoice</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                {invoice ? (
+                  <>
+                    <p className="text-sm"><span className="text-muted-foreground">Invoice #:</span> {invoice.invoice_number}</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full font-display text-xs uppercase tracking-wider"
+                      onClick={() => invoice.invoice_url && window.open(invoice.invoice_url, "_blank")}
+                    >
+                      <FileText className="mr-2 h-4 w-4" /> Download Invoice
+                    </Button>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No invoice generated yet.</p>
+                )}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full font-display text-xs uppercase tracking-wider"
+                  disabled={invoiceLoading}
+                  onClick={async () => {
+                    setInvoiceLoading(true);
+                    try {
+                      const { data } = await supabase.functions.invoke("generate-invoice", {
+                        body: { order_id: orderId, regenerate: !!invoice },
+                      });
+                      if (data?.invoice_number) {
+                        setInvoice({ invoice_number: data.invoice_number, invoice_url: data.invoice_url });
+                        toast({ title: invoice ? "Invoice regenerated" : "Invoice generated" });
+                      }
+                    } catch {
+                      toast({ title: "Error", description: "Failed to generate invoice.", variant: "destructive" });
+                    } finally {
+                      setInvoiceLoading(false);
+                    }
+                  }}
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${invoiceLoading ? "animate-spin" : ""}`} />
+                  {invoice ? "Regenerate Invoice" : "Generate Invoice"}
+                </Button>
+              </CardContent>
+            </Card>
+              </CardContent>
+            </Card>
+
             {/* Customer Info */}
             <Card>
               <CardHeader><CardTitle className="font-display text-sm uppercase">Customer</CardTitle></CardHeader>

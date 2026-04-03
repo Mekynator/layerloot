@@ -591,8 +591,7 @@ const AdminSettings = () => {
         {/* ─── AUTOMATIONS ─── */}
         <TabsContent value="automations" className="space-y-6">
           <Suspense fallback={<p className="text-sm text-muted-foreground py-4">Loading...</p>}>
-            <CustomOrderAutomationRulesEditor />
-            <CustomOrderTemplatesEditor />
+            <AdminEmailManager />
           </Suspense>
         </TabsContent>
       </Tabs>

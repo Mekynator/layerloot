@@ -120,6 +120,30 @@ const AdminOrderDetail = () => {
         summary: `Order status changed from ${oldStatus} to ${status}`,
         metadata: { old_status: oldStatus, new_status: status },
       });
+
+      // Trigger email for shipping/delivered status changes
+      const customerEmail = (order as any).profiles?.email || (order.shipping_address as any)?.email;
+      const customerName = (order as any).profiles?.full_name || "Customer";
+      if (status === "shipped" && customerEmail) {
+        supabase.functions.invoke('trigger-email', {
+          body: {
+            templateName: 'shipping-update',
+            recipientEmail: customerEmail,
+            idempotencyKey: `shipping-${orderId}-${Date.now()}`,
+            templateData: { name: customerName, orderNumber: orderId.slice(0, 8), trackingUrl: trackingUrl || undefined, shippingMethod: 'Standard' },
+          },
+        }).catch(() => {});
+      }
+      if (status === "delivered" && customerEmail) {
+        supabase.functions.invoke('trigger-email', {
+          body: {
+            templateName: 'delivered',
+            recipientEmail: customerEmail,
+            idempotencyKey: `delivered-${orderId}-${Date.now()}`,
+            templateData: { name: customerName, orderNumber: orderId.slice(0, 8) },
+          },
+        }).catch(() => {});
+      }
     }
 
     toast({ title: "Order saved" });

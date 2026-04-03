@@ -39,3 +39,5 @@ project_id = "mjvwltgomifrsivtzaki"
     verify_jwt = false
   [functions.contact-send]
     verify_jwt = false
+  [functions.generate-invoice]
+    verify_jwt = false

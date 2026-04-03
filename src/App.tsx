@@ -138,6 +138,7 @@ const AppShell = () => {
           <Route path="/admin/instagram" element={<AdminRoute requiredPermission="settings.view"><AdminInstagram /></AdminRoute>} />
           <Route path="/admin/email-logs" element={<AdminRoute requiredPermission="reports.view"><AdminEmailLogs /></AdminRoute>} />
           <Route path="/admin/users" element={<AdminRoute requiredPermission="*"><AdminUsers /></AdminRoute>} />
+          <Route path="/admin/personalization" element={<AdminRoute requiredPermission="settings.view"><AdminPersonalization /></AdminRoute>} />
           <Route path="/policies/:slug" element={<Policies />} />
           <Route path="/pages/:slug" element={<DynamicPage />} />
           <Route path="/:slug" element={<DynamicPage />} />

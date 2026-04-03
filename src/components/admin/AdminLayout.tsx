@@ -78,6 +78,7 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
     {
       name: "System",
       items: [
+        { id: "personalization", to: "/admin/personalization", label: "AI Personalization", icon: "Brain", visible: true, permission: "settings.view" },
         { id: "activity", to: "/admin/activity", label: "Activity Log", icon: "Activity", visible: true, permission: "reports.view" },
         { id: "chat-analytics", to: "/admin/chat-analytics", label: "AI Analytics", icon: "BarChart3", visible: true, permission: "reports.view" },
         { id: "email-logs", to: "/admin/email-logs", label: "Email Logs", icon: "MessageCircle", visible: true, permission: "reports.view" },

@@ -5,7 +5,7 @@ import {
   Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
   Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone,
   BarChart3, Wallet, ImageIcon, Shield, Activity, Globe, MessageCircle,
-  Instagram,
+  Instagram, Brain,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminPermissions } from "@/hooks/use-admin-permissions";

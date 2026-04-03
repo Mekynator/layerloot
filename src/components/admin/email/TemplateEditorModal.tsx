@@ -29,8 +29,10 @@ type Section = 'content' | 'design' | 'images' | 'advanced';
 export default function TemplateEditorModal({ template: initial, open, onClose, onSave, onDuplicate }: Props) {
   const [t, setT] = useState<EmailTemplate>(initial);
   const [saving, setSaving] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
   const [activeSection, setActiveSection] = useState<Section>('content');
   const { toast } = useToast();
+  const { user } = useAuth();
   const lastFocusedRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
 
   // Sync local state when a different template is selected

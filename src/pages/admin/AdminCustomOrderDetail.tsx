@@ -275,6 +275,22 @@ const AdminCustomOrderDetail = () => {
     await executeAutomation({ orderId, triggerEvent: "quote_sent" });
     await supabase.from("custom_orders").update({ unread_by_user: true } as any).eq("id", orderId);
 
+    // Send quote email to customer
+    if (order?.email) {
+      supabase.functions.invoke('trigger-email', {
+        body: {
+          templateName: 'quote-sent',
+          recipientEmail: order.email,
+          idempotencyKey: `quote-sent-${orderId}-${Date.now()}`,
+          templateData: {
+            name: order.name,
+            requestNumber: orderId.slice(0, 8),
+            quotedPrice: `${amount} kr`,
+          },
+        },
+      }).catch(() => {});
+    }
+
     setThreadMessage("");
     toast({ title: "Quote sent" });
     setSaving(false);

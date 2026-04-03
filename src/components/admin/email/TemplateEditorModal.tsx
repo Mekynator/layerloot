@@ -9,6 +9,8 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import type { EmailTemplate } from "./types";
 import { TEMPLATE_DEFAULTS } from "./types";
 import EmailLivePreview from "./EmailLivePreview";
@@ -27,8 +29,10 @@ type Section = 'content' | 'design' | 'images' | 'advanced';
 export default function TemplateEditorModal({ template: initial, open, onClose, onSave, onDuplicate }: Props) {
   const [t, setT] = useState<EmailTemplate>(initial);
   const [saving, setSaving] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
   const [activeSection, setActiveSection] = useState<Section>('content');
   const { toast } = useToast();
+  const { user } = useAuth();
   const lastFocusedRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
 
   // Sync local state when a different template is selected
@@ -49,8 +53,30 @@ export default function TemplateEditorModal({ template: initial, open, onClose, 
     const defaults = TEMPLATE_DEFAULTS[t.trigger_key];
     if (defaults) {
       setT(prev => ({ ...prev, ...defaults }));
-      toast({ title: "Reset to default" });
+    toast({ title: "Reset to default" });
     }
+  };
+
+  const handleTestSend = async () => {
+    if (!user?.email) {
+      toast({ title: "No email", description: "Could not determine your email address.", variant: "destructive" });
+      return;
+    }
+    setSendingTest(true);
+    try {
+      await supabase.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: t.trigger_key,
+          recipientEmail: user.email,
+          idempotencyKey: `test-${t.trigger_key}-${Date.now()}`,
+          templateData: { name: 'Test User', orderNumber: 'TEST123', requestNumber: 'TEST456' },
+        },
+      });
+      toast({ title: "Test email sent", description: `Sent to ${user.email}` });
+    } catch (err) {
+      toast({ title: "Failed to send test", variant: "destructive" });
+    }
+    setSendingTest(false);
   };
 
   const handleInsertPlaceholder = (ph: string) => {
@@ -137,6 +163,9 @@ export default function TemplateEditorModal({ template: initial, open, onClose, 
                 <Copy className="mr-1 h-3 w-3" /> Duplicate
               </Button>
             )}
+            <Button size="sm" variant="outline" onClick={handleTestSend} disabled={sendingTest} className="h-7 text-[11px]">
+              <Send className="mr-1 h-3 w-3" /> {sendingTest ? 'Sending...' : 'Test Send'}
+            </Button>
             <Button size="sm" onClick={handleSave} disabled={saving} className="h-7 text-[11px]">
               <Save className="mr-1 h-3 w-3" /> {saving ? 'Saving...' : 'Save'}
             </Button>

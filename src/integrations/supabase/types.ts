@@ -1668,6 +1668,24 @@ export type Database = {
         }
         Relationships: []
       }
+      personalization_settings: {
+        Row: {
+          key: string
+          updated_at: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string | null
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       price_calculations: {
         Row: {
           admin_user_id: string
@@ -2504,6 +2522,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_events: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          custom_order_id: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          page_path: string | null
+          product_id: string | null
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          custom_order_id?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          page_path?: string | null
+          product_id?: string | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          custom_order_id?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          page_path?: string | null
+          product_id?: string | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_gift_notifications: {
         Row: {
           claimed_at: string | null
@@ -2562,6 +2619,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_personalization_profiles: {
+        Row: {
+          custom_interest_score: number | null
+          engagement_score: number | null
+          id: string
+          last_active_at: string | null
+          personalization_summary: Json | null
+          preferred_categories: Json | null
+          preferred_colors: Json | null
+          preferred_materials: Json | null
+          preferred_price_max: number | null
+          preferred_price_min: number | null
+          preferred_tags: Json | null
+          reorder_score: number | null
+          rewards_interest_score: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          custom_interest_score?: number | null
+          engagement_score?: number | null
+          id?: string
+          last_active_at?: string | null
+          personalization_summary?: Json | null
+          preferred_categories?: Json | null
+          preferred_colors?: Json | null
+          preferred_materials?: Json | null
+          preferred_price_max?: number | null
+          preferred_price_min?: number | null
+          preferred_tags?: Json | null
+          reorder_score?: number | null
+          rewards_interest_score?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          custom_interest_score?: number | null
+          engagement_score?: number | null
+          id?: string
+          last_active_at?: string | null
+          personalization_summary?: Json | null
+          preferred_categories?: Json | null
+          preferred_colors?: Json | null
+          preferred_materials?: Json | null
+          preferred_price_max?: number | null
+          preferred_price_min?: number | null
+          preferred_tags?: Json | null
+          reorder_score?: number | null
+          rewards_interest_score?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

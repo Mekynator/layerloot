@@ -375,9 +375,6 @@ const AdminOrderDetail = () => {
                   <RefreshCw className={`mr-2 h-4 w-4 ${invoiceLoading ? "animate-spin" : ""}`} />
                   {invoice ? "Regenerate Invoice" : "Generate Invoice"}
                 </Button>
-              </CardContent>
-            </Card>
-              </CardContent>
             </Card>
 
             {/* Customer Info */}

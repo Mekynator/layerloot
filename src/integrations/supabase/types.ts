@@ -779,6 +779,13 @@ export type Database = {
             referencedRelation: "custom_orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "custom_order_messages_custom_order_id_fkey"
+            columns: ["custom_order_id"]
+            isOneToOne: false
+            referencedRelation: "customer_custom_orders"
+            referencedColumns: ["id"]
+          },
         ]
       }
       custom_order_showcases: {
@@ -889,6 +896,13 @@ export type Database = {
             referencedRelation: "custom_orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "custom_order_showcases_custom_order_id_fkey"
+            columns: ["custom_order_id"]
+            isOneToOne: false
+            referencedRelation: "customer_custom_orders"
+            referencedColumns: ["id"]
+          },
         ]
       }
       custom_order_sla_tracking: {
@@ -928,6 +942,13 @@ export type Database = {
             columns: ["custom_order_id"]
             isOneToOne: false
             referencedRelation: "custom_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_order_sla_tracking_custom_order_id_fkey"
+            columns: ["custom_order_id"]
+            isOneToOne: false
+            referencedRelation: "customer_custom_orders"
             referencedColumns: ["id"]
           },
         ]
@@ -1753,6 +1774,13 @@ export type Database = {
             columns: ["custom_order_id"]
             isOneToOne: false
             referencedRelation: "custom_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_calculations_custom_order_id_fkey"
+            columns: ["custom_order_id"]
+            isOneToOne: false
+            referencedRelation: "customer_custom_orders"
             referencedColumns: ["id"]
           },
           {
@@ -2822,7 +2850,81 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      customer_custom_orders: {
+        Row: {
+          created_at: string | null
+          customer_offer_price: number | null
+          customer_response_status: string | null
+          description: string | null
+          email: string | null
+          final_agreed_price: number | null
+          id: string | null
+          metadata: Json | null
+          model_filename: string | null
+          model_url: string | null
+          name: string | null
+          payment_status: string | null
+          production_status: string | null
+          quoted_price: number | null
+          request_fee_amount: number | null
+          request_fee_status: string | null
+          status: string | null
+          stripe_checkout_session_id: string | null
+          unread_by_admin: boolean | null
+          unread_by_user: boolean | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_offer_price?: number | null
+          customer_response_status?: string | null
+          description?: string | null
+          email?: string | null
+          final_agreed_price?: number | null
+          id?: string | null
+          metadata?: Json | null
+          model_filename?: string | null
+          model_url?: string | null
+          name?: string | null
+          payment_status?: string | null
+          production_status?: string | null
+          quoted_price?: number | null
+          request_fee_amount?: number | null
+          request_fee_status?: string | null
+          status?: string | null
+          stripe_checkout_session_id?: string | null
+          unread_by_admin?: boolean | null
+          unread_by_user?: boolean | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_offer_price?: number | null
+          customer_response_status?: string | null
+          description?: string | null
+          email?: string | null
+          final_agreed_price?: number | null
+          id?: string | null
+          metadata?: Json | null
+          model_filename?: string | null
+          model_url?: string | null
+          name?: string | null
+          payment_status?: string | null
+          production_status?: string | null
+          quoted_price?: number | null
+          request_fee_amount?: number | null
+          request_fee_status?: string | null
+          status?: string | null
+          stripe_checkout_session_id?: string | null
+          unread_by_admin?: boolean | null
+          unread_by_user?: boolean | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       can_access_custom_order: {

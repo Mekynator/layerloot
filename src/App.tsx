@@ -52,6 +52,7 @@ import AdminChat from "./pages/admin/AdminChat";
 import AdminAutomations from "./pages/admin/AdminAutomations";
 import AdminInstagram from "./pages/admin/AdminInstagram";
 import AdminEmailLogs from "./pages/admin/AdminEmailLogs";
+import AdminPersonalization from "./pages/admin/AdminPersonalization";
 import DynamicPage from "./pages/DynamicPage";
 import CreateYourOwn from "./pages/CreateYourOwn";
 import Policies from "./pages/Policies";
@@ -137,6 +138,7 @@ const AppShell = () => {
           <Route path="/admin/instagram" element={<AdminRoute requiredPermission="settings.view"><AdminInstagram /></AdminRoute>} />
           <Route path="/admin/email-logs" element={<AdminRoute requiredPermission="reports.view"><AdminEmailLogs /></AdminRoute>} />
           <Route path="/admin/users" element={<AdminRoute requiredPermission="*"><AdminUsers /></AdminRoute>} />
+          <Route path="/admin/personalization" element={<AdminRoute requiredPermission="settings.view"><AdminPersonalization /></AdminRoute>} />
           <Route path="/policies/:slug" element={<Policies />} />
           <Route path="/pages/:slug" element={<DynamicPage />} />
           <Route path="/:slug" element={<DynamicPage />} />

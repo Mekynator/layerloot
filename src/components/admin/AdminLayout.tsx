@@ -5,7 +5,7 @@ import {
   Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
   Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone,
   BarChart3, Wallet, ImageIcon, Shield, Activity, Globe, MessageCircle,
-  Instagram,
+  Instagram, Brain,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminPermissions } from "@/hooks/use-admin-permissions";
@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 const ICON_MAP: Record<string, typeof Package> = {
   LayoutDashboard, Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
   Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone, BarChart3,
-  Wallet, Tags, Layers, ImageIcon, Shield, Activity, Globe, MessageCircle, Instagram,
+  Wallet, Tags, Layers, ImageIcon, Shield, Activity, Globe, MessageCircle, Instagram, Brain,
 };
 
 export interface SidebarItem {
@@ -78,6 +78,7 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
     {
       name: "System",
       items: [
+        { id: "personalization", to: "/admin/personalization", label: "AI Personalization", icon: "Brain", visible: true, permission: "settings.view" },
         { id: "activity", to: "/admin/activity", label: "Activity Log", icon: "Activity", visible: true, permission: "reports.view" },
         { id: "chat-analytics", to: "/admin/chat-analytics", label: "AI Analytics", icon: "BarChart3", visible: true, permission: "reports.view" },
         { id: "email-logs", to: "/admin/email-logs", label: "Email Logs", icon: "MessageCircle", visible: true, permission: "reports.view" },

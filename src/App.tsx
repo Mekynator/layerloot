@@ -12,6 +12,8 @@ import ProductDetail from "./pages/ProductDetail";
 import Contact from "./pages/Contact";
 import Cart from "./pages/Cart";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
+import Unsubscribe from "./pages/Unsubscribe";
 import Account from "./pages/Account";
 import OrderTracking from "./pages/OrderTracking";
 import Dashboard from "./pages/admin/Dashboard";
@@ -89,6 +91,8 @@ const AppShell = () => {
           <Route path="/contact" element={<Contact />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/unsubscribe" element={<Unsubscribe />} />
           <Route path="/account" element={<Account />} />
           <Route path="/orders/:orderId" element={<OrderTracking />} />
           <Route path="/create" element={<CreateYourOwn />} />

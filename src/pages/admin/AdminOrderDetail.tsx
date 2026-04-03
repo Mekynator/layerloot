@@ -89,6 +89,16 @@ const AdminOrderDetail = () => {
       }
       setItems((itemsRes.data as OrderItem[]) ?? []);
       setHistory((historyRes.data as StatusHistoryEntry[]) ?? []);
+
+      // Load existing invoice
+      try {
+        const { data: invData } = await supabase.functions.invoke("generate-invoice", {
+          body: { order_id: orderId },
+        });
+        if (invData?.invoice_number) {
+          setInvoice({ invoice_number: invData.invoice_number, invoice_url: invData.invoice_url });
+        }
+      } catch { /* no invoice yet */ }
     };
     load();
   }, [orderId]);

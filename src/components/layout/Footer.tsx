@@ -11,6 +11,11 @@ import GlobalSectionRenderer from "@/components/layout/GlobalSectionRenderer";
 
 type LocalizedText = string | Record<string, string>;
 
+/**
+ * Contact settings — unified structure shared with admin.
+ * Admin saves: { email, phone, address, contact_description, email_label, phone_label, address_label, social_title, social: { instagram, facebook, youtube } }
+ * Legacy format had instagram_url / facebook_url at top level — we support both for backwards compatibility.
+ */
 type ContactSettings = {
   email?: string;
   phone?: string;
@@ -19,9 +24,12 @@ type ContactSettings = {
   email_label?: LocalizedText;
   phone_label?: LocalizedText;
   address_label?: LocalizedText;
+  social_title?: LocalizedText;
+  // New unified format (from admin)
+  social?: { instagram?: string; facebook?: string; youtube?: string };
+  // Legacy format (backwards compat)
   instagram_url?: string;
   facebook_url?: string;
-  social_title?: LocalizedText;
 };
 
 type BrandingSettings = {
@@ -60,9 +68,8 @@ const defaultContact: ContactSettings = {
   email_label: "Email",
   phone_label: "Phone",
   address_label: "Address",
-  instagram_url: "",
-  facebook_url: "",
   social_title: "Follow us",
+  social: { instagram: "", facebook: "" },
 };
 
 const defaultFooterSettings: FooterSettings = {
@@ -113,6 +120,16 @@ const getLocalizedValue = (value: unknown, fallback = ""): string => {
   return map[lang] || map.en || fallback;
 };
 
+/** Resolve Instagram URL from either new or legacy format */
+const getInstagramUrl = (contact: ContactSettings): string => {
+  return contact.social?.instagram || contact.instagram_url || "";
+};
+
+/** Resolve Facebook URL from either new or legacy format */
+const getFacebookUrl = (contact: ContactSettings): string => {
+  return contact.social?.facebook || contact.facebook_url || "";
+};
+
 const Footer = () => {
   const { t } = useTranslation();
   const [contact, setContact] = useState<ContactSettings>(defaultContact);
@@ -142,8 +159,10 @@ const Footer = () => {
   );
 
   const logoHeight = Math.max(20, Number(footerSettings.logo_height_px || 32));
-  const hasInstagram = isValidUrl(contact.instagram_url);
-  const hasFacebook = isValidUrl(contact.facebook_url);
+  const instagramUrl = getInstagramUrl(contact);
+  const facebookUrl = getFacebookUrl(contact);
+  const hasInstagram = isValidUrl(instagramUrl);
+  const hasFacebook = isValidUrl(facebookUrl);
   const hasSocials = hasInstagram || hasFacebook;
 
   const logoAlt = getLocalizedValue(branding.logo_alt, "LayerLoot");
@@ -175,7 +194,6 @@ const Footer = () => {
         transition={{ duration: 0.4 }}
         className="relative border-t border-border/10 bg-background/80 backdrop-blur-xl"
       >
-        {/* Top glow line */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 h-px w-2/3 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
         <div className="container py-16">
@@ -273,14 +291,14 @@ const Footer = () => {
                     <p className="mb-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground/70">{socialTitle}</p>
                     <div className="flex items-center gap-3">
                       {hasInstagram && (
-                        <motion.a whileHover={{ y: -2, scale: 1.05 }} whileTap={{ scale: 0.98 }} href={contact.instagram_url} target="_blank" rel="noreferrer"
+                        <motion.a whileHover={{ y: -2, scale: 1.05 }} whileTap={{ scale: 0.98 }} href={instagramUrl} target="_blank" rel="noreferrer"
                           className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border/20 bg-card/30 text-muted-foreground transition-all hover:border-primary/30 hover:text-primary hover:shadow-[0_0_20px_hsl(217_91%_60%/0.15)]"
                           aria-label={t("footer.instagram", "Instagram")}>
                           <Instagram className="h-4 w-4" />
                         </motion.a>
                       )}
                       {hasFacebook && (
-                        <motion.a whileHover={{ y: -2, scale: 1.05 }} whileTap={{ scale: 0.98 }} href={contact.facebook_url} target="_blank" rel="noreferrer"
+                        <motion.a whileHover={{ y: -2, scale: 1.05 }} whileTap={{ scale: 0.98 }} href={facebookUrl} target="_blank" rel="noreferrer"
                           className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border/20 bg-card/30 text-muted-foreground transition-all hover:border-primary/30 hover:text-primary hover:shadow-[0_0_20px_hsl(217_91%_60%/0.15)]"
                           aria-label={t("footer.facebook", "Facebook")}>
                           <Facebook className="h-4 w-4" />

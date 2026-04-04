@@ -215,7 +215,7 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
 
           <div className="mt-auto flex items-end justify-between gap-2 pt-2">
             <div className="flex items-baseline gap-2">
-              <span className="font-display text-xl font-bold text-foreground">{formatPrice(Number(product.price))}</span>
+              <span className="font-display text-base font-bold text-foreground md:text-xl">{formatPrice(Number(product.price))}</span>
               {hasSale && (
                 <span className="text-xs text-muted-foreground line-through">
                   {formatPrice(Number(product.compare_at_price))}

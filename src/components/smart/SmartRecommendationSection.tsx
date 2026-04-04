@@ -29,7 +29,7 @@ export default function SmartRecommendationSection({ section, socialProofMap }: 
         <h2 className="font-display text-2xl font-bold uppercase text-foreground">{section.title}</h2>
         <p className="max-w-2xl text-sm text-muted-foreground">{section.subtitle}</p>
       </div>
-      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 md:gap-6 xl:grid-cols-4">
         {section.products.map((product, index) => (
           <motion.div key={product.id} variants={fadeUp}>
             <ProductCard

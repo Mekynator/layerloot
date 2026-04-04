@@ -555,7 +555,7 @@ const ProductDetail = () => {
               </Badge>
               <h2 className="font-display text-2xl font-bold uppercase text-foreground">{t("products.keepBuilding")}</h2>
             </div>
-            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-4 grid-cols-2 md:gap-6 xl:grid-cols-4">
               {relatedProducts.map((related, index) => (
                 <ProductCard key={related.id} product={related} index={index} />
               ))}

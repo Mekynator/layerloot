@@ -198,7 +198,7 @@ const Footer = () => {
 
         <div className="container py-10 md:py-16">
           <div className="grid gap-8 grid-cols-2 md:grid-cols-3 lg:grid-cols-5 md:gap-10">
-            <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+            <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="col-span-2 md:col-span-1">
               <Link to={branding.logo_link || "/"} className="mb-5 flex items-center gap-2.5 group">
                 {branding.logo_image_url ? (
                   <img src={branding.logo_image_url} alt={logoAlt} style={{ height: `${logoHeight}px` }} className="w-auto object-contain" />

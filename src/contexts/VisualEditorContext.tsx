@@ -61,6 +61,10 @@ interface EditorState {
   moveBlock: (fromIndex: number, toIndex: number) => void;
   toggleBlockActive: (id: string) => void;
 
+  // Layout order (unified static + dynamic)
+  layoutOrder: import("@/lib/static-page-sections").LayoutEntry[] | null;
+  setLayoutOrder: (order: import("@/lib/static-page-sections").LayoutEntry[]) => void;
+
   // Save (draft)
   save: () => Promise<void>;
   saving: boolean;

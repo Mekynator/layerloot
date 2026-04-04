@@ -72,8 +72,14 @@ interface UserOption {
   searchText: string;
 }
 
+type AudienceGroup = "specific" | "existing" | "new_registered" | "newcomers" | "invited";
+
 type DiscountForm = Omit<DiscountCode, "id" | "created_at" | "used_count" | "scope_target_user_id"> & {
   scope_target_user_ids: string[];
+  audience_groups: AudienceGroup[];
+  new_registered_days: number;
+  newcomer_logic: "days" | "zero_orders";
+  newcomer_days: number;
 };
 
 const emptyDiscount: DiscountForm = {
@@ -91,6 +97,10 @@ const emptyDiscount: DiscountForm = {
   starts_at: null,
   expires_at: null,
   scope_target_user_ids: [],
+  audience_groups: ["specific"],
+  new_registered_days: 14,
+  newcomer_logic: "days",
+  newcomer_days: 30,
 };
 
 const normalizeUserIds = (value: string | null) => {

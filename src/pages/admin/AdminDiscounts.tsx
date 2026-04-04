@@ -496,13 +496,26 @@ const AdminDiscounts = () => {
     }
 
     if (discount.scope === "user") {
-      const selectedIds = normalizeUserIds(discount.scope_target_user_id);
-      if (selectedIds.length === 0) return "User audience";
-      const matchedUsers = users.filter((user) => selectedIds.includes(user.id));
-      if (matchedUsers.length === 0) return `${selectedIds.length} targeted user(s)`;
-      if (matchedUsers.length === 1) return matchedUsers[0].label;
-      if (matchedUsers.length <= 3) return matchedUsers.map((user) => user.label).join(", ");
-      return `${matchedUsers.length} targeted users`;
+      if (!discount.scope_target_user_id) return "User audience";
+      try {
+        const parsed = JSON.parse(discount.scope_target_user_id);
+        if (parsed.groups && Array.isArray(parsed.groups)) {
+          const labels: string[] = [];
+          if (parsed.groups.includes("specific") && parsed.specific_ids?.length) labels.push(`${parsed.specific_ids.length} specific`);
+          if (parsed.groups.includes("existing")) labels.push("all existing");
+          if (parsed.groups.includes("new_registered")) labels.push(`new (${parsed.new_registered_days || 14}d)`);
+          if (parsed.groups.includes("newcomers")) labels.push("newcomers");
+          if (parsed.groups.includes("invited")) labels.push("invited");
+          return labels.join(" + ") || "User audience";
+        }
+      } catch {
+        // Legacy format
+        const selectedIds = normalizeUserIds(discount.scope_target_user_id);
+        if (selectedIds.length === 0) return "User audience";
+        const matchedUsers = users.filter((user) => selectedIds.includes(user.id));
+        if (matchedUsers.length <= 3) return matchedUsers.map((u) => u.label).join(", ") || `${selectedIds.length} user(s)`;
+        return `${matchedUsers.length} targeted users`;
+      }
     }
 
     if (discount.scope === "bulk") {

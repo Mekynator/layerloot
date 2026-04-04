@@ -371,7 +371,7 @@ const AdminDiscounts = () => {
       discount_value: Number(form.discount_value),
       scope: form.scope,
       scope_target_id: form.scope === "product" || form.scope === "category" ? form.scope_target_id : null,
-      scope_target_user_id: form.scope === "user" ? form.scope_target_user_ids.join(",") : null,
+      scope_target_user_id: form.scope === "user" ? matchedAudienceUsers.join(",") : null,
       min_order_amount: Number(form.min_order_amount) || 0,
       min_quantity: Number(form.min_quantity) || 1,
       max_uses: form.max_uses ? Number(form.max_uses) : null,

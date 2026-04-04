@@ -348,7 +348,14 @@ const AdminProducts = () => {
             <Button className="font-display uppercase tracking-wider"><Plus className="mr-1 h-4 w-4" /> Add Product</Button>
           </DialogTrigger>
           <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-            <DialogHeader><DialogTitle className="font-display uppercase">{editingId ? "Edit" : "Add"} Product</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <div className="flex items-center justify-between">
+                <DialogTitle className="font-display uppercase">{editingId ? "Edit" : "Add"} Product</DialogTitle>
+                <Button variant="outline" size="sm" onClick={() => setCopyModalOpen(true)} className="text-xs">
+                  <Copy className="mr-1 h-3.5 w-3.5" /> Copy from product
+                </Button>
+              </div>
+            </DialogHeader>
             <Tabs defaultValue="basic" className="space-y-4">
               <TabsList className="w-full grid grid-cols-6">
                 <TabsTrigger value="basic">Basic</TabsTrigger>

@@ -434,6 +434,22 @@ const AdminProducts = () => {
                 </Card>
               </TabsContent>
 
+              {/* Colors Tab */}
+              <TabsContent value="colors" className="space-y-4">
+                <ProductColorManager
+                  productId={editingId ?? "draft-new"}
+                  enableColorPicker={form.enable_color_picker}
+                  colorSelectionMode={form.color_selection_mode}
+                  colorRequired={form.color_required}
+                  onConfigChange={(config) => setForm({ ...form, ...config })}
+                />
+              </TabsContent>
+
+              {/* Sections Tab */}
+              <TabsContent value="sections" className="space-y-4">
+                <ProductSectionsManager productId={editingId ?? "draft-new"} />
+              </TabsContent>
+
               {/* D. Details */}
               <TabsContent value="details" className="space-y-4">
                 <Card className="border-primary/10">

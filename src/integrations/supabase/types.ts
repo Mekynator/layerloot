@@ -1878,6 +1878,7 @@ export type Database = {
           is_active: boolean
           media_urls: string[]
           product_id: string
+          reusable_block_id: string | null
           section_type: string
           sort_order: number
           title: string | null
@@ -1889,6 +1890,7 @@ export type Database = {
           is_active?: boolean
           media_urls?: string[]
           product_id: string
+          reusable_block_id?: string | null
           section_type?: string
           sort_order?: number
           title?: string | null
@@ -1900,6 +1902,7 @@ export type Database = {
           is_active?: boolean
           media_urls?: string[]
           product_id?: string
+          reusable_block_id?: string | null
           section_type?: string
           sort_order?: number
           title?: string | null
@@ -1911,6 +1914,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_detail_sections_reusable_block_id_fkey"
+            columns: ["reusable_block_id"]
+            isOneToOne: false
+            referencedRelation: "reusable_blocks"
             referencedColumns: ["id"]
           },
         ]

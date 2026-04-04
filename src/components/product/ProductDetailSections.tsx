@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Play } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 
 interface Section {
   id: string;
@@ -10,6 +11,14 @@ interface Section {
   title: string | null;
   media_urls: string[];
   sort_order: number;
+  reusable_block_id: string | null;
+}
+
+interface ReusableBlock {
+  id: string;
+  block_type: string;
+  content: any;
+  name: string;
 }
 
 interface ProductDetailSectionsProps {
@@ -18,6 +27,7 @@ interface ProductDetailSectionsProps {
 
 const ProductDetailSections = ({ productId }: ProductDetailSectionsProps) => {
   const [sections, setSections] = useState<Section[]>([]);
+  const [reusableBlocks, setReusableBlocks] = useState<Record<string, ReusableBlock>>({});
 
   useEffect(() => {
     let mounted = true;
@@ -28,7 +38,27 @@ const ProductDetailSections = ({ productId }: ProductDetailSectionsProps) => {
         .eq("product_id", productId)
         .eq("is_active", true)
         .order("sort_order");
-      if (mounted) setSections((data as Section[]) ?? []);
+      if (!mounted) return;
+      const sections = (data as Section[]) ?? [];
+      setSections(sections);
+
+      // Fetch reusable blocks for sections that reference them
+      const blockIds = sections
+        .filter(s => s.section_type === "reusable_block" && s.reusable_block_id)
+        .map(s => s.reusable_block_id!);
+      
+      if (blockIds.length > 0) {
+        const { data: blocks } = await supabase
+          .from("reusable_blocks")
+          .select("id, block_type, content, name")
+          .in("id", blockIds)
+          .eq("is_archived", false);
+        if (mounted && blocks) {
+          const map: Record<string, ReusableBlock> = {};
+          for (const b of blocks) map[b.id] = b as ReusableBlock;
+          setReusableBlocks(map);
+        }
+      }
     };
     void fetch();
     return () => { mounted = false; };
@@ -42,11 +72,37 @@ const ProductDetailSections = ({ productId }: ProductDetailSectionsProps) => {
         <div key={section.id}>
           {section.section_type === "video" && <VideoSection section={section} />}
           {section.section_type === "image_carousel" && <ImageCarouselSection section={section} />}
+          {section.section_type === "reusable_block" && section.reusable_block_id && (
+            <ReusableBlockSection section={section} block={reusableBlocks[section.reusable_block_id]} />
+          )}
         </div>
       ))}
     </div>
   );
 };
+
+function ReusableBlockSection({ section, block }: { section: Section; block?: ReusableBlock }) {
+  if (!block) return null;
+
+  const siteBlock: SiteBlock = {
+    id: block.id,
+    block_type: block.block_type,
+    title: section.title || block.name,
+    content: block.content,
+    sort_order: section.sort_order,
+    is_active: true,
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+    >
+      {renderBlock(siteBlock)}
+    </motion.div>
+  );
+}
 
 function VideoSection({ section }: { section: Section }) {
   const url = section.media_urls?.[0];

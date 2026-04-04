@@ -1,0 +1,1 @@
+ALTER TABLE public.product_detail_sections ADD COLUMN reusable_block_id uuid REFERENCES public.reusable_blocks(id) ON DELETE SET NULL DEFAULT NULL;

@@ -32,6 +32,7 @@ import ProductFOMOBar from "@/components/smart/ProductFOMOBar";
 import FrequentlyBoughtTogether from "@/components/smart/FrequentlyBoughtTogether";
 import ProductColorPicker, { type SelectedColor } from "@/components/product/ProductColorPicker";
 import ProductDetailSections from "@/components/product/ProductDetailSections";
+import ProductColorSummary from "@/components/product/ProductColorSummary";
 
 const AUTO_GALLERY_MS = 6500;
 
@@ -312,6 +313,9 @@ const ProductDetail = () => {
             {product.description && (
               <p className="max-w-2xl leading-relaxed text-muted-foreground">{product.description}</p>
             )}
+
+            {/* Color summary tile under description */}
+            <ProductColorSummary productId={product.id} />
 
             <motion.div whileHover={{ y: -2 }} className="section-surface p-4">
 

@@ -185,7 +185,7 @@ const ProductDetail = () => {
           </Link>
         </motion.div>
 
-        <div className="grid gap-8 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
             {show3D && product.model_url ? (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>

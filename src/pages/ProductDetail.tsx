@@ -341,20 +341,28 @@ const ProductDetail = () => {
               )}
             </motion.div>
 
-            <div className="grid gap-4 lg:grid-cols-2">
-              <motion.div whileHover={{ y: -2 }}>
-                <PrintInfo
-                  printTimeHours={product.print_time_hours}
-                  dimensionsCm={product.dimensions_cm}
-                  weightGrams={product.weight_grams}
-                  finishType={product.finish_type}
-                  materialType={product.material_type}
+            <motion.div whileHover={{ y: -2 }}>
+              <PrintInfo
+                printTimeHours={product.print_time_hours}
+                dimensionsCm={product.dimensions_cm}
+                weightGrams={product.weight_grams}
+                finishType={product.finish_type}
+                materialType={product.material_type}
+              />
+            </motion.div>
+
+            {/* Color Picker */}
+            {(product as any).enable_color_picker && (
+              <motion.div whileHover={{ y: -2 }} className="section-surface p-4">
+                <ProductColorPicker
+                  productId={product.id}
+                  selectionMode={(product as any).color_selection_mode ?? "single"}
+                  required={(product as any).color_required ?? false}
+                  selectedColors={selectedColors}
+                  onColorsChange={setSelectedColors}
                 />
               </motion.div>
-              <motion.div whileHover={{ y: -2 }}>
-                <SizePreview dimensionsCm={product.dimensions_cm} />
-              </motion.div>
-            </div>
+            )}
 
             <div className="flex items-center gap-3 text-sm">
               <span className="font-medium text-green-500">

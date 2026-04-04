@@ -117,18 +117,18 @@ const ProductConfigurator = ({ variants, selectedVariant, onSelectVariant }: Pro
                   const test = { ...selections, [key]: val };
                   return Object.entries(test).every(([k, vv]) => v.attributes[k] === vv);
                 });
-                const outOfStock = matchVariant && matchVariant.stock <= 0;
+                // stock=0 means made-to-order, always available
+                void matchVariant;
 
                 return (
                   <button
                     key={val}
                     onClick={() => handleSelect(key, val)}
-                    disabled={!!outOfStock}
                     className={`rounded-md border px-4 py-2 font-display text-sm uppercase transition-all duration-200 ${
                       active
                         ? "border-primary bg-primary text-primary-foreground shadow-md"
                         : "border-border text-foreground hover:border-primary/50"
-                    } ${outOfStock ? "opacity-40 cursor-not-allowed" : ""}`}
+                    }`}
                   >
                     {val}
                   </button>

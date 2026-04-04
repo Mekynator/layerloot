@@ -355,8 +355,8 @@ const ProductDetail = () => {
             </div>
 
             <div className="flex items-center gap-3 text-sm">
-              <span className={`font-medium ${activeStock > 0 ? "text-green-500" : "text-destructive"}`}>
-                {activeStock > 0 ? t("products.inStock", { count: activeStock }) : t("products.outOfStock")}
+              <span className="font-medium text-green-500">
+                {activeStock > 0 ? t("products.inStock", { count: activeStock }) : t("products.madeToOrder", "Made to order")}
               </span>
             </div>
 

@@ -169,16 +169,7 @@ function computeSmartActions(
     });
   }
 
-  // Reorder from last completed order
-  const completedOrder = orders.find((o) => o.status === "completed" || o.status === "delivered");
-  if (completedOrder) {
-    actions.push({
-      label: tt("account.smart.reorderLast", "Reorder previous item"),
-      icon: RotateCcw,
-      priority: 55,
-      onClick: () => onSwitchTab("orders"),
-    });
-  }
+  // Reorder section removed per design
 
   // New custom request (always available, low priority)
   actions.push({

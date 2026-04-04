@@ -94,7 +94,7 @@ export function useAdminDashboard(period: Period) {
         supabase.from("loyalty_points").select("points"),
         supabase.from("user_vouchers").select("id", { count: "exact", head: true })
           .eq("is_used", true),
-        supabase.from("products").select("id, name, stock").lte("stock", 5).eq("is_active", true).order("stock").limit(10),
+        supabase.from("products").select("id, name, stock").gt("stock", 0).lte("stock", 5).eq("is_active", true).order("stock").limit(10),
         supabase.from("custom_orders").select("status"),
         // New parallel queries
         supabase.from("site_blocks").select("id", { count: "exact", head: true }).eq("has_draft", true),

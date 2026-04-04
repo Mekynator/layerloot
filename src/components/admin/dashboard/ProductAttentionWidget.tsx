@@ -23,8 +23,8 @@ const ProductAttentionWidget = ({ data }: Props) => {
           {lowStock.slice(0, 5).map((p) => (
             <div key={p.id} className="flex items-center justify-between rounded-lg bg-amber-500/5 px-3 py-2">
               <span className="text-xs text-foreground truncate max-w-[60%]">{p.name}</span>
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${p.stock === 0 ? "bg-red-500/10 text-red-400" : "bg-amber-500/10 text-amber-400"}`}>
-                {p.stock === 0 ? "Out of stock" : `${p.stock} left`}
+              <span className="rounded-full px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-400">
+                {`${p.stock} left`}
               </span>
             </div>
           ))}

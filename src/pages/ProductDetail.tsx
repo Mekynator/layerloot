@@ -302,7 +302,7 @@ const ProductDetail = () => {
               animate={{ opacity: 1, scale: 1 }}
               className="flex items-baseline gap-3"
             >
-              <span className="font-display text-3xl font-bold text-primary">{formatPrice(activePrice)}</span>
+              <span className="font-display text-2xl font-bold text-primary md:text-3xl">{formatPrice(activePrice)}</span>
               {product.compare_at_price && !selectedVariant && (
                 <span className="text-lg text-muted-foreground line-through">
                   {formatPrice(Number(product.compare_at_price))}

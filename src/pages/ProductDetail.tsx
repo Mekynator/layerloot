@@ -16,7 +16,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import ModelViewer from "@/components/ModelViewer";
 import ProductConfigurator from "@/components/ProductConfigurator";
 import PrintInfo from "@/components/PrintInfo";
-import SizePreview from "@/components/SizePreview";
 import { ProductDetailSkeleton } from "@/components/shared/loading-states";
 import RatingStars from "@/components/social/RatingStars";
 import { formatPrice } from "@/lib/currency";
@@ -31,6 +30,8 @@ import { useRecentlyViewedProducts } from "@/hooks/use-recently-viewed";
 import { useProductDetailQuery } from "@/hooks/use-storefront";
 import ProductFOMOBar from "@/components/smart/ProductFOMOBar";
 import FrequentlyBoughtTogether from "@/components/smart/FrequentlyBoughtTogether";
+import ProductColorPicker, { type SelectedColor } from "@/components/product/ProductColorPicker";
+import ProductDetailSections from "@/components/product/ProductDetailSections";
 
 const AUTO_GALLERY_MS = 6500;
 
@@ -48,6 +49,7 @@ const ProductDetail = () => {
   const [reviewForm, setReviewForm] = useState({ rating: 5, title: "", comment: "" });
   const [submitting, setSubmitting] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
+  const [selectedColors, setSelectedColors] = useState<SelectedColor[]>([]);
 
   const heroImageRef = useRef<HTMLImageElement | null>(null);
   const addToCartSectionRef = useRef<HTMLDivElement | null>(null);
@@ -94,9 +96,17 @@ const ProductDetail = () => {
 
   const handleAddToCart = () => {
     if (!product) return;
+
+    // Validate color requirement
+    if ((product as any).enable_color_picker && (product as any).color_required && selectedColors.length === 0) {
+      toast({ title: "Please select a color", description: "Color selection is required for this product.", variant: "destructive" });
+      return;
+    }
+
     const variant = selectedVariant;
     const price = variant ? Number(variant.price) : Number(product.price);
-    const name = variant ? `${product.name} - ${variant.name}` : product.name;
+    const colorSuffix = selectedColors.length > 0 ? ` (${selectedColors.map(c => c.name).join(", ")})` : "";
+    const name = variant ? `${product.name} - ${variant.name}${colorSuffix}` : `${product.name}${colorSuffix}`;
     const id = variant ? `${product.id}-${variant.id}` : product.id;
 
     const rect = heroImageRef.current?.getBoundingClientRect();
@@ -339,20 +349,28 @@ const ProductDetail = () => {
               )}
             </motion.div>
 
-            <div className="grid gap-4 lg:grid-cols-2">
-              <motion.div whileHover={{ y: -2 }}>
-                <PrintInfo
-                  printTimeHours={product.print_time_hours}
-                  dimensionsCm={product.dimensions_cm}
-                  weightGrams={product.weight_grams}
-                  finishType={product.finish_type}
-                  materialType={product.material_type}
+            <motion.div whileHover={{ y: -2 }}>
+              <PrintInfo
+                printTimeHours={product.print_time_hours}
+                dimensionsCm={product.dimensions_cm}
+                weightGrams={product.weight_grams}
+                finishType={product.finish_type}
+                materialType={product.material_type}
+              />
+            </motion.div>
+
+            {/* Color Picker */}
+            {(product as any).enable_color_picker && (
+              <motion.div whileHover={{ y: -2 }} className="section-surface p-4">
+                <ProductColorPicker
+                  productId={product.id}
+                  selectionMode={(product as any).color_selection_mode ?? "single"}
+                  required={(product as any).color_required ?? false}
+                  selectedColors={selectedColors}
+                  onColorsChange={setSelectedColors}
                 />
               </motion.div>
-              <motion.div whileHover={{ y: -2 }}>
-                <SizePreview dimensionsCm={product.dimensions_cm} />
-              </motion.div>
-            </div>
+            )}
 
             <div className="flex items-center gap-3 text-sm">
               <span className="font-medium text-green-500">
@@ -397,6 +415,9 @@ const ProductDetail = () => {
             </div>
           </motion.div>
         </div>
+
+        {/* Product Detail Sections (Video / Carousel) */}
+        <ProductDetailSections productId={product.id} />
 
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 pt-4">
           <div className="flex flex-wrap items-end justify-between gap-4">

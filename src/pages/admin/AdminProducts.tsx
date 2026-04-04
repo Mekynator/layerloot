@@ -26,6 +26,8 @@ import RevisionHistoryPanel from "@/components/admin/RevisionHistoryPanel";
 import SchedulePublishDialog from "@/components/admin/SchedulePublishDialog";
 import { useProductAdmin, type ProductDraftData, type ProductStatus } from "@/hooks/use-product-admin";
 import { getStockTypeBadge, isMadeToOrder } from "@/lib/stock";
+import ProductColorManager from "@/components/admin/ProductColorManager";
+import ProductSectionsManager from "@/components/admin/ProductSectionsManager";
 
 interface Product {
   id: string;
@@ -51,6 +53,9 @@ interface Product {
   draft_data?: any;
   published_at?: string | null;
   scheduled_publish_at?: string | null;
+  enable_color_picker?: boolean;
+  color_selection_mode?: string;
+  color_required?: boolean;
 }
 
 interface Category { id: string; name: string; }
@@ -73,6 +78,9 @@ const emptyProduct = {
   finish_type: null as string | null,
   material_type: null as string | null,
   gift_finder_tag_ids: [] as string[],
+  enable_color_picker: false,
+  color_selection_mode: "single",
+  color_required: false,
 };
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "success" | "destructive" | "outline" }> = {
@@ -250,6 +258,9 @@ const AdminProducts = () => {
         weight_grams: form.weight_grams || null,
         finish_type: form.finish_type || null,
         material_type: form.material_type || null,
+        enable_color_picker: form.enable_color_picker,
+        color_selection_mode: form.color_selection_mode,
+        color_required: form.color_required,
       };
 
       if (editingId) {
@@ -288,6 +299,9 @@ const AdminProducts = () => {
       finish_type: source.finish_type ?? null,
       material_type: source.material_type ?? null,
       gift_finder_tag_ids: product.giftFinderTags?.map((tag) => tag.id) ?? [],
+      enable_color_picker: source.enable_color_picker ?? false,
+      color_selection_mode: source.color_selection_mode ?? "single",
+      color_required: source.color_required ?? false,
     });
     setEditingId(product.id);
     setGiftTagPickerValue("none");
@@ -334,10 +348,12 @@ const AdminProducts = () => {
           <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
             <DialogHeader><DialogTitle className="font-display uppercase">{editingId ? "Edit" : "Add"} Product</DialogTitle></DialogHeader>
             <Tabs defaultValue="basic" className="space-y-4">
-              <TabsList className="w-full grid grid-cols-4">
-                <TabsTrigger value="basic">Basic Info</TabsTrigger>
+              <TabsList className="w-full grid grid-cols-6">
+                <TabsTrigger value="basic">Basic</TabsTrigger>
                 <TabsTrigger value="media">Media</TabsTrigger>
                 <TabsTrigger value="inventory">Inventory</TabsTrigger>
+                <TabsTrigger value="colors">Colors</TabsTrigger>
+                <TabsTrigger value="sections">Sections</TabsTrigger>
                 <TabsTrigger value="details">Details</TabsTrigger>
               </TabsList>
 
@@ -419,6 +435,22 @@ const AdminProducts = () => {
                     </div>
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              {/* Colors Tab */}
+              <TabsContent value="colors" className="space-y-4">
+                <ProductColorManager
+                  productId={editingId ?? "draft-new"}
+                  enableColorPicker={form.enable_color_picker}
+                  colorSelectionMode={form.color_selection_mode}
+                  colorRequired={form.color_required}
+                  onConfigChange={(config) => setForm({ ...form, ...config })}
+                />
+              </TabsContent>
+
+              {/* Sections Tab */}
+              <TabsContent value="sections" className="space-y-4">
+                <ProductSectionsManager productId={editingId ?? "draft-new"} />
               </TabsContent>
 
               {/* D. Details */}

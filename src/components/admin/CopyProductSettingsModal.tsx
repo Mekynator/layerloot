@@ -116,9 +116,8 @@ const CopyProductSettingsModal = ({ open, onOpenChange, targetProductId, onApply
 
       for (const cat of CATEGORIES) {
         if (!selected.has(cat.key)) continue;
-        if (cat.fields) {
+        if ("fields" in cat && cat.fields) {
           for (const field of cat.fields) {
-            // For basic: skip slug when editing existing product
             if (field === "slug" && targetProductId) continue;
             result[field] = merged[field] ?? null;
           }
@@ -127,23 +126,21 @@ const CopyProductSettingsModal = ({ open, onOpenChange, targetProductId, onApply
 
       // Copy colors (swatches) if selected
       if (selected.has("colors") && targetProductId && !targetProductId.startsWith("draft-")) {
-        const { data: srcColors } = await supabase
+        const { data: srcColors } = await (supabase as any)
           .from("product_colors")
           .select("*")
           .eq("product_id", sourceId)
           .order("sort_order");
 
         if (srcColors && srcColors.length > 0) {
-          // Delete existing colors on target
-          await supabase.from("product_colors").delete().eq("product_id", targetProductId);
-          // Insert copied colors
+          await (supabase as any).from("product_colors").delete().eq("product_id", targetProductId);
           const newColors = srcColors.map((c: any) => ({
             product_id: targetProductId,
             color_name: c.color_name,
             hex_value: c.hex_value,
             sort_order: c.sort_order,
           }));
-          await supabase.from("product_colors").insert(newColors);
+          await (supabase as any).from("product_colors").insert(newColors);
         }
       }
 

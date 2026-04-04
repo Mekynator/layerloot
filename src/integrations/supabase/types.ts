@@ -1830,6 +1830,91 @@ export type Database = {
           },
         ]
       }
+      product_color_options: {
+        Row: {
+          color_name: string
+          created_at: string
+          group_label: string | null
+          hex_value: string
+          id: string
+          is_active: boolean
+          product_id: string
+          sort_order: number
+        }
+        Insert: {
+          color_name: string
+          created_at?: string
+          group_label?: string | null
+          hex_value?: string
+          id?: string
+          is_active?: boolean
+          product_id: string
+          sort_order?: number
+        }
+        Update: {
+          color_name?: string
+          created_at?: string
+          group_label?: string | null
+          hex_value?: string
+          id?: string
+          is_active?: boolean
+          product_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_color_options_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_detail_sections: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          media_urls: string[]
+          product_id: string
+          section_type: string
+          sort_order: number
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          media_urls?: string[]
+          product_id: string
+          section_type?: string
+          sort_order?: number
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          media_urls?: string[]
+          product_id?: string
+          section_type?: string
+          sort_order?: number
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_detail_sections_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_gift_finder_tags: {
         Row: {
           created_at: string
@@ -2002,11 +2087,14 @@ export type Database = {
         Row: {
           archived_at: string | null
           category_id: string | null
+          color_required: boolean
+          color_selection_mode: string
           compare_at_price: number | null
           created_at: string
           description: string | null
           dimensions_cm: Json | null
           draft_data: Json | null
+          enable_color_picker: boolean
           finish_type: string | null
           gift_finder_tag_id: string | null
           has_draft: boolean
@@ -2032,11 +2120,14 @@ export type Database = {
         Insert: {
           archived_at?: string | null
           category_id?: string | null
+          color_required?: boolean
+          color_selection_mode?: string
           compare_at_price?: number | null
           created_at?: string
           description?: string | null
           dimensions_cm?: Json | null
           draft_data?: Json | null
+          enable_color_picker?: boolean
           finish_type?: string | null
           gift_finder_tag_id?: string | null
           has_draft?: boolean
@@ -2062,11 +2153,14 @@ export type Database = {
         Update: {
           archived_at?: string | null
           category_id?: string | null
+          color_required?: boolean
+          color_selection_mode?: string
           compare_at_price?: number | null
           created_at?: string
           description?: string | null
           dimensions_cm?: Json | null
           draft_data?: Json | null
+          enable_color_picker?: boolean
           finish_type?: string | null
           gift_finder_tag_id?: string | null
           has_draft?: boolean

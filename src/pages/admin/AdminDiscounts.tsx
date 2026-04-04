@@ -726,75 +726,147 @@ const AdminDiscounts = () => {
             )}
 
             {form.scope === "user" && (
-              <div className="space-y-3">
-                <Label>User Emails</Label>
+              <div className="space-y-4 rounded-lg border border-border/40 bg-muted/20 p-4">
+                <Label className="text-sm font-semibold">Audience Targeting</Label>
 
-                <Popover open={userPickerOpen} onOpenChange={setUserPickerOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      role="combobox"
-                      className="w-full justify-between font-normal"
-                    >
-                      <span className="truncate text-left">{userButtonLabel}</span>
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-
-                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                    <div className="border-b p-3">
-                      <div className="relative">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          value={userSearch}
-                          onChange={(e) => setUserSearch(e.target.value)}
-                          placeholder="Search email..."
-                          className="pl-9"
-                        />
+                {/* Audience group checkboxes */}
+                <div className="space-y-2">
+                  {([
+                    { value: "specific" as AudienceGroup, label: "Specific Users", desc: "Pick individual users by email or name" },
+                    { value: "existing" as AudienceGroup, label: "All Existing Users", desc: "Every registered account" },
+                    { value: "new_registered" as AudienceGroup, label: "Newly Registered", desc: "Users who signed up recently" },
+                    { value: "newcomers" as AudienceGroup, label: "Newcomers", desc: "New users based on configurable logic" },
+                    { value: "invited" as AudienceGroup, label: "Invited Users", desc: "Users who haven't signed in yet (pending invites)" },
+                  ]).map((opt) => (
+                    <label key={opt.value} className="flex items-start gap-3 rounded-md border border-border/30 bg-card/60 p-3 cursor-pointer hover:bg-accent/10 transition-colors">
+                      <Checkbox
+                        checked={form.audience_groups.includes(opt.value)}
+                        onCheckedChange={() => toggleAudienceGroup(opt.value)}
+                        className="mt-0.5"
+                      />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground">{opt.label}</p>
+                        <p className="text-xs text-muted-foreground">{opt.desc}</p>
                       </div>
-                    </div>
+                    </label>
+                  ))}
+                </div>
 
-                    <div className="max-h-64 overflow-y-auto">
-                      {filteredUsers.length > 0 ? (
-                        filteredUsers.map((user) => {
-                          const selected = form.scope_target_user_ids.includes(user.id);
-
-                          return (
-                            <button
-                              key={user.id}
-                              type="button"
-                              onClick={() => toggleUserSelection(user.id)}
-                              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground"
-                            >
-                              <span className="truncate">{user.label}</span>
-                              <Check className={`ml-3 h-4 w-4 ${selected ? "opacity-100" : "opacity-0"}`} />
-                            </button>
-                          );
-                        })
-                      ) : (
-                        <div className="px-3 py-3 text-sm text-muted-foreground">No users found</div>
-                      )}
-                    </div>
-                  </PopoverContent>
-                </Popover>
-
-                {selectedUsers.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {selectedUsers.map((user) => (
-                      <Badge key={user.id} variant="secondary" className="flex items-center gap-1 pr-1">
-                        <span className="max-w-[220px] truncate">{user.label}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeSelectedUser(user.id)}
-                          className="rounded-full p-0.5 hover:bg-black/10"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
+                {/* Newly registered config */}
+                {form.audience_groups.includes("new_registered") && (
+                  <div className="rounded-md border border-border/30 bg-card/40 p-3 space-y-2">
+                    <Label className="text-xs">Registered within last</Label>
+                    <Select value={String(form.new_registered_days)} onValueChange={(v) => setForm({ ...form, new_registered_days: Number(v) })}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="7">7 days</SelectItem>
+                        <SelectItem value="14">14 days</SelectItem>
+                        <SelectItem value="30">30 days</SelectItem>
+                        <SelectItem value="60">60 days</SelectItem>
+                        <SelectItem value="90">90 days</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
+
+                {/* Newcomers config */}
+                {form.audience_groups.includes("newcomers") && (
+                  <div className="rounded-md border border-border/30 bg-card/40 p-3 space-y-2">
+                    <Label className="text-xs">Newcomer logic</Label>
+                    <Select value={form.newcomer_logic} onValueChange={(v) => setForm({ ...form, newcomer_logic: v as "days" | "zero_orders" })}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="days">Registered within X days</SelectItem>
+                        <SelectItem value="zero_orders">Users with no activity</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {form.newcomer_logic === "days" && (
+                      <div className="pt-1">
+                        <Label className="text-xs">Within last</Label>
+                        <Select value={String(form.newcomer_days)} onValueChange={(v) => setForm({ ...form, newcomer_days: Number(v) })}>
+                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="7">7 days</SelectItem>
+                            <SelectItem value="14">14 days</SelectItem>
+                            <SelectItem value="30">30 days</SelectItem>
+                            <SelectItem value="60">60 days</SelectItem>
+                            <SelectItem value="90">90 days</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Specific users picker */}
+                {form.audience_groups.includes("specific") && (
+                  <div className="space-y-2">
+                    <Label className="text-xs">Search & select users</Label>
+                    <Popover open={userPickerOpen} onOpenChange={setUserPickerOpen}>
+                      <PopoverTrigger asChild>
+                        <Button type="button" variant="outline" role="combobox" className="w-full justify-between font-normal">
+                          <span className="truncate text-left">{userButtonLabel}</span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                        <div className="border-b p-3">
+                          <div className="relative">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input value={userSearch} onChange={(e) => setUserSearch(e.target.value)} placeholder="Search email or name..." className="pl-9" />
+                          </div>
+                        </div>
+                        <div className="max-h-64 overflow-y-auto">
+                          {filteredUsers.length > 0 ? (
+                            filteredUsers.map((user) => {
+                              const selected = form.scope_target_user_ids.includes(user.id);
+                              return (
+                                <button key={user.id} type="button" onClick={() => toggleUserSelection(user.id)}
+                                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground">
+                                  <span className="truncate">{user.label}</span>
+                                  <Check className={`ml-3 h-4 w-4 ${selected ? "opacity-100" : "opacity-0"}`} />
+                                </button>
+                              );
+                            })
+                          ) : (
+                            <div className="px-3 py-3 text-sm text-muted-foreground">No users found</div>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+
+                    {selectedUsers.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedUsers.map((user) => (
+                          <Badge key={user.id} variant="secondary" className="flex items-center gap-1 pr-1">
+                            <span className="max-w-[220px] truncate">{user.label}</span>
+                            <button type="button" onClick={() => removeSelectedUser(user.id)} className="rounded-full p-0.5 hover:bg-black/10">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Live matched preview */}
+                <div className="rounded-md border border-primary/20 bg-primary/5 p-3 flex items-center gap-3">
+                  <Users className="h-5 w-5 text-primary shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{matchedAudienceUsers.length} user{matchedAudienceUsers.length !== 1 ? "s" : ""} matched</p>
+                    <p className="text-xs text-muted-foreground">
+                      {form.audience_groups.map((g) => {
+                        if (g === "specific") return `${form.scope_target_user_ids.length} manually selected`;
+                        if (g === "existing") return "all existing users";
+                        if (g === "new_registered") return `registered in last ${form.new_registered_days} days`;
+                        if (g === "newcomers") return form.newcomer_logic === "days" ? `newcomers (last ${form.newcomer_days} days)` : "newcomers (no activity)";
+                        if (g === "invited") return "invited users";
+                        return g;
+                      }).join(" + ")}
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
 

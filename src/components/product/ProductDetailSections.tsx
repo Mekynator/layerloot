@@ -135,7 +135,10 @@ function VideoSection({ section }: { section: Section }) {
         ) : (
           <video
             src={url}
-            controls
+            autoPlay
+            muted
+            loop
+            playsInline
             className="w-full rounded-2xl"
             preload="metadata"
           />

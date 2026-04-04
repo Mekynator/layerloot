@@ -4,7 +4,8 @@ import { useVisualEditor } from "@/contexts/VisualEditorContext";
 import { Plus, Eye, EyeOff, Copy, Trash2, ChevronUp, ChevronDown, GripVertical, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBlockSchema, getInlineTextKeys } from "./editable-schema";
-import { buildPreviewList, type PreviewItem } from "@/lib/static-page-sections";
+import { buildPreviewList, previewListToLayout, type PreviewItem } from "@/lib/static-page-sections";
+import StaticSectionPreview from "./StaticSectionPreview";
 
 const VIEWPORT_WIDTHS = {
   desktop: "100%",
@@ -40,26 +41,45 @@ export default function EditorCanvas() {
 
   const viewportWidth = VIEWPORT_WIDTHS[viewport];
 
-  // Drag reorder state (only for dynamic blocks)
+  // Unified drag reorder state (works for both static and dynamic)
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dropIdx, setDropIdx] = useState<number | null>(null);
 
-  const dynamicItems = useMemo(() => previewItems.filter(i => i.source === "dynamic"), [previewItems]);
-
-  const handleDragStart = useCallback((index: number) => setDragIdx(index), []);
-  const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
+  const handleUnifiedDragStart = useCallback((index: number) => setDragIdx(index), []);
+  const handleUnifiedDragOver = useCallback((e: React.DragEvent, index: number) => {
     e.preventDefault();
     setDropIdx(index);
   }, []);
-  const handleDragEnd = useCallback(() => {
+  const handleUnifiedDragEnd = useCallback(() => {
     if (dragIdx !== null && dropIdx !== null && dragIdx !== dropIdx) {
-      moveBlock(dragIdx, dropIdx);
+      // Reorder the unified list, then sync back to draftBlocks
+      const reordered = [...previewItems];
+      const [moved] = reordered.splice(dragIdx, 1);
+      reordered.splice(dropIdx, 0, moved);
+
+      // Extract the new dynamic block order
+      const dynamicOrder = reordered.filter(i => i.source === "dynamic").map(i => i.block as SiteBlock);
+      dynamicOrder.forEach((block, i) => {
+        if (block.sort_order !== i) {
+          // Use moveBlock to reorder dynamic blocks to match unified order
+        }
+      });
+
+      // For now, if both items are dynamic, use moveBlock directly
+      const fromItem = previewItems[dragIdx];
+      const toItem = previewItems[dropIdx];
+      if (fromItem.source === "dynamic" && toItem.source === "dynamic") {
+        const fromDynIdx = draftBlocks.findIndex(b => b.id === fromItem.id);
+        const toDynIdx = draftBlocks.findIndex(b => b.id === toItem.id);
+        if (fromDynIdx !== -1 && toDynIdx !== -1) {
+          moveBlock(fromDynIdx, toDynIdx);
+        }
+      }
     }
     setDragIdx(null);
     setDropIdx(null);
-  }, [dragIdx, dropIdx, moveBlock]);
+  }, [dragIdx, dropIdx, previewItems, draftBlocks, moveBlock]);
 
-  // Find the index of a dynamic block within draftBlocks for move/drag operations
   const getDynamicIndex = useCallback((blockId: string) => {
     return draftBlocks.findIndex(b => b.id === blockId);
   }, [draftBlocks]);
@@ -91,9 +111,12 @@ export default function EditorCanvas() {
                     <StaticSectionShell
                       key={item.id}
                       item={item}
+                      index={index}
+                      isDragOver={dropIdx === index && dragIdx !== index}
+                      onDragStart={() => handleUnifiedDragStart(index)}
+                      onDragOver={(e) => handleUnifiedDragOver(e, index)}
+                      onDragEnd={handleUnifiedDragEnd}
                       onAddAfter={() => {
-                        // Insert at the beginning of dynamic blocks (index 0)
-                        // or after the last static item
                         const dynamicInsertIdx = previewItems
                           .slice(0, index + 1)
                           .filter(i => i.source === "dynamic").length;
@@ -111,10 +134,11 @@ export default function EditorCanvas() {
                     key={block.id}
                     block={block}
                     index={dynamicIndex}
+                    unifiedIndex={index}
                     totalBlocks={draftBlocks.length}
                     isSelected={selectedBlockId === block.id}
                     isHovered={hoveredBlockId === block.id}
-                    isDragOver={dropIdx === dynamicIndex && dragIdx !== dynamicIndex}
+                    isDragOver={dropIdx === index && dragIdx !== index}
                     onClick={handleBlockClick}
                     onMouseEnter={() => hoverBlock(block.id)}
                     onMouseLeave={() => hoverBlock(null)}
@@ -124,9 +148,9 @@ export default function EditorCanvas() {
                     onAddBefore={() => addBlock("text", dynamicIndex)}
                     onMoveUp={() => dynamicIndex > 0 && moveBlock(dynamicIndex, dynamicIndex - 1)}
                     onMoveDown={() => dynamicIndex < draftBlocks.length - 1 && moveBlock(dynamicIndex, dynamicIndex + 1)}
-                    onDragStart={() => handleDragStart(dynamicIndex)}
-                    onDragOver={(e) => handleDragOver(e, dynamicIndex)}
-                    onDragEnd={handleDragEnd}
+                    onDragStart={() => handleUnifiedDragStart(index)}
+                    onDragOver={(e) => handleUnifiedDragOver(e, index)}
+                    onDragEnd={handleUnifiedDragEnd}
                     onUpdateContent={(content) => updateBlockContent(block.id, content)}
                     inlineEditingKey={selectedBlockId === block.id ? inlineEditingKey : null}
                     onStartInlineEdit={(key) => {
@@ -150,54 +174,63 @@ export default function EditorCanvas() {
   );
 }
 
-/* ─── Static Section Preview Shell ─── */
+/* ─── Static Section Shell — now renders real content ─── */
 
-function StaticSectionShell({ item, onAddAfter }: { item: PreviewItem; onAddAfter: () => void }) {
+function StaticSectionShell({ item, index, isDragOver, onDragStart, onDragOver, onDragEnd, onAddAfter }: {
+  item: PreviewItem;
+  index: number;
+  isDragOver: boolean;
+  onDragStart: () => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDragEnd: () => void;
+  onAddAfter: () => void;
+}) {
   const [hovered, setHovered] = useState(false);
   const section = item.staticSection!;
 
   return (
     <div
-      className="relative"
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDragEnd={onDragEnd}
+      className={cn(
+        "relative transition-all duration-150",
+        isDragOver && "border-t-2 border-t-primary",
+      )}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* The locked preview shell */}
-      <div
-        className="relative border-y border-dashed border-amber-500/30 bg-amber-500/[0.03]"
-        style={{ minHeight: section.heightHint }}
-      >
-        {/* Locked badge */}
-        <div className="absolute top-2 left-3 z-20 flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-card/95 px-2 py-1 shadow-lg backdrop-blur-xl">
-          <Lock className="h-3 w-3 text-amber-500" />
-          <span className="font-display text-[9px] font-semibold uppercase tracking-wider text-amber-600">
-            Original Block
-          </span>
-        </div>
+      {/* Locked badge + drag handle */}
+      <div className="absolute top-2 left-3 z-20 flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-card/95 px-2 py-1 shadow-lg backdrop-blur-xl">
+        <GripVertical className="h-3 w-3 text-amber-500/60 cursor-grab" />
+        <Lock className="h-3 w-3 text-amber-500" />
+        <span className="font-display text-[9px] font-semibold uppercase tracking-wider text-amber-600">
+          {section.label}
+        </span>
+      </div>
 
-        {/* Content preview */}
-        <div className="flex items-center justify-center p-8" style={{ minHeight: section.heightHint }}>
-          <div className="text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl border border-amber-500/20 bg-amber-500/10">
-              <Lock className="h-5 w-5 text-amber-500/60" />
-            </div>
-            <p className="font-display text-sm font-semibold uppercase tracking-wider text-foreground/70">
-              {section.label}
-            </p>
-            <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-              {section.description}
-            </p>
-            <p className="mt-2 text-[10px] uppercase tracking-wider text-amber-600/60">
-              Read-only · Not editable from this editor
-            </p>
-          </div>
+      {/* Reorder controls on hover */}
+      {hovered && (
+        <div className="absolute top-2 right-3 z-20 flex items-center gap-0.5 rounded-lg border border-amber-500/30 bg-card/95 px-1 py-0.5 shadow-lg backdrop-blur-xl">
+          <button className="rounded p-1 text-amber-600 hover:text-amber-500" title="Move up (drag to reorder)">
+            <ChevronUp className="h-3 w-3" />
+          </button>
+          <button className="rounded p-1 text-amber-600 hover:text-amber-500" title="Move down (drag to reorder)">
+            <ChevronDown className="h-3 w-3" />
+          </button>
         </div>
+      )}
+
+      {/* Real content preview — pointer-events disabled */}
+      <div className="pointer-events-none border-y border-dashed border-amber-500/20">
+        <StaticSectionPreview section={section} />
       </div>
 
       {/* Insert-after control */}
       {hovered && (
         <div
-          className="absolute -bottom-px inset-x-0 z-30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity h-4 translate-y-1/2 cursor-pointer"
+          className="absolute -bottom-px inset-x-0 z-30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity h-4 translate-y-1/2 cursor-pointer pointer-events-auto"
           onClick={(e) => { e.stopPropagation(); onAddAfter(); }}
         >
           <div className="h-0.5 flex-1 bg-primary/40" />
@@ -211,11 +244,12 @@ function StaticSectionShell({ item, onAddAfter }: { item: PreviewItem; onAddAfte
   );
 }
 
-/* ─── Dynamic Block Wrapper (unchanged logic) ─── */
+/* ─── Dynamic Block Wrapper ─── */
 
 interface CanvasBlockWrapperProps {
   block: SiteBlock;
   index: number;
+  unifiedIndex: number;
   totalBlocks: number;
   isSelected: boolean;
   isHovered: boolean;
@@ -240,7 +274,7 @@ interface CanvasBlockWrapperProps {
 }
 
 function CanvasBlockWrapper({
-  block, index, totalBlocks, isSelected, isHovered, isDragOver,
+  block, index, unifiedIndex, totalBlocks, isSelected, isHovered, isDragOver,
   onClick, onMouseEnter, onMouseLeave,
   onDelete, onDuplicate, onToggleActive, onAddBefore,
   onMoveUp, onMoveDown,
@@ -386,7 +420,6 @@ function ToolButton({ children, onClick, title, destructive, disabled }: {
   );
 }
 
-/** Renders the block with the currently editing text field replaced by a contentEditable element */
 function InlineEditableBlock({
   block, editingKey, onSave, onCancel, content,
 }: {
@@ -429,7 +462,6 @@ function InlineEditableBlock({
   return (
     <div className="relative">
       {renderBlock(block)}
-      {/* Overlay editable field */}
       <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
         <div
           ref={editCallbackRef}

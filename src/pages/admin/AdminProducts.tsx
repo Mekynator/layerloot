@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Archive, Calculator, Calendar, CheckCircle, Eye, History, Layers,
+  Archive, Calculator, Calendar, CheckCircle, Copy, Eye, History, Layers,
   Pencil, Plus, Tag, Trash2, X, XCircle, Search, Package, Repeat,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";

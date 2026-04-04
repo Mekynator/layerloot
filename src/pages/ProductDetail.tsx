@@ -314,6 +314,9 @@ const ProductDetail = () => {
               <p className="max-w-2xl leading-relaxed text-muted-foreground">{product.description}</p>
             )}
 
+            {/* Color summary tile under description */}
+            <ProductColorSummary productId={product.id} />
+
             <motion.div whileHover={{ y: -2 }} className="section-surface p-4">
 
               {hasConfiguratorAttrs && (

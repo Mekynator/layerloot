@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import BlockRenderer, { type SiteBlock } from "@/components/admin/BlockRenderer";
+import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 
 interface Section {
   id: string;

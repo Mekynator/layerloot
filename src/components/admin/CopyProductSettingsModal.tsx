@@ -51,8 +51,9 @@ const CATEGORIES = [
   {
     key: "details",
     label: "Details",
-    description: "Material, finish, dimensions, weight, print time",
+    description: "Material, finish, dimensions, weight, print time, gift finder tags",
     fields: ["material_type", "finish_type", "dimensions_cm", "weight_grams", "print_time_hours"],
+    extra: "gift_tags",
   },
 ] as const;
 

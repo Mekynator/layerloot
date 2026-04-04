@@ -20,12 +20,16 @@ export interface ProductDraftData {
   weight_grams: number | null;
   finish_type: string | null;
   material_type: string | null;
+  enable_color_picker?: boolean;
+  color_selection_mode?: string;
+  color_required?: boolean;
 }
 
 const DRAFT_FIELDS: (keyof ProductDraftData)[] = [
   "name", "slug", "description", "price", "compare_at_price",
   "category_id", "images", "stock", "is_featured", "model_url",
   "print_time_hours", "dimensions_cm", "weight_grams", "finish_type", "material_type",
+  "enable_color_picker", "color_selection_mode", "color_required",
 ];
 
 function snapshotProduct(product: any): ProductDraftData {

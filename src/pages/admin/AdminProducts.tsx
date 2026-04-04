@@ -258,6 +258,9 @@ const AdminProducts = () => {
         weight_grams: form.weight_grams || null,
         finish_type: form.finish_type || null,
         material_type: form.material_type || null,
+        enable_color_picker: form.enable_color_picker,
+        color_selection_mode: form.color_selection_mode,
+        color_required: form.color_required,
       };
 
       if (editingId) {

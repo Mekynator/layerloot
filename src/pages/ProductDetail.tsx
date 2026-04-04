@@ -367,7 +367,7 @@ const ProductDetail = () => {
                 size="lg"
                 className={`w-full font-display uppercase tracking-wider transition-all duration-300 shadow-[0_0_20px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_32px_hsl(var(--primary)/0.35)] ${justAdded ? "shadow-[0_0_28px_hsl(var(--primary)/0.45)]" : ""}`}
                 onClick={handleAddToCart}
-                disabled={activeStock <= 0 || (variants.length > 0 && !selectedVariant && !hasConfiguratorAttrs)}
+                disabled={(variants.length > 0 && !selectedVariant && !hasConfiguratorAttrs)}
               >
                 {justAdded ? (
                   <>

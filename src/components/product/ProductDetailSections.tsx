@@ -151,8 +151,32 @@ function VideoSection({ section }: { section: Section }) {
 function ImageCarouselSection({ section }: { section: Section }) {
   const [current, setCurrent] = useState(0);
   const images = section.media_urls ?? [];
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   if (images.length === 0) return null;
+
+  const goTo = (index: number) => {
+    setCurrent(index);
+  };
+
+  const goNext = () => goTo((current + 1) % images.length);
+  const goPrev = () => goTo((current - 1 + images.length) % images.length);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartRef.current || images.length <= 1) return;
+    const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+    const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+      if (dx < 0) goNext();
+      else goPrev();
+    }
+    touchStartRef.current = null;
+  };
 
   return (
     <motion.div
@@ -162,16 +186,21 @@ function ImageCarouselSection({ section }: { section: Section }) {
       className="space-y-3"
     >
       {section.title && (
-        <h3 className="font-display text-lg font-bold uppercase text-foreground">{section.title}</h3>
+        <h3 className="font-display text-base font-bold uppercase text-foreground md:text-lg">{section.title}</h3>
       )}
-      <div className="relative overflow-hidden rounded-2xl bg-card">
-        <div className="aspect-[16/9]">
+      <div
+        className="relative overflow-hidden rounded-xl bg-card md:rounded-2xl touch-pan-y"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div className="aspect-[4/3] md:aspect-[16/9]">
           <AnimatePresence mode="wait">
             <motion.img
               key={current}
               src={images[current]}
               alt={`${section.title || "Gallery"} ${current + 1}`}
               className="h-full w-full object-cover"
+              loading="lazy"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -185,25 +214,26 @@ function ImageCarouselSection({ section }: { section: Section }) {
             <Button
               variant="ghost"
               size="icon"
-              className="absolute left-3 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background"
-              onClick={() => setCurrent((p) => (p - 1 + images.length) % images.length)}
+              className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background h-8 w-8 md:h-10 md:w-10 md:left-3"
+              onClick={goPrev}
             >
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-4 w-4 md:h-5 md:w-5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-3 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background"
-              onClick={() => setCurrent((p) => (p + 1) % images.length)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background h-8 w-8 md:h-10 md:w-10 md:right-3"
+              onClick={goNext}
             >
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight className="h-4 w-4 md:h-5 md:w-5" />
             </Button>
-            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-background/65 px-3 py-1.5 backdrop-blur-sm">
+            <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-background/65 px-2.5 py-1 backdrop-blur-sm md:bottom-3 md:px-3 md:py-1.5">
               {images.map((_, idx) => (
                 <button
                   key={idx}
-                  onClick={() => setCurrent(idx)}
-                  className={`h-1.5 rounded-full transition-all ${idx === current ? "w-5 bg-foreground" : "w-1.5 bg-foreground/40"}`}
+                  onClick={() => goTo(idx)}
+                  className={`h-1.5 rounded-full transition-all ${idx === current ? "w-4 bg-foreground md:w-5" : "w-1.5 bg-foreground/40"}`}
+                  aria-label={`Image ${idx + 1}`}
                 />
               ))}
             </div>
@@ -212,16 +242,16 @@ function ImageCarouselSection({ section }: { section: Section }) {
       </div>
 
       {images.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div ref={scrollRef} className="flex gap-1.5 overflow-x-auto pb-1 md:gap-2 scrollbar-none">
           {images.map((img, i) => (
             <button
               key={i}
-              onClick={() => setCurrent(i)}
-              className={`h-14 w-14 shrink-0 overflow-hidden rounded-lg transition-all ${
+              onClick={() => goTo(i)}
+              className={`h-12 w-12 shrink-0 overflow-hidden rounded-lg transition-all md:h-14 md:w-14 ${
                 i === current ? "ring-2 ring-primary" : "opacity-60 hover:opacity-100"
               }`}
             >
-              <img src={img} alt="" className="h-full w-full object-cover" />
+              <img src={img} alt="" className="h-full w-full object-cover" loading="lazy" />
             </button>
           ))}
         </div>

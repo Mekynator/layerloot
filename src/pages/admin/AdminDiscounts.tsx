@@ -253,6 +253,35 @@ const AdminDiscounts = () => {
   const openEdit = (discount: DiscountCode) => {
     setEditing(discount);
     setUserSearch("");
+
+    // Parse audience config from stored JSON, or fall back to legacy comma-separated IDs
+    let audienceGroups: AudienceGroup[] = ["specific"];
+    let specificIds: string[] = [];
+    let newRegisteredDays = 14;
+    let newcomerLogic: "days" | "zero_orders" = "days";
+    let newcomerDays = 30;
+
+    if (discount.scope === "user" && discount.scope_target_user_id) {
+      try {
+        const parsed = JSON.parse(discount.scope_target_user_id);
+        if (parsed.groups && Array.isArray(parsed.groups)) {
+          audienceGroups = parsed.groups;
+          specificIds = parsed.specific_ids || [];
+          newRegisteredDays = parsed.new_registered_days || 14;
+          newcomerLogic = parsed.newcomer_logic || "days";
+          newcomerDays = parsed.newcomer_days || 30;
+        } else {
+          // Not valid audience JSON, treat as legacy
+          specificIds = normalizeUserIds(discount.scope_target_user_id);
+          audienceGroups = specificIds.length > 0 ? ["specific"] : ["existing"];
+        }
+      } catch {
+        // Legacy comma-separated user IDs
+        specificIds = normalizeUserIds(discount.scope_target_user_id);
+        audienceGroups = specificIds.length > 0 ? ["specific"] : ["existing"];
+      }
+    }
+
     setForm({
       code: discount.code,
       description: discount.description || "",
@@ -267,11 +296,11 @@ const AdminDiscounts = () => {
       is_active: discount.is_active,
       starts_at: discount.starts_at,
       expires_at: discount.expires_at,
-      scope_target_user_ids: normalizeUserIds(discount.scope_target_user_id),
-      audience_groups: normalizeUserIds(discount.scope_target_user_id).length > 0 ? ["specific"] : ["existing"],
-      new_registered_days: 14,
-      newcomer_logic: "days",
-      newcomer_days: 30,
+      scope_target_user_ids: specificIds,
+      audience_groups: audienceGroups,
+      new_registered_days: newRegisteredDays,
+      newcomer_logic: newcomerLogic,
+      newcomer_days: newcomerDays,
     });
     setDialogOpen(true);
   };

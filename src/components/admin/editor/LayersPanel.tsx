@@ -1,10 +1,10 @@
-import { useCallback, useState, useRef } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   GripVertical, Eye, EyeOff, Trash2, Copy, Plus,
   LayoutGrid, ChevronUp, ChevronDown,
   Square, Type, Image, Columns, PlayCircle, MousePointer, Link2, Code, Globe, Mail,
   Truck, Star, HelpCircle, ShieldCheck, Layers, Package, FolderTree, Search,
-  Box, BookmarkPlus,
+  Box, BookmarkPlus, Lock,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import InsertReusableDialog from "@/components/admin/reusable/InsertReusableDialog";
+import { buildPreviewList } from "@/lib/static-page-sections";
 
 const BLOCK_ICONS: Record<string, any> = {
   hero: Square, shipping_banner: Truck, entry_cards: Layers, categories: FolderTree,
@@ -41,7 +42,7 @@ interface LayersPanelProps {
 
 export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
   const {
-    draftBlocks, selectedBlockId, hoveredBlockId,
+    draftBlocks, selectedBlockId, hoveredBlockId, activePage,
     selectBlock, hoverBlock, selectedPage,
     deleteBlock, duplicateBlock, toggleBlockActive, moveBlock,
     addBlock,
@@ -53,6 +54,14 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [reusableOpen, setReusableOpen] = useState(false);
 
+  const previewItems = useMemo(
+    () => buildPreviewList(activePage, draftBlocks),
+    [activePage, draftBlocks],
+  );
+
+  const staticCount = useMemo(() => previewItems.filter(i => i.source === "static").length, [previewItems]);
+  const totalCount = previewItems.length;
+
   const handleDragEnd = useCallback(() => {
     if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
       moveBlock(dragIndex, dragOverIndex);
@@ -61,11 +70,11 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
     setDragOverIndex(null);
   }, [dragIndex, dragOverIndex, moveBlock]);
 
-  const filteredBlocks = searchQuery
-    ? draftBlocks.filter(b =>
-        (b.title || b.block_type).toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredItems = searchQuery
+    ? previewItems.filter(item =>
+        item.label.toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : draftBlocks;
+    : previewItems;
 
   const saveAsReusable = async (blockId: string) => {
     const block = draftBlocks.find(b => b.id === blockId);
@@ -83,11 +92,6 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
 
   const handleInsertReusable = (data: { block_type: string; content: any; title: string }) => {
     addBlock(data.block_type);
-    // The addBlock creates default content, so we need to update it
-    // We'll use a setTimeout to let the state update, then patch
-    setTimeout(() => {
-      const newest = draftBlocks[draftBlocks.length]; // won't work perfectly but addBlock selects it
-    }, 0);
     toast.success("Reusable block inserted");
   };
 
@@ -99,7 +103,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
           <LayoutGrid className="h-3.5 w-3.5 text-primary" />
           <span className="font-display text-[10px] font-bold uppercase tracking-widest text-foreground">Layers</span>
         </div>
-        <Badge variant="secondary" className="font-mono text-[10px]">{draftBlocks.length}</Badge>
+        <Badge variant="secondary" className="font-mono text-[10px]">{totalCount}</Badge>
       </div>
 
       {/* Page info */}
@@ -113,7 +117,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
       </div>
 
       {/* Search */}
-      {draftBlocks.length > 4 && (
+      {totalCount > 4 && (
         <div className="border-b border-border/30 px-2 py-1.5">
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
@@ -130,7 +134,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
       {/* Block list */}
       <ScrollArea className="flex-1">
         <div className="space-y-0.5 p-1.5">
-          {filteredBlocks.length === 0 && draftBlocks.length === 0 ? (
+          {filteredItems.length === 0 && totalCount === 0 ? (
             <div className="flex flex-col items-center py-12 text-center">
               <Layers className="mb-2 h-8 w-8 text-muted-foreground/30" />
               <p className="text-xs text-muted-foreground">No blocks yet</p>
@@ -138,10 +142,34 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
                 <Plus className="mr-1 h-3 w-3" /> Add Block
               </Button>
             </div>
-          ) : filteredBlocks.length === 0 ? (
+          ) : filteredItems.length === 0 ? (
             <p className="py-4 text-center text-[10px] text-muted-foreground">No matching blocks</p>
           ) : (
-            filteredBlocks.map((block, index) => {
+            filteredItems.map((item) => {
+              if (item.source === "static") {
+                return (
+                  <div
+                    key={item.id}
+                    className="flex items-start gap-1.5 rounded-lg border-l-[3px] border-l-amber-500 px-2 py-1.5 text-xs bg-amber-500/5"
+                  >
+                    <Lock className="mt-0.5 h-3 w-3 shrink-0 text-amber-500/70" />
+                    <div className="min-w-0 flex-1">
+                      <span className="block truncate font-display text-[10px] font-semibold uppercase tracking-wider text-foreground/70">
+                        {item.label}
+                      </span>
+                      <span className="block truncate text-[9px] text-muted-foreground">
+                        {item.staticSection?.description}
+                      </span>
+                    </div>
+                    <Badge variant="outline" className="shrink-0 border-amber-500/30 text-[8px] text-amber-600">
+                      Locked
+                    </Badge>
+                  </div>
+                );
+              }
+
+              // Dynamic block
+              const block = item.block;
               const realIndex = draftBlocks.indexOf(block);
               const Icon = BLOCK_ICONS[block.block_type] ?? Square;
               const colorClass = BLOCK_COLORS[block.block_type] ?? "border-l-muted-foreground";
@@ -212,7 +240,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
             <div className="mx-1 h-0.5 rounded bg-primary" />
           )}
 
-          {draftBlocks.length > 0 && (
+          {totalCount > 0 && (
             <div className="space-y-1">
               <button
                 onClick={onAddBlock}
@@ -237,7 +265,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
       {/* Summary */}
       <div className="border-t border-border/30 px-3 py-2">
         <div className="flex justify-between text-[10px] text-muted-foreground">
-          <span>{draftBlocks.length} blocks</span>
+          <span>{draftBlocks.length} editable · {staticCount} locked</span>
           <span>{draftBlocks.filter(b => b.is_active !== false).length} visible</span>
         </div>
       </div>

@@ -733,6 +733,16 @@ const AdminProducts = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Copy Product Settings Modal */}
+      <CopyProductSettingsModal
+        open={copyModalOpen}
+        onOpenChange={setCopyModalOpen}
+        targetProductId={editingId}
+        onApply={(data) => {
+          setForm((prev) => ({ ...prev, ...data }));
+        }}
+      />
     </AdminLayout>
   );
 };

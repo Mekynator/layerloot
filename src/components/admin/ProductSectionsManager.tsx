@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Eye, EyeOff, Box } from "lucide-react";
+import { Plus, Trash2, Eye, EyeOff, Box, ArrowUp, ArrowDown, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -47,7 +47,6 @@ const ProductSectionsManager = ({ productId }: ProductSectionsManagerProps) => {
     const secs = (data as Section[]) ?? [];
     setSections(secs);
 
-    // Fetch reusable block names
     const blockIds = secs.filter(s => s.reusable_block_id).map(s => s.reusable_block_id!);
     if (blockIds.length > 0) {
       const { data: blocks } = await supabase
@@ -120,6 +119,22 @@ const ProductSectionsManager = ({ productId }: ProductSectionsManagerProps) => {
     setSections((prev) => prev.map((s) => (s.id === id ? { ...s, title } : s)));
   };
 
+  const moveSection = async (index: number, direction: "up" | "down") => {
+    const swapIndex = direction === "up" ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= sections.length) return;
+
+    const a = sections[index];
+    const b = sections[swapIndex];
+
+    // Swap sort_order values
+    await Promise.all([
+      supabase.from("product_detail_sections").update({ sort_order: b.sort_order }).eq("id", a.id),
+      supabase.from("product_detail_sections").update({ sort_order: a.sort_order }).eq("id", b.id),
+    ]);
+
+    await fetchSections();
+  };
+
   const addMediaUrl = async (id: string, url: string) => {
     const section = sections.find((s) => s.id === id);
     if (!section) return;
@@ -177,9 +192,35 @@ const ProductSectionsManager = ({ productId }: ProductSectionsManagerProps) => {
           <CardTitle className="text-sm font-display uppercase">Content Sections (Video / Carousel / Reusable)</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {sections.map((section) => (
+          {sections.map((section, idx) => (
             <div key={section.id} className="rounded-lg border border-border/50 bg-muted/10 p-3 space-y-3">
               <div className="flex items-center gap-2">
+                {/* Reorder controls */}
+                <div className="flex flex-col gap-0.5">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5"
+                    disabled={idx === 0}
+                    onClick={() => moveSection(idx, "up")}
+                    title="Move up"
+                  >
+                    <ArrowUp className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5"
+                    disabled={idx === sections.length - 1}
+                    onClick={() => moveSection(idx, "down")}
+                    title="Move down"
+                  >
+                    <ArrowDown className="h-3 w-3" />
+                  </Button>
+                </div>
+
+                <GripVertical className="h-4 w-4 text-muted-foreground/50" />
+
                 <Badge variant="secondary" className="text-[10px] font-bold uppercase">
                   {section.section_type === "reusable_block" ? (
                     <span className="flex items-center gap-1"><Box className="h-3 w-3" /> Block</span>
@@ -203,6 +244,11 @@ const ProductSectionsManager = ({ productId }: ProductSectionsManagerProps) => {
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteSection(section.id)}>
                   <Trash2 className="h-3.5 w-3.5 text-destructive" />
                 </Button>
+              </div>
+
+              {/* Order indicator */}
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                <span>Position: {idx + 1} of {sections.length}</span>
               </div>
 
               {/* Reusable block info */}

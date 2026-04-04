@@ -295,14 +295,65 @@ const AdminDiscounts = () => {
     }));
   };
 
+  const toggleAudienceGroup = (group: AudienceGroup) => {
+    setForm((current) => {
+      const has = current.audience_groups.includes(group);
+      const next = has
+        ? current.audience_groups.filter((g) => g !== group)
+        : [...current.audience_groups, group];
+      return { ...current, audience_groups: next.length > 0 ? next : [group] };
+    });
+  };
+
+  const matchedAudienceUsers = useMemo(() => {
+    if (form.scope !== "user") return [];
+    const now = Date.now();
+    const ids = new Set<string>();
+
+    for (const group of form.audience_groups) {
+      if (group === "specific") {
+        form.scope_target_user_ids.forEach((id) => ids.add(id));
+      } else if (group === "existing") {
+        users.forEach((u) => ids.add(u.id));
+      } else if (group === "new_registered") {
+        const cutoff = now - form.new_registered_days * 86400000;
+        users.forEach((u) => {
+          if (new Date(u.created_at).getTime() >= cutoff) ids.add(u.id);
+        });
+      } else if (group === "newcomers") {
+        if (form.newcomer_logic === "days") {
+          const cutoff = now - form.newcomer_days * 86400000;
+          users.forEach((u) => {
+            if (new Date(u.created_at).getTime() >= cutoff) ids.add(u.id);
+          });
+        } else {
+          // zero_orders — all users (order filtering would need orders data; for now treat as all users with no order history indicator)
+          users.forEach((u) => {
+            if (!u.last_sign_in_at || new Date(u.created_at).getTime() === new Date(u.last_sign_in_at).getTime()) {
+              ids.add(u.id);
+            }
+          });
+        }
+      } else if (group === "invited") {
+        // Invited users — users whose metadata indicates invitation
+        // Currently marks users who have never signed in as "invited"
+        users.forEach((u) => {
+          if (!u.last_sign_in_at) ids.add(u.id);
+        });
+      }
+    }
+
+    return Array.from(ids);
+  }, [form.scope, form.audience_groups, form.scope_target_user_ids, form.new_registered_days, form.newcomer_logic, form.newcomer_days, users]);
+
   const handleSave = async () => {
     if (!form.code.trim()) {
       toast({ title: "Code required", variant: "destructive" });
       return;
     }
 
-    if (form.scope === "user" && form.scope_target_user_ids.length === 0) {
-      toast({ title: "Select at least one user", variant: "destructive" });
+    if (form.scope === "user" && matchedAudienceUsers.length === 0) {
+      toast({ title: "No users matched. Select at least one audience or user.", variant: "destructive" });
       return;
     }
 

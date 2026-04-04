@@ -212,18 +212,18 @@ const ProductDetail = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="absolute left-3 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background h-8 w-8 md:h-10 md:w-10 md:left-3"
                       onClick={() => setCurrentImage((p) => (p - 1 + images.length) % images.length)}
                     >
-                      <ChevronLeft className="h-5 w-5" />
+                      <ChevronLeft className="h-4 w-4 md:h-5 md:w-5" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background h-8 w-8 md:h-10 md:w-10 md:right-3"
                       onClick={() => setCurrentImage((p) => (p + 1) % images.length)}
                     >
-                      <ChevronRight className="h-5 w-5" />
+                      <ChevronRight className="h-4 w-4 md:h-5 md:w-5" />
                     </Button>
                   </>
                 )}

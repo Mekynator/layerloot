@@ -70,6 +70,10 @@ interface UserOption {
   id: string;
   label: string;
   searchText: string;
+  created_at: string;
+  last_sign_in_at: string | null;
+  order_count?: number;
+  is_invited?: boolean;
 }
 
 type AudienceGroup = "specific" | "existing" | "new_registered" | "newcomers" | "invited";

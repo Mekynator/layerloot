@@ -450,13 +450,12 @@ const AdminDiscounts = () => {
 
     if (discount.scope === "user") {
       const selectedIds = normalizeUserIds(discount.scope_target_user_id);
+      if (selectedIds.length === 0) return "User audience";
       const matchedUsers = users.filter((user) => selectedIds.includes(user.id));
-
-      if (matchedUsers.length === 0) return "Specific user";
+      if (matchedUsers.length === 0) return `${selectedIds.length} targeted user(s)`;
       if (matchedUsers.length === 1) return matchedUsers[0].label;
       if (matchedUsers.length <= 3) return matchedUsers.map((user) => user.label).join(", ");
-
-      return `${matchedUsers.length} specific users`;
+      return `${matchedUsers.length} targeted users`;
     }
 
     if (discount.scope === "bulk") {

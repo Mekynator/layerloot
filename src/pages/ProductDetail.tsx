@@ -174,8 +174,8 @@ const ProductDetail = () => {
   }
 
   return (
-    <div className="py-8 md:py-10">
-      <div className="container space-y-12">
+    <div className="py-6 pb-24 md:py-10 md:pb-10">
+      <div className="container space-y-8 md:space-y-12 px-4 md:px-6">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           <Link
             to="/products"
@@ -185,14 +185,14 @@ const ProductDetail = () => {
           </Link>
         </motion.div>
 
-        <div className="grid gap-8 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
             {show3D && product.model_url ? (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <ModelViewer url={product.model_url} className="aspect-square" />
               </motion.div>
             ) : (
-              <div className="glass-card relative aspect-square overflow-hidden rounded-[1.75rem]">
+              <div className="glass-card relative aspect-square overflow-hidden rounded-xl md:rounded-[1.75rem]">
                 <AnimatePresence mode="wait">
                   <motion.img
                     ref={heroImageRef}
@@ -212,18 +212,18 @@ const ProductDetail = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="absolute left-3 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background h-8 w-8 md:h-10 md:w-10 md:left-3"
                       onClick={() => setCurrentImage((p) => (p - 1 + images.length) % images.length)}
                     >
-                      <ChevronLeft className="h-5 w-5" />
+                      <ChevronLeft className="h-4 w-4 md:h-5 md:w-5" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background h-8 w-8 md:h-10 md:w-10 md:right-3"
                       onClick={() => setCurrentImage((p) => (p + 1) % images.length)}
                     >
-                      <ChevronRight className="h-5 w-5" />
+                      <ChevronRight className="h-4 w-4 md:h-5 md:w-5" />
                     </Button>
                   </>
                 )}
@@ -247,7 +247,7 @@ const ProductDetail = () => {
               </div>
             )}
 
-            <div className="flex gap-2 overflow-x-auto pb-1">
+            <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none md:gap-2">
               {images.map((img, i) => (
                 <motion.button
                   whileHover={{ y: -2 }}
@@ -256,7 +256,7 @@ const ProductDetail = () => {
                     setCurrentImage(i);
                     setShow3D(false);
                   }}
-                  className={`h-16 w-16 shrink-0 overflow-hidden rounded-xl transition-all duration-200 ${
+                  className={`h-14 w-14 shrink-0 overflow-hidden rounded-lg transition-all duration-200 md:h-16 md:w-16 md:rounded-xl ${
                     !show3D && i === currentImage
                       ? "ring-2 ring-primary shadow-lg shadow-primary/20"
                       : "opacity-70 hover:opacity-100"
@@ -282,7 +282,7 @@ const ProductDetail = () => {
             </div>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6 lg:sticky lg:top-24 lg:self-start">
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-5 md:space-y-6 lg:sticky lg:top-24 lg:self-start">
             <div className="space-y-3">
               <Badge
                 variant="outline"
@@ -290,7 +290,7 @@ const ProductDetail = () => {
               >
                 {t("products.premiumPrint")}
               </Badge>
-              <h1 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{product.name}</h1>
+              <h1 className="font-display text-2xl font-bold uppercase text-foreground md:text-3xl lg:text-4xl">{product.name}</h1>
               <RatingStars rating={socialProof?.averageRating} count={socialProof?.reviewCount} />
               
               <ProductFOMOBar productId={product.id} stock={activeStock} />
@@ -302,7 +302,7 @@ const ProductDetail = () => {
               animate={{ opacity: 1, scale: 1 }}
               className="flex items-baseline gap-3"
             >
-              <span className="font-display text-3xl font-bold text-primary">{formatPrice(activePrice)}</span>
+              <span className="font-display text-2xl font-bold text-primary md:text-3xl">{formatPrice(activePrice)}</span>
               {product.compare_at_price && !selectedVariant && (
                 <span className="text-lg text-muted-foreground line-through">
                   {formatPrice(Number(product.compare_at_price))}
@@ -311,7 +311,7 @@ const ProductDetail = () => {
             </motion.div>
 
             {product.description && (
-              <div className="max-w-2xl leading-relaxed text-muted-foreground whitespace-pre-line">{product.description}</div>
+              <div className="max-w-2xl text-sm leading-relaxed text-muted-foreground whitespace-pre-line md:text-base">{product.description}</div>
             )}
 
             {/* Color summary tile under description */}
@@ -494,7 +494,7 @@ const ProductDetail = () => {
             </Card>
           )}
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
             {reviews.length === 0 ? (
               <div className="section-surface px-6 py-12 text-center text-muted-foreground">
                 {t("products.noReviews")}
@@ -555,7 +555,7 @@ const ProductDetail = () => {
               </Badge>
               <h2 className="font-display text-2xl font-bold uppercase text-foreground">{t("products.keepBuilding")}</h2>
             </div>
-            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-4 grid-cols-2 md:gap-6 xl:grid-cols-4">
               {relatedProducts.map((related, index) => (
                 <ProductCard key={related.id} product={related} index={index} />
               ))}

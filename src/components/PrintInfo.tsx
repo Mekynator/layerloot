@@ -48,11 +48,11 @@ const PrintInfo = ({ printTimeHours, dimensionsCm, weightGrams, finishType, mate
   if (items.length === 0) return null;
 
   return (
-    <div className="rounded-2xl bg-card/60 p-4 shadow-[0_4px_24px_-4px_hsl(225_44%_4%/0.4)] backdrop-blur-md">
+    <div className="rounded-xl bg-card/60 p-3 shadow-[0_4px_24px_-4px_hsl(225_44%_4%/0.4)] backdrop-blur-md md:rounded-2xl md:p-4">
       <h4 className="mb-3 font-display text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         Craftsmanship Details
       </h4>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2 md:gap-3">
         {items.map(({ icon: Icon, label, value }) => (
           <div key={label} className="flex items-start gap-2.5">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">

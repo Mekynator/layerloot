@@ -206,8 +206,8 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
         </div>
 
         {/* Content — clean, no dividers */}
-        <div className="flex flex-1 flex-col gap-2 p-5">
-          <h3 className="line-clamp-2 font-display text-sm font-semibold uppercase tracking-[0.14em] text-foreground/90 transition-colors duration-300 group-hover:text-primary">
+        <div className="flex flex-1 flex-col gap-1.5 p-3 md:gap-2 md:p-5">
+          <h3 className="line-clamp-2 font-display text-xs font-semibold uppercase tracking-[0.1em] text-foreground/90 transition-colors duration-300 group-hover:text-primary md:text-sm md:tracking-[0.14em]">
             {product.name}
           </h3>
 
@@ -215,7 +215,7 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
 
           <div className="mt-auto flex items-end justify-between gap-2 pt-2">
             <div className="flex items-baseline gap-2">
-              <span className="font-display text-xl font-bold text-foreground">{formatPrice(Number(product.price))}</span>
+              <span className="font-display text-base font-bold text-foreground md:text-xl">{formatPrice(Number(product.price))}</span>
               {hasSale && (
                 <span className="text-xs text-muted-foreground line-through">
                   {formatPrice(Number(product.compare_at_price))}

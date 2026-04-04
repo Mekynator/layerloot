@@ -335,6 +335,23 @@
   background: hsl(217 91% 60% / 0.4);
 }
 
+/* Hide scrollbar on horizontal scroll areas */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* ─── Mobile-first touch targets ─── */
+@media (max-width: 767px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
 /* ─── Selection ─── */
 ::selection {
   background: hsl(217 91% 60% / 0.3);

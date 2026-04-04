@@ -96,9 +96,17 @@ const ProductDetail = () => {
 
   const handleAddToCart = () => {
     if (!product) return;
+
+    // Validate color requirement
+    if ((product as any).enable_color_picker && (product as any).color_required && selectedColors.length === 0) {
+      toast({ title: "Please select a color", description: "Color selection is required for this product.", variant: "destructive" });
+      return;
+    }
+
     const variant = selectedVariant;
     const price = variant ? Number(variant.price) : Number(product.price);
-    const name = variant ? `${product.name} - ${variant.name}` : product.name;
+    const colorSuffix = selectedColors.length > 0 ? ` (${selectedColors.map(c => c.name).join(", ")})` : "";
+    const name = variant ? `${product.name} - ${variant.name}${colorSuffix}` : `${product.name}${colorSuffix}`;
     const id = variant ? `${product.id}-${variant.id}` : product.id;
 
     const rect = heroImageRef.current?.getBoundingClientRect();

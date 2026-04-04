@@ -262,6 +262,10 @@ const AdminDiscounts = () => {
       starts_at: discount.starts_at,
       expires_at: discount.expires_at,
       scope_target_user_ids: normalizeUserIds(discount.scope_target_user_id),
+      audience_groups: normalizeUserIds(discount.scope_target_user_id).length > 0 ? ["specific"] : ["existing"],
+      new_registered_days: 14,
+      newcomer_logic: "days",
+      newcomer_days: 30,
     });
     setDialogOpen(true);
   };

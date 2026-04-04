@@ -41,7 +41,7 @@ export function useAdminGrowth() {
         supabase.from("custom_orders").select("id", { count: "exact", head: true }).eq("status", "quoted").eq("customer_response_status", "pending"),
         supabase.from("product_reviews").select("id", { count: "exact", head: true }).eq("is_approved", false),
         supabase.from("custom_order_showcases").select("id", { count: "exact", head: true }).eq("visibility_status", "shared").eq("approved_by_admin", false),
-        supabase.from("products").select("id, name, stock").lte("stock", 5).eq("is_active", true),
+        supabase.from("products").select("id, name, stock").gt("stock", 0).lte("stock", 5).eq("is_active", true),
         supabase.from("order_items").select("product_name, quantity").order("quantity", { ascending: false }).limit(5),
         supabase.from("user_vouchers").select("id", { count: "exact", head: true }).eq("is_used", false),
         supabase.from("orders").select("id, total, created_at").order("created_at", { ascending: false }).limit(50),

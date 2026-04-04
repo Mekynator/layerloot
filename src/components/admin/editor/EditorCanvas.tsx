@@ -19,13 +19,14 @@ export default function EditorCanvas() {
     selectBlock, hoverBlock, viewport, activePage,
     deleteBlock, duplicateBlock, toggleBlockActive, addBlock, moveBlock,
     updateBlockContent, selectElement, inlineEditingKey, setInlineEditingKey,
+    layoutOrder, setLayoutOrder,
   } = useVisualEditor();
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const previewItems = useMemo(
-    () => buildPreviewList(activePage, draftBlocks),
-    [activePage, draftBlocks],
+    () => buildPreviewList(activePage, draftBlocks, layoutOrder),
+    [activePage, draftBlocks, layoutOrder],
   );
 
   const handleBlockClick = useCallback((e: React.MouseEvent, blockId: string) => {
@@ -41,7 +42,7 @@ export default function EditorCanvas() {
 
   const viewportWidth = VIEWPORT_WIDTHS[viewport];
 
-  // Unified drag reorder state (works for both static and dynamic)
+  // Unified drag reorder state
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dropIdx, setDropIdx] = useState<number | null>(null);
 
@@ -50,22 +51,21 @@ export default function EditorCanvas() {
     e.preventDefault();
     setDropIdx(index);
   }, []);
+
   const handleUnifiedDragEnd = useCallback(() => {
     if (dragIdx !== null && dropIdx !== null && dragIdx !== dropIdx) {
-      // Reorder the unified list, then sync back to draftBlocks
       const reordered = [...previewItems];
       const [moved] = reordered.splice(dragIdx, 1);
       reordered.splice(dropIdx, 0, moved);
 
-      // Extract the new dynamic block order
-      const dynamicOrder = reordered.filter(i => i.source === "dynamic").map(i => i.block as SiteBlock);
-      dynamicOrder.forEach((block, i) => {
-        if (block.sort_order !== i) {
-          // Use moveBlock to reorder dynamic blocks to match unified order
-        }
-      });
+      // Persist the new layout order
+      setLayoutOrder(previewListToLayout(reordered));
 
-      // For now, if both items are dynamic, use moveBlock directly
+      // Sync dynamic block sort_order
+      const dynamicOrder = reordered.filter(i => i.source === "dynamic");
+      const currentDynamic = previewItems.filter(i => i.source === "dynamic");
+      
+      // If dynamic order changed, reorder via moveBlock
       const fromItem = previewItems[dragIdx];
       const toItem = previewItems[dropIdx];
       if (fromItem.source === "dynamic" && toItem.source === "dynamic") {
@@ -78,7 +78,38 @@ export default function EditorCanvas() {
     }
     setDragIdx(null);
     setDropIdx(null);
-  }, [dragIdx, dropIdx, previewItems, draftBlocks, moveBlock]);
+  }, [dragIdx, dropIdx, previewItems, draftBlocks, moveBlock, setLayoutOrder]);
+
+  const handleMoveUp = useCallback((index: number) => {
+    if (index <= 0) return;
+    const reordered = [...previewItems];
+    [reordered[index - 1], reordered[index]] = [reordered[index], reordered[index - 1]];
+    setLayoutOrder(previewListToLayout(reordered));
+    
+    // If moving dynamic blocks relative to each other, sync
+    const item = previewItems[index];
+    const target = previewItems[index - 1];
+    if (item.source === "dynamic" && target.source === "dynamic") {
+      const fromIdx = draftBlocks.findIndex(b => b.id === item.id);
+      const toIdx = draftBlocks.findIndex(b => b.id === target.id);
+      if (fromIdx !== -1 && toIdx !== -1) moveBlock(fromIdx, toIdx);
+    }
+  }, [previewItems, setLayoutOrder, draftBlocks, moveBlock]);
+
+  const handleMoveDown = useCallback((index: number) => {
+    if (index >= previewItems.length - 1) return;
+    const reordered = [...previewItems];
+    [reordered[index], reordered[index + 1]] = [reordered[index + 1], reordered[index]];
+    setLayoutOrder(previewListToLayout(reordered));
+    
+    const item = previewItems[index];
+    const target = previewItems[index + 1];
+    if (item.source === "dynamic" && target.source === "dynamic") {
+      const fromIdx = draftBlocks.findIndex(b => b.id === item.id);
+      const toIdx = draftBlocks.findIndex(b => b.id === target.id);
+      if (fromIdx !== -1 && toIdx !== -1) moveBlock(fromIdx, toIdx);
+    }
+  }, [previewItems, setLayoutOrder, draftBlocks, moveBlock]);
 
   const getDynamicIndex = useCallback((blockId: string) => {
     return draftBlocks.findIndex(b => b.id === blockId);
@@ -112,10 +143,13 @@ export default function EditorCanvas() {
                       key={item.id}
                       item={item}
                       index={index}
+                      totalItems={previewItems.length}
                       isDragOver={dropIdx === index && dragIdx !== index}
                       onDragStart={() => handleUnifiedDragStart(index)}
                       onDragOver={(e) => handleUnifiedDragOver(e, index)}
                       onDragEnd={handleUnifiedDragEnd}
+                      onMoveUp={() => handleMoveUp(index)}
+                      onMoveDown={() => handleMoveDown(index)}
                       onAddAfter={() => {
                         const dynamicInsertIdx = previewItems
                           .slice(0, index + 1)
@@ -136,6 +170,7 @@ export default function EditorCanvas() {
                     index={dynamicIndex}
                     unifiedIndex={index}
                     totalBlocks={draftBlocks.length}
+                    totalItems={previewItems.length}
                     isSelected={selectedBlockId === block.id}
                     isHovered={hoveredBlockId === block.id}
                     isDragOver={dropIdx === index && dragIdx !== index}
@@ -146,8 +181,8 @@ export default function EditorCanvas() {
                     onDuplicate={() => duplicateBlock(block.id)}
                     onToggleActive={() => toggleBlockActive(block.id)}
                     onAddBefore={() => addBlock("text", dynamicIndex)}
-                    onMoveUp={() => dynamicIndex > 0 && moveBlock(dynamicIndex, dynamicIndex - 1)}
-                    onMoveDown={() => dynamicIndex < draftBlocks.length - 1 && moveBlock(dynamicIndex, dynamicIndex + 1)}
+                    onMoveUp={() => handleMoveUp(index)}
+                    onMoveDown={() => handleMoveDown(index)}
                     onDragStart={() => handleUnifiedDragStart(index)}
                     onDragOver={(e) => handleUnifiedDragOver(e, index)}
                     onDragEnd={handleUnifiedDragEnd}
@@ -174,15 +209,18 @@ export default function EditorCanvas() {
   );
 }
 
-/* ─── Static Section Shell — now renders real content ─── */
+/* ─── Static Section Shell — renders real content ─── */
 
-function StaticSectionShell({ item, index, isDragOver, onDragStart, onDragOver, onDragEnd, onAddAfter }: {
+function StaticSectionShell({ item, index, totalItems, isDragOver, onDragStart, onDragOver, onDragEnd, onMoveUp, onMoveDown, onAddAfter }: {
   item: PreviewItem;
   index: number;
+  totalItems: number;
   isDragOver: boolean;
   onDragStart: () => void;
   onDragOver: (e: React.DragEvent) => void;
   onDragEnd: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
   onAddAfter: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
@@ -213,10 +251,20 @@ function StaticSectionShell({ item, index, isDragOver, onDragStart, onDragOver, 
       {/* Reorder controls on hover */}
       {hovered && (
         <div className="absolute top-2 right-3 z-20 flex items-center gap-0.5 rounded-lg border border-amber-500/30 bg-card/95 px-1 py-0.5 shadow-lg backdrop-blur-xl">
-          <button className="rounded p-1 text-amber-600 hover:text-amber-500" title="Move up (drag to reorder)">
+          <button
+            onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
+            disabled={index === 0}
+            className={cn("rounded p-1 text-amber-600 hover:text-amber-500", index === 0 && "opacity-30 cursor-not-allowed")}
+            title="Move up"
+          >
             <ChevronUp className="h-3 w-3" />
           </button>
-          <button className="rounded p-1 text-amber-600 hover:text-amber-500" title="Move down (drag to reorder)">
+          <button
+            onClick={(e) => { e.stopPropagation(); onMoveDown(); }}
+            disabled={index === totalItems - 1}
+            className={cn("rounded p-1 text-amber-600 hover:text-amber-500", index === totalItems - 1 && "opacity-30 cursor-not-allowed")}
+            title="Move down"
+          >
             <ChevronDown className="h-3 w-3" />
           </button>
         </div>
@@ -251,6 +299,7 @@ interface CanvasBlockWrapperProps {
   index: number;
   unifiedIndex: number;
   totalBlocks: number;
+  totalItems: number;
   isSelected: boolean;
   isHovered: boolean;
   isDragOver: boolean;
@@ -274,7 +323,7 @@ interface CanvasBlockWrapperProps {
 }
 
 function CanvasBlockWrapper({
-  block, index, unifiedIndex, totalBlocks, isSelected, isHovered, isDragOver,
+  block, index, unifiedIndex, totalBlocks, totalItems, isSelected, isHovered, isDragOver,
   onClick, onMouseEnter, onMouseLeave,
   onDelete, onDuplicate, onToggleActive, onAddBefore,
   onMoveUp, onMoveDown,
@@ -357,10 +406,10 @@ function CanvasBlockWrapper({
       {/* Floating action toolbar (right) */}
       {showControls && (
         <div className="absolute top-1 right-2 z-30 flex items-center gap-0.5 rounded-lg border border-border/30 bg-card/95 px-1 py-0.5 shadow-lg backdrop-blur-xl">
-          <ToolButton onClick={onMoveUp} title="Move up" disabled={index === 0}>
+          <ToolButton onClick={onMoveUp} title="Move up" disabled={unifiedIndex === 0}>
             <ChevronUp className="h-3 w-3" />
           </ToolButton>
-          <ToolButton onClick={onMoveDown} title="Move down" disabled={index === totalBlocks - 1}>
+          <ToolButton onClick={onMoveDown} title="Move down" disabled={unifiedIndex === totalItems - 1}>
             <ChevronDown className="h-3 w-3" />
           </ToolButton>
           <div className="w-px h-3 bg-border/30 mx-0.5" />

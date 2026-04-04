@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import type { LayoutEntry } from "@/lib/static-page-sections";
 import { supabase } from "@/integrations/supabase/client";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
 import type { Tables } from "@/integrations/supabase/types";
@@ -60,6 +61,10 @@ interface EditorState {
   duplicateBlock: (id: string) => void;
   moveBlock: (fromIndex: number, toIndex: number) => void;
   toggleBlockActive: (id: string) => void;
+
+  // Layout order (unified static + dynamic)
+  layoutOrder: import("@/lib/static-page-sections").LayoutEntry[] | null;
+  setLayoutOrder: (order: import("@/lib/static-page-sections").LayoutEntry[]) => void;
 
   // Save (draft)
   save: () => Promise<void>;
@@ -215,6 +220,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   const [publishing, setPublishing] = useState(false);
   const [draftStatus, setDraftStatus] = useState<DraftStatus>("published");
   const [scheduledAt, setScheduledAt] = useState<string | null>(null);
+  const [layoutOrder, setLayoutOrderState] = useState<LayoutEntry[] | null>(null);
 
   const selectElement = useCallback((el: SelectedElement | null) => {
     setSelectedElement(el);
@@ -291,7 +297,29 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   }, [pages, loadPages]);
 
   useEffect(() => { void loadPages(); }, [loadPages]);
-  useEffect(() => { if (activePage) void fetchBlocks(activePage); }, [activePage, fetchBlocks]);
+  useEffect(() => { if (activePage) { void fetchBlocks(activePage); void loadLayoutOrder(activePage); } }, [activePage, fetchBlocks]);
+
+  // Layout order persistence
+  const loadLayoutOrder = useCallback(async (page: string) => {
+    const key = `layout_order_${page}`;
+    const { data } = await supabase.from("site_settings").select("value").eq("key", key).maybeSingle();
+    if (data?.value && Array.isArray(data.value)) {
+      setLayoutOrderState(data.value as unknown as LayoutEntry[]);
+    } else {
+      setLayoutOrderState(null);
+    }
+  }, []);
+
+  const setLayoutOrder = useCallback(async (order: LayoutEntry[]) => {
+    setLayoutOrderState(order);
+    const key = `layout_order_${activePage}`;
+    const { data: existing } = await supabase.from("site_settings").select("id").eq("key", key).maybeSingle();
+    if (existing) {
+      await supabase.from("site_settings").update({ value: order as any }).eq("key", key);
+    } else {
+      await supabase.from("site_settings").insert({ key, value: order as any });
+    }
+  }, [activePage]);
 
   const selectedPage = useMemo(
     () => pages.find(p => pageToEditorKey(p) === activePage) ?? null,
@@ -517,6 +545,8 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     duplicateBlock,
     moveBlock,
     toggleBlockActive,
+    layoutOrder,
+    setLayoutOrder,
     save,
     saving,
     discardChanges,
@@ -536,7 +566,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     frontendPages,
     globalPages,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [pages, activePage, selectedPage, pageBlocks, savedBlocks, isDirty, selectedBlockId, selectedBlock, hoveredBlockId, saving, publishing, draftStatus, scheduledAt, viewport, frontendPages, globalPages, undoVersion, selectedElement, inlineEditingKey]);
+  }), [pages, activePage, selectedPage, pageBlocks, savedBlocks, isDirty, selectedBlockId, selectedBlock, hoveredBlockId, saving, publishing, draftStatus, scheduledAt, viewport, frontendPages, globalPages, undoVersion, selectedElement, inlineEditingKey, layoutOrder]);
 
   return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;
 }

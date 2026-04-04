@@ -16,7 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import InsertReusableDialog from "@/components/admin/reusable/InsertReusableDialog";
-import { buildPreviewList } from "@/lib/static-page-sections";
+import { buildPreviewList, previewListToLayout, type PreviewItem } from "@/lib/static-page-sections";
 
 const BLOCK_ICONS: Record<string, any> = {
   hero: Square, shipping_banner: Truck, entry_cards: Layers, categories: FolderTree,
@@ -45,7 +45,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
     draftBlocks, selectedBlockId, hoveredBlockId, activePage,
     selectBlock, hoverBlock, selectedPage,
     deleteBlock, duplicateBlock, toggleBlockActive, moveBlock,
-    addBlock,
+    addBlock, layoutOrder, setLayoutOrder,
   } = useVisualEditor();
   const { user } = useAuth();
 
@@ -55,8 +55,8 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
   const [reusableOpen, setReusableOpen] = useState(false);
 
   const previewItems = useMemo(
-    () => buildPreviewList(activePage, draftBlocks),
-    [activePage, draftBlocks],
+    () => buildPreviewList(activePage, draftBlocks, layoutOrder),
+    [activePage, draftBlocks, layoutOrder],
   );
 
   const staticCount = useMemo(() => previewItems.filter(i => i.source === "static").length, [previewItems]);
@@ -64,11 +64,39 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
 
   const handleDragEnd = useCallback(() => {
     if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
-      moveBlock(dragIndex, dragOverIndex);
+      const reordered = [...previewItems];
+      const [moved] = reordered.splice(dragIndex, 1);
+      reordered.splice(dragOverIndex, 0, moved);
+      setLayoutOrder(previewListToLayout(reordered));
+
+      // Sync dynamic blocks if both are dynamic
+      const fromItem = previewItems[dragIndex];
+      const toItem = previewItems[dragOverIndex];
+      if (fromItem.source === "dynamic" && toItem.source === "dynamic") {
+        const fromDynIdx = draftBlocks.findIndex(b => b.id === fromItem.id);
+        const toDynIdx = draftBlocks.findIndex(b => b.id === toItem.id);
+        if (fromDynIdx !== -1 && toDynIdx !== -1) moveBlock(fromDynIdx, toDynIdx);
+      }
     }
     setDragIndex(null);
     setDragOverIndex(null);
-  }, [dragIndex, dragOverIndex, moveBlock]);
+  }, [dragIndex, dragOverIndex, previewItems, draftBlocks, moveBlock, setLayoutOrder]);
+
+  const handleMoveItem = useCallback((index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= previewItems.length) return;
+    const reordered = [...previewItems];
+    [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+    setLayoutOrder(previewListToLayout(reordered));
+
+    const item = previewItems[index];
+    const target = previewItems[targetIndex];
+    if (item.source === "dynamic" && target.source === "dynamic") {
+      const fromIdx = draftBlocks.findIndex(b => b.id === item.id);
+      const toIdx = draftBlocks.findIndex(b => b.id === target.id);
+      if (fromIdx !== -1 && toIdx !== -1) moveBlock(fromIdx, toIdx);
+    }
+  }, [previewItems, draftBlocks, moveBlock, setLayoutOrder]);
 
   const filteredItems = searchQuery
     ? previewItems.filter(item =>
@@ -145,13 +173,24 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
           ) : filteredItems.length === 0 ? (
             <p className="py-4 text-center text-[10px] text-muted-foreground">No matching blocks</p>
           ) : (
-            filteredItems.map((item) => {
+            filteredItems.map((item, filteredIdx) => {
+              // Get the real unified index for move operations
+              const realIndex = previewItems.findIndex(p => p.id === item.id);
+
               if (item.source === "static") {
                 return (
                   <div
                     key={item.id}
-                    className="flex items-start gap-1.5 rounded-lg border-l-[3px] border-l-amber-500 px-2 py-1.5 text-xs bg-amber-500/5"
+                    draggable
+                    onDragStart={() => setDragIndex(realIndex)}
+                    onDragOver={(e) => { e.preventDefault(); setDragOverIndex(realIndex); }}
+                    onDragEnd={handleDragEnd}
+                    className={cn(
+                      "flex items-start gap-1.5 rounded-lg border-l-[3px] border-l-amber-500 px-2 py-1.5 text-xs bg-amber-500/5 transition-all",
+                      dragOverIndex === realIndex && dragIndex !== realIndex && "ring-1 ring-primary",
+                    )}
                   >
+                    <GripVertical className="mt-0.5 h-3 w-3 shrink-0 cursor-grab text-amber-500/60" />
                     <Lock className="mt-0.5 h-3 w-3 shrink-0 text-amber-500/70" />
                     <div className="min-w-0 flex-1">
                       <span className="block truncate font-display text-[10px] font-semibold uppercase tracking-wider text-foreground/70">
@@ -160,6 +199,22 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
                       <span className="block truncate text-[9px] text-muted-foreground">
                         {item.staticSection?.description}
                       </span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleMoveItem(realIndex, "up"); }}
+                        disabled={realIndex === 0}
+                        className={cn("rounded p-0.5 text-amber-600 hover:text-amber-500", realIndex === 0 && "opacity-30 cursor-not-allowed")}
+                      >
+                        <ChevronUp className="h-2.5 w-2.5" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleMoveItem(realIndex, "down"); }}
+                        disabled={realIndex === previewItems.length - 1}
+                        className={cn("rounded p-0.5 text-amber-600 hover:text-amber-500", realIndex === previewItems.length - 1 && "opacity-30 cursor-not-allowed")}
+                      >
+                        <ChevronDown className="h-2.5 w-2.5" />
+                      </button>
                     </div>
                     <Badge variant="outline" className="shrink-0 border-amber-500/30 text-[8px] text-amber-600">
                       Locked
@@ -170,7 +225,6 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
 
               // Dynamic block
               const block = item.block;
-              const realIndex = draftBlocks.indexOf(block);
               const Icon = BLOCK_ICONS[block.block_type] ?? Square;
               const colorClass = BLOCK_COLORS[block.block_type] ?? "border-l-muted-foreground";
               const isSelected = selectedBlockId === block.id;
@@ -211,10 +265,10 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
 
                     {/* Quick actions */}
                     <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                      <button onClick={(e) => { e.stopPropagation(); moveBlock(realIndex, Math.max(0, realIndex - 1)); }} className="rounded p-0.5 text-muted-foreground hover:text-foreground" title="Move up">
+                      <button onClick={(e) => { e.stopPropagation(); handleMoveItem(realIndex, "up"); }} className={cn("rounded p-0.5 text-muted-foreground hover:text-foreground", realIndex === 0 && "opacity-30 cursor-not-allowed")} title="Move up">
                         <ChevronUp className="h-2.5 w-2.5" />
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); moveBlock(realIndex, Math.min(draftBlocks.length - 1, realIndex + 1)); }} className="rounded p-0.5 text-muted-foreground hover:text-foreground" title="Move down">
+                      <button onClick={(e) => { e.stopPropagation(); handleMoveItem(realIndex, "down"); }} className={cn("rounded p-0.5 text-muted-foreground hover:text-foreground", realIndex === previewItems.length - 1 && "opacity-30 cursor-not-allowed")} title="Move down">
                         <ChevronDown className="h-2.5 w-2.5" />
                       </button>
                       <button onClick={(e) => { e.stopPropagation(); toggleBlockActive(block.id); }} className="rounded p-0.5 text-muted-foreground hover:text-foreground" title={isInactive ? "Show" : "Hide"}>
@@ -236,15 +290,10 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
             })
           )}
 
-          {dragOverIndex === draftBlocks.length && (
-            <div className="mx-1 h-0.5 rounded bg-primary" />
-          )}
-
           {totalCount > 0 && (
             <div className="space-y-1">
               <button
                 onClick={onAddBlock}
-                onDragOver={(e) => { e.preventDefault(); setDragOverIndex(draftBlocks.length); }}
                 className="flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border/50 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
               >
                 <Plus className="h-3 w-3" />

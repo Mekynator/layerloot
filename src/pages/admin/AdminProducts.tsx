@@ -26,6 +26,8 @@ import RevisionHistoryPanel from "@/components/admin/RevisionHistoryPanel";
 import SchedulePublishDialog from "@/components/admin/SchedulePublishDialog";
 import { useProductAdmin, type ProductDraftData, type ProductStatus } from "@/hooks/use-product-admin";
 import { getStockTypeBadge, isMadeToOrder } from "@/lib/stock";
+import ProductColorManager from "@/components/admin/ProductColorManager";
+import ProductSectionsManager from "@/components/admin/ProductSectionsManager";
 
 interface Product {
   id: string;

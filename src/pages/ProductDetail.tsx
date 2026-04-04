@@ -290,7 +290,7 @@ const ProductDetail = () => {
               >
                 {t("products.premiumPrint")}
               </Badge>
-              <h1 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{product.name}</h1>
+              <h1 className="font-display text-2xl font-bold uppercase text-foreground md:text-3xl lg:text-4xl">{product.name}</h1>
               <RatingStars rating={socialProof?.averageRating} count={socialProof?.reviewCount} />
               
               <ProductFOMOBar productId={product.id} stock={activeStock} />

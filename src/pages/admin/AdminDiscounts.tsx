@@ -206,6 +206,8 @@ const AdminDiscounts = () => {
         id: authUser.id,
         label: email || fullName || authUser.id,
         searchText: `${email} ${fullName} ${authUser.id}`.toLowerCase(),
+        created_at: authUser.created_at,
+        last_sign_in_at: authUser.last_sign_in_at,
       } satisfies UserOption;
     });
 

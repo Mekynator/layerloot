@@ -293,6 +293,9 @@ const AdminProducts = () => {
       finish_type: source.finish_type ?? null,
       material_type: source.material_type ?? null,
       gift_finder_tag_ids: product.giftFinderTags?.map((tag) => tag.id) ?? [],
+      enable_color_picker: source.enable_color_picker ?? false,
+      color_selection_mode: source.color_selection_mode ?? "single",
+      color_required: source.color_required ?? false,
     });
     setEditingId(product.id);
     setGiftTagPickerValue("none");

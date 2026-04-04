@@ -352,8 +352,13 @@ const AdminDiscounts = () => {
       return;
     }
 
-    if (form.scope === "user" && matchedAudienceUsers.length === 0) {
-      toast({ title: "No users matched. Select at least one audience or user.", variant: "destructive" });
+    if (form.scope === "user" && form.audience_groups.length === 0) {
+      toast({ title: "Select at least one audience group.", variant: "destructive" });
+      return;
+    }
+
+    if (form.scope === "user" && form.audience_groups.length === 1 && form.audience_groups[0] === "specific" && form.scope_target_user_ids.length === 0) {
+      toast({ title: "Select at least one user.", variant: "destructive" });
       return;
     }
 
@@ -364,6 +369,19 @@ const AdminDiscounts = () => {
 
     setSaving(true);
 
+    // For user scope, store audience config as JSON so it applies dynamically
+    let scopeTargetUserIdValue: string | null = null;
+    if (form.scope === "user") {
+      const audienceConfig = {
+        groups: form.audience_groups,
+        specific_ids: form.audience_groups.includes("specific") ? form.scope_target_user_ids : [],
+        new_registered_days: form.new_registered_days,
+        newcomer_logic: form.newcomer_logic,
+        newcomer_days: form.newcomer_days,
+      };
+      scopeTargetUserIdValue = JSON.stringify(audienceConfig);
+    }
+
     const payload = {
       code: form.code.toUpperCase(),
       description: form.description || null,
@@ -371,7 +389,7 @@ const AdminDiscounts = () => {
       discount_value: Number(form.discount_value),
       scope: form.scope,
       scope_target_id: form.scope === "product" || form.scope === "category" ? form.scope_target_id : null,
-      scope_target_user_id: form.scope === "user" ? matchedAudienceUsers.join(",") : null,
+      scope_target_user_id: scopeTargetUserIdValue,
       min_order_amount: Number(form.min_order_amount) || 0,
       min_quantity: Number(form.min_quantity) || 1,
       max_uses: form.max_uses ? Number(form.max_uses) : null,

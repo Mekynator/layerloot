@@ -168,6 +168,23 @@ const CopyProductSettingsModal = ({ open, onOpenChange, targetProductId, onApply
         }
       }
 
+      // Copy gift finder tags if details selected
+      if (selected.has("details") && targetProductId && !targetProductId.startsWith("draft-")) {
+        const { data: srcTags } = await supabase
+          .from("product_gift_finder_tags")
+          .select("gift_finder_tag_id")
+          .eq("product_id", sourceId);
+
+        if (srcTags && srcTags.length > 0) {
+          await supabase.from("product_gift_finder_tags").delete().eq("product_id", targetProductId);
+          await supabase.from("product_gift_finder_tags").insert(
+            srcTags.map((t: any) => ({ product_id: targetProductId, gift_finder_tag_id: t.gift_finder_tag_id }))
+          );
+          // Also update form state with copied tag IDs
+          result.gift_finder_tag_ids = srcTags.map((t: any) => t.gift_finder_tag_id);
+        }
+      }
+
       onApply(result);
       toast({ title: "Settings copied", description: `Copied ${selected.size} categories from source product.` });
       onOpenChange(false);

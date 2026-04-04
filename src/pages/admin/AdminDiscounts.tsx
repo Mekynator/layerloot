@@ -909,21 +909,35 @@ const AdminDiscounts = () => {
                   </div>
                 )}
 
-                {/* Live matched preview */}
-                <div className="rounded-md border border-primary/20 bg-primary/5 p-3 flex items-center gap-3">
-                  <Users className="h-5 w-5 text-primary shrink-0" />
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">{matchedAudienceUsers.length} user{matchedAudienceUsers.length !== 1 ? "s" : ""} matched</p>
-                    <p className="text-xs text-muted-foreground">
-                      {form.audience_groups.map((g) => {
-                        if (g === "specific") return `${form.scope_target_user_ids.length} manually selected`;
-                        if (g === "existing") return "all existing users";
-                        if (g === "new_registered") return `registered in last ${form.new_registered_days} days`;
-                        if (g === "newcomers") return form.newcomer_logic === "days" ? `newcomers (last ${form.newcomer_days} days)` : "newcomers (no activity)";
-                        if (g === "invited") return "invited users";
-                        return g;
-                      }).join(" + ")}
-                    </p>
+                {/* Live audience preview */}
+                <div className="rounded-md border border-primary/20 bg-primary/5 p-3 flex items-start gap-3">
+                  <Users className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    {form.audience_groups.includes("specific") && (
+                      <p className="text-sm text-foreground">
+                        <span className="font-semibold">{form.scope_target_user_ids.length}</span> manually selected user{form.scope_target_user_ids.length !== 1 ? "s" : ""}
+                      </p>
+                    )}
+                    {form.audience_groups.filter((g) => g !== "specific").length > 0 && (
+                      <p className="text-sm text-foreground">
+                        <span className="font-semibold">Dynamic groups:</span>{" "}
+                        {form.audience_groups.filter((g) => g !== "specific").map((g) => {
+                          if (g === "existing") return "all existing users";
+                          if (g === "new_registered") return `registered in last ${form.new_registered_days} days`;
+                          if (g === "newcomers") return form.newcomer_logic === "days" ? `newcomers (last ${form.newcomer_days} days)` : "newcomers (no activity)";
+                          if (g === "invited") return "invited users";
+                          return g;
+                        }).join(", ")}
+                      </p>
+                    )}
+                    {form.audience_groups.some((g) => g !== "specific") && (
+                      <p className="text-xs text-muted-foreground italic">
+                        Applies to current and future users who match the criteria
+                      </p>
+                    )}
+                    {form.audience_groups.length === 1 && form.audience_groups[0] === "specific" && (
+                      <p className="text-xs text-muted-foreground">Only the selected users above will receive this discount</p>
+                    )}
                   </div>
                 </div>
               </div>

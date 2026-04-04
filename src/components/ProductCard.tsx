@@ -207,7 +207,7 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
 
         {/* Content — clean, no dividers */}
         <div className="flex flex-1 flex-col gap-1.5 p-3 md:gap-2 md:p-5">
-          <h3 className="line-clamp-2 font-display text-sm font-semibold uppercase tracking-[0.14em] text-foreground/90 transition-colors duration-300 group-hover:text-primary">
+          <h3 className="line-clamp-2 font-display text-xs font-semibold uppercase tracking-[0.1em] text-foreground/90 transition-colors duration-300 group-hover:text-primary md:text-sm md:tracking-[0.14em]">
             {product.name}
           </h3>
 

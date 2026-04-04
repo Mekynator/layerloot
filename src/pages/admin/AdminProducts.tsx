@@ -345,10 +345,12 @@ const AdminProducts = () => {
           <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
             <DialogHeader><DialogTitle className="font-display uppercase">{editingId ? "Edit" : "Add"} Product</DialogTitle></DialogHeader>
             <Tabs defaultValue="basic" className="space-y-4">
-              <TabsList className="w-full grid grid-cols-4">
-                <TabsTrigger value="basic">Basic Info</TabsTrigger>
+              <TabsList className="w-full grid grid-cols-6">
+                <TabsTrigger value="basic">Basic</TabsTrigger>
                 <TabsTrigger value="media">Media</TabsTrigger>
                 <TabsTrigger value="inventory">Inventory</TabsTrigger>
+                <TabsTrigger value="colors">Colors</TabsTrigger>
+                <TabsTrigger value="sections">Sections</TabsTrigger>
                 <TabsTrigger value="details">Details</TabsTrigger>
               </TabsList>
 

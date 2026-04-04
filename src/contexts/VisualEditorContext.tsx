@@ -220,6 +220,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   const [publishing, setPublishing] = useState(false);
   const [draftStatus, setDraftStatus] = useState<DraftStatus>("published");
   const [scheduledAt, setScheduledAt] = useState<string | null>(null);
+  const [layoutOrder, setLayoutOrderState] = useState<LayoutEntry[] | null>(null);
 
   const selectElement = useCallback((el: SelectedElement | null) => {
     setSelectedElement(el);

@@ -51,8 +51,9 @@ const CATEGORIES = [
   {
     key: "details",
     label: "Details",
-    description: "Material, finish, dimensions, weight, print time",
+    description: "Material, finish, dimensions, weight, print time, gift finder tags",
     fields: ["material_type", "finish_type", "dimensions_cm", "weight_grams", "print_time_hours"],
+    extra: "gift_tags",
   },
 ] as const;
 
@@ -164,6 +165,23 @@ const CopyProductSettingsModal = ({ open, onOpenChange, targetProductId, onApply
             reusable_block_id: s.reusable_block_id,
           }));
           await supabase.from("product_detail_sections").insert(newSections);
+        }
+      }
+
+      // Copy gift finder tags if details selected
+      if (selected.has("details") && targetProductId && !targetProductId.startsWith("draft-")) {
+        const { data: srcTags } = await supabase
+          .from("product_gift_finder_tags")
+          .select("gift_finder_tag_id")
+          .eq("product_id", sourceId);
+
+        if (srcTags && srcTags.length > 0) {
+          await supabase.from("product_gift_finder_tags").delete().eq("product_id", targetProductId);
+          await supabase.from("product_gift_finder_tags").insert(
+            srcTags.map((t: any) => ({ product_id: targetProductId, gift_finder_tag_id: t.gift_finder_tag_id }))
+          );
+          // Also update form state with copied tag IDs
+          result.gift_finder_tag_ids = srcTags.map((t: any) => t.gift_finder_tag_id);
         }
       }
 

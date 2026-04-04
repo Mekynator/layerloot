@@ -16,7 +16,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import ModelViewer from "@/components/ModelViewer";
 import ProductConfigurator from "@/components/ProductConfigurator";
 import PrintInfo from "@/components/PrintInfo";
-import SizePreview from "@/components/SizePreview";
 import { ProductDetailSkeleton } from "@/components/shared/loading-states";
 import RatingStars from "@/components/social/RatingStars";
 import { formatPrice } from "@/lib/currency";
@@ -31,6 +30,8 @@ import { useRecentlyViewedProducts } from "@/hooks/use-recently-viewed";
 import { useProductDetailQuery } from "@/hooks/use-storefront";
 import ProductFOMOBar from "@/components/smart/ProductFOMOBar";
 import FrequentlyBoughtTogether from "@/components/smart/FrequentlyBoughtTogether";
+import ProductColorPicker, { type SelectedColor } from "@/components/product/ProductColorPicker";
+import ProductDetailSections from "@/components/product/ProductDetailSections";
 
 const AUTO_GALLERY_MS = 6500;
 

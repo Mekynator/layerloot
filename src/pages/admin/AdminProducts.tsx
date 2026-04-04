@@ -126,6 +126,7 @@ const AdminProducts = () => {
   const [historyProductId, setHistoryProductId] = useState<string | null>(null);
   const [scheduleProductId, setScheduleProductId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ type: string; productId: string; name: string } | null>(null);
+  const [copyModalOpen, setCopyModalOpen] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const productAdmin = useProductAdmin();

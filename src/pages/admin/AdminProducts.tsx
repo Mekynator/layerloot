@@ -28,6 +28,7 @@ import { useProductAdmin, type ProductDraftData, type ProductStatus } from "@/ho
 import { getStockTypeBadge, isMadeToOrder } from "@/lib/stock";
 import ProductColorManager from "@/components/admin/ProductColorManager";
 import ProductSectionsManager from "@/components/admin/ProductSectionsManager";
+import CopyProductSettingsModal from "@/components/admin/CopyProductSettingsModal";
 
 interface Product {
   id: string;

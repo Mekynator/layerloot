@@ -247,7 +247,7 @@ const ProductDetail = () => {
               </div>
             )}
 
-            <div className="flex gap-2 overflow-x-auto pb-1">
+            <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none md:gap-2">
               {images.map((img, i) => (
                 <motion.button
                   whileHover={{ y: -2 }}

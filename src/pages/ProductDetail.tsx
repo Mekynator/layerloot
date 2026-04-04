@@ -32,6 +32,7 @@ import ProductFOMOBar from "@/components/smart/ProductFOMOBar";
 import FrequentlyBoughtTogether from "@/components/smart/FrequentlyBoughtTogether";
 import ProductColorPicker, { type SelectedColor } from "@/components/product/ProductColorPicker";
 import ProductDetailSections from "@/components/product/ProductDetailSections";
+import ProductColorSummary from "@/components/product/ProductColorSummary";
 
 const AUTO_GALLERY_MS = 6500;
 

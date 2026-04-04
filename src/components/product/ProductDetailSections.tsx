@@ -99,7 +99,7 @@ function ReusableBlockSection({ section, block }: { section: Section; block?: Re
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
     >
-      <BlockRenderer block={siteBlock} />
+      <BlockRenderer {...siteBlock} />
     </motion.div>
   );
 }

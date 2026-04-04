@@ -49,6 +49,7 @@ const ProductDetail = () => {
   const [reviewForm, setReviewForm] = useState({ rating: 5, title: "", comment: "" });
   const [submitting, setSubmitting] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
+  const [selectedColors, setSelectedColors] = useState<SelectedColor[]>([]);
 
   const heroImageRef = useRef<HTMLImageElement | null>(null);
   const addToCartSectionRef = useRef<HTMLDivElement | null>(null);

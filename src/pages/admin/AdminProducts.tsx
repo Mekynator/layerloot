@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Archive, Calculator, Calendar, CheckCircle, Eye, History, Layers,
-  Pencil, Plus, Tag, Trash2, X, XCircle,
+  Pencil, Plus, Tag, Trash2, X, XCircle, Search, Package, Repeat,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,7 @@ import PricingCalculator from "@/components/admin/PricingCalculator";
 import RevisionHistoryPanel from "@/components/admin/RevisionHistoryPanel";
 import SchedulePublishDialog from "@/components/admin/SchedulePublishDialog";
 import { useProductAdmin, type ProductDraftData, type ProductStatus } from "@/hooks/use-product-admin";
+import { getStockTypeBadge, isMadeToOrder } from "@/lib/stock";
 
 interface Product {
   id: string;
@@ -82,6 +83,22 @@ const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secon
   scheduled: { label: "Scheduled", variant: "default" },
 };
 
+function StockBadge({ stock }: { stock: number }) {
+  const badge = getStockTypeBadge(stock);
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
+      badge.type === "mto"
+        ? "bg-primary/10 text-primary"
+        : badge.type === "low"
+        ? "bg-amber-500/10 text-amber-500"
+        : "bg-muted text-foreground"
+    }`}>
+      {badge.type === "mto" && <Repeat className="h-3 w-3" />}
+      {badge.label}
+    </span>
+  );
+}
+
 const AdminProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -95,6 +112,8 @@ const AdminProducts = () => {
   const [pricingProductId, setPricingProductId] = useState<string | null>(null);
   const [giftTagPickerValue, setGiftTagPickerValue] = useState<string>("none");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [stockFilter, setStockFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [historyProductId, setHistoryProductId] = useState<string | null>(null);
   const [scheduleProductId, setScheduleProductId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ type: string; productId: string; name: string } | null>(null);
@@ -105,10 +124,34 @@ const AdminProducts = () => {
   const giftFinderTagMap = useMemo(() => new Map(giftFinderTags.map((tag) => [tag.id, tag])), [giftFinderTags]);
 
   const filteredProducts = useMemo(() => {
-    if (statusFilter === "all") return products;
-    if (statusFilter === "has_draft") return products.filter((p) => p.has_draft);
-    return products.filter((p) => (p.status ?? "published") === statusFilter);
-  }, [products, statusFilter]);
+    let result = products;
+
+    // Status filter
+    if (statusFilter === "has_draft") result = result.filter((p) => p.has_draft);
+    else if (statusFilter !== "all") result = result.filter((p) => (p.status ?? "published") === statusFilter);
+
+    // Stock filter
+    if (stockFilter === "mto") result = result.filter((p) => isMadeToOrder(p.stock));
+    else if (stockFilter === "tracked") result = result.filter((p) => p.stock > 0);
+    else if (stockFilter === "low") result = result.filter((p) => p.stock > 0 && p.stock <= 5);
+
+    // Search
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter((p) => p.name.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q));
+    }
+
+    return result;
+  }, [products, statusFilter, stockFilter, searchQuery]);
+
+  // Stats
+  const stats = useMemo(() => {
+    const total = products.length;
+    const mto = products.filter((p) => isMadeToOrder(p.stock)).length;
+    const tracked = products.filter((p) => p.stock > 0).length;
+    const active = products.filter((p) => p.is_active).length;
+    return { total, mto, tracked, active };
+  }, [products]);
 
   const fetchProducts = async () => {
     const [{ data: productsData, error: productsError }, { data: linksData, error: linksError }] = await Promise.all([
@@ -211,14 +254,10 @@ const AdminProducts = () => {
 
       if (editingId) {
         const ok = await productAdmin.saveDraftProduct(editingId, draftData, user?.id ?? "");
-        if (ok) {
-          await syncProductGiftTags(editingId, form.gift_finder_tag_ids);
-        }
+        if (ok) await syncProductGiftTags(editingId, form.gift_finder_tag_ids);
       } else {
         const newId = await productAdmin.createDraftProduct(draftData, user?.id ?? "");
-        if (newId) {
-          await syncProductGiftTags(newId, form.gift_finder_tag_ids);
-        }
+        if (newId) await syncProductGiftTags(newId, form.gift_finder_tag_ids);
       }
 
       setOpen(false);
@@ -271,13 +310,6 @@ const AdminProducts = () => {
     if (ok) await fetchProducts();
   };
 
-  const handleScheduleConfirm = async (date: Date) => {
-    if (!scheduleProductId || !user?.id) return;
-    const ok = await productAdmin.scheduleProductPublish(scheduleProductId, date.toISOString(), user.id);
-    setScheduleProductId(null);
-    if (ok) await fetchProducts();
-  };
-
   const addGiftFinderTagToForm = (tagId: string) => {
     if (!tagId || tagId === "none") return;
     setForm((prev) => ({ ...prev, gift_finder_tag_ids: prev.gift_finder_tag_ids.includes(tagId) ? prev.gift_finder_tag_ids : [...prev.gift_finder_tag_ids, tagId] }));
@@ -287,66 +319,170 @@ const AdminProducts = () => {
 
   return (
     <AdminLayout>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="font-display text-3xl font-bold uppercase text-foreground">Products</h1>
-        <div className="flex items-center gap-3">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40"><SelectValue placeholder="Filter" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Products</SelectItem>
-              <SelectItem value="published">Published</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="unpublished">Unpublished</SelectItem>
-              <SelectItem value="archived">Archived</SelectItem>
-              <SelectItem value="scheduled">Scheduled</SelectItem>
-              <SelectItem value="has_draft">Has Changes</SelectItem>
-            </SelectContent>
-          </Select>
+      {/* Header */}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-bold uppercase text-foreground">Products</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {stats.total} total · {stats.active} active · {stats.mto} made to order · {stats.tracked} tracked inventory
+          </p>
+        </div>
+        <Dialog open={open} onOpenChange={(nextOpen) => { setOpen(nextOpen); if (!nextOpen) resetFormState(); }}>
+          <DialogTrigger asChild>
+            <Button className="font-display uppercase tracking-wider"><Plus className="mr-1 h-4 w-4" /> Add Product</Button>
+          </DialogTrigger>
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+            <DialogHeader><DialogTitle className="font-display uppercase">{editingId ? "Edit" : "Add"} Product</DialogTitle></DialogHeader>
+            <Tabs defaultValue="basic" className="space-y-4">
+              <TabsList className="w-full grid grid-cols-4">
+                <TabsTrigger value="basic">Basic Info</TabsTrigger>
+                <TabsTrigger value="media">Media</TabsTrigger>
+                <TabsTrigger value="inventory">Inventory</TabsTrigger>
+                <TabsTrigger value="details">Details</TabsTrigger>
+              </TabsList>
 
-          <Dialog open={open} onOpenChange={(nextOpen) => { setOpen(nextOpen); if (!nextOpen) resetFormState(); }}>
-            <DialogTrigger asChild>
-              <Button className="font-display uppercase tracking-wider"><Plus className="mr-1 h-4 w-4" /> Add Product</Button>
-            </DialogTrigger>
-            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-              <DialogHeader><DialogTitle className="font-display uppercase">{editingId ? "Edit" : "Add"} Product</DialogTitle></DialogHeader>
-              <Tabs defaultValue="general" className="space-y-4">
-                <TabsList className="w-full">
-                  <TabsTrigger value="general" className="flex-1">General</TabsTrigger>
-                  <TabsTrigger value="print" className="flex-1">Print Info</TabsTrigger>
-                </TabsList>
+              {/* A. Basic Info */}
+              <TabsContent value="basic" className="space-y-4">
+                <div><Label>Product Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: generateSlug(e.target.value) })} placeholder="Enter product name" /></div>
+                <div><Label>Slug</Label><Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} className="text-muted-foreground" /></div>
+                <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={4} placeholder="Product description..." /></div>
+                <div>
+                  <Label>Category</Label>
+                  <Select value={form.category_id ?? "none"} onValueChange={(value) => setForm({ ...form, category_id: value === "none" ? null : value })}>
+                    <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No category</SelectItem>
+                      {categories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-6">
+                  <label className="flex items-center gap-2 text-sm"><Switch checked={form.is_featured} onCheckedChange={(value) => setForm({ ...form, is_featured: value })} /> Featured Product</label>
+                </div>
+              </TabsContent>
 
-                <TabsContent value="general" className="space-y-4">
-                  <div><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: generateSlug(e.target.value) })} /></div>
-                  <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-                  <div className="grid grid-cols-2 gap-4">
+              {/* B. Media */}
+              <TabsContent value="media" className="space-y-4">
+                <div>
+                  <Label>Product Images (max 20 MB each)</Label>
+                  <Input type="file" accept="image/*" multiple onChange={(e) => setImageFiles(Array.from(e.target.files ?? []))} className="mt-1" />
+                  {form.images.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {form.images.map((url, index) => (
+                        <div key={index} className="group relative">
+                          <img src={url} alt="" className="h-20 w-20 rounded-lg border border-border object-cover" />
+                          <button type="button" onClick={() => setForm({ ...form, images: form.images.filter((_, idx) => idx !== index) })} className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100">×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <Separator />
+                <div>
+                  <Label>3D Model (STL, OBJ, 3MF — max 500 MB)</Label>
+                  <Input type="file" accept=".stl,.obj,.3mf" onChange={(e) => setModelFile(e.target.files?.[0] ?? null)} className="mt-1" />
+                  {form.model_url && <p className="mt-1 text-xs text-muted-foreground">Current model uploaded ✓</p>}
+                </div>
+              </TabsContent>
+
+              {/* C. Inventory & Pricing */}
+              <TabsContent value="inventory" className="space-y-4">
+                <Card className="border-primary/10">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-display uppercase">Pricing</CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-2 gap-4">
                     <div><Label>Price (DKK)</Label><Input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) || 0 })} /></div>
-                    <div><Label>Compare Price (DKK)</Label><Input type="number" step="0.01" value={form.compare_at_price ?? ""} onChange={(e) => setForm({ ...form, compare_at_price: parseFloat(e.target.value) || null })} /></div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><Label>Stock</Label><Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: parseInt(e.target.value, 10) || 0 })} /></div>
-                    <div>
-                      <Label>Product Category</Label>
-                      <Select value={form.category_id ?? "none"} onValueChange={(value) => setForm({ ...form, category_id: value === "none" ? null : value })}>
-                        <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No category</SelectItem>
-                          {categories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+                    <div><Label>Compare at Price</Label><Input type="number" step="0.01" value={form.compare_at_price ?? ""} onChange={(e) => setForm({ ...form, compare_at_price: parseFloat(e.target.value) || null })} /></div>
+                  </CardContent>
+                </Card>
 
-                  <div className="space-y-3">
+                <Card className="border-primary/10">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-display uppercase">Inventory / Fulfillment</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
                     <div>
-                      <Label>Gift Finder Tags</Label>
-                      <Select value={giftTagPickerValue} onValueChange={addGiftFinderTagToForm}>
-                        <SelectTrigger><SelectValue placeholder="Add gift finder tag" /></SelectTrigger>
+                      <Label>Stock Quantity</Label>
+                      <Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: parseInt(e.target.value, 10) || 0 })} />
+                    </div>
+                    <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <StockBadge stock={form.stock} />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        <strong>0 = Made to order</strong> — no stock tracking, always purchasable, produced on demand.
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        <strong>1+ = Tracked inventory</strong> — stock decreases after orders, low stock warnings apply.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* D. Details */}
+              <TabsContent value="details" className="space-y-4">
+                <Card className="border-primary/10">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-display uppercase">Print / Production Info</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div><Label>Print Time (hours)</Label><Input type="number" step="0.5" value={form.print_time_hours ?? ""} onChange={(e) => setForm({ ...form, print_time_hours: parseFloat(e.target.value) || null })} /></div>
+                      <div><Label>Weight (grams)</Label><Input type="number" step="1" value={form.weight_grams ?? ""} onChange={(e) => setForm({ ...form, weight_grams: parseFloat(e.target.value) || null })} /></div>
+                    </div>
+                    <div>
+                      <Label>Material Type</Label>
+                      <Select value={form.material_type ?? "none"} onValueChange={(value) => setForm({ ...form, material_type: value === "none" ? null : value })}>
+                        <SelectTrigger><SelectValue placeholder="Select material" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">Select tag</SelectItem>
-                          {giftFinderTags.map((tag) => (<SelectItem key={tag.id} value={tag.id} disabled={form.gift_finder_tag_ids.includes(tag.id)}>{tag.name}</SelectItem>))}
+                          <SelectItem value="none">Not specified</SelectItem>
+                          <SelectItem value="PLA">PLA</SelectItem>
+                          <SelectItem value="PLA Silk">PLA Silk</SelectItem>
+                          <SelectItem value="PETG">PETG</SelectItem>
+                          <SelectItem value="Resin">Resin</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
+                    <div>
+                      <Label>Finish Type</Label>
+                      <Select value={form.finish_type ?? "none"} onValueChange={(value) => setForm({ ...form, finish_type: value === "none" ? null : value })}>
+                        <SelectTrigger><SelectValue placeholder="Select finish" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Not specified</SelectItem>
+                          <SelectItem value="raw">Raw</SelectItem>
+                          <SelectItem value="cleaned">Cleaned</SelectItem>
+                          <SelectItem value="painted">Painted</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Dimensions (cm)</Label>
+                      <div className="mt-1 grid grid-cols-3 gap-2">
+                        {(["length", "width", "height"] as const).map((dim) => (
+                          <div key={dim}>
+                            <Label className="text-xs text-muted-foreground capitalize">{dim}</Label>
+                            <Input type="number" step="0.1" value={form.dimensions_cm?.[dim] ?? ""} onChange={(e) => setForm({ ...form, dimensions_cm: { ...(form.dimensions_cm || {}), [dim]: parseFloat(e.target.value) || undefined } })} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-primary/10">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-display uppercase">Gift Finder Tags</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Select value={giftTagPickerValue} onValueChange={addGiftFinderTagToForm}>
+                      <SelectTrigger><SelectValue placeholder="Add gift finder tag" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Select tag</SelectItem>
+                        {giftFinderTags.map((tag) => (<SelectItem key={tag.id} value={tag.id} disabled={form.gift_finder_tag_ids.includes(tag.id)}>{tag.name}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
                     {form.gift_finder_tag_ids.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
                         {form.gift_finder_tag_ids.map((tagId) => {
@@ -360,89 +496,55 @@ const AdminProducts = () => {
                           );
                         })}
                       </div>
-                    ) : (<p className="text-xs text-muted-foreground">Hidden from the product UI. Used only by Gift Finder on Create Your Own.</p>)}
-                  </div>
+                    ) : (<p className="text-xs text-muted-foreground">Used by Gift Finder on Create Your Own page.</p>)}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
 
-                  <div>
-                    <Label>Product Images (max 20 MB each)</Label>
-                    <Input type="file" accept="image/*" multiple onChange={(e) => setImageFiles(Array.from(e.target.files ?? []))} />
-                    {form.images.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {form.images.map((url, index) => (
-                          <div key={index} className="group relative">
-                            <img src={url} alt="" className="h-16 w-16 rounded border border-border object-cover" />
-                            <button type="button" onClick={() => setForm({ ...form, images: form.images.filter((_, idx) => idx !== index) })} className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100">×</button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <Label>3D Model (STL, OBJ, 3MF, max 500 MB)</Label>
-                    <Input type="file" accept=".stl,.obj,.3mf" onChange={(e) => setModelFile(e.target.files?.[0] ?? null)} />
-                    {form.model_url && <p className="mt-1 text-xs text-muted-foreground">Current model uploaded ✓</p>}
-                  </div>
-
-                  <div className="flex gap-6">
-                    <label className="flex items-center gap-2 text-sm"><Switch checked={form.is_featured} onCheckedChange={(value) => setForm({ ...form, is_featured: value })} /> Featured</label>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="print" className="space-y-4">
-                  <p className="text-xs text-muted-foreground">These details show on the product page as craftsmanship indicators.</p>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><Label>Print Time (hours)</Label><Input type="number" step="0.5" value={form.print_time_hours ?? ""} onChange={(e) => setForm({ ...form, print_time_hours: parseFloat(e.target.value) || null })} /></div>
-                    <div><Label>Weight (grams)</Label><Input type="number" step="1" value={form.weight_grams ?? ""} onChange={(e) => setForm({ ...form, weight_grams: parseFloat(e.target.value) || null })} /></div>
-                  </div>
-                  <div>
-                    <Label>Material Type</Label>
-                    <Select value={form.material_type ?? "none"} onValueChange={(value) => setForm({ ...form, material_type: value === "none" ? null : value })}>
-                      <SelectTrigger><SelectValue placeholder="Select material" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Not specified</SelectItem>
-                        <SelectItem value="PLA">PLA</SelectItem>
-                        <SelectItem value="PLA Silk">PLA Silk</SelectItem>
-                        <SelectItem value="PETG">PETG</SelectItem>
-                        <SelectItem value="Resin">Resin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Finish Type</Label>
-                    <Select value={form.finish_type ?? "none"} onValueChange={(value) => setForm({ ...form, finish_type: value === "none" ? null : value })}>
-                      <SelectTrigger><SelectValue placeholder="Select finish" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Not specified</SelectItem>
-                        <SelectItem value="raw">Raw</SelectItem>
-                        <SelectItem value="cleaned">Cleaned</SelectItem>
-                        <SelectItem value="painted">Painted</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Separator />
-                  <div>
-                    <Label>Dimensions (cm)</Label>
-                    <div className="mt-1 grid grid-cols-3 gap-2">
-                      {(["length", "width", "height"] as const).map((dim) => (
-                        <div key={dim}>
-                          <Label className="text-xs text-muted-foreground capitalize">{dim}</Label>
-                          <Input type="number" step="0.1" value={form.dimensions_cm?.[dim] ?? ""} onChange={(e) => setForm({ ...form, dimensions_cm: { ...(form.dimensions_cm || {}), [dim]: parseFloat(e.target.value) || undefined } })} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-
-              <Button onClick={handleSubmit} className="w-full font-display uppercase tracking-wider">
-                {editingId ? "Save Draft" : "Create Product"}
-              </Button>
-            </DialogContent>
-          </Dialog>
-        </div>
+            <Button onClick={handleSubmit} className="w-full font-display uppercase tracking-wider mt-2">
+              {editingId ? "Save Draft" : "Create Product"}
+            </Button>
+          </DialogContent>
+        </Dialog>
       </div>
 
+      {/* Filters Bar */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search products..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="published">Published</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="unpublished">Unpublished</SelectItem>
+            <SelectItem value="archived">Archived</SelectItem>
+            <SelectItem value="scheduled">Scheduled</SelectItem>
+            <SelectItem value="has_draft">Has Changes</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={stockFilter} onValueChange={setStockFilter}>
+          <SelectTrigger className="w-40"><SelectValue placeholder="Stock" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Stock Types</SelectItem>
+            <SelectItem value="mto">Made to Order</SelectItem>
+            <SelectItem value="tracked">Tracked Inventory</SelectItem>
+            <SelectItem value="low">Low Stock (≤5)</SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="text-xs text-muted-foreground">{filteredProducts.length} products</span>
+      </div>
+
+      {/* Products Table */}
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -450,7 +552,7 @@ const AdminProducts = () => {
               <TableRow>
                 <TableHead>Product</TableHead>
                 <TableHead>Price</TableHead>
-                <TableHead>Stock</TableHead>
+                <TableHead>Stock Type</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -463,7 +565,7 @@ const AdminProducts = () => {
                   <TableRow key={product.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        {product.images?.[0] && <img src={product.images[0]} alt="" className="h-10 w-10 rounded object-cover" />}
+                        {product.images?.[0] && <img src={product.images[0]} alt="" className="h-10 w-10 rounded-lg object-cover" />}
                         <div>
                           <p className="font-display text-sm font-semibold uppercase">{product.name}</p>
                           <p className="text-xs text-muted-foreground">{product.slug}</p>
@@ -471,7 +573,7 @@ const AdminProducts = () => {
                       </div>
                     </TableCell>
                     <TableCell className="font-display font-bold text-primary">{Number(product.price).toFixed(2)} DKK</TableCell>
-                    <TableCell>{product.stock}</TableCell>
+                    <TableCell><StockBadge stock={product.stock} /></TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1">
                         <Badge variant={cfg.variant}>{cfg.label}</Badge>
@@ -485,43 +587,34 @@ const AdminProducts = () => {
                         <Link to={`/admin/products/${product.id}/preview`}>
                           <Button variant="ghost" size="icon" title="Preview"><Eye className="h-4 w-4" /></Button>
                         </Link>
-
                         {(status === "draft" || product.has_draft) && (
                           <Button variant="ghost" size="icon" title="Publish" onClick={() => setConfirmAction({ type: "publish", productId: product.id, name: product.name })}>
                             <CheckCircle className="h-4 w-4 text-primary" />
                           </Button>
                         )}
-
                         {status === "published" && (
                           <Button variant="ghost" size="icon" title="Unpublish" onClick={() => setConfirmAction({ type: "unpublish", productId: product.id, name: product.name })}>
                             <XCircle className="h-4 w-4 text-destructive" />
                           </Button>
                         )}
-
                         <Button variant="ghost" size="icon" title="Schedule" onClick={() => setScheduleProductId(product.id)}>
                           <Calendar className="h-4 w-4" />
                         </Button>
-
                         <Button variant="ghost" size="icon" title="History" onClick={() => setHistoryProductId(product.id)}>
                           <History className="h-4 w-4" />
                         </Button>
-
                         <Button variant="ghost" size="icon" onClick={() => { setPricingProductId(product.id); setPricingOpen(true); }} title="Pricing">
                           <Calculator className="h-4 w-4" />
                         </Button>
-
                         <Link to={`/admin/products/${product.id}/variants`}>
                           <Button variant="ghost" size="icon" title="Variants"><Layers className="h-4 w-4" /></Button>
                         </Link>
-
                         <Button variant="ghost" size="icon" onClick={() => editProduct(product)}><Pencil className="h-4 w-4" /></Button>
-
                         {status !== "archived" && (
                           <Button variant="ghost" size="icon" title="Archive" onClick={() => setConfirmAction({ type: "archive", productId: product.id, name: product.name })}>
                             <Archive className="h-4 w-4 text-muted-foreground" />
                           </Button>
                         )}
-
                         <Button variant="ghost" size="icon" onClick={() => setConfirmAction({ type: "delete", productId: product.id, name: product.name })}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>

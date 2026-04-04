@@ -416,6 +416,9 @@ const ProductDetail = () => {
           </motion.div>
         </div>
 
+        {/* Product Detail Sections (Video / Carousel) */}
+        <ProductDetailSections productId={product.id} />
+
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 pt-4">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="space-y-2">

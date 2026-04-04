@@ -676,7 +676,7 @@ const AdminDiscounts = () => {
                   <SelectItem value="all">All Products</SelectItem>
                   <SelectItem value="product">Specific Product</SelectItem>
                   <SelectItem value="category">Specific Category</SelectItem>
-                  <SelectItem value="user">Specific User(s)</SelectItem>
+                  <SelectItem value="user">User Audience</SelectItem>
                   <SelectItem value="bulk">Bulk Discount</SelectItem>
                 </SelectContent>
               </Select>

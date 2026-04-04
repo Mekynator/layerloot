@@ -494,7 +494,7 @@ const ProductDetail = () => {
             </Card>
           )}
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
             {reviews.length === 0 ? (
               <div className="section-surface px-6 py-12 text-center text-muted-foreground">
                 {t("products.noReviews")}

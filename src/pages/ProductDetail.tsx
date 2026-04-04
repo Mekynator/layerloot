@@ -174,8 +174,8 @@ const ProductDetail = () => {
   }
 
   return (
-    <div className="py-8 md:py-10">
-      <div className="container space-y-12">
+    <div className="py-6 pb-24 md:py-10 md:pb-10">
+      <div className="container space-y-8 md:space-y-12 px-4 md:px-6">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           <Link
             to="/products"

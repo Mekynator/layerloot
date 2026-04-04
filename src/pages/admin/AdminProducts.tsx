@@ -75,6 +75,9 @@ const emptyProduct = {
   finish_type: null as string | null,
   material_type: null as string | null,
   gift_finder_tag_ids: [] as string[],
+  enable_color_picker: false,
+  color_selection_mode: "single",
+  color_required: false,
 };
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "success" | "destructive" | "outline" }> = {

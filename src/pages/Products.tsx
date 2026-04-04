@@ -152,7 +152,7 @@ const Products = () => {
                   initial="hidden"
                   animate="visible"
                   variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.05 } } }}
-                  className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3"
+                  className="grid gap-4 grid-cols-2 md:gap-6 xl:grid-cols-3"
                 >
                   {filtered.map((product, index) => (
                     <motion.div key={product.id} variants={fadeUp}>

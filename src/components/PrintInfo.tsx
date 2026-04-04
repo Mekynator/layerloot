@@ -52,7 +52,7 @@ const PrintInfo = ({ printTimeHours, dimensionsCm, weightGrams, finishType, mate
       <h4 className="mb-3 font-display text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         Craftsmanship Details
       </h4>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2 md:gap-3">
         {items.map(({ icon: Icon, label, value }) => (
           <div key={label} className="flex items-start gap-2.5">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">

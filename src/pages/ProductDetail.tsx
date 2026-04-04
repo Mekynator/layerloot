@@ -329,11 +329,9 @@ const ProductDetail = () => {
                           selectedVariant?.id === variant.id
                             ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
                             : "bg-muted/30 text-foreground hover:bg-primary/10"
-                        } ${variant.stock <= 0 ? "cursor-not-allowed opacity-40" : ""}`}
-                        disabled={variant.stock <= 0}
+                        }`}
                       >
                         {variant.name}
-                        {variant.stock <= 0 && ` (${t("products.outOfStock")})`}
                       </motion.button>
                     ))}
                   </div>
@@ -357,8 +355,8 @@ const ProductDetail = () => {
             </div>
 
             <div className="flex items-center gap-3 text-sm">
-              <span className={`font-medium ${activeStock > 0 ? "text-green-500" : "text-destructive"}`}>
-                {activeStock > 0 ? t("products.inStock", { count: activeStock }) : t("products.outOfStock")}
+              <span className="font-medium text-green-500">
+                {activeStock > 0 ? t("products.inStock", { count: activeStock }) : t("products.madeToOrder", "Made to order")}
               </span>
             </div>
 
@@ -367,7 +365,7 @@ const ProductDetail = () => {
                 size="lg"
                 className={`w-full font-display uppercase tracking-wider transition-all duration-300 shadow-[0_0_20px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_32px_hsl(var(--primary)/0.35)] ${justAdded ? "shadow-[0_0_28px_hsl(var(--primary)/0.45)]" : ""}`}
                 onClick={handleAddToCart}
-                disabled={activeStock <= 0 || (variants.length > 0 && !selectedVariant && !hasConfiguratorAttrs)}
+                disabled={(variants.length > 0 && !selectedVariant && !hasConfiguratorAttrs)}
               >
                 {justAdded ? (
                   <>
@@ -552,7 +550,7 @@ const ProductDetail = () => {
         product={product}
         price={activePrice}
         stock={activeStock}
-        disabled={activeStock <= 0 || (variants.length > 0 && !selectedVariant && !hasConfiguratorAttrs)}
+        disabled={(variants.length > 0 && !selectedVariant && !hasConfiguratorAttrs)}
         onAddToCart={handleAddToCart}
         justAdded={justAdded}
         observeRef={addToCartSectionRef}

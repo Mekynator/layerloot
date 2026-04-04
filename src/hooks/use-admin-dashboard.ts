@@ -94,7 +94,7 @@ export function useAdminDashboard(period: Period) {
         supabase.from("loyalty_points").select("points"),
         supabase.from("user_vouchers").select("id", { count: "exact", head: true })
           .eq("is_used", true),
-        supabase.from("products").select("id, name, stock").lte("stock", 5).eq("is_active", true).order("stock").limit(10),
+        supabase.from("products").select("id, name, stock").gt("stock", 0).lte("stock", 5).eq("is_active", true).order("stock").limit(10),
         supabase.from("custom_orders").select("status"),
         // New parallel queries
         supabase.from("site_blocks").select("id", { count: "exact", head: true }).eq("has_draft", true),
@@ -159,7 +159,7 @@ export function useAdminDashboard(period: Period) {
       if (allOrders.length > 0) insights.push({ message: `${allOrders.length} orders in this period generating ${revenue.toFixed(0)} kr revenue.`, type: "positive" });
       if ((pendingOrdRes.count ?? 0) > 3) insights.push({ message: `${pendingOrdRes.count} orders pending — consider processing soon.`, type: "warning" });
       if ((quotesRes.count ?? 0) > 0) insights.push({ message: `${quotesRes.count} custom quotes awaiting customer response.`, type: "neutral" });
-      if ((lowStockRes.data ?? []).length > 0) insights.push({ message: `${lowStockRes.data!.length} products have low stock (≤5 units).`, type: "warning" });
+      if ((lowStockRes.data ?? []).length > 0) insights.push({ message: `${lowStockRes.data!.length} tracked-inventory products have low stock (≤5 units).`, type: "warning" });
       if ((pendingShowRes.count ?? 0) > 0) insights.push({ message: `${pendingShowRes.count} community showcases pending approval.`, type: "neutral" });
 
       if (!mounted) return;

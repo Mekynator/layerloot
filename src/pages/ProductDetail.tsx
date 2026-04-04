@@ -329,11 +329,9 @@ const ProductDetail = () => {
                           selectedVariant?.id === variant.id
                             ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
                             : "bg-muted/30 text-foreground hover:bg-primary/10"
-                        } ${variant.stock <= 0 ? "cursor-not-allowed opacity-40" : ""}`}
-                        disabled={variant.stock <= 0}
+                        }`}
                       >
                         {variant.name}
-                        {variant.stock <= 0 && ` (${t("products.outOfStock")})`}
                       </motion.button>
                     ))}
                   </div>

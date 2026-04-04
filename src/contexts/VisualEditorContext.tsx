@@ -297,7 +297,29 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   }, [pages, loadPages]);
 
   useEffect(() => { void loadPages(); }, [loadPages]);
-  useEffect(() => { if (activePage) void fetchBlocks(activePage); }, [activePage, fetchBlocks]);
+  useEffect(() => { if (activePage) { void fetchBlocks(activePage); void loadLayoutOrder(activePage); } }, [activePage, fetchBlocks]);
+
+  // Layout order persistence
+  const loadLayoutOrder = useCallback(async (page: string) => {
+    const key = `layout_order_${page}`;
+    const { data } = await supabase.from("site_settings").select("value").eq("key", key).maybeSingle();
+    if (data?.value && Array.isArray(data.value)) {
+      setLayoutOrderState(data.value as LayoutEntry[]);
+    } else {
+      setLayoutOrderState(null);
+    }
+  }, []);
+
+  const setLayoutOrder = useCallback(async (order: LayoutEntry[]) => {
+    setLayoutOrderState(order);
+    const key = `layout_order_${activePage}`;
+    const { data: existing } = await supabase.from("site_settings").select("id").eq("key", key).maybeSingle();
+    if (existing) {
+      await supabase.from("site_settings").update({ value: order as any }).eq("key", key);
+    } else {
+      await supabase.from("site_settings").insert({ key, value: order as any });
+    }
+  }, [activePage]);
 
   const selectedPage = useMemo(
     () => pages.find(p => pageToEditorKey(p) === activePage) ?? null,

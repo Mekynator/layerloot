@@ -415,33 +415,7 @@ export default function AccountDashboard({ overview, tt, orders, customOrders, u
         )}
       </div>
 
-      {/* Row 3: Buy Again (conditional — only for returning users with purchases) */}
-      {showBuyAgain && (
-        <Card className="border-primary/10">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 font-display text-sm uppercase">
-              <RotateCcw className="h-4 w-4 text-primary" /> {tt("account.dashboard.buyAgain", "Buy Again")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-              {buyAgainProducts.map((product, i) => (
-                <motion.div key={product.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-                  <Link to={`/products/${product.slug}`} className="group block">
-                    <div className="aspect-square overflow-hidden rounded-xl bg-muted">
-                      {product.images?.[0] && (
-                        <img src={product.images[0]} alt={product.name} className="h-full w-full object-cover transition-transform group-hover:scale-105" loading="lazy" />
-                      )}
-                    </div>
-                    <p className="mt-2 truncate text-xs font-medium">{product.name}</p>
-                    <p className="text-xs font-bold text-primary">{formatPrice(product.price)}</p>
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Buy Again section removed */}
 
       {/* Row 4: Recently Viewed */}
       {recentProducts.length >= 2 && (

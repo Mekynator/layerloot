@@ -53,6 +53,9 @@ interface Product {
   draft_data?: any;
   published_at?: string | null;
   scheduled_publish_at?: string | null;
+  enable_color_picker?: boolean;
+  color_selection_mode?: string;
+  color_required?: boolean;
 }
 
 interface Category { id: string; name: string; }

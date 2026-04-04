@@ -311,7 +311,7 @@ const ProductDetail = () => {
             </motion.div>
 
             {product.description && (
-              <p className="max-w-2xl leading-relaxed text-muted-foreground">{product.description}</p>
+              <div className="max-w-2xl leading-relaxed text-muted-foreground whitespace-pre-line">{product.description}</div>
             )}
 
             {/* Color summary tile under description */}

@@ -552,7 +552,7 @@ const ProductDetail = () => {
         product={product}
         price={activePrice}
         stock={activeStock}
-        disabled={activeStock <= 0 || (variants.length > 0 && !selectedVariant && !hasConfiguratorAttrs)}
+        disabled={(variants.length > 0 && !selectedVariant && !hasConfiguratorAttrs)}
         onAddToCart={handleAddToCart}
         justAdded={justAdded}
         observeRef={addToCartSectionRef}

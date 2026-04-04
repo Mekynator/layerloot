@@ -304,7 +304,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     const key = `layout_order_${page}`;
     const { data } = await supabase.from("site_settings").select("value").eq("key", key).maybeSingle();
     if (data?.value && Array.isArray(data.value)) {
-      setLayoutOrderState(data.value as LayoutEntry[]);
+      setLayoutOrderState(data.value as unknown as LayoutEntry[]);
     } else {
       setLayoutOrderState(null);
     }

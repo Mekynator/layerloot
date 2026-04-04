@@ -253,6 +253,35 @@ const AdminDiscounts = () => {
   const openEdit = (discount: DiscountCode) => {
     setEditing(discount);
     setUserSearch("");
+
+    // Parse audience config from stored JSON, or fall back to legacy comma-separated IDs
+    let audienceGroups: AudienceGroup[] = ["specific"];
+    let specificIds: string[] = [];
+    let newRegisteredDays = 14;
+    let newcomerLogic: "days" | "zero_orders" = "days";
+    let newcomerDays = 30;
+
+    if (discount.scope === "user" && discount.scope_target_user_id) {
+      try {
+        const parsed = JSON.parse(discount.scope_target_user_id);
+        if (parsed.groups && Array.isArray(parsed.groups)) {
+          audienceGroups = parsed.groups;
+          specificIds = parsed.specific_ids || [];
+          newRegisteredDays = parsed.new_registered_days || 14;
+          newcomerLogic = parsed.newcomer_logic || "days";
+          newcomerDays = parsed.newcomer_days || 30;
+        } else {
+          // Not valid audience JSON, treat as legacy
+          specificIds = normalizeUserIds(discount.scope_target_user_id);
+          audienceGroups = specificIds.length > 0 ? ["specific"] : ["existing"];
+        }
+      } catch {
+        // Legacy comma-separated user IDs
+        specificIds = normalizeUserIds(discount.scope_target_user_id);
+        audienceGroups = specificIds.length > 0 ? ["specific"] : ["existing"];
+      }
+    }
+
     setForm({
       code: discount.code,
       description: discount.description || "",
@@ -267,11 +296,11 @@ const AdminDiscounts = () => {
       is_active: discount.is_active,
       starts_at: discount.starts_at,
       expires_at: discount.expires_at,
-      scope_target_user_ids: normalizeUserIds(discount.scope_target_user_id),
-      audience_groups: normalizeUserIds(discount.scope_target_user_id).length > 0 ? ["specific"] : ["existing"],
-      new_registered_days: 14,
-      newcomer_logic: "days",
-      newcomer_days: 30,
+      scope_target_user_ids: specificIds,
+      audience_groups: audienceGroups,
+      new_registered_days: newRegisteredDays,
+      newcomer_logic: newcomerLogic,
+      newcomer_days: newcomerDays,
     });
     setDialogOpen(true);
   };
@@ -352,8 +381,13 @@ const AdminDiscounts = () => {
       return;
     }
 
-    if (form.scope === "user" && matchedAudienceUsers.length === 0) {
-      toast({ title: "No users matched. Select at least one audience or user.", variant: "destructive" });
+    if (form.scope === "user" && form.audience_groups.length === 0) {
+      toast({ title: "Select at least one audience group.", variant: "destructive" });
+      return;
+    }
+
+    if (form.scope === "user" && form.audience_groups.length === 1 && form.audience_groups[0] === "specific" && form.scope_target_user_ids.length === 0) {
+      toast({ title: "Select at least one user.", variant: "destructive" });
       return;
     }
 
@@ -364,6 +398,19 @@ const AdminDiscounts = () => {
 
     setSaving(true);
 
+    // For user scope, store audience config as JSON so it applies dynamically
+    let scopeTargetUserIdValue: string | null = null;
+    if (form.scope === "user") {
+      const audienceConfig = {
+        groups: form.audience_groups,
+        specific_ids: form.audience_groups.includes("specific") ? form.scope_target_user_ids : [],
+        new_registered_days: form.new_registered_days,
+        newcomer_logic: form.newcomer_logic,
+        newcomer_days: form.newcomer_days,
+      };
+      scopeTargetUserIdValue = JSON.stringify(audienceConfig);
+    }
+
     const payload = {
       code: form.code.toUpperCase(),
       description: form.description || null,
@@ -371,7 +418,7 @@ const AdminDiscounts = () => {
       discount_value: Number(form.discount_value),
       scope: form.scope,
       scope_target_id: form.scope === "product" || form.scope === "category" ? form.scope_target_id : null,
-      scope_target_user_id: form.scope === "user" ? matchedAudienceUsers.join(",") : null,
+      scope_target_user_id: scopeTargetUserIdValue,
       min_order_amount: Number(form.min_order_amount) || 0,
       min_quantity: Number(form.min_quantity) || 1,
       max_uses: form.max_uses ? Number(form.max_uses) : null,
@@ -449,13 +496,26 @@ const AdminDiscounts = () => {
     }
 
     if (discount.scope === "user") {
-      const selectedIds = normalizeUserIds(discount.scope_target_user_id);
-      if (selectedIds.length === 0) return "User audience";
-      const matchedUsers = users.filter((user) => selectedIds.includes(user.id));
-      if (matchedUsers.length === 0) return `${selectedIds.length} targeted user(s)`;
-      if (matchedUsers.length === 1) return matchedUsers[0].label;
-      if (matchedUsers.length <= 3) return matchedUsers.map((user) => user.label).join(", ");
-      return `${matchedUsers.length} targeted users`;
+      if (!discount.scope_target_user_id) return "User audience";
+      try {
+        const parsed = JSON.parse(discount.scope_target_user_id);
+        if (parsed.groups && Array.isArray(parsed.groups)) {
+          const labels: string[] = [];
+          if (parsed.groups.includes("specific") && parsed.specific_ids?.length) labels.push(`${parsed.specific_ids.length} specific`);
+          if (parsed.groups.includes("existing")) labels.push("all existing");
+          if (parsed.groups.includes("new_registered")) labels.push(`new (${parsed.new_registered_days || 14}d)`);
+          if (parsed.groups.includes("newcomers")) labels.push("newcomers");
+          if (parsed.groups.includes("invited")) labels.push("invited");
+          return labels.join(" + ") || "User audience";
+        }
+      } catch {
+        // Legacy format
+        const selectedIds = normalizeUserIds(discount.scope_target_user_id);
+        if (selectedIds.length === 0) return "User audience";
+        const matchedUsers = users.filter((user) => selectedIds.includes(user.id));
+        if (matchedUsers.length <= 3) return matchedUsers.map((u) => u.label).join(", ") || `${selectedIds.length} user(s)`;
+        return `${matchedUsers.length} targeted users`;
+      }
     }
 
     if (discount.scope === "bulk") {
@@ -849,21 +909,35 @@ const AdminDiscounts = () => {
                   </div>
                 )}
 
-                {/* Live matched preview */}
-                <div className="rounded-md border border-primary/20 bg-primary/5 p-3 flex items-center gap-3">
-                  <Users className="h-5 w-5 text-primary shrink-0" />
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">{matchedAudienceUsers.length} user{matchedAudienceUsers.length !== 1 ? "s" : ""} matched</p>
-                    <p className="text-xs text-muted-foreground">
-                      {form.audience_groups.map((g) => {
-                        if (g === "specific") return `${form.scope_target_user_ids.length} manually selected`;
-                        if (g === "existing") return "all existing users";
-                        if (g === "new_registered") return `registered in last ${form.new_registered_days} days`;
-                        if (g === "newcomers") return form.newcomer_logic === "days" ? `newcomers (last ${form.newcomer_days} days)` : "newcomers (no activity)";
-                        if (g === "invited") return "invited users";
-                        return g;
-                      }).join(" + ")}
-                    </p>
+                {/* Live audience preview */}
+                <div className="rounded-md border border-primary/20 bg-primary/5 p-3 flex items-start gap-3">
+                  <Users className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    {form.audience_groups.includes("specific") && (
+                      <p className="text-sm text-foreground">
+                        <span className="font-semibold">{form.scope_target_user_ids.length}</span> manually selected user{form.scope_target_user_ids.length !== 1 ? "s" : ""}
+                      </p>
+                    )}
+                    {form.audience_groups.filter((g) => g !== "specific").length > 0 && (
+                      <p className="text-sm text-foreground">
+                        <span className="font-semibold">Dynamic groups:</span>{" "}
+                        {form.audience_groups.filter((g) => g !== "specific").map((g) => {
+                          if (g === "existing") return "all existing users";
+                          if (g === "new_registered") return `registered in last ${form.new_registered_days} days`;
+                          if (g === "newcomers") return form.newcomer_logic === "days" ? `newcomers (last ${form.newcomer_days} days)` : "newcomers (no activity)";
+                          if (g === "invited") return "invited users";
+                          return g;
+                        }).join(", ")}
+                      </p>
+                    )}
+                    {form.audience_groups.some((g) => g !== "specific") && (
+                      <p className="text-xs text-muted-foreground italic">
+                        Applies to current and future users who match the criteria
+                      </p>
+                    )}
+                    {form.audience_groups.length === 1 && form.audience_groups[0] === "specific" && (
+                      <p className="text-xs text-muted-foreground">Only the selected users above will receive this discount</p>
+                    )}
                   </div>
                 </div>
               </div>

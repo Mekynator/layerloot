@@ -1,5 +1,5 @@
 import { useEffect, useState, lazy, Suspense } from "react";
-import { Save, ChevronUp, ChevronDown, Eye, EyeOff, GripVertical, Package } from "lucide-react";
+import { Save, ChevronUp, ChevronDown, Eye, EyeOff, GripVertical, Package, Plus, Trash2 } from "lucide-react";
 import type { AccountPageConfig } from "@/components/account/types";
 import { DEFAULT_ACCOUNT_CONFIG } from "@/components/account/types";
 import { Button } from "@/components/ui/button";
@@ -72,28 +72,19 @@ const PersonalizationSettings = () => {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="font-display text-sm uppercase">Engine Settings</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle className="font-display text-sm uppercase">Engine Settings</CardTitle></CardHeader>
         <CardContent className="space-y-5">
           <div className="flex items-center gap-3">
             <Switch checked={weights.enabled} onCheckedChange={(v) => setWeights((p) => ({ ...p, enabled: v }))} />
             <Label className="text-xs">Enable personalization globally</Label>
           </div>
-
           {sliders.map((s) => (
             <div key={s.key} className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-medium">{s.label}</Label>
                 <span className="text-xs text-muted-foreground">{weights[s.key].toFixed(1)}×</span>
               </div>
-              <Slider
-                min={0}
-                max={3}
-                step={0.1}
-                value={[weights[s.key]]}
-                onValueChange={([v]) => setWeights((p) => ({ ...p, [s.key]: v }))}
-              />
+              <Slider min={0} max={3} step={0.1} value={[weights[s.key]]} onValueChange={([v]) => setWeights((p) => ({ ...p, [s.key]: v }))} />
               <p className="text-[10px] text-muted-foreground">{s.desc}</p>
             </div>
           ))}
@@ -101,9 +92,7 @@ const PersonalizationSettings = () => {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="font-display text-sm uppercase">Admin Boost Products</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle className="font-display text-sm uppercase">Admin Boost Products</CardTitle></CardHeader>
         <CardContent className="space-y-2">
           <p className="text-[10px] text-muted-foreground">Enter product IDs (comma-separated) to boost in all recommendation sections.</p>
           <Input value={boostInput} onChange={(e) => setBoostInput(e.target.value)} placeholder="product-id-1, product-id-2" className="font-mono text-xs" />
@@ -114,29 +103,83 @@ const PersonalizationSettings = () => {
 };
 
 /* ─── Types ─── */
+interface ContactConfig {
+  email: string;
+  phone: string;
+  address: string;
+  contact_description: string;
+  email_label: string;
+  phone_label: string;
+  address_label: string;
+  social_title: string;
+  social: { instagram: string; facebook: string; youtube: string };
+}
+
 interface PromoConfig {
   enabled: boolean; title: string; message: string; button_text: string;
   button_link: string; image_url: string; dismiss_key: string;
 }
+
 interface FooterConfig {
   description: string; quick_links_title: string; account_title: string; contact_title: string;
-  copyright_text: string; show_quick_links: boolean; show_account_links: boolean; show_contact_block: boolean;
+  policies_title: string; copyright_text: string;
+  show_quick_links: boolean; show_account_links: boolean; show_contact_block: boolean; show_policies: boolean;
   show_logo_icon: boolean; show_logo_text: boolean; logo_height_px: number;
   auth_link_label: string; account_link_label: string; orders_link_label: string;
+  policy_links: Array<{ label: string; path: string }>;
 }
-interface FooterContactConfig {
-  email: string; phone: string; address: string; contact_description: string;
-  email_label: string; phone_label: string; address_label: string;
-  instagram_url: string; facebook_url: string; social_title: string;
+
+interface HeaderConfig {
+  show_logo_icon: boolean; show_logo_text: boolean;
+  show_cart_icon: boolean; show_account_icon: boolean; show_admin_icon: boolean;
+  show_mobile_menu: boolean; desktop_nav_enabled: boolean; mobile_nav_enabled: boolean;
+  logo_height_px: number; logo_text_class: string;
+  account_label: string; auth_label: string; admin_label: string; sign_out_label: string;
+  mobile_account_label: string; mobile_admin_label: string;
 }
+
 interface BrandingConfig {
   logo_text_left: string; logo_text_right: string; logo_image_url: string;
   logo_link: string; logo_alt: string;
 }
 
+const defaultContact: ContactConfig = {
+  email: "support@layerloot.lovable.app", phone: "+45 00 00 00 00", address: "Denmark",
+  contact_description: "Questions, custom requests, or order help? Reach out anytime.",
+  email_label: "Email", phone_label: "Phone", address_label: "Address", social_title: "Follow us",
+  social: { instagram: "", facebook: "", youtube: "" },
+};
+
 const defaultPromo: PromoConfig = { enabled: false, title: "Welcome!", message: "Check out our latest 3D printed items.", button_text: "Shop Now", button_link: "/products", image_url: "", dismiss_key: "v1" };
-const defaultFooter: FooterConfig = { description: "Premium 3D printing supplies and custom prints for makers, hobbyists, and professionals.", quick_links_title: "Quick Links", account_title: "Account", contact_title: "Contact", copyright_text: "All rights reserved.", show_quick_links: true, show_account_links: true, show_contact_block: true, show_logo_icon: true, show_logo_text: true, logo_height_px: 32, auth_link_label: "Login / Register", account_link_label: "My Account", orders_link_label: "Order History" };
-const defaultFooterContact: FooterContactConfig = { email: "support@layerloot.lovable.app", phone: "+45 00 00 00 00", address: "Denmark", contact_description: "Questions, custom requests, or order help? Reach out anytime.", email_label: "Email", phone_label: "Phone", address_label: "Address", instagram_url: "", facebook_url: "", social_title: "Follow us" };
+
+const defaultFooter: FooterConfig = {
+  description: "Premium 3D printing supplies and custom prints for makers, hobbyists, and professionals.",
+  quick_links_title: "Quick Links", account_title: "Account", contact_title: "Contact",
+  policies_title: "Policies", copyright_text: "All rights reserved.",
+  show_quick_links: true, show_account_links: true, show_contact_block: true, show_policies: true,
+  show_logo_icon: true, show_logo_text: true, logo_height_px: 32,
+  auth_link_label: "Login / Register", account_link_label: "My Account", orders_link_label: "Order History",
+  policy_links: [
+    { label: "Returns Policy", path: "/policies/returns-policy" },
+    { label: "Cancellation Policy", path: "/policies/cancellation-policy" },
+    { label: "Refund Policy", path: "/policies/refund-policy" },
+    { label: "Privacy Policy", path: "/policies/privacy-policy" },
+    { label: "Terms of Service", path: "/policies/terms-of-service" },
+    { label: "Safety Regulations", path: "/policies/safety-regulations" },
+    { label: "Intellectual Property", path: "/policies/intellectual-property" },
+    { label: "Shipping Policy", path: "/policies/shipping-policy" },
+  ],
+};
+
+const defaultHeader: HeaderConfig = {
+  show_logo_icon: true, show_logo_text: true,
+  show_cart_icon: true, show_account_icon: true, show_admin_icon: true,
+  show_mobile_menu: true, desktop_nav_enabled: true, mobile_nav_enabled: true,
+  logo_height_px: 36, logo_text_class: "font-display text-2xl font-bold uppercase tracking-wider text-foreground",
+  account_label: "My Account", auth_label: "Login / Register", admin_label: "Admin Dashboard",
+  sign_out_label: "Sign Out", mobile_account_label: "My Account", mobile_admin_label: "Admin",
+};
+
 const defaultBranding: BrandingConfig = { logo_text_left: "Layer", logo_text_right: "Loot", logo_image_url: "", logo_link: "/", logo_alt: "LayerLoot" };
 
 const AVAILABLE_ICONS = Object.keys({ ...ICON_MAP, ...SIDEBAR_ICON_MAP });
@@ -151,6 +194,11 @@ const upsertSetting = async (key: string, value: any) => {
   }
 };
 
+/* ─── Helpers ─── */
+const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+  <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-primary/60 mb-2 mt-4 first:mt-0">{children}</p>
+);
+
 /* ─── Main ─── */
 const AdminSettings = () => {
   const { toast } = useToast();
@@ -158,14 +206,15 @@ const AdminSettings = () => {
   const userId = user?.id;
 
   /* Draft-managed storefront settings */
-  const contactDraft = useDraftSettings("contact", { email: "", phone: "", address: "", social: { instagram: "", facebook: "", youtube: "" } });
+  const contactDraft = useDraftSettings<ContactConfig>("contact", defaultContact);
   const storeDraft = useDraftSettings("store", { name: "LayerLoot", currency: "DKK", currency_symbol: "kr" });
   const promoDraft = useDraftSettings<PromoConfig>("promotion_popup", defaultPromo);
   const footerDraft = useDraftSettings<FooterConfig>("footer_settings", defaultFooter);
+  const headerDraft = useDraftSettings<HeaderConfig>("header_settings", defaultHeader);
   const brandingDraft = useDraftSettings<BrandingConfig>("branding", defaultBranding);
   const accountDraft = useDraftSettings<AccountPageConfig>("account_page_config", DEFAULT_ACCOUNT_CONFIG);
 
-  /* Policy drafts — managed as individual keys */
+  /* Policy drafts */
   const policyDrafts = POLICY_KEYS.map(p => useDraftSettings<{ title: string; body: string }>(p.settingKey, { title: p.title, body: "" }));
 
   /* Admin-only settings (direct save, not draft) */
@@ -186,8 +235,8 @@ const AdminSettings = () => {
     load();
   }, []);
 
-  /* Compute combined draft status */
-  const allDrafts = [contactDraft, storeDraft, promoDraft, footerDraft, brandingDraft, accountDraft, ...policyDrafts];
+  /* Combined draft status */
+  const allDrafts = [contactDraft, storeDraft, promoDraft, footerDraft, headerDraft, brandingDraft, accountDraft, ...policyDrafts];
   const anyDirty = allDrafts.some(d => d.dirty);
   const anyHasDraft = allDrafts.some(d => d.hasDraft);
   const combinedStatus = anyDirty ? "draft" as const : anyHasDraft ? "draft" as const : "published" as const;
@@ -229,34 +278,56 @@ const AdminSettings = () => {
     [arr[idx], arr[target]] = [arr[target], arr[idx]];
     setShortcuts(arr);
   };
-
   const updateShortcut = (idx: number, field: keyof DashboardShortcut, value: any) => {
-    const arr = [...shortcuts];
-    arr[idx] = { ...arr[idx], [field]: value };
-    setShortcuts(arr);
+    const arr = [...shortcuts]; arr[idx] = { ...arr[idx], [field]: value }; setShortcuts(arr);
   };
 
   /* Sidebar helpers */
   const moveSidebarItem = (gi: number, ii: number, dir: -1 | 1) => {
     const groups = JSON.parse(JSON.stringify(sidebarConfig.groups));
-    const items = groups[gi].items;
-    const target = ii + dir;
+    const items = groups[gi].items; const target = ii + dir;
     if (target < 0 || target >= items.length) return;
     [items[ii], items[target]] = [items[target], items[ii]];
     setSidebarConfig({ groups });
   };
-
   const updateSidebarItem = (gi: number, ii: number, field: string, value: any) => {
     const groups = JSON.parse(JSON.stringify(sidebarConfig.groups));
-    groups[gi].items[ii][field] = value;
-    setSidebarConfig({ groups });
+    groups[gi].items[ii][field] = value; setSidebarConfig({ groups });
   };
-
   const moveSidebarItemToGroup = (fromGi: number, ii: number, toGi: number) => {
     const groups = JSON.parse(JSON.stringify(sidebarConfig.groups));
     const [item] = groups[fromGi].items.splice(ii, 1);
-    groups[toGi].items.push(item);
-    setSidebarConfig({ groups });
+    groups[toGi].items.push(item); setSidebarConfig({ groups });
+  };
+
+  /* Policy link helpers */
+  const addPolicyLink = () => {
+    footerDraft.setValue(prev => ({
+      ...prev,
+      policy_links: [...(prev.policy_links ?? []), { label: "New Policy", path: "/policies/new" }],
+    }));
+  };
+  const removePolicyLink = (idx: number) => {
+    footerDraft.setValue(prev => ({
+      ...prev,
+      policy_links: (prev.policy_links ?? []).filter((_, i) => i !== idx),
+    }));
+  };
+  const updatePolicyLink = (idx: number, field: "label" | "path", value: string) => {
+    footerDraft.setValue(prev => {
+      const links = [...(prev.policy_links ?? [])];
+      links[idx] = { ...links[idx], [field]: value };
+      return { ...prev, policy_links: links };
+    });
+  };
+  const movePolicyLink = (idx: number, dir: -1 | 1) => {
+    footerDraft.setValue(prev => {
+      const links = [...(prev.policy_links ?? [])];
+      const target = idx + dir;
+      if (target < 0 || target >= links.length) return prev;
+      [links[idx], links[target]] = [links[target], links[idx]];
+      return { ...prev, policy_links: links };
+    });
   };
 
   const loading = allDrafts.some(d => d.loading);
@@ -275,7 +346,7 @@ const AdminSettings = () => {
         <div className="flex items-center justify-between gap-4">
           <div>
             <h1 className="font-display text-2xl font-bold uppercase text-foreground">Settings</h1>
-            <p className="text-xs text-muted-foreground">Store configuration, branding, dashboard & navigation</p>
+            <p className="text-xs text-muted-foreground">Store configuration, branding, layout & navigation — all connected to the live website</p>
           </div>
         </div>
         <DraftActionBar
@@ -289,60 +360,236 @@ const AdminSettings = () => {
         />
       </div>
 
-      <Tabs defaultValue="general" className="space-y-6">
+      <Tabs defaultValue="branding" className="space-y-6">
         <TabsList className="flex-wrap">
-          <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="branding">Branding</TabsTrigger>
+          <TabsTrigger value="header">Header</TabsTrigger>
+          <TabsTrigger value="footer">Footer</TabsTrigger>
+          <TabsTrigger value="store">Store & Contact</TabsTrigger>
+          <TabsTrigger value="promo">Promotion</TabsTrigger>
           <TabsTrigger value="policies">Policies</TabsTrigger>
+          <TabsTrigger value="account">Account Page</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="navigation">Navigation</TabsTrigger>
-          <TabsTrigger value="account">Account Page</TabsTrigger>
           <TabsTrigger value="personalization">Personalization</TabsTrigger>
           <TabsTrigger value="automations">Automations</TabsTrigger>
         </TabsList>
 
-        {/* ─── GENERAL ─── */}
-        <TabsContent value="general" className="space-y-6">
+        {/* ─── BRANDING ─── */}
+        <TabsContent value="branding" className="space-y-6">
+          <p className="text-sm text-muted-foreground">Controls the logo and brand identity across Header, Footer, and all pages.</p>
+          <Card>
+            <CardHeader><CardTitle className="font-display text-sm uppercase">Logo & Brand</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div><Label className="text-xs">Logo Text (Left)</Label><Input value={brandingDraft.value.logo_text_left} onChange={e => brandingDraft.setValue(prev => ({ ...prev, logo_text_left: e.target.value }))} placeholder="Layer" /></div>
+                <div><Label className="text-xs">Logo Text (Right / Accent)</Label><Input value={brandingDraft.value.logo_text_right} onChange={e => brandingDraft.setValue(prev => ({ ...prev, logo_text_right: e.target.value }))} placeholder="Loot" /></div>
+              </div>
+              <div><Label className="text-xs">Custom Logo Image URL</Label><Input value={brandingDraft.value.logo_image_url} onChange={e => brandingDraft.setValue(prev => ({ ...prev, logo_image_url: e.target.value }))} placeholder="https://... (overrides text logo)" /></div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div><Label className="text-xs">Logo Link</Label><Input value={brandingDraft.value.logo_link} onChange={e => brandingDraft.setValue(prev => ({ ...prev, logo_link: e.target.value }))} placeholder="/" /></div>
+                <div><Label className="text-xs">Logo Alt Text</Label><Input value={brandingDraft.value.logo_alt} onChange={e => brandingDraft.setValue(prev => ({ ...prev, logo_alt: e.target.value }))} placeholder="LayerLoot" /></div>
+              </div>
+              <p className="text-[10px] text-muted-foreground">→ Affects: Header logo, Footer logo, page title</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ─── HEADER ─── */}
+        <TabsContent value="header" className="space-y-6">
+          <p className="text-sm text-muted-foreground">Controls the website header bar — logo display, navigation, cart icon, and account dropdown.</p>
+
+          <Card>
+            <CardHeader><CardTitle className="font-display text-sm uppercase">Visibility</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex items-center gap-2"><Switch checked={headerDraft.value.show_logo_icon} onCheckedChange={v => headerDraft.setValue(p => ({ ...p, show_logo_icon: v }))} /><Label className="text-xs">Show Logo Icon</Label></div>
+                <div className="flex items-center gap-2"><Switch checked={headerDraft.value.show_logo_text} onCheckedChange={v => headerDraft.setValue(p => ({ ...p, show_logo_text: v }))} /><Label className="text-xs">Show Logo Text</Label></div>
+                <div className="flex items-center gap-2"><Switch checked={headerDraft.value.show_cart_icon} onCheckedChange={v => headerDraft.setValue(p => ({ ...p, show_cart_icon: v }))} /><Label className="text-xs">Show Cart Icon</Label></div>
+                <div className="flex items-center gap-2"><Switch checked={headerDraft.value.show_account_icon} onCheckedChange={v => headerDraft.setValue(p => ({ ...p, show_account_icon: v }))} /><Label className="text-xs">Show Account Dropdown</Label></div>
+                <div className="flex items-center gap-2"><Switch checked={headerDraft.value.show_admin_icon} onCheckedChange={v => headerDraft.setValue(p => ({ ...p, show_admin_icon: v }))} /><Label className="text-xs">Show Admin Link</Label></div>
+                <div className="flex items-center gap-2"><Switch checked={headerDraft.value.show_mobile_menu} onCheckedChange={v => headerDraft.setValue(p => ({ ...p, show_mobile_menu: v }))} /><Label className="text-xs">Show Mobile Menu</Label></div>
+                <div className="flex items-center gap-2"><Switch checked={headerDraft.value.desktop_nav_enabled} onCheckedChange={v => headerDraft.setValue(p => ({ ...p, desktop_nav_enabled: v }))} /><Label className="text-xs">Desktop Navigation</Label></div>
+                <div className="flex items-center gap-2"><Switch checked={headerDraft.value.mobile_nav_enabled} onCheckedChange={v => headerDraft.setValue(p => ({ ...p, mobile_nav_enabled: v }))} /><Label className="text-xs">Mobile Navigation</Label></div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="font-display text-sm uppercase">Logo Size</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Logo Height (px)</Label>
+                <span className="text-xs text-muted-foreground">{headerDraft.value.logo_height_px}px</span>
+              </div>
+              <Slider min={20} max={80} step={2} value={[headerDraft.value.logo_height_px]} onValueChange={([v]) => headerDraft.setValue(p => ({ ...p, logo_height_px: v }))} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="font-display text-sm uppercase">Labels</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div><Label className="text-xs">Account Label</Label><Input value={headerDraft.value.account_label} onChange={e => headerDraft.setValue(p => ({ ...p, account_label: e.target.value }))} /></div>
+                <div><Label className="text-xs">Auth Label</Label><Input value={headerDraft.value.auth_label} onChange={e => headerDraft.setValue(p => ({ ...p, auth_label: e.target.value }))} /></div>
+                <div><Label className="text-xs">Admin Label</Label><Input value={headerDraft.value.admin_label} onChange={e => headerDraft.setValue(p => ({ ...p, admin_label: e.target.value }))} /></div>
+                <div><Label className="text-xs">Sign Out Label</Label><Input value={headerDraft.value.sign_out_label} onChange={e => headerDraft.setValue(p => ({ ...p, sign_out_label: e.target.value }))} /></div>
+                <div><Label className="text-xs">Mobile Account Label</Label><Input value={headerDraft.value.mobile_account_label} onChange={e => headerDraft.setValue(p => ({ ...p, mobile_account_label: e.target.value }))} /></div>
+                <div><Label className="text-xs">Mobile Admin Label</Label><Input value={headerDraft.value.mobile_admin_label} onChange={e => headerDraft.setValue(p => ({ ...p, mobile_admin_label: e.target.value }))} /></div>
+              </div>
+              <p className="text-[10px] text-muted-foreground">→ Affects: Header account dropdown, mobile navigation labels</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ─── FOOTER ─── */}
+        <TabsContent value="footer" className="space-y-6">
+          <p className="text-sm text-muted-foreground">Controls the website footer — sections, contact info, policy links, and social icons.</p>
+
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card><CardHeader><CardTitle className="font-display text-sm uppercase">Contact Information</CardTitle></CardHeader>
+            <Card>
+              <CardHeader><CardTitle className="font-display text-sm uppercase">Footer Layout</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <div><Label className="text-xs">Email</Label><Input value={contactDraft.value.email} onChange={e => contactDraft.setValue(prev => ({ ...prev, email: e.target.value }))} /></div>
-                <div><Label className="text-xs">Phone</Label><Input value={contactDraft.value.phone} onChange={e => contactDraft.setValue(prev => ({ ...prev, phone: e.target.value }))} /></div>
-                <div><Label className="text-xs">Address</Label><Input value={contactDraft.value.address} onChange={e => contactDraft.setValue(prev => ({ ...prev, address: e.target.value }))} /></div>
+                <div><Label className="text-xs">Description</Label><Textarea value={footerDraft.value.description} onChange={e => footerDraft.setValue(p => ({ ...p, description: e.target.value }))} rows={2} /></div>
+                <div><Label className="text-xs">Copyright Text</Label><Input value={footerDraft.value.copyright_text} onChange={e => footerDraft.setValue(p => ({ ...p, copyright_text: e.target.value }))} /></div>
+                <div className="space-y-2 pt-2">
+                  <SectionLabel>Section Visibility</SectionLabel>
+                  <div className="flex items-center gap-2"><Switch checked={footerDraft.value.show_quick_links} onCheckedChange={v => footerDraft.setValue(p => ({ ...p, show_quick_links: v }))} /><Label className="text-xs">Quick Links column</Label></div>
+                  <div className="flex items-center gap-2"><Switch checked={footerDraft.value.show_account_links} onCheckedChange={v => footerDraft.setValue(p => ({ ...p, show_account_links: v }))} /><Label className="text-xs">Account column</Label></div>
+                  <div className="flex items-center gap-2"><Switch checked={footerDraft.value.show_policies} onCheckedChange={v => footerDraft.setValue(p => ({ ...p, show_policies: v }))} /><Label className="text-xs">Policies column</Label></div>
+                  <div className="flex items-center gap-2"><Switch checked={footerDraft.value.show_contact_block} onCheckedChange={v => footerDraft.setValue(p => ({ ...p, show_contact_block: v }))} /><Label className="text-xs">Contact column</Label></div>
+                </div>
               </CardContent>
             </Card>
-            <Card><CardHeader><CardTitle className="font-display text-sm uppercase">Social Media</CardTitle></CardHeader>
+
+            <Card>
+              <CardHeader><CardTitle className="font-display text-sm uppercase">Footer Logo</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <div><Label className="text-xs">Instagram URL</Label><Input value={contactDraft.value.social?.instagram ?? ""} onChange={e => contactDraft.setValue(prev => ({ ...prev, social: { ...prev.social, instagram: e.target.value } }))} /></div>
-                <div><Label className="text-xs">Facebook URL</Label><Input value={contactDraft.value.social?.facebook ?? ""} onChange={e => contactDraft.setValue(prev => ({ ...prev, social: { ...prev.social, facebook: e.target.value } }))} /></div>
-                <div><Label className="text-xs">YouTube URL</Label><Input value={contactDraft.value.social?.youtube ?? ""} onChange={e => contactDraft.setValue(prev => ({ ...prev, social: { ...prev.social, youtube: e.target.value } }))} /></div>
+                <div className="flex items-center gap-2"><Switch checked={footerDraft.value.show_logo_icon} onCheckedChange={v => footerDraft.setValue(p => ({ ...p, show_logo_icon: v }))} /><Label className="text-xs">Show Logo Icon</Label></div>
+                <div className="flex items-center gap-2"><Switch checked={footerDraft.value.show_logo_text} onCheckedChange={v => footerDraft.setValue(p => ({ ...p, show_logo_text: v }))} /><Label className="text-xs">Show Logo Text</Label></div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Logo Height (px)</Label>
+                  <span className="text-xs text-muted-foreground">{footerDraft.value.logo_height_px}px</span>
+                </div>
+                <Slider min={16} max={64} step={2} value={[footerDraft.value.logo_height_px]} onValueChange={([v]) => footerDraft.setValue(p => ({ ...p, logo_height_px: v }))} />
               </CardContent>
             </Card>
-            <Card><CardHeader><CardTitle className="font-display text-sm uppercase">Store Settings</CardTitle></CardHeader>
+          </div>
+
+          <Card>
+            <CardHeader><CardTitle className="font-display text-sm uppercase">Section Titles</CardTitle></CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div><Label className="text-xs">Quick Links Title</Label><Input value={footerDraft.value.quick_links_title} onChange={e => footerDraft.setValue(p => ({ ...p, quick_links_title: e.target.value }))} /></div>
+              <div><Label className="text-xs">Account Title</Label><Input value={footerDraft.value.account_title} onChange={e => footerDraft.setValue(p => ({ ...p, account_title: e.target.value }))} /></div>
+              <div><Label className="text-xs">Policies Title</Label><Input value={footerDraft.value.policies_title} onChange={e => footerDraft.setValue(p => ({ ...p, policies_title: e.target.value }))} /></div>
+              <div><Label className="text-xs">Contact Title</Label><Input value={footerDraft.value.contact_title} onChange={e => footerDraft.setValue(p => ({ ...p, contact_title: e.target.value }))} /></div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="font-display text-sm uppercase">Account Links</CardTitle></CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-3">
+              <div><Label className="text-xs">Auth Link Label</Label><Input value={footerDraft.value.auth_link_label} onChange={e => footerDraft.setValue(p => ({ ...p, auth_link_label: e.target.value }))} /></div>
+              <div><Label className="text-xs">Account Link Label</Label><Input value={footerDraft.value.account_link_label} onChange={e => footerDraft.setValue(p => ({ ...p, account_link_label: e.target.value }))} /></div>
+              <div><Label className="text-xs">Orders Link Label</Label><Input value={footerDraft.value.orders_link_label} onChange={e => footerDraft.setValue(p => ({ ...p, orders_link_label: e.target.value }))} /></div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="font-display text-sm uppercase">Policy Links</CardTitle>
+              <Button variant="ghost" size="sm" onClick={addPolicyLink}><Plus className="mr-1 h-3 w-3" />Add Link</Button>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {(footerDraft.value.policy_links ?? []).map((link, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <Input value={link.label} onChange={e => updatePolicyLink(idx, "label", e.target.value)} className="h-8 text-sm" placeholder="Label" />
+                  <Input value={link.path} onChange={e => updatePolicyLink(idx, "path", e.target.value)} className="h-8 text-xs font-mono max-w-[200px]" placeholder="/policies/..." />
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => movePolicyLink(idx, -1)} disabled={idx === 0}><ChevronUp className="h-3 w-3" /></Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => movePolicyLink(idx, 1)} disabled={idx === (footerDraft.value.policy_links?.length ?? 0) - 1}><ChevronDown className="h-3 w-3" /></Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-destructive" onClick={() => removePolicyLink(idx)}><Trash2 className="h-3 w-3" /></Button>
+                </div>
+              ))}
+              <p className="text-[10px] text-muted-foreground">→ These links appear in the Footer "Policies" column</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ─── STORE & CONTACT ─── */}
+        <TabsContent value="store" className="space-y-6">
+          <p className="text-sm text-muted-foreground">Store identity and contact information — used by the Contact page, Footer, and email templates.</p>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card>
+              <CardHeader><CardTitle className="font-display text-sm uppercase">Store Settings</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <div><Label className="text-xs">Store Name</Label><Input value={storeDraft.value.name} onChange={e => storeDraft.setValue(prev => ({ ...prev, name: e.target.value }))} /></div>
                 <div><Label className="text-xs">Currency</Label><Input value={storeDraft.value.currency} onChange={e => storeDraft.setValue(prev => ({ ...prev, currency: e.target.value }))} /></div>
                 <div><Label className="text-xs">Currency Symbol</Label><Input value={storeDraft.value.currency_symbol} onChange={e => storeDraft.setValue(prev => ({ ...prev, currency_symbol: e.target.value }))} /></div>
+                <p className="text-[10px] text-muted-foreground">→ Affects: Product prices, cart, checkout, invoices</p>
               </CardContent>
             </Card>
-            <Card><CardHeader><CardTitle className="font-display text-sm uppercase">Promotion Popup</CardTitle></CardHeader>
+
+            <Card>
+              <CardHeader><CardTitle className="font-display text-sm uppercase">Contact Information</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex items-center gap-2"><Switch checked={promoDraft.value.enabled} onCheckedChange={v => promoDraft.setValue(prev => ({ ...prev, enabled: v }))} /><Label className="text-xs">Enable popup</Label></div>
-                <div><Label className="text-xs">Title</Label><Input value={promoDraft.value.title} onChange={e => promoDraft.setValue(prev => ({ ...prev, title: e.target.value }))} /></div>
-                <div><Label className="text-xs">Message</Label><Textarea value={promoDraft.value.message} onChange={e => promoDraft.setValue(prev => ({ ...prev, message: e.target.value }))} rows={2} /></div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div><Label className="text-xs">Button Text</Label><Input value={promoDraft.value.button_text} onChange={e => promoDraft.setValue(prev => ({ ...prev, button_text: e.target.value }))} /></div>
-                  <div><Label className="text-xs">Button Link</Label><Input value={promoDraft.value.button_link} onChange={e => promoDraft.setValue(prev => ({ ...prev, button_link: e.target.value }))} /></div>
+                <div><Label className="text-xs">Email</Label><Input value={contactDraft.value.email} onChange={e => contactDraft.setValue(prev => ({ ...prev, email: e.target.value }))} /></div>
+                <div><Label className="text-xs">Phone</Label><Input value={contactDraft.value.phone} onChange={e => contactDraft.setValue(prev => ({ ...prev, phone: e.target.value }))} /></div>
+                <div><Label className="text-xs">Address</Label><Input value={contactDraft.value.address} onChange={e => contactDraft.setValue(prev => ({ ...prev, address: e.target.value }))} /></div>
+                <p className="text-[10px] text-muted-foreground">→ Affects: Contact page, Footer contact block</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle className="font-display text-sm uppercase">Footer Contact Display</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <div><Label className="text-xs">Contact Description</Label><Textarea value={contactDraft.value.contact_description} onChange={e => contactDraft.setValue(prev => ({ ...prev, contact_description: e.target.value }))} rows={2} /></div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div><Label className="text-xs">Email Label</Label><Input value={contactDraft.value.email_label} onChange={e => contactDraft.setValue(prev => ({ ...prev, email_label: e.target.value }))} /></div>
+                  <div><Label className="text-xs">Phone Label</Label><Input value={contactDraft.value.phone_label} onChange={e => contactDraft.setValue(prev => ({ ...prev, phone_label: e.target.value }))} /></div>
+                  <div><Label className="text-xs">Address Label</Label><Input value={contactDraft.value.address_label} onChange={e => contactDraft.setValue(prev => ({ ...prev, address_label: e.target.value }))} /></div>
                 </div>
-                <div><Label className="text-xs">Image URL</Label><Input value={promoDraft.value.image_url} onChange={e => promoDraft.setValue(prev => ({ ...prev, image_url: e.target.value }))} /></div>
-                <div><Label className="text-xs">Dismiss Key</Label><Input value={promoDraft.value.dismiss_key} onChange={e => promoDraft.setValue(prev => ({ ...prev, dismiss_key: e.target.value }))} /></div>
+                <p className="text-[10px] text-muted-foreground">→ Affects: Footer contact column labels and description text</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle className="font-display text-sm uppercase">Social Media</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <div><Label className="text-xs">Social Section Title</Label><Input value={contactDraft.value.social_title} onChange={e => contactDraft.setValue(prev => ({ ...prev, social_title: e.target.value }))} placeholder="Follow us" /></div>
+                <div><Label className="text-xs">Instagram URL</Label><Input value={contactDraft.value.social?.instagram ?? ""} onChange={e => contactDraft.setValue(prev => ({ ...prev, social: { ...prev.social, instagram: e.target.value } }))} placeholder="https://instagram.com/..." /></div>
+                <div><Label className="text-xs">Facebook URL</Label><Input value={contactDraft.value.social?.facebook ?? ""} onChange={e => contactDraft.setValue(prev => ({ ...prev, social: { ...prev.social, facebook: e.target.value } }))} placeholder="https://facebook.com/..." /></div>
+                <div><Label className="text-xs">YouTube URL</Label><Input value={contactDraft.value.social?.youtube ?? ""} onChange={e => contactDraft.setValue(prev => ({ ...prev, social: { ...prev.social, youtube: e.target.value } }))} placeholder="https://youtube.com/..." /></div>
+                <p className="text-[10px] text-muted-foreground">→ Affects: Footer social icons (Instagram, Facebook)</p>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
+        {/* ─── PROMOTION ─── */}
+        <TabsContent value="promo" className="space-y-6">
+          <p className="text-sm text-muted-foreground">Controls the promotion popup that appears on the website.</p>
+          <Card>
+            <CardHeader><CardTitle className="font-display text-sm uppercase">Promotion Popup</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-2"><Switch checked={promoDraft.value.enabled} onCheckedChange={v => promoDraft.setValue(prev => ({ ...prev, enabled: v }))} /><Label className="text-xs">Enable popup</Label></div>
+              <div><Label className="text-xs">Title</Label><Input value={promoDraft.value.title} onChange={e => promoDraft.setValue(prev => ({ ...prev, title: e.target.value }))} /></div>
+              <div><Label className="text-xs">Message</Label><Textarea value={promoDraft.value.message} onChange={e => promoDraft.setValue(prev => ({ ...prev, message: e.target.value }))} rows={2} /></div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div><Label className="text-xs">Button Text</Label><Input value={promoDraft.value.button_text} onChange={e => promoDraft.setValue(prev => ({ ...prev, button_text: e.target.value }))} /></div>
+                <div><Label className="text-xs">Button Link</Label><Input value={promoDraft.value.button_link} onChange={e => promoDraft.setValue(prev => ({ ...prev, button_link: e.target.value }))} /></div>
+              </div>
+              <div><Label className="text-xs">Image URL</Label><Input value={promoDraft.value.image_url} onChange={e => promoDraft.setValue(prev => ({ ...prev, image_url: e.target.value }))} /></div>
+              <div><Label className="text-xs">Dismiss Key</Label><Input value={promoDraft.value.dismiss_key} onChange={e => promoDraft.setValue(prev => ({ ...prev, dismiss_key: e.target.value }))} /></div>
+              <p className="text-[10px] text-muted-foreground">→ Affects: Promotion popup on all pages. Change dismiss key to re-show to returning visitors.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* ─── POLICIES ─── */}
         <TabsContent value="policies" className="space-y-6">
-          <p className="text-sm text-muted-foreground">Edit your store policies below. Content supports Markdown formatting.</p>
+          <p className="text-sm text-muted-foreground">Edit your store policies below. Content supports Markdown formatting. Linked from the Footer policies column.</p>
           <div className="grid gap-4">
             {POLICY_KEYS.map((policy, idx) => {
               const draft = policyDrafts[idx];
@@ -350,12 +597,8 @@ const AdminSettings = () => {
                 <Card key={policy.settingKey}>
                   <CardHeader><CardTitle className="font-display text-sm uppercase">{policy.title}</CardTitle></CardHeader>
                   <CardContent className="space-y-3">
-                    <div><Label className="text-xs">Page Title</Label>
-                      <Input value={draft.value.title} onChange={e => draft.setValue(prev => ({ ...prev, title: e.target.value }))} />
-                    </div>
-                    <div><Label className="text-xs">Content (Markdown)</Label>
-                      <Textarea value={draft.value.body} onChange={e => draft.setValue(prev => ({ ...prev, body: e.target.value }))} rows={10} className="font-mono text-xs" />
-                    </div>
+                    <div><Label className="text-xs">Page Title</Label><Input value={draft.value.title} onChange={e => draft.setValue(prev => ({ ...prev, title: e.target.value }))} /></div>
+                    <div><Label className="text-xs">Content (Markdown)</Label><Textarea value={draft.value.body} onChange={e => draft.setValue(prev => ({ ...prev, body: e.target.value }))} rows={10} className="font-mono text-xs" /></div>
                     <p className="text-[10px] text-muted-foreground">Live at: <span className="font-mono text-primary">/policies/{policy.slug}</span></p>
                   </CardContent>
                 </Card>
@@ -364,7 +607,7 @@ const AdminSettings = () => {
           </div>
         </TabsContent>
 
-        {/* ─── DASHBOARD SHORTCUTS (admin-only, direct save) ─── */}
+        {/* ─── DASHBOARD SHORTCUTS ─── */}
         <TabsContent value="dashboard" className="space-y-6">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">Manage shortcuts shown on the admin dashboard.</p>
@@ -379,9 +622,7 @@ const AdminSettings = () => {
                 <Card key={sc.id} className={`transition-opacity ${!sc.visible ? "opacity-50" : ""}`}>
                   <CardContent className="flex items-center gap-3 py-3 px-4">
                     <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 shrink-0">
-                      <Icon className="h-4 w-4 text-primary" />
-                    </div>
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 shrink-0"><Icon className="h-4 w-4 text-primary" /></div>
                     <Input value={sc.label} onChange={e => updateShortcut(idx, "label", e.target.value)} className="h-8 max-w-[160px] text-sm" />
                     <Select value={sc.icon} onValueChange={v => updateShortcut(idx, "icon", v)}>
                       <SelectTrigger className="h-8 w-[130px] text-xs"><SelectValue /></SelectTrigger>
@@ -405,7 +646,7 @@ const AdminSettings = () => {
           </Button>
         </TabsContent>
 
-        {/* ─── NAVIGATION (sidebar editor, admin-only) ─── */}
+        {/* ─── NAVIGATION ─── */}
         <TabsContent value="navigation" className="space-y-6">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">Manage the left admin sidebar.</p>
@@ -423,9 +664,7 @@ const AdminSettings = () => {
                     <Card key={item.id} className={`transition-opacity ${!item.visible ? "opacity-50" : ""}`}>
                       <CardContent className="flex items-center gap-3 py-3 px-4">
                         <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 shrink-0">
-                          <Icon className="h-3.5 w-3.5 text-primary" />
-                        </div>
+                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 shrink-0"><Icon className="h-3.5 w-3.5 text-primary" /></div>
                         <Input value={item.label} onChange={e => updateSidebarItem(gi, ii, "label", e.target.value)} className="h-8 max-w-[160px] text-sm" />
                         <Select value={item.icon} onValueChange={v => updateSidebarItem(gi, ii, "icon", v)}>
                           <SelectTrigger className="h-8 w-[130px] text-xs"><SelectValue /></SelectTrigger>

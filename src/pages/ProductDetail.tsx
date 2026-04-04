@@ -256,7 +256,7 @@ const ProductDetail = () => {
                     setCurrentImage(i);
                     setShow3D(false);
                   }}
-                  className={`h-16 w-16 shrink-0 overflow-hidden rounded-xl transition-all duration-200 ${
+                  className={`h-14 w-14 shrink-0 overflow-hidden rounded-lg transition-all duration-200 md:h-16 md:w-16 md:rounded-xl ${
                     !show3D && i === currentImage
                       ? "ring-2 ring-primary shadow-lg shadow-primary/20"
                       : "opacity-70 hover:opacity-100"

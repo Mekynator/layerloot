@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2, GripVertical, Eye, EyeOff } from "lucide-react";
+import { Plus, Trash2, Eye, EyeOff, Box } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import InsertReusableDialog from "@/components/admin/reusable/InsertReusableDialog";
 
 interface Section {
   id: string;
@@ -15,6 +16,13 @@ interface Section {
   media_urls: string[];
   sort_order: number;
   is_active: boolean;
+  reusable_block_id: string | null;
+}
+
+interface ReusableBlockInfo {
+  id: string;
+  name: string;
+  block_type: string;
 }
 
 interface ProductSectionsManagerProps {
@@ -23,7 +31,9 @@ interface ProductSectionsManagerProps {
 
 const ProductSectionsManager = ({ productId }: ProductSectionsManagerProps) => {
   const [sections, setSections] = useState<Section[]>([]);
+  const [reusableNames, setReusableNames] = useState<Record<string, ReusableBlockInfo>>({});
   const [newType, setNewType] = useState("video");
+  const [showReusablePicker, setShowReusablePicker] = useState(false);
   const { toast } = useToast();
 
   const isNewProduct = !productId || productId.startsWith("draft-");
@@ -34,7 +44,22 @@ const ProductSectionsManager = ({ productId }: ProductSectionsManagerProps) => {
       .select("*")
       .eq("product_id", productId)
       .order("sort_order");
-    setSections((data as Section[]) ?? []);
+    const secs = (data as Section[]) ?? [];
+    setSections(secs);
+
+    // Fetch reusable block names
+    const blockIds = secs.filter(s => s.reusable_block_id).map(s => s.reusable_block_id!);
+    if (blockIds.length > 0) {
+      const { data: blocks } = await supabase
+        .from("reusable_blocks")
+        .select("id, name, block_type")
+        .in("id", blockIds);
+      if (blocks) {
+        const map: Record<string, ReusableBlockInfo> = {};
+        for (const b of blocks) map[b.id] = b as ReusableBlockInfo;
+        setReusableNames(map);
+      }
+    }
   };
 
   useEffect(() => {
@@ -42,12 +67,36 @@ const ProductSectionsManager = ({ productId }: ProductSectionsManagerProps) => {
   }, [productId]);
 
   const addSection = async () => {
+    if (newType === "reusable_block") {
+      setShowReusablePicker(true);
+      return;
+    }
     const { error } = await supabase.from("product_detail_sections").insert({
       product_id: productId,
       section_type: newType,
       title: newType === "video" ? "Video" : "Gallery",
       media_urls: [],
       sort_order: sections.length,
+    });
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+    await fetchSections();
+  };
+
+  const handleInsertReusable = async (block: { block_type: string; content: any; title: string; reusableId?: string }) => {
+    if (!block.reusableId) {
+      toast({ title: "Please use linked mode", description: "Only linked reusable blocks are supported here.", variant: "destructive" });
+      return;
+    }
+    const { error } = await supabase.from("product_detail_sections").insert({
+      product_id: productId,
+      section_type: "reusable_block",
+      title: block.title,
+      media_urls: [],
+      sort_order: sections.length,
+      reusable_block_id: block.reusableId,
     });
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -108,118 +157,151 @@ const ProductSectionsManager = ({ productId }: ProductSectionsManagerProps) => {
           <CardTitle className="text-sm font-display uppercase">Content Sections</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-xs text-muted-foreground">Save the product first to add video and carousel sections.</p>
+          <p className="text-xs text-muted-foreground">Save the product first to add video, carousel, and reusable block sections.</p>
         </CardContent>
       </Card>
     );
   }
 
+  const sectionTypeLabel = (type: string) => {
+    if (type === "video") return "Video";
+    if (type === "image_carousel") return "Carousel";
+    if (type === "reusable_block") return "Reusable Block";
+    return type;
+  };
+
   return (
-    <Card className="border-primary/10">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-display uppercase">Content Sections (Video / Carousel)</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {sections.map((section) => (
-          <div key={section.id} className="rounded-lg border border-border/50 bg-muted/10 p-3 space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="rounded bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
-                {section.section_type === "video" ? "Video" : "Carousel"}
-              </span>
-              <Input
-                value={section.title ?? ""}
-                onChange={(e) => updateTitle(section.id, e.target.value)}
-                className="h-7 flex-1 text-sm"
-                placeholder="Section title"
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => toggleActive(section.id, !section.is_active)}
-                title={section.is_active ? "Hide" : "Show"}
-              >
-                {section.is_active ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />}
-              </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteSection(section.id)}>
-                <Trash2 className="h-3.5 w-3.5 text-destructive" />
-              </Button>
-            </div>
-
-            {/* Media list */}
-            {section.media_urls.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {section.media_urls.map((url, i) => (
-                  <div key={i} className="group relative">
-                    {section.section_type === "video" ? (
-                      <div className="flex h-16 w-24 items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground">
-                        🎥 Video
-                      </div>
-                    ) : (
-                      <img src={url} alt="" className="h-16 w-16 rounded-lg object-cover" />
-                    )}
-                    <button
-                      onClick={() => removeMediaUrl(section.id, i)}
-                      className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Add media */}
-            <div className="flex items-center gap-2">
-              {section.section_type === "video" ? (
-                <>
-                  <Input
-                    placeholder="Paste video URL (YouTube, Vimeo, or direct)"
-                    className="h-8 text-xs"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        const val = (e.target as HTMLInputElement).value.trim();
-                        if (val) {
-                          addMediaUrl(section.id, val);
-                          (e.target as HTMLInputElement).value = "";
-                        }
-                      }
-                    }}
-                  />
-                  <Input
-                    type="file"
-                    accept="video/*"
-                    className="h-8 w-32 text-xs"
-                    onChange={(e) => e.target.files && handleFileUpload(section.id, e.target.files)}
-                  />
-                </>
-              ) : (
+    <>
+      <Card className="border-primary/10">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-display uppercase">Content Sections (Video / Carousel / Reusable)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {sections.map((section) => (
+            <div key={section.id} className="rounded-lg border border-border/50 bg-muted/10 p-3 space-y-3">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-[10px] font-bold uppercase">
+                  {section.section_type === "reusable_block" ? (
+                    <span className="flex items-center gap-1"><Box className="h-3 w-3" /> Block</span>
+                  ) : sectionTypeLabel(section.section_type)}
+                </Badge>
                 <Input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="h-8 text-xs"
-                  onChange={(e) => e.target.files && handleFileUpload(section.id, e.target.files)}
+                  value={section.title ?? ""}
+                  onChange={(e) => updateTitle(section.id, e.target.value)}
+                  className="h-7 flex-1 text-sm"
+                  placeholder="Section title"
                 />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => toggleActive(section.id, !section.is_active)}
+                  title={section.is_active ? "Hide" : "Show"}
+                >
+                  {section.is_active ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />}
+                </Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteSection(section.id)}>
+                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                </Button>
+              </div>
+
+              {/* Reusable block info */}
+              {section.section_type === "reusable_block" && section.reusable_block_id && (
+                <div className="flex items-center gap-2 rounded-md bg-primary/5 px-3 py-2">
+                  <Box className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-medium text-foreground">
+                    {reusableNames[section.reusable_block_id]?.name || "Linked block"}
+                  </span>
+                  <Badge variant="outline" className="text-[9px] ml-auto">
+                    {reusableNames[section.reusable_block_id]?.block_type || "block"}
+                  </Badge>
+                </div>
+              )}
+
+              {/* Media list (video/carousel only) */}
+              {section.section_type !== "reusable_block" && section.media_urls.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {section.media_urls.map((url, i) => (
+                    <div key={i} className="group relative">
+                      {section.section_type === "video" ? (
+                        <div className="flex h-16 w-24 items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground">
+                          🎥 Video
+                        </div>
+                      ) : (
+                        <img src={url} alt="" className="h-16 w-16 rounded-lg object-cover" />
+                      )}
+                      <button
+                        onClick={() => removeMediaUrl(section.id, i)}
+                        className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add media (video/carousel only) */}
+              {section.section_type !== "reusable_block" && (
+                <div className="flex items-center gap-2">
+                  {section.section_type === "video" ? (
+                    <>
+                      <Input
+                        placeholder="Paste video URL (YouTube, Vimeo, or direct)"
+                        className="h-8 text-xs"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            const val = (e.target as HTMLInputElement).value.trim();
+                            if (val) {
+                              addMediaUrl(section.id, val);
+                              (e.target as HTMLInputElement).value = "";
+                            }
+                          }
+                        }}
+                      />
+                      <Input
+                        type="file"
+                        accept="video/*"
+                        className="h-8 w-32 text-xs"
+                        onChange={(e) => e.target.files && handleFileUpload(section.id, e.target.files)}
+                      />
+                    </>
+                  ) : (
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="h-8 text-xs"
+                      onChange={(e) => e.target.files && handleFileUpload(section.id, e.target.files)}
+                    />
+                  )}
+                </div>
               )}
             </div>
-          </div>
-        ))}
+          ))}
 
-        <div className="flex items-center gap-2">
-          <Select value={newType} onValueChange={setNewType}>
-            <SelectTrigger className="w-40 h-8"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="video">Video Section</SelectItem>
-              <SelectItem value="image_carousel">Image Carousel</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button size="sm" variant="outline" onClick={addSection} className="h-8">
-            <Plus className="mr-1 h-3.5 w-3.5" /> Add Section
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+          <div className="flex items-center gap-2">
+            <Select value={newType} onValueChange={setNewType}>
+              <SelectTrigger className="w-44 h-8"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="video">Video Section</SelectItem>
+                <SelectItem value="image_carousel">Image Carousel</SelectItem>
+                <SelectItem value="reusable_block">Reusable Block</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button size="sm" variant="outline" onClick={addSection} className="h-8">
+              <Plus className="mr-1 h-3.5 w-3.5" /> Add Section
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <InsertReusableDialog
+        open={showReusablePicker}
+        onOpenChange={setShowReusablePicker}
+        onInsert={handleInsertReusable}
+      />
+    </>
   );
 };
 

@@ -223,6 +223,7 @@ const AdminProducts = () => {
     const path = `${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from("3d-models").upload(path, modelFile);
     if (error) throw new Error(`Model upload failed: ${error.message}`);
+    // Store the full storage URL (bucket is now private; frontend resolves signed URLs)
     const { data } = supabase.storage.from("3d-models").getPublicUrl(path);
     return data.publicUrl;
   };

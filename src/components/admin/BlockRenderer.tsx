@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import { useState, useEffect, useRef, FormEvent, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight, Truck, Shield, Star, Printer, ChevronLeft, ChevronRight,

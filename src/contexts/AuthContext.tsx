@@ -104,6 +104,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (session?.user) {
         setTimeout(() => checkAdminRole(session.user), 0);
         syncLanguage(session.user.id);
+
+        // Link referral invite on first sign-in
+        if (_event === "SIGNED_IN") {
+          const refCode = sessionStorage.getItem("ll_ref_code");
+          if (refCode) {
+            sessionStorage.removeItem("ll_ref_code");
+            supabase.functions.invoke("process-referral-rewards", {
+              body: { ref_code: refCode, user_id: session.user.id },
+            }).catch(() => {});
+          } else {
+            // Check email-based invites even without ref code
+            supabase.functions.invoke("process-referral-rewards", {
+              body: { ref_code: "__email_match__", user_id: session.user.id },
+            }).catch(() => {});
+          }
+        }
       } else {
         setIsAdmin(false);
         setAdminRole(null);

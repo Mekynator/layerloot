@@ -235,6 +235,10 @@ const Account = () => {
               <VouchersModule {...moduleProps} userVouchers={userVouchers} overviewLoading={overviewLoading} />
             )}
 
+            {tab === "referrals" && (
+              <ReferralModule {...moduleProps} />
+            )}
+
             {tab === "preferences" && (
               <SavedPreferencesModule tt={tt} />
             )}

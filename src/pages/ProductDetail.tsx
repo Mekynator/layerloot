@@ -336,7 +336,7 @@ const ProductDetail = () => {
             {/* Color summary tile under description */}
             <ProductColorSummary productId={product.id} />
 
-            <motion.div whileHover={{ y: -2 }} className="section-surface p-4">
+            <motion.div whileHover={isMobile ? undefined : { y: -2 }} className="section-surface p-4">
 
               {hasConfiguratorAttrs && (
                 <ProductConfigurator
@@ -354,7 +354,7 @@ const ProductDetail = () => {
                   <div className="flex flex-wrap gap-2">
                     {variants.map((variant) => (
                       <motion.button
-                        whileHover={{ y: -2 }}
+                        whileHover={isMobile ? undefined : { y: -2 }}
                         whileTap={{ scale: 0.98 }}
                         key={variant.id}
                         onClick={() => setSelectedVariantId(selectedVariant?.id === variant.id ? null : variant.id)}
@@ -372,7 +372,7 @@ const ProductDetail = () => {
               )}
             </motion.div>
 
-            <motion.div whileHover={{ y: -2 }}>
+            <motion.div whileHover={isMobile ? undefined : { y: -2 }}>
               <PrintInfo
                 printTimeHours={product.print_time_hours}
                 dimensionsCm={product.dimensions_cm}
@@ -384,7 +384,7 @@ const ProductDetail = () => {
 
             {/* Color Picker */}
             {(product as any).enable_color_picker && (
-              <motion.div whileHover={{ y: -2 }} className="section-surface p-4">
+              <motion.div whileHover={isMobile ? undefined : { y: -2 }} className="section-surface p-4">
                 <ProductColorPicker
                   productId={product.id}
                   selectionMode={(product as any).color_selection_mode ?? "single"}

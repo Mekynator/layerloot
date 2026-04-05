@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
-import { UserPlus, Users, ShoppingCart, Star, TrendingUp } from "lucide-react";
+import { UserPlus, Users, ShoppingCart, Star, TrendingUp, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { Link } from "react-router-dom";
 
 interface ReferralStats {
   totalInvites: number;
@@ -11,24 +14,42 @@ interface ReferralStats {
   topInviters: { user_id: string; count: number; email?: string }[];
 }
 
+type DateRange = "today" | "week" | "all";
+
 const ReferralStatsWidget = () => {
   const [stats, setStats] = useState<ReferralStats | null>(null);
+  const [range, setRange] = useState<DateRange>("all");
 
   useEffect(() => {
     const load = async () => {
-      const { data: invites } = await supabase
+      let query = supabase
         .from("referral_invites")
-        .select("inviter_user_id, status, inviter_points_granted, invited_points_granted");
+        .select("inviter_user_id, status, inviter_points_granted, invited_points_granted, inviter_points_amount, invited_points_amount, created_at");
 
+      if (range === "today") {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        query = query.gte("created_at", today.toISOString());
+      } else if (range === "week") {
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        query = query.gte("created_at", weekAgo.toISOString());
+      }
+
+      const { data: invites } = await query;
       if (!invites) return;
 
       const totalInvites = invites.length;
       const accountsCreated = invites.filter((i) => i.status === "registered" || i.status === "ordered").length;
       const firstOrders = invites.filter((i) => i.status === "ordered").length;
-      const inviterPoints = invites.filter((i) => i.inviter_points_granted).length * 25;
-      const invitedPoints = invites.filter((i) => i.invited_points_granted).length * 15;
 
-      // Top inviters
+      const inviterPoints = invites
+        .filter((i) => i.inviter_points_granted)
+        .reduce((sum, i) => sum + ((i as Record<string, unknown>).inviter_points_amount as number ?? 25), 0);
+      const invitedPoints = invites
+        .filter((i) => i.invited_points_granted)
+        .reduce((sum, i) => sum + ((i as Record<string, unknown>).invited_points_amount as number ?? 15), 0);
+
       const inviterCounts = new Map<string, number>();
       invites.forEach((i) => {
         inviterCounts.set(i.inviter_user_id, (inviterCounts.get(i.inviter_user_id) ?? 0) + 1);
@@ -47,7 +68,7 @@ const ReferralStatsWidget = () => {
       });
     };
     load();
-  }, []);
+  }, [range]);
 
   if (!stats) return null;
 
@@ -61,10 +82,29 @@ const ReferralStatsWidget = () => {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-display uppercase">
-          <TrendingUp className="h-4 w-4 text-primary" />
-          Referral Program
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-sm font-display uppercase">
+            <TrendingUp className="h-4 w-4 text-primary" />
+            Referral Program
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <Select value={range} onValueChange={(v) => setRange(v as DateRange)}>
+              <SelectTrigger className="h-7 w-24 text-[11px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="week">This week</SelectItem>
+                <SelectItem value="all">All time</SelectItem>
+              </SelectContent>
+            </Select>
+            <Link to="/admin/referrals">
+              <Button variant="ghost" size="sm" className="h-7 text-[11px]">
+                View all <ArrowRight className="ml-1 h-3 w-3" />
+              </Button>
+            </Link>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-3">

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import type { LayoutEntry } from "@/lib/static-page-sections";
+import type { LayoutEntry, StaticSection } from "@/lib/static-page-sections";
 import { supabase } from "@/integrations/supabase/client";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
 import type { Tables } from "@/integrations/supabase/types";

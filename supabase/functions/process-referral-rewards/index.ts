@@ -5,9 +5,24 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const INVITER_POINTS = 25;
-const INVITED_POINTS = 15;
 const VALID_ORDER_STATUSES = ["paid", "completed", "processing", "shipped", "delivered"];
+const INVALID_ORDER_STATUSES = ["cancelled", "refunded", "failed"];
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUuid(v: unknown): v is string {
+  return typeof v === "string" && UUID_RE.test(v);
+}
+
+function isValidRefCode(v: unknown): v is string {
+  return typeof v === "string" && v.length >= 4 && v.length <= 20;
+}
+
+function jsonRes(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -26,8 +41,12 @@ Deno.serve(async (req) => {
       ref_code?: string;
     };
 
-    // 1. If ref_code provided, link invited user on registration
+    // ── 1. Link invited user on registration ──
     if (ref_code && user_id) {
+      if (!isValidRefCode(ref_code)) return jsonRes({ error: "Invalid ref_code format" }, 400);
+      if (!isValidUuid(user_id)) return jsonRes({ error: "Invalid user_id format" }, 400);
+
+      // Try code-based invite
       const { data: invite } = await sb
         .from("referral_invites")
         .select("*")
@@ -43,14 +62,17 @@ Deno.serve(async (req) => {
           account_created_at: new Date().toISOString(),
         }).eq("id", invite.id);
 
-        return new Response(JSON.stringify({ linked: true }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        // Link profile
+        await sb.from("profiles").update({
+          referred_by_invite_id: invite.id,
+        }).eq("user_id", user_id);
+
+        return jsonRes({ linked: true, invite_id: invite.id });
       }
 
-      // Check if there's an email-based invite
-      const { data: session } = await sb.auth.admin.getUserById(user_id);
-      const email = session?.user?.email?.toLowerCase();
+      // Try email-based invite
+      const { data: authData } = await sb.auth.admin.getUserById(user_id);
+      const email = authData?.user?.email?.toLowerCase();
 
       if (email) {
         const { data: emailInvite } = await sb
@@ -68,20 +90,23 @@ Deno.serve(async (req) => {
             account_created_at: new Date().toISOString(),
           }).eq("id", emailInvite.id);
 
-          return new Response(JSON.stringify({ linked: true }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          await sb.from("profiles").update({
+            referred_by_invite_id: emailInvite.id,
+          }).eq("user_id", user_id);
+
+          return jsonRes({ linked: true, invite_id: emailInvite.id });
         }
       }
 
-      return new Response(JSON.stringify({ linked: false }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonRes({ linked: false });
     }
 
-    // 2. If order_id provided, check if this user was invited and grant points
+    // ── 2. Process order-based referral rewards ──
     if (order_id && user_id) {
-      // Verify order is valid
+      if (!isValidUuid(order_id)) return jsonRes({ error: "Invalid order_id format" }, 400);
+      if (!isValidUuid(user_id)) return jsonRes({ error: "Invalid user_id format" }, 400);
+
+      // Verify order
       const { data: order } = await sb
         .from("orders")
         .select("id, status, user_id, total")
@@ -89,16 +114,15 @@ Deno.serve(async (req) => {
         .single();
 
       if (!order || order.user_id !== user_id) {
-        return new Response(JSON.stringify({ error: "Invalid order" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonRes({ error: "Invalid order" }, 400);
+      }
+
+      if (INVALID_ORDER_STATUSES.includes(order.status)) {
+        return jsonRes({ skipped: true, reason: "Order status is invalid for rewards" });
       }
 
       if (!VALID_ORDER_STATUSES.includes(order.status)) {
-        return new Response(JSON.stringify({ skipped: true, reason: "Invalid order status" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonRes({ skipped: true, reason: "Order status not qualifying" });
       }
 
       // Find the referral invite for this user
@@ -111,11 +135,11 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (!invite) {
-        return new Response(JSON.stringify({ skipped: true, reason: "No referral found" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonRes({ skipped: true, reason: "No referral found" });
       }
 
+      const inviterPoints = invite.inviter_points_amount ?? 25;
+      const invitedPoints = invite.invited_points_amount ?? 15;
       let pointsGranted = false;
 
       // Update status to ordered if first order
@@ -127,47 +151,75 @@ Deno.serve(async (req) => {
         }).eq("id", invite.id);
       }
 
-      // Grant inviter points (once per invited user)
+      // Grant inviter points (idempotent: check flag AND existing loyalty row)
       if (!invite.inviter_points_granted) {
-        await sb.from("loyalty_points").insert({
-          user_id: invite.inviter_user_id,
-          points: INVITER_POINTS,
-          reason: `Referral reward: invited user placed first order`,
-          order_id: order_id,
-        });
+        const { data: existing } = await sb
+          .from("loyalty_points")
+          .select("id")
+          .eq("user_id", invite.inviter_user_id)
+          .eq("order_id", order_id)
+          .like("reason", "Referral reward:%")
+          .limit(1)
+          .maybeSingle();
+
+        if (!existing) {
+          await sb.from("loyalty_points").insert({
+            user_id: invite.inviter_user_id,
+            points: inviterPoints,
+            reason: `Referral reward: invited user placed first order`,
+            order_id: order_id,
+          });
+        }
         await sb.from("referral_invites").update({
           inviter_points_granted: true,
         }).eq("id", invite.id);
         pointsGranted = true;
       }
 
-      // Grant invited user points (once)
+      // Grant invited user points (idempotent)
       if (!invite.invited_points_granted) {
-        await sb.from("loyalty_points").insert({
-          user_id: user_id,
-          points: INVITED_POINTS,
-          reason: `Welcome reward: first order as invited user`,
-          order_id: order_id,
-        });
+        const { data: existing } = await sb
+          .from("loyalty_points")
+          .select("id")
+          .eq("user_id", user_id)
+          .eq("order_id", order_id)
+          .like("reason", "Welcome reward:%")
+          .limit(1)
+          .maybeSingle();
+
+        if (!existing) {
+          await sb.from("loyalty_points").insert({
+            user_id: user_id,
+            points: invitedPoints,
+            reason: `Welcome reward: first order as invited user`,
+            order_id: order_id,
+          });
+        }
         await sb.from("referral_invites").update({
           invited_points_granted: true,
         }).eq("id", invite.id);
         pointsGranted = true;
       }
 
-      return new Response(JSON.stringify({ processed: true, pointsGranted }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      // Set reward_granted_at when both flags are true
+      const { data: updated } = await sb
+        .from("referral_invites")
+        .select("inviter_points_granted, invited_points_granted, reward_granted_at")
+        .eq("id", invite.id)
+        .single();
+
+      if (updated && updated.inviter_points_granted && updated.invited_points_granted && !updated.reward_granted_at) {
+        await sb.from("referral_invites").update({
+          reward_granted_at: new Date().toISOString(),
+        }).eq("id", invite.id);
+      }
+
+      return jsonRes({ processed: true, pointsGranted, inviterPoints, invitedPoints });
     }
 
-    return new Response(JSON.stringify({ error: "Missing parameters" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonRes({ error: "Missing parameters: provide (ref_code + user_id) or (order_id + user_id)" }, 400);
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("process-referral-rewards error:", err);
+    return jsonRes({ error: String(err) }, 500);
   }
 });

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, memo } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Tag } from "lucide-react";
@@ -15,7 +15,7 @@ interface Props {
   categories?: { id: string; name: string; slug: string }[];
 }
 
-export default function SmartHomeSections({ products, socialProofMap, categories = [] }: Props) {
+const SmartHomeSections = memo(function SmartHomeSections({ products, socialProofMap, categories = [] }: Props) {
   const engine = usePersonalizationEngine();
   const { recommendations } = useSmartRecommendations(products, socialProofMap);
 
@@ -63,4 +63,6 @@ export default function SmartHomeSections({ products, socialProofMap, categories
       ))}
     </div>
   );
-}
+});
+
+export default SmartHomeSections;

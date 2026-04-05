@@ -63,9 +63,11 @@ import SubmitDesign from "./pages/SubmitDesign";
 import NotFound from "./pages/NotFound";
 import Creations from "./pages/Creations";
 import CreationDetail from "./pages/CreationDetail";
-import ChatWidget from "./components/ChatWidget";
-import PromotionPopup from "./components/PromotionPopup";
-import GiftClaimPopup from "./components/GiftClaimPopup";
+import { lazy, Suspense } from "react";
+
+const ChatWidget = lazy(() => import("./components/ChatWidget"));
+const PromotionPopup = lazy(() => import("./components/PromotionPopup"));
+const GiftClaimPopup = lazy(() => import("./components/GiftClaimPopup"));
 import { CampaignThemeProvider } from "./components/campaign/CampaignThemeProvider";
 
 const queryClient = new QueryClient({
@@ -148,9 +150,13 @@ const AppShell = () => {
         </Routes>
       </Layout>
 
-      {!isEditorPreview && !isAdminRoute && <ChatWidget />}
-      {!isEditorPreview && !isAdminRoute && <PromotionPopup />}
-      {!isEditorPreview && !isAdminRoute && <GiftClaimPopup />}
+      {!isEditorPreview && !isAdminRoute && (
+        <Suspense fallback={null}>
+          <ChatWidget />
+          <PromotionPopup />
+          <GiftClaimPopup />
+        </Suspense>
+      )}
     </CampaignThemeProvider>
   );
 };

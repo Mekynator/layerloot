@@ -107,7 +107,7 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
     <motion.div
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: index * 0.08, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.5, delay: Math.min(index * 0.06, 0.3), ease: [0.22, 1, 0.36, 1] }}
       className="h-full"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -125,20 +125,30 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
       >
         {/* Image area */}
         <div className="relative aspect-[4/5] overflow-hidden">
-          <AnimatePresence mode="wait">
-            <motion.img
-              key={currentImage}
+          {isMobile ? (
+            <img
               ref={imageRef}
               src={currentImage}
               alt={product.name}
               className="absolute inset-0 h-full w-full object-cover"
               loading="lazy"
-              initial={{ opacity: 0, scale: 1.06 }}
-              animate={{ opacity: 1, scale: isHovered ? 1.1 : 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
             />
-          </AnimatePresence>
+          ) : (
+            <AnimatePresence mode="wait">
+              <motion.img
+                key={currentImage}
+                ref={imageRef}
+                src={currentImage}
+                alt={product.name}
+                className="absolute inset-0 h-full w-full object-cover"
+                loading="lazy"
+                initial={{ opacity: 0, scale: 1.06 }}
+                animate={{ opacity: 1, scale: isHovered ? 1.1 : 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              />
+            </AnimatePresence>
+          )}
 
           {/* Soft bottom gradient for text readability */}
           <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent opacity-70" />

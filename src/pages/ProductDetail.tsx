@@ -199,13 +199,17 @@ const ProductDetail = () => {
               </motion.div>
             ) : (
               <div
-                className="glass-card relative aspect-square overflow-hidden rounded-xl md:rounded-[1.75rem]"
+                className="glass-card relative aspect-[4/3] md:aspect-square overflow-hidden rounded-xl md:rounded-[1.75rem] cursor-zoom-in"
                 onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
                 onTouchEnd={(e) => {
                   const diff = touchStartX.current - e.changedTouches[0].clientX;
                   if (Math.abs(diff) > 50) {
                     setCurrentImage((p) => diff > 0 ? (p + 1) % images.length : (p - 1 + images.length) % images.length);
                   }
+                }}
+                onClick={() => {
+                  setLightboxIndex(currentImage);
+                  setLightboxOpen(true);
                 }}
               >
                 <AnimatePresence mode="wait">
@@ -265,7 +269,7 @@ const ProductDetail = () => {
             <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none md:gap-2">
               {images.map((img, i) => (
                 <motion.button
-                  whileHover={{ y: -2 }}
+                  whileHover={isMobile ? undefined : { y: -2 }}
                   key={i}
                   onClick={() => {
                     setCurrentImage(i);
@@ -282,7 +286,7 @@ const ProductDetail = () => {
               ))}
               {product.model_url && (
                 <motion.button
-                  whileHover={{ y: -2 }}
+                  whileHover={isMobile ? undefined : { y: -2 }}
                   onClick={() => setShow3D(true)}
                   className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-xl transition-all duration-200 ${
                     show3D

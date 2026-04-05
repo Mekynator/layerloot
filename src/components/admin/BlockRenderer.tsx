@@ -578,6 +578,15 @@ const CONTINUOUS_KEYFRAMES = `
 @keyframes glowPulse { 0%,100%{box-shadow:var(--glow-shadow)} 50%{box-shadow:var(--glow-shadow-bright)} }
 `;
 
+const sectionWidthClass = (width?: string) => {
+  switch (width) {
+    case "narrow": return "max-w-4xl mx-auto";
+    case "wide": return "max-w-[1400px] mx-auto";
+    case "full": return "w-full";
+    default: return "";
+  }
+};
+
 const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNode) => {
   const c = block.content || {};
   const props = sectionProps(block, defaultClasses);
@@ -648,7 +657,7 @@ const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNo
         viewport={{ once: true, amount: 0.12 }}
         transition={entranceAnim.transition}
         whileHover={Object.keys(hoverProps).length > 0 ? hoverProps : undefined}
-        className={`${needsRelative ? "relative overflow-hidden" : ""} ${props.className} ${clickable.className}`.trim()}
+        className={`${needsRelative ? "relative overflow-hidden" : ""} ${props.className} ${clickable.className} ${sectionWidthClass(c.sectionWidth)}`.trim()}
         style={{ ...props.style, ...sectionStyleOverrides }}
         onClick={clickable.onClick}
         data-editor-block-id={block.id}
@@ -1140,7 +1149,7 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
   );
 };
 
-const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boolean }) => {
+const CategoriesBlock = ({ block, disableAnimations = false }: { block: SiteBlock; disableAnimations?: boolean }) => {
   useTranslation();
   const [categories, setCategories] = useState<any[]>([]);
   const c = block.content || {};
@@ -1152,20 +1161,46 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
       .is("parent_id", null)
       .order("sort_order")
       .limit(c.limit || 6)
-      .then(({ data }) => setCategories(data ?? []));
-  }, [c.limit]);
+      .then(({ data }) => {
+        let cats = data ?? [];
+        // Manual selection & ordering
+        if (c.categorySource === "manual" && Array.isArray(c.selectedCategories) && c.selectedCategories.length > 0) {
+          const order = c.selectedCategories as string[];
+          cats = order.map(id => cats.find(cat => cat.id === id)).filter(Boolean) as typeof cats;
+        }
+        setCategories(cats);
+      });
+  }, [c.limit, c.categorySource, c.selectedCategories]);
 
   const align = c.alignment || "center";
   const heading = getLocalizedValue(c.heading, tr("blocks.categories.heading", "Shop by Category"));
   const subheading = getLocalizedValue(c.subheading, tr("blocks.categories.subheading", "Find exactly what you need"));
+  const showTitle = c.tileShowTitle !== false;
+  const showSubtitle = c.tileShowSubtitle !== false;
+
+  const layoutMode = (c.tileLayoutMode as string) || "grid";
+  const gridColumns = Math.max(1, Math.min(6, Number(c.tileGridColumns) || 3));
+  const spacing = (c.tileSpacing as number) ?? 16;
+  const showArrows = c.tileShowArrows !== false;
+  const cardMinWidth = (c.tileCardMinWidth as number) ?? 260;
+
+  const colClass =
+    gridColumns === 1 ? "grid-cols-1"
+    : gridColumns === 2 ? "sm:grid-cols-2"
+    : gridColumns === 4 ? "sm:grid-cols-2 lg:grid-cols-4"
+    : gridColumns === 5 ? "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+    : gridColumns === 6 ? "sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
+    : "sm:grid-cols-2 lg:grid-cols-3";
+
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   if (categories.length === 0) {
     return withSection(
       block,
       "py-16 lg:py-24",
       <div className="container text-center">
-        <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{heading}</h2>
-        <p className="mt-2 text-muted-foreground">{subheading}</p>
+        {showTitle && <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{heading}</h2>}
+        {showSubtitle && <p className="mt-2 text-muted-foreground">{subheading}</p>}
         <p className="mt-8 text-sm italic text-muted-foreground">
           {tr("blocks.categories.empty", "No categories available.")}
         </p>
@@ -1173,52 +1208,86 @@ const CategoriesBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
     );
   }
 
+  const scrollCarousel = (dir: number) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * el.clientWidth * 0.7, behavior: "smooth" });
+  };
+
+  const renderCategoryCard = (cat: { id: string; name: string; slug: string; image_url?: string }, index: number) => {
+    const catName = getLocalizedValue(cat.name, cat.name || "");
+    const cardContent = (
+      <motion.div
+        initial={disableAnimations ? false : { opacity: 0, y: 16 }}
+        whileInView={disableAnimations ? undefined : { opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ delay: index * 0.04 }}
+        whileHover={{ y: -6 }}
+        className="group relative flex h-40 items-end overflow-hidden rounded-2xl border border-border/30 bg-card/70 p-6 backdrop-blur-xl transition-all duration-500 hover:border-primary/20"
+        style={{ boxShadow: '0 8px 40px -8px hsl(228 33% 2% / 0.5), inset 0 1px 0 0 hsl(215 25% 95% / 0.04)' }}
+      >
+        {cat.image_url && (
+          <img
+            src={cat.image_url}
+            alt={catName}
+            className="absolute inset-0 h-full w-full object-cover opacity-30 transition-all duration-500 group-hover:scale-110 group-hover:opacity-40"
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent" />
+        <h3 className="relative font-display text-xl font-bold uppercase text-foreground transition-colors group-hover:text-primary">
+          {catName}
+        </h3>
+      </motion.div>
+    );
+
+    if (isEditorPreviewMode()) return <div key={cat.id}>{cardContent}</div>;
+    return (
+      <div key={cat.id}>
+        <Link to={`/products?category=${cat.slug}`} className="block">{cardContent}</Link>
+      </div>
+    );
+  };
+
   return withSection(
     block,
     "py-16 lg:py-24",
     <div className="container">
-      <div className={`mb-12 ${alignmentClass(align)}`}>
-        <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{heading}</h2>
-        <p className="mt-2 text-muted-foreground">{subheading}</p>
-      </div>
+      {(showTitle || showSubtitle) && (
+        <div className={`mb-12 ${alignmentClass(align)}`}>
+          {showTitle && <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{heading}</h2>}
+          {showSubtitle && <p className="mt-2 text-muted-foreground">{subheading}</p>}
+        </div>
+      )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {categories.map((cat, index) => {
-          const catName = getLocalizedValue(cat.name, cat.name || "");
-          const content = (
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.04 }}
-                whileHover={{ y: -6 }}
-                className="group relative flex h-40 items-end overflow-hidden rounded-2xl border border-border/30 bg-card/70 p-6 backdrop-blur-xl transition-all duration-500 hover:border-primary/20"
-                style={{ boxShadow: '0 8px 40px -8px hsl(228 33% 2% / 0.5), inset 0 1px 0 0 hsl(215 25% 95% / 0.04)' }}
-            >
-              {cat.image_url && (
-                <img
-                  src={cat.image_url}
-                  alt={catName}
-                  className="absolute inset-0 h-full w-full object-cover opacity-30 transition-all duration-500 group-hover:scale-110 group-hover:opacity-40"
-                />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent" />
-              <h3 className="relative font-display text-xl font-bold uppercase text-foreground transition-colors group-hover:text-primary">
-                {catName}
-              </h3>
-            </motion.div>
-          );
-
-          if (isEditorPreviewMode()) return <div key={cat.id}>{content}</div>;
-          return (
-            <div key={cat.id}>
-              <Link to={`/products?category=${cat.slug}`} className="block">
-                {content}
-              </Link>
-            </div>
-          );
-        })}
-      </div>
+      {layoutMode === "carousel" ? (
+        <div className="relative">
+          <div
+            ref={scrollRef}
+            className="flex overflow-x-auto scrollbar-none snap-x snap-mandatory pb-2"
+            style={{ gap: `${spacing}px` }}
+          >
+            {categories.map((cat, i) => (
+              <div key={cat.id} className="shrink-0 snap-start" style={{ minWidth: `${cardMinWidth}px`, width: `${cardMinWidth}px` }}>
+                {renderCategoryCard(cat, i)}
+              </div>
+            ))}
+          </div>
+          {showArrows && (
+            <>
+              <Button variant="ghost" size="icon" className="absolute -left-2 top-1/2 -translate-y-1/2 bg-background/80 shadow-md hover:bg-background" onClick={() => scrollCarousel(-1)}>
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="absolute -right-2 top-1/2 -translate-y-1/2 bg-background/80 shadow-md hover:bg-background" onClick={() => scrollCarousel(1)}>
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className={`grid ${colClass}`} style={{ gap: `${spacing}px` }}>
+          {categories.map((cat, i) => renderCategoryCard(cat, i))}
+        </div>
+      )}
     </div>,
   );
 };

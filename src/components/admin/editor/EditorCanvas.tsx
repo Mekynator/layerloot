@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 import { useVisualEditor } from "@/contexts/VisualEditorContext";
 import { Plus, Eye, EyeOff, Copy, Trash2, ChevronUp, ChevronDown, GripVertical, Lock } from "lucide-react";
@@ -23,6 +23,13 @@ export default function EditorCanvas() {
   } = useVisualEditor();
 
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  // Scroll selected block into view
+  useEffect(() => {
+    if (!selectedBlockId || !canvasRef.current) return;
+    const el = canvasRef.current.querySelector(`[data-preview-id="${selectedBlockId}"]`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [selectedBlockId]);
 
   const previewItems = useMemo(
     () => buildPreviewList(activePage, draftBlocks, layoutOrder),
@@ -228,6 +235,7 @@ function StaticSectionShell({ item, index, totalItems, isDragOver, onDragStart, 
 
   return (
     <div
+      data-preview-id={item.id}
       draggable
       onDragStart={onDragStart}
       onDragOver={onDragOver}
@@ -360,6 +368,7 @@ function CanvasBlockWrapper({
 
   return (
     <div
+      data-preview-id={block.id}
       draggable
       onDragStart={onDragStart}
       onDragOver={onDragOver}

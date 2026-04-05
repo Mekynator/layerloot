@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { classifyVoucher } from "@/components/account/types";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AccountDropdownProps {
   hasNotifications: boolean;
@@ -15,19 +16,37 @@ interface AccountDropdownProps {
 const AccountDropdown = ({ hasNotifications }: AccountDropdownProps) => {
   const { t } = useTranslation();
   const { user, signOut } = useAuth();
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [pointsBalance, setPointsBalance] = useState(0);
   const [activeVouchers, setActiveVouchers] = useState(0);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const handleEnter = useCallback(() => {
+    if (isMobile) return;
     if (closeTimer.current) clearTimeout(closeTimer.current);
     setOpen(true);
-  }, []);
+  }, [isMobile]);
 
   const handleLeave = useCallback(() => {
+    if (isMobile) return;
     closeTimer.current = setTimeout(() => setOpen(false), 250);
-  }, []);
+  }, [isMobile]);
+
+  const handleToggle = useCallback(() => {
+    if (isMobile) setOpen((v) => !v);
+  }, [isMobile]);
+
+  // Close on outside tap (mobile)
+  useEffect(() => {
+    if (!isMobile || !open) return;
+    const handler = (e: PointerEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", handler);
+    return () => document.removeEventListener("pointerdown", handler);
+  }, [isMobile, open]);
 
   useEffect(() => {
     if (!user || !open) return;
@@ -59,8 +78,8 @@ const AccountDropdown = ({ hasNotifications }: AccountDropdownProps) => {
   ];
 
   return (
-    <div className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
-      <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-primary" aria-label={t("nav.account", "My Account")}>
+    <div ref={containerRef} className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
+      <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-primary" aria-label={t("nav.account", "My Account")} onClick={handleToggle}>
         <User className="h-5 w-5" />
         {hasNotifications && <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-primary animate-pulse" />}
       </Button>

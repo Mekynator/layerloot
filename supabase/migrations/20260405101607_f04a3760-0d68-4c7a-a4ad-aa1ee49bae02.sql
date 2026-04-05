@@ -1,0 +1,5 @@
+-- Migrate: for any row where scope_target_user_id is set AND discount_rules is null,
+-- try to parse it as JSON. Since scope_target_user_id is UUID, any existing data is valid UUIDs.
+-- The JSON was being rejected at insert time, so there's nothing to migrate.
+-- Just ensure the column exists (it was added in previous migration).
+-- No data migration needed since UUID column rejects JSON inserts.

@@ -54,6 +54,7 @@ const ProductDetail = () => {
 
   const heroImageRef = useRef<HTMLImageElement | null>(null);
   const addToCartSectionRef = useRef<HTMLDivElement | null>(null);
+  const touchStartX = useRef<number>(0);
   const { recentProducts, trackProduct } = useRecentlyViewedProducts();
 
   const product = data?.product ?? null;
@@ -192,7 +193,16 @@ const ProductDetail = () => {
                 <ModelViewer url={product.model_url} className="aspect-square" />
               </motion.div>
             ) : (
-              <div className="glass-card relative aspect-square overflow-hidden rounded-xl md:rounded-[1.75rem]">
+              <div
+                className="glass-card relative aspect-square overflow-hidden rounded-xl md:rounded-[1.75rem]"
+                onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+                onTouchEnd={(e) => {
+                  const diff = touchStartX.current - e.changedTouches[0].clientX;
+                  if (Math.abs(diff) > 50) {
+                    setCurrentImage((p) => diff > 0 ? (p + 1) % images.length : (p - 1 + images.length) % images.length);
+                  }
+                }}
+              >
                 <AnimatePresence mode="wait">
                   <motion.img
                     ref={heroImageRef}

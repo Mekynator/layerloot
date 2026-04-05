@@ -317,6 +317,104 @@ export const BLOCK_EDITABLE_SCHEMAS: Record<string, BlockEditableSchema> = {
       { type: "icon", key: "icon", label: "Section Icon" },
     ],
   },
+  // ─── New block types ───
+  social_proof: {
+    blockType: "social_proof",
+    nodes: [
+      { type: "text", key: "heading", label: "Section Heading" },
+      { type: "text", key: "subheading", label: "Section Subheading", multiline: true },
+      { type: "layout", key: "columns", label: "Columns", options: [
+        { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "4", label: "4" },
+      ]},
+      { type: "layout", key: "alignment", label: "Alignment", options: ALIGNMENT_OPTIONS },
+    ],
+    repeaterKey: "items",
+    repeaterItemNodes: [
+      { type: "text", key: "label", label: "Label" },
+      { type: "text", key: "value", label: "Value / Counter" },
+      { type: "icon", key: "icon", label: "Icon" },
+    ],
+  },
+  testimonials: {
+    blockType: "testimonials",
+    nodes: [
+      { type: "text", key: "heading", label: "Section Heading" },
+      { type: "text", key: "subheading", label: "Subheading", multiline: true },
+      { type: "layout", key: "columns", label: "Columns", options: [
+        { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" },
+      ]},
+      { type: "layout", key: "alignment", label: "Alignment", options: ALIGNMENT_OPTIONS },
+    ],
+    repeaterKey: "items",
+    repeaterItemNodes: [
+      { type: "text", key: "name", label: "Customer Name" },
+      { type: "text", key: "quote", label: "Quote", multiline: true },
+      { type: "text", key: "rating", label: "Rating (1-5)" },
+      { type: "media", key: "avatar", label: "Avatar Image" },
+    ],
+  },
+  gallery: {
+    blockType: "gallery",
+    nodes: [
+      { type: "text", key: "heading", label: "Heading" },
+      { type: "text", key: "subheading", label: "Subheading", multiline: true },
+      { type: "layout", key: "columns", label: "Columns", options: [
+        { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "4", label: "4" },
+      ]},
+      { type: "layout", key: "alignment", label: "Alignment", options: ALIGNMENT_OPTIONS },
+    ],
+    repeaterKey: "images",
+    repeaterItemNodes: [
+      { type: "media", key: "url", label: "Image" },
+      { type: "text", key: "caption", label: "Caption" },
+      { type: "text", key: "alt", label: "Alt Text" },
+    ],
+  },
+  recently_viewed: {
+    blockType: "recently_viewed",
+    nodes: [
+      { type: "text", key: "heading", label: "Heading" },
+      { type: "text", key: "subheading", label: "Subheading", multiline: true },
+      { type: "layout", key: "maxItems", label: "Max Items", options: [
+        { value: "4", label: "4" }, { value: "6", label: "6" }, { value: "8", label: "8" },
+      ]},
+      { type: "layout", key: "columns", label: "Columns", options: [
+        { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "4", label: "4" },
+      ]},
+    ],
+  },
+  gift_finder: {
+    blockType: "gift_finder",
+    nodes: [
+      { type: "text", key: "heading", label: "Heading" },
+      { type: "text", key: "subheading", label: "Subheading", multiline: true },
+      { type: "text", key: "button_text", label: "Button Text" },
+      { type: "layout", key: "alignment", label: "Alignment", options: ALIGNMENT_OPTIONS },
+    ],
+  },
+  countdown: {
+    blockType: "countdown",
+    nodes: [
+      { type: "text", key: "heading", label: "Heading" },
+      { type: "text", key: "subheading", label: "Subheading", multiline: true },
+      { type: "text", key: "target_date", label: "Target Date (ISO)" },
+      { type: "text", key: "expired_text", label: "Expired Text" },
+      { type: "text", key: "button_text", label: "Button Text" },
+      { type: "text", key: "button_link", label: "Button Link" },
+      { type: "layout", key: "alignment", label: "Alignment", options: ALIGNMENT_OPTIONS },
+    ],
+  },
+  divider: {
+    blockType: "divider",
+    nodes: [
+      { type: "layout", key: "style", label: "Style", options: [
+        { value: "line", label: "Line" },
+        { value: "dots", label: "Dots" },
+        { value: "gradient", label: "Gradient" },
+        { value: "space", label: "Space Only" },
+      ]},
+    ],
+  },
   // Header global section
   header: {
     blockType: "header",

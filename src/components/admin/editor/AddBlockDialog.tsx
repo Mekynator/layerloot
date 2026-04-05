@@ -3,6 +3,7 @@ import { useVisualEditor, pageDisplayTitle } from "@/contexts/VisualEditorContex
 import {
   Square, Type, Image, Columns, PlayCircle, MousePointer, Link2, Code, Globe, Mail,
   Truck, Star, HelpCircle, ShieldCheck, Layers, Package, FolderTree,
+  Award, Clock, MessageSquare, Eye, Gift, Minus, ThumbsUp,
 } from "lucide-react";
 
 const BLOCK_TYPES = [
@@ -14,12 +15,19 @@ const BLOCK_TYPES = [
   { value: "how_it_works", label: "How It Works", icon: Package, color: "border-l-teal-500" },
   { value: "faq", label: "FAQ", icon: HelpCircle, color: "border-l-sky-500" },
   { value: "trust_badges", label: "Trust Badges", icon: ShieldCheck, color: "border-l-emerald-500" },
+  { value: "social_proof", label: "Social Proof", icon: ThumbsUp, color: "border-l-rose-500" },
+  { value: "testimonials", label: "Testimonials", icon: MessageSquare, color: "border-l-orange-500" },
+  { value: "gallery", label: "Gallery", icon: Image, color: "border-l-lime-500" },
+  { value: "recently_viewed", label: "Recently Viewed", icon: Eye, color: "border-l-slate-500" },
+  { value: "gift_finder", label: "Gift Finder", icon: Gift, color: "border-l-pink-500" },
+  { value: "countdown", label: "Countdown", icon: Clock, color: "border-l-red-500" },
   { value: "text", label: "Text", icon: Type, color: "border-l-blue-500" },
   { value: "image", label: "Image Grid", icon: Image, color: "border-l-green-500" },
   { value: "carousel", label: "Carousel", icon: Columns, color: "border-l-purple-500" },
   { value: "video", label: "Video", icon: PlayCircle, color: "border-l-red-500" },
   { value: "banner", label: "Banner", icon: Square, color: "border-l-amber-500" },
   { value: "cta", label: "Call to Action", icon: MousePointer, color: "border-l-emerald-500" },
+  { value: "divider", label: "Divider", icon: Minus, color: "border-l-muted-foreground" },
   { value: "button", label: "Button", icon: Link2, color: "border-l-cyan-500" },
   { value: "spacer", label: "Spacer", icon: Square, color: "border-l-muted-foreground" },
   { value: "html", label: "Custom HTML", icon: Code, color: "border-l-orange-500" },

@@ -32,6 +32,9 @@ const getRepeaterKey = (blockType?: string) => {
     case "entry_cards": return "cards";
     case "image": return "items";
     case "carousel": return "slides";
+    case "social_proof": return "items";
+    case "testimonials": return "items";
+    case "gallery": return "images";
     default: return null;
   }
 };

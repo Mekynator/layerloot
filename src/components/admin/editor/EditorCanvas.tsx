@@ -122,7 +122,7 @@ export default function EditorCanvas() {
           <div
             ref={canvasRef}
             className={cn(
-              "min-h-[calc(100vh-8rem)] bg-background transition-all duration-300",
+              "min-h-0 bg-background transition-all duration-300",
               viewport !== "desktop" && "rounded-xl border border-border/40 shadow-2xl",
             )}
             style={{ width: viewportWidth, maxWidth: "100%" }}

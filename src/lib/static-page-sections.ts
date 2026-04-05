@@ -33,7 +33,10 @@ export interface LayoutEntry {
 }
 
 const STATIC_SECTIONS: Record<string, StaticSection[]> = {
-  home: [],
+  home: [
+    { id: "static_home_smart_sections", label: "Smart Recommendations", description: "Personalized product recommendations based on user activity", icon: "Sparkles", previewType: "home_smart_sections" },
+    { id: "static_home_social_proof", label: "Social Proof", description: "Customer reviews, trust badges, and social proof section", icon: "Star", previewType: "home_social_proof" },
+  ],
   products: [
     { id: "static_products_header", label: "Products Header", description: "Page title, search & category filters", icon: "Search", previewType: "products_header" },
     { id: "static_products_grid", label: "Products Grid", description: "Product cards with pagination", icon: "LayoutGrid", previewType: "products_grid" },

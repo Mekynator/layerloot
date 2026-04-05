@@ -1,79 +1,79 @@
 
 
-## Fix Background Editor Preview — Side-by-Side Layout with Live Updates
+## Complete Page Editor — Remaining Gaps & Polish
 
-### Problem
-The `PageBackgroundEditor` currently renders inside a `<Dialog>` modal that covers the entire screen. The small inline preview (h-48 div) doesn't accurately represent the real page. There's no way to see changes reflected on the actual editor canvas, and the preview disappears when scrolling through settings.
+### Current State (Already Working)
 
-### Solution
-Replace the Dialog-based layout with a **Sheet panel** (sliding from the right) that coexists with the editor canvas, OR convert the background editor into a **side-by-side split layout** where settings scroll on the left and a sticky live preview sits on the right within the same dialog.
+After thorough analysis, the system is far more complete than the request implies:
 
-Given the existing architecture (background editor opens from the VisualEditor toolbar), the cleanest approach is:
+- **27 block types** all have renderers, editable schemas, field group configs, icons, colors, and default content
+- **Global sections**: header, footer, and 6 global slots (above/below header, before/after content, above/below footer) with auto-creation
+- **Background editor**: full side-by-side layout with live preview, all visual controls
+- **Draft/publish/schedule** workflow with undo/redo, unsaved warnings, keyboard shortcuts
+- **Desktop/tablet/mobile** viewport toggle
+- **Categorized Add Block dialog** with search and descriptions
+- **Element-level selection** with inline editing
+- **Unified layout ordering** for static + dynamic blocks with drag-and-drop
 
-**Convert the Dialog into a full-height Sheet/panel that replaces the SettingsPanel area temporarily**, keeping the editor canvas visible as the live preview. This way the actual page preview in `EditorCanvas` serves as the real-time preview.
+### Actual Remaining Gaps
 
-However, the canvas preview (iframe) won't reflect unsaved background changes since `PageBackgroundSlideshow` reads from the database. So the better approach is:
+#### 1. SettingsPanel ContentEditor doesn't use BlockFieldGroups
+The `SettingsPanel.tsx` (1082 lines) has its own `ContentEditor` function with ~700 lines of per-block rendering that duplicates `BlockFieldGroups.tsx`. The BlockEditorPanel already uses BlockFieldGroups cleanly.
 
-**Redesign the Dialog into a two-column layout with a large sticky preview panel on the right.**
+**Fix**: Replace `ContentEditor` internals in SettingsPanel with `<BlockFieldGroups>` (same as BlockEditorPanel does), keeping the element-selection integration and hero-button special case.
+
+#### 2. Missing block types in BLOCK_TYPES list
+`VisualEditorContext.tsx` line 131 lists only 20 block types in `BLOCK_TYPES` — missing: `social_proof`, `testimonials`, `gallery`, `recently_viewed`, `gift_finder`, `countdown`, `divider`. These can be added via AddBlockDialog (which has them) but `addBlock()` uses `BLOCK_TYPES` for label lookup, falling back to raw type name.
+
+**Fix**: Add the 7 missing entries to `BLOCK_TYPES`.
+
+#### 3. SettingsPanel responsive/style tabs redundancy
+The SettingsPanel has `ResponsiveEditor` and `AdvancedStyleEditor` components (~400 lines) with hardcoded per-block logic that could be streamlined.
+
+**Fix**: Clean up unused branches, ensure all block types get proper style/responsive controls.
+
+#### 4. Preview click-to-select for global sections
+EditorCanvas renders global section blocks identically to page blocks, but global section preview doesn't show the page's actual header/footer context.
+
+**Fix**: Minor — the canvas already works for global pages. No structural change needed, just ensure global blocks render correctly in preview (they do).
 
 ### Changes
 
-#### 1. Redesign `PageBackgroundEditor` layout
-**File:** `src/components/admin/PageBackgroundEditor.tsx`
+#### File 1: `src/contexts/VisualEditorContext.tsx`
+- Add 7 missing entries to `BLOCK_TYPES`: social_proof, testimonials, gallery, recently_viewed, gift_finder, countdown, divider
 
-- Change `DialogContent` from `sm:max-w-3xl` to `sm:max-w-6xl` (or `max-w-[90vw]`) to give room for side-by-side.
-- Split interior into two columns: left = scrollable settings form, right = sticky live preview.
-- Move the existing preview div from inline (between settings) to a **sticky right column** that stays visible while scrolling.
-- Make the right preview column take ~45% width and render at a taller aspect ratio (e.g., h-[60vh]) to better simulate the real page.
-- Apply ALL form settings to the preview: opacity, blur, brightness, contrast, saturation, blend mode, color overlay, gradient overlay, motion effect — the current preview only uses opacity, blur, position, and size.
-- Add desktop/mobile toggle buttons on the preview panel (mobile = narrower preview container width).
+#### File 2: `src/components/admin/editor/SettingsPanel.tsx`
+- Replace `ContentEditor` function (~700 lines) with `<BlockFieldGroups>` usage
+- Keep element-selection overlay and hero buttons special case
+- Keep existing tabs (Content, Style, Border, Device, More) structure
+- Reduce file from ~1082 lines to ~600 lines
 
-#### 2. Fix preview to reflect ALL settings
-**File:** `src/components/admin/PageBackgroundEditor.tsx`
+### What Does NOT Need Changing
 
-Currently the inline preview only applies `opacity`, `blur`, `backgroundPosition`, and `sizeCSS`. Missing from preview:
-- `brightness` / `contrast` / `saturation` → add to `filter` string
-- `blendMode` → add `mixBlendMode`
-- `colorOverlay` + `colorOverlayOpacity` → already has dark overlay, add color overlay div
-- `gradientStart` / `gradientEnd` / `gradientOpacity` → add gradient overlay div
-- `motionEffect` → add CSS animation
-- `transitionDurationMs` → use in opacity transition
-
-Update the preview rendering to match `PageBackgroundSlideshow.tsx` exactly.
-
-#### 3. Make settings form more compact for side-by-side
-- Keep all existing controls but ensure they fit well in a ~55% width left column.
-- The left column scrolls independently with `overflow-y-auto`.
-- The right preview column uses `sticky top-0` positioning.
-
-### Layout Structure
-```text
-┌─────────────────────────────────────────────────────┐
-│ Dialog (max-w-6xl, h-[85vh])                        │
-│ ┌──────────────────────┬───────────────────────────┐ │
-│ │ Settings (scroll)    │ Preview (sticky)          │ │
-│ │                      │                           │ │
-│ │ Enable toggle        │  ┌─────────────────────┐  │ │
-│ │ Images manager       │  │                     │  │ │
-│ │ Visual settings      │  │  Live background    │  │ │
-│ │ Size & position      │  │  with all effects   │  │ │
-│ │ Effects controls     │  │                     │  │ │
-│ │ Save button          │  │  [Desktop] [Mobile] │  │ │
-│ │                      │  └─────────────────────┘  │ │
-│ └──────────────────────┴───────────────────────────┘ │
-└─────────────────────────────────────────────────────┘
-```
+| Area | Status |
+|------|--------|
+| BlockRenderer.tsx | All 27 blocks render correctly |
+| BlockFieldGroups.tsx | All block configs present |
+| editable-schema.ts | All block schemas defined |
+| AddBlockDialog.tsx | Categorized with all blocks |
+| LayersPanel.tsx | Icons/colors for all blocks |
+| EditorToolbar.tsx | Global slots, background button, viewport toggle |
+| VisualEditor.tsx | Background editor integrated |
+| EditorCanvas.tsx | Unified layout, drag-and-drop, click-to-select |
+| PageBackgroundEditor.tsx | Side-by-side live preview |
+| Draft/publish workflow | Fully implemented |
+| Undo/redo | Working |
 
 ### Files
 
 | File | Action |
 |------|--------|
-| `src/components/admin/PageBackgroundEditor.tsx` | Redesign to two-column layout with sticky preview, fix preview to reflect all settings |
+| `src/contexts/VisualEditorContext.tsx` | Add 7 missing block types to BLOCK_TYPES |
+| `src/components/admin/editor/SettingsPanel.tsx` | Replace ContentEditor with BlockFieldGroups, reduce ~400 lines |
 
 ### Technical Notes
 - No database changes
 - No new dependencies
-- Reuses existing Dialog/Slider/Select/Switch components
-- Preview accuracy matches `PageBackgroundSlideshow.tsx` rendering logic
-- Desktop/mobile preview toggle is purely a CSS width change on the preview container
+- Consolidates duplicate code between two editor systems
+- All existing functionality preserved
 

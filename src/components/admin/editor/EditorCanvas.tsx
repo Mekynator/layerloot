@@ -24,6 +24,13 @@ export default function EditorCanvas() {
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
+  // Scroll selected block into view
+  useEffect(() => {
+    if (!selectedBlockId || !canvasRef.current) return;
+    const el = canvasRef.current.querySelector(`[data-preview-id="${selectedBlockId}"]`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [selectedBlockId]);
+
   const previewItems = useMemo(
     () => buildPreviewList(activePage, draftBlocks, layoutOrder),
     [activePage, draftBlocks, layoutOrder],

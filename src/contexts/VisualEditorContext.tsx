@@ -44,6 +44,13 @@ interface EditorState {
   selectedBlock: SiteBlock | null;
   hoveredBlockId: string | null;
 
+  // Static section selection
+  selectedStaticId: string | null;
+  selectedStatic: StaticSection | null;
+  staticSettings: Record<string, Record<string, unknown>>;
+  selectStaticSection: (id: string | null) => void;
+  updateStaticSettings: (sectionId: string, key: string, value: unknown) => void;
+
   // Element-level selection
   selectedElement: SelectedElement | null;
   selectElement: (element: SelectedElement | null) => void;

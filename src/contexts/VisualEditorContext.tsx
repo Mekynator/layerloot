@@ -276,7 +276,8 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
 
   const selectedStatic = useMemo<StaticSection | null>(() => {
     if (!selectedStaticId) return null;
-    const sections = getStaticSections(activePage);
+    const { getStaticSections: getSections } = require("@/lib/static-page-sections") as typeof import("@/lib/static-page-sections");
+    const sections = getSections(activePage);
     return sections.find(s => s.id === selectedStaticId) ?? null;
   }, [selectedStaticId, activePage]);
 

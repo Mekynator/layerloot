@@ -34,6 +34,8 @@ import CartUpsellSection from "@/components/smart/CartUpsellSection";
 import { useStorefrontCatalog } from "@/hooks/use-storefront";
 import CheckoutSavingsPanel from "@/components/cart/CheckoutSavingsPanel";
 import { useCheckoutSavings } from "@/hooks/useCheckoutSavings";
+import RecentlyViewedSection from "@/components/product/RecentlyViewedSection";
+import { useRecentlyViewedProducts } from "@/hooks/use-recently-viewed";
 
 const FREE_SHIPPING_THRESHOLD = 500;
 const BASE_SHIPPING_PRICE = 5.99;
@@ -53,6 +55,7 @@ export default function CartPage() {
   const { t } = useTranslation("common");
   const { data: accountData, isLoading: accountLoading } = useCartAccountData(user?.id, user?.email);
   const { data: catalog } = useStorefrontCatalog();
+  const { recentProducts } = useRecentlyViewedProducts();
 
   type CartItemExt = (typeof items)[number] & {
     material?: string;
@@ -502,6 +505,17 @@ export default function CartPage() {
                     ))}
                   </AnimatePresence>
                 </div>
+              </motion.div>
+            )}
+
+            {/* Returning user: recently viewed */}
+            {user && recentProducts.length > 0 && (
+              <motion.div layout className="glass-card p-5">
+                <RecentlyViewedSection
+                  products={recentProducts}
+                  title={t("cart.pickUpWhereYouLeftOff", "Pick up where you left off")}
+                  maxItems={6}
+                />
               </motion.div>
             )}
 

@@ -1242,6 +1242,24 @@ const FeaturedProductsBlock = ({
     tr("blocks.featuredProducts.subheading", "Our most popular 3D printed items"),
   );
 
+  const layoutMode = c.tileLayoutMode || "grid";
+  const gridColumns = Math.max(1, Math.min(6, Number(c.tileGridColumns) || 4));
+  const spacing = c.tileSpacing ?? 16;
+  const showTitle = c.tileShowTitle !== false;
+  const showSubtitle = c.tileShowSubtitle !== false;
+  const showArrows = c.tileShowArrows !== false;
+  const cardMinWidth = c.tileCardMinWidth ?? 260;
+
+  const colClass =
+    gridColumns === 1 ? "grid-cols-1"
+    : gridColumns === 2 ? "sm:grid-cols-2"
+    : gridColumns === 3 ? "sm:grid-cols-2 lg:grid-cols-3"
+    : gridColumns === 5 ? "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+    : gridColumns === 6 ? "sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
+    : "sm:grid-cols-2 lg:grid-cols-4";
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   if (!isLoading && products.length === 0) {
     return withSection(
       block,
@@ -1256,33 +1274,84 @@ const FeaturedProductsBlock = ({
     );
   }
 
+  const scrollCarousel = (dir: number) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * el.clientWidth * 0.7, behavior: "smooth" });
+  };
+
   return withSection(
     block,
     "py-16 lg:py-24",
     <div className="container">
-      <div className={`mb-12 flex flex-wrap items-end justify-between gap-4 ${headingAlignClass}`}>
-        <div>
-          <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{heading}</h2>
-          <p className="mt-2 text-muted-foreground">{subheading}</p>
-        </div>
+      {(showTitle || showSubtitle) && (
+        <div className={`mb-12 flex flex-wrap items-end justify-between gap-4 ${headingAlignClass}`}>
+          <div>
+            {showTitle && <h2 className="font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">{heading}</h2>}
+            {showSubtitle && <p className="mt-2 text-muted-foreground">{subheading}</p>}
+          </div>
 
-        <ActionButton
-          button={{
-            text: getLocalizedValue(c.view_all_text, tr("blocks.featuredProducts.viewAll", "View All")),
-            icon: "ArrowRight",
-            iconPosition: "right",
-            variant: "ghost",
-            visible: c.show_view_all !== false,
-            ...viewAllAction,
-          }}
-          className="font-display uppercase tracking-wider text-primary hover:text-primary/80"
-        />
-      </div>
+          <ActionButton
+            button={{
+              text: getLocalizedValue(c.view_all_text, tr("blocks.featuredProducts.viewAll", "View All")),
+              icon: "ArrowRight",
+              iconPosition: "right",
+              variant: "ghost",
+              visible: c.show_view_all !== false,
+              ...viewAllAction,
+            }}
+            className="font-display uppercase tracking-wider text-primary hover:text-primary/80"
+          />
+        </div>
+      )}
 
       {isLoading ? (
-        <ProductGridSkeleton count={4} />
+        <ProductGridSkeleton count={gridColumns} />
+      ) : layoutMode === "carousel" ? (
+        <div className="relative">
+          <div
+            ref={scrollRef}
+            className="flex overflow-x-auto scrollbar-none snap-x snap-mandatory pb-2"
+            style={{ gap: `${spacing}px` }}
+          >
+            {products.map(({ product, socialProof }, i) => (
+              <motion.div
+                key={product.id}
+                variants={fadeUp}
+                initial={disableAnimations ? false : "hidden"}
+                whileInView={disableAnimations ? undefined : "visible"}
+                animate={disableAnimations ? { opacity: 1, y: 0 } : undefined}
+                viewport={{ once: true }}
+                className="shrink-0 snap-start"
+                style={{ minWidth: `${cardMinWidth}px`, width: `${cardMinWidth}px` }}
+              >
+                <ProductCard product={product} socialProof={socialProof} index={i} />
+              </motion.div>
+            ))}
+          </div>
+          {showArrows && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute -left-2 top-1/2 -translate-y-1/2 bg-background/80 shadow-md hover:bg-background"
+                onClick={() => scrollCarousel(-1)}
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute -right-2 top-1/2 -translate-y-1/2 bg-background/80 shadow-md hover:bg-background"
+                onClick={() => scrollCarousel(1)}
+              >
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            </>
+          )}
+        </div>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className={`grid ${colClass}`} style={{ gap: `${spacing}px` }}>
           {products.map(({ product, socialProof }, i) => (
             <motion.div
               key={product.id}

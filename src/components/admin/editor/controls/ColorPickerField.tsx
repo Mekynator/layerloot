@@ -63,7 +63,7 @@ export default function ColorPickerField({ label, value, onChange, placeholder =
               )}
               style={value && value !== "transparent" ? { backgroundColor: value } : undefined}
             />
-            <span className="flex-1 truncate text-left text-foreground">{value || placeholder}</span>
+            <span className="flex-1 truncate text-left text-foreground">{typeof value === "string" ? value : placeholder}</span>
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-64 space-y-3 p-3" align="start">

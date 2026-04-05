@@ -1,73 +1,58 @@
 
 
-## Phase 3: Full UI, Admin UI, Dashboard Integration & Live Data Wiring
+## Fix Page Editor to Show Full Homepage
 
-### Current State
+### Root Cause
 
-Most of Phase 3 is **already implemented**:
-- `ReferralModule.tsx` — full invite link, email invite, stats grid, achievement cards, referral history
-- `use-referrals.ts` — hooks for fetching referral data, sending invites, generating codes
-- `ReferralStatsWidget.tsx` — admin dashboard widget with stats and top inviters
-- `AdminDiscounts.tsx` — audience group targeting (specific, existing, new_registered, newcomers, invited) with JSON config storage
-- Account page has "Referrals" tab wired to `ReferralModule`
-- Admin Dashboard includes `ReferralStatsWidget`
+The Page Editor only shows CMS blocks from `site_blocks` table. The homepage (`Index.tsx`) renders additional hardcoded React sections **after** the CMS blocks: `SmartHomeSections` (personalized product recommendations) and `HomeSocialProof` (social proof badges). These are invisible to the editor because they aren't registered as static sections.
 
-### What Still Needs Work
+The `static-page-sections.ts` file defines `home: []` — an empty array — so no static sections appear for the home page.
 
-#### 1. ReferralModule Improvements
-- Add loading/skeleton state (currently returns empty object on load)
-- Add "rewarded" status to status config (only has pending/registered/ordered)
-- Add points-earned-per-referral display in history rows
-- Add explanation text about how rewards work (25 pts inviter, 15 pts invited)
-- Add empty state for zero referrals
+### Fix Strategy
 
-#### 2. Account Dashboard — Referral Summary Cards
-- `AccountDashboard.tsx` has no referral data integration
-- Add 4 referral summary cards (Friends Invited, Accounts Created, First Orders, Referral Points) matching existing tile style
-- Wire to `useReferrals` hook
-- Add "Invite Friends" quick action to smart actions engine
+Register the homepage's hardcoded sections as static sections so they appear in the editor as locked/reorderable items, matching the pattern already used for Products, Cart, Contact, etc.
 
-#### 3. Rewards History Integration
-- `AccountOverviewPanel.tsx` shows loyalty history but referral points have no special labeling
-- Add referral-specific icons/labels in points history (distinguish "Referral reward" entries)
+### Changes
 
-#### 4. ReferralStatsWidget Admin Improvements
-- Use dynamic `inviter_points_amount`/`invited_points_amount` from DB instead of hardcoded `* 25` / `* 15`
-- Add date-range filter (today/this week/all time)
-- Add link to a full admin referral management page
+#### 1. Register Home Static Sections (`src/lib/static-page-sections.ts`)
 
-#### 5. Admin Referral Management Page
-- Create `src/pages/admin/AdminReferrals.tsx` with full table view
-- Search, filter by status/date/inviter, sort
-- Show all invite rows with inviter email, invited email, status, dates, points
-- Add route in `App.tsx`
+Change `home: []` to include:
 
-#### 6. Discount Targeting UI Polish
-- Add helper text explaining each audience group in the discount form
-- Add validation warning when no group is selected
-- Add preview count showing "~X users currently match"
+- **Smart Recommendations** — "Personalized product recommendations based on user activity"
+- **Social Proof** — "Customer reviews, trust badges, and social proof section"
 
-#### 7. Cart/Checkout Discount Feedback
-- Ensure invited user discounts show proper eligibility messaging in cart
-- No false eligibility — validate against `validate-discount-eligibility` edge function
+Add corresponding `previewType` values: `home_smart_sections`, `home_social_proof`.
 
-### Files to Create/Edit
+#### 2. Add Preview Components (`src/components/admin/editor/StaticSectionPreview.tsx`)
 
-| File | Action | Description |
-|------|--------|-------------|
-| `src/components/account/ReferralModule.tsx` | Edit | Add skeleton, rewarded status, per-row points, empty state, reward explanation |
-| `src/components/account/AccountDashboard.tsx` | Edit | Add referral summary cards + invite quick action |
-| `src/components/account/AccountOverviewPanel.tsx` | Edit | Label referral points in history |
-| `src/components/admin/dashboard/ReferralStatsWidget.tsx` | Edit | Use dynamic point amounts, add date filter |
-| `src/pages/admin/AdminReferrals.tsx` | Create | Full admin referral management page |
-| `src/pages/admin/AdminDiscounts.tsx` | Edit | Add helper text and validation for audience groups |
-| `src/App.tsx` | Edit | Add admin referrals route |
-| `src/components/admin/AdminLayout.tsx` | Edit | Add referrals nav item |
+Add two new preview cases:
 
-### Technical Notes
+- `home_smart_sections` — renders a simple product grid placeholder with "Recommended for You" heading
+- `home_social_proof` — renders placeholder review cards and trust badges
 
-- All data comes from existing `referral_invites` table and `use-referrals` hook
-- Admin page uses service-accessible queries (admin RLS policies already exist)
-- No new database changes needed — Phase 2 schema is sufficient
-- Referral points in loyalty history are identified by `reason` field containing "Referral reward"
+These are read-only visual placeholders matching the style of existing previews (like `ProductsGridPreview`).
+
+#### 3. Fix Canvas Container Height (`src/components/admin/editor/EditorCanvas.tsx`)
+
+Change `min-h-[calc(100vh-8rem)]` to `min-h-0` on the canvas wrapper. The current min-height forces a tall empty container even when content is shorter, and doesn't help when content is taller (overflow-y-auto on parent handles scrolling). This ensures the canvas naturally sizes to its content.
+
+#### 4. Ensure `renderBlock` Handles All Block Types
+
+Verify that `BlockRenderer.tsx` doesn't silently return `null` for any block type that exists in the DB. If a block type has no renderer, show a labeled placeholder instead of nothing. (Quick check of current code shows it already has a fallback — just need to confirm it renders visible content.)
+
+### What This Achieves
+
+- Home page in editor shows **all sections** from top to bottom: Hero → Best Sellers → Smart Recommendations → Social Proof
+- All sections are visible in the Layers panel with proper labels
+- Static sections are locked but reorderable (matching existing pattern)
+- Preview stays non-interactive
+- No changes to the live page rendering
+
+### Files to Edit
+
+| File | Change |
+|------|--------|
+| `src/lib/static-page-sections.ts` | Add home static sections |
+| `src/components/admin/editor/StaticSectionPreview.tsx` | Add 2 preview components |
+| `src/components/admin/editor/EditorCanvas.tsx` | Fix min-height |
 

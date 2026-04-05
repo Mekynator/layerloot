@@ -364,10 +364,9 @@ const AdminDiscounts = () => {
           });
         }
       } else if (group === "invited") {
-        // Invited users — users whose metadata indicates invitation
-        // Currently marks users who have never signed in as "invited"
+        // Invited users — users who have a referral invite record
         users.forEach((u) => {
-          if (!u.last_sign_in_at) ids.add(u.id);
+          if (u.is_invited) ids.add(u.id);
         });
       }
     }

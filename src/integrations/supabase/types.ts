@@ -1036,6 +1036,7 @@ export type Database = {
           code: string
           created_at: string
           description: string | null
+          discount_rules: Json | null
           discount_type: string
           discount_value: number
           expires_at: string | null
@@ -1045,10 +1046,13 @@ export type Database = {
           max_uses: number | null
           min_order_amount: number | null
           min_quantity: number | null
+          per_user_limit: number | null
+          priority: number
           scope: string
           scope_target_id: string | null
           scope_target_user_id: string | null
           starts_at: string | null
+          target_mode: string
           updated_at: string
           used_count: number
         }
@@ -1056,6 +1060,7 @@ export type Database = {
           code: string
           created_at?: string
           description?: string | null
+          discount_rules?: Json | null
           discount_type?: string
           discount_value?: number
           expires_at?: string | null
@@ -1065,10 +1070,13 @@ export type Database = {
           max_uses?: number | null
           min_order_amount?: number | null
           min_quantity?: number | null
+          per_user_limit?: number | null
+          priority?: number
           scope?: string
           scope_target_id?: string | null
           scope_target_user_id?: string | null
           starts_at?: string | null
+          target_mode?: string
           updated_at?: string
           used_count?: number
         }
@@ -1076,6 +1084,7 @@ export type Database = {
           code?: string
           created_at?: string
           description?: string | null
+          discount_rules?: Json | null
           discount_type?: string
           discount_value?: number
           expires_at?: string | null
@@ -1085,10 +1094,13 @@ export type Database = {
           max_uses?: number | null
           min_order_amount?: number | null
           min_quantity?: number | null
+          per_user_limit?: number | null
+          priority?: number
           scope?: string
           scope_target_id?: string | null
           scope_target_user_id?: string | null
           starts_at?: string | null
+          target_mode?: string
           updated_at?: string
           used_count?: number
         }

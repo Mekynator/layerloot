@@ -589,6 +589,15 @@ const ProductDetail = () => {
         />
       </div>
 
+      {/* Lightbox */}
+      {lightboxOpen && (
+        <ProductMediaLightbox
+          images={images}
+          startIndex={lightboxIndex}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
+
       {/* Sticky Add-to-Cart bar */}
       <StickyAddToCart
         product={product}

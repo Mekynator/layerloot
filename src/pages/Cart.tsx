@@ -34,6 +34,9 @@ import CartUpsellSection from "@/components/smart/CartUpsellSection";
 import { useStorefrontCatalog } from "@/hooks/use-storefront";
 import CheckoutSavingsPanel from "@/components/cart/CheckoutSavingsPanel";
 import { useCheckoutSavings } from "@/hooks/useCheckoutSavings";
+import RecentlyViewedSection from "@/components/product/RecentlyViewedSection";
+import { useRecentlyViewedProducts } from "@/hooks/use-recently-viewed";
+import { useReorder } from "@/hooks/use-reorder";
 
 const FREE_SHIPPING_THRESHOLD = 500;
 const BASE_SHIPPING_PRICE = 5.99;
@@ -53,6 +56,8 @@ export default function CartPage() {
   const { t } = useTranslation("common");
   const { data: accountData, isLoading: accountLoading } = useCartAccountData(user?.id, user?.email);
   const { data: catalog } = useStorefrontCatalog();
+  const { recentProducts } = useRecentlyViewedProducts();
+  const { reorderItems } = useReorder(user?.id);
 
   type CartItemExt = (typeof items)[number] & {
     material?: string;
@@ -501,6 +506,58 @@ export default function CartPage() {
                       </motion.div>
                     ))}
                   </AnimatePresence>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Returning user: recently viewed + reorder */}
+            {user && recentProducts.length > 0 && (
+              <motion.div layout className="glass-card p-5">
+                <RecentlyViewedSection
+                  products={recentProducts}
+                  title={t("cart.pickUpWhereYouLeftOff", "Pick up where you left off")}
+                  maxItems={6}
+                />
+              </motion.div>
+            )}
+
+            {user && reorderItems && reorderItems.length > 0 && (
+              <motion.div layout className="glass-card p-5">
+                <h2 className="mb-4 font-display text-xl font-bold uppercase text-foreground">
+                  {t("cart.reorder", "Reorder")}
+                </h2>
+                <div className="flex gap-3 overflow-x-auto pb-2">
+                  {reorderItems.slice(0, 6).map((item: any) => (
+                    <div
+                      key={item.id}
+                      className="w-36 shrink-0 cursor-pointer rounded-xl border border-border/30 bg-card/60 p-2 transition-all hover:border-primary/20 hover:shadow-md"
+                      onClick={() => {
+                        if (typeof addItem === "function") {
+                          addItem({
+                            id: item.product_id || item.id,
+                            name: item.product_name || item.name,
+                            price: item.unit_price || item.price,
+                            image: item.image || "/placeholder.svg",
+                            slug: item.slug || "",
+                          });
+                          markItemChanged(item.product_id || item.id, "added");
+                        }
+                      }}
+                    >
+                      <div className="aspect-square overflow-hidden rounded-lg bg-muted mb-2">
+                        <img
+                          src={item.image || "/placeholder.svg"}
+                          alt={item.product_name || item.name}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                      </div>
+                      <p className="truncate font-display text-xs font-semibold uppercase text-foreground">
+                        {item.product_name || item.name}
+                      </p>
+                      <p className="text-xs text-primary">{formatPrice(item.unit_price || item.price)}</p>
+                    </div>
+                  ))}
                 </div>
               </motion.div>
             )}

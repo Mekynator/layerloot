@@ -1,120 +1,91 @@
 
 
-## Complete Mobile Optimization Pass — All Remaining Areas
+## Final Mobile Performance, QA & Polish Pass
 
-This is a large scope. The plan focuses on highest-impact, deliverable changes grouped by area. Many components already have decent responsive basics (2-col grids, stacked layouts) — the work is about polish, interaction fixes, and performance.
+This is a refinement phase — no new features, just optimization and stabilization of what exists.
 
-### 1. Header & Mobile Navigation
+### Analysis
 
-**File:** `src/components/layout/Header.tsx`
+After reviewing the codebase, the previous mobile passes already covered the major structural changes. What remains are targeted performance wins and consistency fixes:
 
-- **Mobile menu**: Currently a simple slide-down list. Add proper touch targets (min `py-3.5` per link), visual separators between items, and a cart/account quick-access row at the bottom of the mobile menu.
-- **AccountDropdown**: The dropdown uses `onMouseEnter`/`onMouseLeave` — completely broken on mobile (can't hover). Fix by adding `onClick` toggle on mobile via `useIsMobile()`. Same for **MiniCart** hover dropdown.
-- **Header height**: Already compact at `h-16`. No change needed.
-- **Backdrop blur**: Already reduced on mobile via CSS. No change.
+**Already done well:**
+- Ambient blobs/grid/noise hidden on mobile
+- Backdrop-blur reduced on mobile
+- Hover lifts disabled on mobile
+- ProductCard has mobile-visible add button
+- Footer has collapsible sections
+- Products page has mobile filter drawer
+- Hero headings scale responsively
+- Safe area padding on sticky bars
 
-**File:** `src/components/layout/AccountDropdown.tsx`
-- Add `onClick` toggle alongside hover handlers. On mobile, tapping the user icon opens/closes the dropdown. Tapping outside closes it.
+**Remaining issues found:**
 
-**File:** `src/components/layout/MiniCart.tsx`
-- Same fix: add `onClick` toggle for mobile. The hover dropdown is invisible on touch devices. On mobile, redirect to `/cart` directly instead of showing a dropdown (simpler, faster).
+1. **HomeSocialProof cards** still have `hover:-translate-y-2` inline (not caught by CSS mobile override since it's inline Tailwind, not `.glass-card`)
+2. **ProductCard** uses `AnimatePresence` with crossfade for image cycling — expensive on mobile with many cards on screen
+3. **ProductCard** entrance animation has staggered delay (`index * 0.08`) — with 10+ cards this causes visible delay
+4. **HomeSocialProof** recent prints grid is `md:grid-cols-3 xl:grid-cols-4` — on mobile defaults to 1-col, should be 2-col
+5. **ChatWidget** is 669 lines, always mounted — should be lazy loaded
+6. **PromotionPopup** and **GiftClaimPopup** always mounted — should be lazy
+7. **Loading skeletons** use `aspect-square` but ProductCard uses `aspect-[4/5]` — mismatch causes CLS
+8. **`page-enter` animation** on every route change adds 400ms perceived delay
 
-### 2. Footer Mobile Optimization
+### Changes
 
-**File:** `src/components/layout/Footer.tsx`
+#### 1. Lazy Load Heavy Non-Critical Components
+**File:** `src/App.tsx`
 
-- On mobile (`col-span-2` logo area is fine), make the 5-column grid collapse to a single stacked column with collapsible accordion sections for Quick Links, Account, Policies, and Contact. Use `<details>/<summary>` or a simple toggle state per section.
-- Remove `whileHover={{ y: -2 }}` from social icons on mobile.
-- Reduce `py-10` to `py-8` on mobile for tighter footer.
+Wrap `ChatWidget`, `PromotionPopup`, and `GiftClaimPopup` in `React.lazy` + `Suspense`. These are non-critical overlays that don't need to block initial render.
 
-### 3. Products Page — Filters & Grid
-
-**File:** `src/pages/Products.tsx`
-
-- **Mobile filter drawer**: The sidebar (`aside`) is full-width on mobile, pushing content down. Convert to a slide-in sheet/drawer triggered by a filter button. On mobile, hide the sidebar by default and show a "Filters" button that opens a `Sheet` from the bottom.
-- **Category buttons**: Add `whileHover={undefined}` on mobile (remove `whileHover={{ x: 2 }}`).
-- **Product grid**: Already `grid-cols-2` on mobile. Ensure gap is `gap-3` on mobile for tighter cards.
-- **Search input**: Already responsive. Ensure it gets full width.
-
-### 4. Cart Page Mobile Polish
-
-**File:** `src/pages/Cart.tsx`
-
-- **Cart title**: Reduce `text-4xl` to `text-2xl` on mobile.
-- **Cart items**: The `flex-col md:flex-row` layout is correct. Tighten image size from `h-24 w-24` to `h-20 w-20` on mobile.
-- **Quantity controls**: Already `h-9 w-9` — adequate touch targets.
-- **Cart summary sidebar**: On mobile, the `lg:grid-cols-[1.4fr_0.8fr]` already stacks. Add a sticky checkout CTA at the bottom of the page on mobile with safe area padding.
-- **CheckoutSavingsPanel**: Ensure it doesn't overflow on mobile — check its internal layout.
-
-### 5. Account Pages Mobile Polish
-
-**File:** `src/pages/Account.tsx`
-
-- **Header**: Reduce `text-2xl lg:text-3xl` greeting — already responsive. Stack admin/logout buttons vertically on very small screens.
-- **Mobile tab pills**: Already has horizontal scrollable pills. Ensure they have minimum tap targets (`min-h-[44px]`).
-- **Content area**: Already full-width on mobile. No structural change needed.
-
-**File:** `src/components/account/ReferralModule.tsx`
-- Stats grid: `sm:grid-cols-2 lg:grid-cols-4` — on mobile it's already 1-col. Ensure cards don't overflow.
-- Invite link input: ensure full-width and copy button is easy to tap.
-
-**File:** `src/components/account/RewardsModule.tsx`
-- Reward cards: ensure they stack properly and redeem buttons have adequate size.
-
-### 6. CreateYourOwn (Custom Order) Mobile Polish
-
-**File:** `src/pages/CreateYourOwn.tsx`
-
-- This is a 1572-line file with multi-step form. Key fixes:
-  - Ensure upload drop zone works on mobile (file input, not just drag)
-  - Reduce oversized headings and card padding on mobile
-  - Ensure the 3D model preview doesn't dominate — already handled by ModelViewer changes
-  - Ensure tabs (`TabsList`) are scrollable on mobile if they overflow
-  - Make material/color selection swatches large enough to tap (min 44px)
-
-### 7. Global Performance & Interaction Fixes
-
-**File:** `src/index.css`
-- Already has mobile performance optimizations (no blobs, reduced blur). Add:
-  - `@media (max-width: 767px) { .glass-card:hover { transform: none; } }` — already done, verify.
-  - Ensure `card-interactive:hover` transform is disabled on mobile — already done.
-
-**File:** `src/components/smart/SmartHomeSections.tsx`
-- Verify mobile grid is `grid-cols-2` not wider. Add responsive image sizing.
-
+#### 2. Fix HomeSocialProof Mobile Layout
 **File:** `src/components/social/HomeSocialProof.tsx`
-- Verify cards stack properly on mobile.
 
-### 8. Dynamic Page Blocks Mobile Defaults
+- Change recent prints grid from `grid gap-4 md:grid-cols-3 xl:grid-cols-4` to `grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4`
+- Change popular products grid from `grid gap-6 sm:grid-cols-2 xl:grid-cols-4` to `grid grid-cols-2 gap-3 md:gap-6 xl:grid-cols-4`
+- Remove `hover:-translate-y-2` from recent prints cards (replace with conditional via CSS or remove entirely — the CSS mobile override doesn't catch inline Tailwind classes)
+- Reduce `space-y-16 py-16` to `space-y-10 py-10 lg:space-y-16 lg:py-20` on mobile
 
-**File:** `src/components/admin/BlockRenderer.tsx`
-- In `withSection()`, ensure all blocks get `px-4` container padding on mobile (already via `container` class).
-- Review `HeroBlock`, `TextBlock`, `FeaturedProductsBlock`, `CategoriesBlock` for mobile text sizing and spacing. Reduce `text-5xl`/`text-6xl` hero headings to `text-3xl` on mobile.
+#### 3. Optimize ProductCard Rendering
+**File:** `src/components/ProductCard.tsx`
+
+- Reduce entrance animation delay cap: change `delay: index * 0.08` to `delay: Math.min(index * 0.06, 0.3)` so cards beyond 5th all appear together
+- On mobile, skip `AnimatePresence` crossfade for image cycling — use instant swap (no `motion.img` wrapper, just regular `img`) to reduce GPU compositing
+
+#### 4. Fix Skeleton CLS Mismatch
+**File:** `src/components/shared/loading-states.tsx`
+
+- Change `ProductCardSkeleton` from `aspect-square` to `aspect-[4/5]` to match actual `ProductCard` image ratio
+
+#### 5. Reduce Page Transition Delay
+**File:** `src/index.css`
+
+- Reduce `pageEnter` animation from `0.4s` to `0.25s` for snappier route changes
+- On mobile, disable the `pageEnter` animation entirely to feel instant
+
+#### 6. Memoize SmartHomeSections
+**File:** `src/components/smart/SmartHomeSections.tsx`
+
+- Wrap component export in `React.memo` to prevent re-renders when parent (Index) re-renders from unrelated state changes
+
+#### 7. Global Mobile CSS Polish
+**File:** `src/index.css`
+
+- Add mobile rule to disable `hover:-translate-y-2` on all elements (catch-all for inline Tailwind hover transforms): `@media (max-width: 767px) { * { --tw-translate-y: 0 !important; } }` — too broad. Instead, add `.hover\:-translate-y-2:hover { transform: none; }` inside the existing mobile media query
+- Add `will-change: auto` reset on mobile to prevent unnecessary GPU layer promotion
 
 ### Files Summary
 
 | File | Changes |
 |------|---------|
-| `src/components/layout/Header.tsx` | Mobile menu touch targets, spacing |
-| `src/components/layout/AccountDropdown.tsx` | Add click toggle for mobile |
-| `src/components/layout/MiniCart.tsx` | Mobile: redirect to /cart instead of hover dropdown |
-| `src/components/layout/Footer.tsx` | Collapsible sections on mobile, remove hover lifts |
-| `src/pages/Products.tsx` | Filter drawer on mobile, remove hover motions, tighten grid |
-| `src/pages/Cart.tsx` | Smaller title/images on mobile, sticky checkout CTA |
-| `src/pages/Account.tsx` | Tab pill touch targets |
-| `src/pages/CreateYourOwn.tsx` | Upload zone, tab scroll, swatch sizing for mobile |
-| `src/components/admin/BlockRenderer.tsx` | Hero heading mobile sizing |
-| `src/components/smart/SmartHomeSections.tsx` | Verify mobile grid |
-
-### What's NOT in this phase
-- Bottom sheet pattern for all modals (significant refactor, separate phase)
-- Image srcset/responsive loading (requires backend pipeline)
-- Full admin panel mobile optimization (admin is desktop-primary)
-- Lazy loading framework changes (already deferred via React patterns)
+| `src/App.tsx` | Lazy load ChatWidget, PromotionPopup, GiftClaimPopup |
+| `src/components/social/HomeSocialProof.tsx` | 2-col mobile grid, remove hover lifts, tighter spacing |
+| `src/components/ProductCard.tsx` | Cap entrance delay, simplify mobile image swap |
+| `src/components/shared/loading-states.tsx` | Fix skeleton aspect ratio to match cards |
+| `src/index.css` | Faster page transition, mobile hover transform override |
+| `src/components/smart/SmartHomeSections.tsx` | React.memo wrapper |
 
 ### Technical Notes
-- No database changes needed
-- All changes are CSS/component-level
-- `useIsMobile()` hook already available
+- No database changes
 - No new dependencies
+- All changes are CSS/component-level optimizations
+- Desktop behavior unchanged
 

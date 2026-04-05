@@ -404,7 +404,7 @@ const Header = () => {
                 <Link
                   key={`${link.to}-${link.localizedLabel}-mobile`}
                   to={link.to}
-                  className={`block py-3 font-display text-sm uppercase tracking-widest transition-colors hover:text-primary ${
+                  className={`block py-3.5 font-display text-sm uppercase tracking-widest transition-colors border-b border-border/5 ${
                     isActiveLink(location.pathname, link.to) ? "text-primary" : "text-muted-foreground"
                   }`}
                 >
@@ -413,13 +413,13 @@ const Header = () => {
               ))}
               {user ? (
                 <>
-                  <Link to="/account" className="block py-3 font-display text-sm uppercase tracking-widest text-muted-foreground hover:text-primary">
+                  <Link to="/account" className="block py-3.5 font-display text-sm uppercase tracking-widest text-muted-foreground border-b border-border/5">
                     {getLocalizedValue(headerSettings.mobile_account_label, getLocalizedValue(headerSettings.account_label, t("nav.account", "My Account")))}
                   </Link>
                   {/* Mobile admin link removed — admin access is via /admin/login */}
                 </>
               ) : (
-                <Link to="/auth" className="block py-3 font-display text-sm uppercase tracking-widest text-muted-foreground hover:text-primary">
+                <Link to="/auth" className="block py-3.5 font-display text-sm uppercase tracking-widest text-muted-foreground">
                   {getLocalizedValue(headerSettings.auth_label, t("nav.login", "Login / Register"))}
                 </Link>
               )}

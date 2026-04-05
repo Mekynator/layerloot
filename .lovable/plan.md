@@ -1,123 +1,73 @@
 
 
-## Phase 2: Referral System Backend Hardening
+## Phase 3: Full UI, Admin UI, Dashboard Integration & Live Data Wiring
 
 ### Current State
 
-The foundation already exists:
-- **`referral_invites` table** with `invite_code`, `inviter_user_id`, `invited_user_id`, `status`, point-granted flags, indexes, and unique constraint on `invite_code`
-- **`process-referral-rewards` edge function** handling invite linking (by code and email) and order-based reward granting with idempotent point flags
-- **RLS policies** for users, admins, and service role
-- **Frontend hooks** (`use-referrals.ts`) and UI (`ReferralModule.tsx`)
-- **Auth integration** capturing `ref` param and invoking the edge function on sign-in
-- **Stripe webhook** handling cart checkout but NOT triggering referral rewards on order completion
+Most of Phase 3 is **already implemented**:
+- `ReferralModule.tsx` — full invite link, email invite, stats grid, achievement cards, referral history
+- `use-referrals.ts` — hooks for fetching referral data, sending invites, generating codes
+- `ReferralStatsWidget.tsx` — admin dashboard widget with stats and top inviters
+- `AdminDiscounts.tsx` — audience group targeting (specific, existing, new_registered, newcomers, invited) with JSON config storage
+- Account page has "Referrals" tab wired to `ReferralModule`
+- Admin Dashboard includes `ReferralStatsWidget`
 
-### What Needs To Be Done
+### What Still Needs Work
 
-#### 1. Database Migration — Extend Schema
+#### 1. ReferralModule Improvements
+- Add loading/skeleton state (currently returns empty object on load)
+- Add "rewarded" status to status config (only has pending/registered/ordered)
+- Add points-earned-per-referral display in history rows
+- Add explanation text about how rewards work (25 pts inviter, 15 pts invited)
+- Add empty state for zero referrals
 
-Add missing columns and hardening to `referral_invites`:
-- `inviter_points_amount INT NOT NULL DEFAULT 25`
-- `invited_points_amount INT NOT NULL DEFAULT 15`
-- `reward_granted_at TIMESTAMPTZ`
-- `notes TEXT`
-- `metadata JSONB DEFAULT '{}'`
-- Index on `status`
-- Index on `invited_email`
+#### 2. Account Dashboard — Referral Summary Cards
+- `AccountDashboard.tsx` has no referral data integration
+- Add 4 referral summary cards (Friends Invited, Accounts Created, First Orders, Referral Points) matching existing tile style
+- Wire to `useReferrals` hook
+- Add "Invite Friends" quick action to smart actions engine
 
-Add `referred_by_invite_id` to `profiles`:
-- `referred_by_invite_id UUID REFERENCES referral_invites(id) ON DELETE SET NULL`
+#### 3. Rewards History Integration
+- `AccountOverviewPanel.tsx` shows loyalty history but referral points have no special labeling
+- Add referral-specific icons/labels in points history (distinguish "Referral reward" entries)
 
-Add a **trigger** on `referral_invites` to auto-set `updated_at`.
+#### 4. ReferralStatsWidget Admin Improvements
+- Use dynamic `inviter_points_amount`/`invited_points_amount` from DB instead of hardcoded `* 25` / `* 15`
+- Add date-range filter (today/this week/all time)
+- Add link to a full admin referral management page
 
-#### 2. RLS Policy Hardening
+#### 5. Admin Referral Management Page
+- Create `src/pages/admin/AdminReferrals.tsx` with full table view
+- Search, filter by status/date/inviter, sort
+- Show all invite rows with inviter email, invited email, status, dates, points
+- Add route in `App.tsx`
 
-Tighten the existing `"Users update own invites"` policy to prevent users from modifying reward fields:
-- Drop the current UPDATE policy for authenticated users
-- Create a new restricted UPDATE policy that only allows updating non-sensitive fields (`invited_email`, `notes`) where `inviter_user_id = auth.uid()`
-- All reward-related updates (status, points_granted, invited_user_id) remain service-role only
+#### 6. Discount Targeting UI Polish
+- Add helper text explaining each audience group in the discount form
+- Add validation warning when no group is selected
+- Add preview count showing "~X users currently match"
 
-#### 3. Edge Function — Harden `process-referral-rewards`
-
-Update the existing function with:
-- **Input validation** using manual checks (ref_code format, UUID format for user_id/order_id)
-- **Idempotency** — before inserting loyalty points, check if a point row with the same reason pattern and order_id already exists
-- **Set `reward_granted_at`** when both point flags become true
-- **Set `profiles.referred_by_invite_id`** when linking an invited user
-- **Exclude invalid order statuses** — keep existing `VALID_ORDER_STATUSES` but explicitly reject `cancelled`, `refunded`, `failed`
-- **Return structured response** with details of what was processed
-
-#### 4. Stripe Webhook — Trigger Referral Rewards on Order Completion
-
-In `stripe-webhook/index.ts`, after a successful cart checkout (`source === "cart"`):
-- Extract `user_id` from session metadata (must be passed from `create-checkout`)
-- Call `process-referral-rewards` with `{ order_id, user_id }` via internal function invoke
-- This ensures referral rewards trigger automatically on paid orders
-
-Also update `create-checkout` to include `user_id` in Stripe session metadata if not already present.
-
-#### 5. Discount Engine — Backend Targeting for Invited Users
-
-The `AdminDiscounts.tsx` currently stores audience config as JSON in `scope_target_user_id`. The backend validation at checkout needs to evaluate this:
-
-Create a new edge function `validate-discount-eligibility`:
-- Accepts `{ discount_code, user_id }`
-- Parses the audience JSON config from `discount_codes.scope_target_user_id`
-- Evaluates group membership:
-  - **invited**: check `referral_invites` for `invited_user_id = user_id`
-  - **new_registered**: check `auth.users.created_at` within configured days
-  - **newcomer**: check order count = 0 or created within X days
-  - **specific**: check user_id in the specific_ids list
-  - **all_existing**: always true for authenticated users
-- Returns `{ eligible: boolean, discount_value, discount_type }`
-
-#### 6. Achievement Counters — Database View
-
-Create a SQL view `referral_user_stats` for efficient dashboard queries:
-```sql
-CREATE VIEW referral_user_stats AS
-SELECT
-  inviter_user_id,
-  COUNT(*) FILTER (WHERE invited_email IS NOT NULL OR invited_user_id IS NOT NULL) AS total_invited,
-  COUNT(*) FILTER (WHERE status IN ('registered','ordered')) AS accounts_created,
-  COUNT(*) FILTER (WHERE status = 'ordered') AS first_orders,
-  COALESCE(SUM(inviter_points_amount) FILTER (WHERE inviter_points_granted), 0) AS points_earned
-FROM referral_invites
-GROUP BY inviter_user_id;
-```
-
-#### 7. Admin Reporting — Aggregate View
-
-Create `referral_admin_summary` view for admin dashboard:
-```sql
-CREATE VIEW referral_admin_summary AS
-SELECT
-  COUNT(*) AS total_invites,
-  COUNT(*) FILTER (WHERE status != 'pending') AS accepted,
-  COUNT(*) FILTER (WHERE status = 'ordered') AS first_orders,
-  SUM(CASE WHEN inviter_points_granted THEN inviter_points_amount ELSE 0 END) AS total_inviter_points,
-  SUM(CASE WHEN invited_points_granted THEN invited_points_amount ELSE 0 END) AS total_invited_points
-FROM referral_invites;
-```
-
-#### 8. Update Frontend Hook
-
-Update `use-referrals.ts` to use the new `inviter_points_amount` column instead of hardcoded `* 25` calculation.
+#### 7. Cart/Checkout Discount Feedback
+- Ensure invited user discounts show proper eligibility messaging in cart
+- No false eligibility — validate against `validate-discount-eligibility` edge function
 
 ### Files to Create/Edit
 
-| File | Action |
-|------|--------|
-| `supabase/migrations/...` | New migration with schema changes, views, trigger, policy updates |
-| `supabase/functions/process-referral-rewards/index.ts` | Harden with validation, idempotency, profile linking |
-| `supabase/functions/stripe-webhook/index.ts` | Add referral reward trigger after cart checkout |
-| `supabase/functions/validate-discount-eligibility/index.ts` | New function for backend discount targeting |
-| `src/hooks/use-referrals.ts` | Use dynamic point amounts from DB |
+| File | Action | Description |
+|------|--------|-------------|
+| `src/components/account/ReferralModule.tsx` | Edit | Add skeleton, rewarded status, per-row points, empty state, reward explanation |
+| `src/components/account/AccountDashboard.tsx` | Edit | Add referral summary cards + invite quick action |
+| `src/components/account/AccountOverviewPanel.tsx` | Edit | Label referral points in history |
+| `src/components/admin/dashboard/ReferralStatsWidget.tsx` | Edit | Use dynamic point amounts, add date filter |
+| `src/pages/admin/AdminReferrals.tsx` | Create | Full admin referral management page |
+| `src/pages/admin/AdminDiscounts.tsx` | Edit | Add helper text and validation for audience groups |
+| `src/App.tsx` | Edit | Add admin referrals route |
+| `src/components/admin/AdminLayout.tsx` | Edit | Add referrals nav item |
 
-### Technical Decisions
+### Technical Notes
 
-- Views instead of materialized views — data is small enough for live queries
-- No profile `is_invited_user` column — derivable from `referred_by_invite_id IS NOT NULL`
-- Reward idempotency via both boolean flags AND duplicate loyalty_points check
-- Discount validation as separate edge function for reuse from checkout and cart
+- All data comes from existing `referral_invites` table and `use-referrals` hook
+- Admin page uses service-accessible queries (admin RLS policies already exist)
+- No new database changes needed — Phase 2 schema is sufficient
+- Referral points in loyalty history are identified by `reason` field containing "Referral reward"
 

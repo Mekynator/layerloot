@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 import { useVisualEditor } from "@/contexts/VisualEditorContext";
 import { Plus, Eye, EyeOff, Copy, Trash2, ChevronUp, ChevronDown, GripVertical, Lock } from "lucide-react";

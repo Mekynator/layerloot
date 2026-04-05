@@ -578,6 +578,15 @@ const CONTINUOUS_KEYFRAMES = `
 @keyframes glowPulse { 0%,100%{box-shadow:var(--glow-shadow)} 50%{box-shadow:var(--glow-shadow-bright)} }
 `;
 
+const sectionWidthClass = (width?: string) => {
+  switch (width) {
+    case "narrow": return "max-w-4xl mx-auto";
+    case "wide": return "max-w-[1400px] mx-auto";
+    case "full": return "w-full";
+    default: return "";
+  }
+};
+
 const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNode) => {
   const c = block.content || {};
   const props = sectionProps(block, defaultClasses);
@@ -648,7 +657,7 @@ const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNo
         viewport={{ once: true, amount: 0.12 }}
         transition={entranceAnim.transition}
         whileHover={Object.keys(hoverProps).length > 0 ? hoverProps : undefined}
-        className={`${needsRelative ? "relative overflow-hidden" : ""} ${props.className} ${clickable.className}`.trim()}
+        className={`${needsRelative ? "relative overflow-hidden" : ""} ${props.className} ${clickable.className} ${sectionWidthClass(c.sectionWidth)}`.trim()}
         style={{ ...props.style, ...sectionStyleOverrides }}
         onClick={clickable.onClick}
         data-editor-block-id={block.id}

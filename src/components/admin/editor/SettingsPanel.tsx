@@ -37,7 +37,11 @@ const getRepeaterKey = (blockType?: string) => {
 };
 
 export default function SettingsPanel() {
-  const { selectedBlock, selectedBlockId, selectBlock, selectedElement, selectElement } = useVisualEditor();
+  const { selectedBlock, selectedBlockId, selectBlock, selectedElement, selectElement, selectedStatic, selectedStaticId, selectStaticSection, staticSettings, updateStaticSettings } = useVisualEditor();
+
+  if (selectedStatic && selectedStaticId) {
+    return <StaticSectionSettings section={selectedStatic} sectionId={selectedStaticId} settings={staticSettings[selectedStaticId] || {}} onUpdate={updateStaticSettings} onClose={() => selectStaticSection(null)} />;
+  }
 
   if (!selectedBlock) {
     return (

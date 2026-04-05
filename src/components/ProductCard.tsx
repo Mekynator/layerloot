@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Check, ShoppingBag, ArrowRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useCart } from "@/contexts/CartContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 import RatingStars from "@/components/social/RatingStars";
 import { formatPrice } from "@/lib/currency";
 import type { ProductSocialProof } from "@/lib/social-proof";
@@ -31,6 +32,7 @@ const AUTO_SLIDE_MS = 7000;
 const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
   const { t } = useTranslation("common");
   const { addItem } = useCart();
+  const isMobile = useIsMobile();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
@@ -114,11 +116,11 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
         to={`/products/${product.slug}`}
         className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/30 bg-card/70 backdrop-blur-xl transition-all duration-500"
         style={{
-          boxShadow: isHovered
+          boxShadow: isHovered && !isMobile
             ? '0 24px 80px -12px hsl(217 91% 60% / 0.15), 0 0 0 1px hsl(217 91% 60% / 0.15), inset 0 1px 0 0 hsl(215 25% 95% / 0.06)'
             : '0 8px 40px -8px hsl(228 33% 2% / 0.5), inset 0 1px 0 0 hsl(215 25% 95% / 0.04)',
-          transform: isHovered ? 'translateY(-8px)' : 'translateY(0)',
-          borderColor: isHovered ? 'hsl(217 91% 60% / 0.2)' : undefined,
+          transform: isHovered && !isMobile ? 'translateY(-8px)' : 'translateY(0)',
+          borderColor: isHovered && !isMobile ? 'hsl(217 91% 60% / 0.2)' : undefined,
         }}
       >
         {/* Image area */}
@@ -176,10 +178,10 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
             </div>
           )}
 
-          {/* Quick add — slides up on hover */}
+          {/* Quick add — always visible on mobile, slides up on hover for desktop */}
           <motion.div
             initial={false}
-            animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : 12 }}
+            animate={{ opacity: isMobile || isHovered ? 1 : 0, y: isMobile || isHovered ? 0 : 12 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
             className="absolute bottom-3 right-3 pointer-events-auto"
           >
@@ -188,7 +190,7 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
               type="button"
               size="sm"
               onClick={handleAddToCart}
-              className="rounded-full border-0 bg-primary/90 px-4 shadow-xl shadow-primary/25 backdrop-blur-sm transition-all duration-300 hover:bg-primary hover:shadow-primary/40"
+              className="rounded-full border-0 bg-primary/90 px-4 shadow-xl shadow-primary/25 backdrop-blur-sm transition-all duration-300 hover:bg-primary hover:shadow-primary/40 min-h-[44px]"
             >
               {justAdded ? (
                 <>
@@ -223,11 +225,12 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
               )}
             </div>
 
-            {/* Subtle "view" arrow on hover */}
+            {/* Subtle "view" arrow on hover — hidden on mobile */}
             <motion.div
               initial={false}
-              animate={{ opacity: isHovered ? 1 : 0, x: isHovered ? 0 : -8 }}
+              animate={{ opacity: !isMobile && isHovered ? 1 : 0, x: !isMobile && isHovered ? 0 : -8 }}
               transition={{ duration: 0.25 }}
+              className={isMobile ? "hidden" : ""}
             >
               <ArrowRight className="h-4 w-4 text-primary" />
             </motion.div>

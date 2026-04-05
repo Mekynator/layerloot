@@ -4,7 +4,7 @@ import {
   LayoutGrid, ChevronUp, ChevronDown,
   Square, Type, Image, Columns, PlayCircle, MousePointer, Link2, Code, Globe, Mail,
   Truck, Star, HelpCircle, ShieldCheck, Layers, Package, FolderTree, Search,
-  Box, BookmarkPlus, Lock,
+  Box, BookmarkPlus, Settings2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
     selectBlock, hoverBlock, selectedPage,
     deleteBlock, duplicateBlock, toggleBlockActive, moveBlock,
     addBlock, layoutOrder, setLayoutOrder,
+    selectedStaticId, selectStaticSection,
   } = useVisualEditor();
   const { user } = useAuth();
 
@@ -187,6 +188,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
               const realIndex = previewItems.findIndex(p => p.id === item.id);
 
               if (item.source === "static") {
+                const isStaticSelected = selectedStaticId === item.id;
                 return (
                   <div
                     key={item.id}
@@ -194,15 +196,18 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
                     onDragStart={() => setDragIndex(realIndex)}
                     onDragOver={(e) => { e.preventDefault(); setDragOverIndex(realIndex); }}
                     onDragEnd={handleDragEnd}
+                    onClick={() => selectStaticSection(isStaticSelected ? null : item.id)}
                     className={cn(
-                      "flex items-start gap-1.5 rounded-lg border-l-[3px] border-l-amber-500 px-2 py-1.5 text-xs bg-amber-500/5 transition-all",
+                      "group flex cursor-pointer items-start gap-1.5 rounded-lg border-l-[3px] border-l-primary/60 px-2 py-1.5 text-xs transition-all",
+                      isStaticSelected && "bg-primary/10 ring-1 ring-primary/40",
+                      !isStaticSelected && "hover:bg-accent/20",
                       dragOverIndex === realIndex && dragIndex !== realIndex && "ring-1 ring-primary",
                     )}
                   >
-                    <GripVertical className="mt-0.5 h-3 w-3 shrink-0 cursor-grab text-amber-500/60" />
-                    <Lock className="mt-0.5 h-3 w-3 shrink-0 text-amber-500/70" />
+                    <GripVertical className="mt-0.5 h-3 w-3 shrink-0 cursor-grab text-muted-foreground/50" />
+                    <Settings2 className="mt-0.5 h-3 w-3 shrink-0 text-primary/70" />
                     <div className="min-w-0 flex-1">
-                      <span className="block truncate font-display text-[10px] font-semibold uppercase tracking-wider text-foreground/70">
+                      <span className="block truncate font-display text-[10px] font-semibold uppercase tracking-wider text-foreground">
                         {item.label}
                       </span>
                       <span className="block truncate text-[9px] text-muted-foreground">
@@ -213,21 +218,18 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
                       <button
                         onClick={(e) => { e.stopPropagation(); handleMoveItem(realIndex, "up"); }}
                         disabled={realIndex === 0}
-                        className={cn("rounded p-0.5 text-amber-600 hover:text-amber-500", realIndex === 0 && "opacity-30 cursor-not-allowed")}
+                        className={cn("rounded p-0.5 text-muted-foreground hover:text-foreground", realIndex === 0 && "opacity-30 cursor-not-allowed")}
                       >
                         <ChevronUp className="h-2.5 w-2.5" />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleMoveItem(realIndex, "down"); }}
                         disabled={realIndex === previewItems.length - 1}
-                        className={cn("rounded p-0.5 text-amber-600 hover:text-amber-500", realIndex === previewItems.length - 1 && "opacity-30 cursor-not-allowed")}
+                        className={cn("rounded p-0.5 text-muted-foreground hover:text-foreground", realIndex === previewItems.length - 1 && "opacity-30 cursor-not-allowed")}
                       >
                         <ChevronDown className="h-2.5 w-2.5" />
                       </button>
                     </div>
-                    <Badge variant="outline" className="shrink-0 border-amber-500/30 text-[8px] text-amber-600">
-                      Locked
-                    </Badge>
                   </div>
                 );
               }
@@ -323,7 +325,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
       {/* Summary */}
       <div className="border-t border-border/30 px-3 py-2">
         <div className="flex justify-between text-[10px] text-muted-foreground">
-          <span>{draftBlocks.length} editable · {staticCount} locked</span>
+          <span>{draftBlocks.length + staticCount} sections</span>
           <span>{draftBlocks.filter(b => b.is_active !== false).length} visible</span>
         </div>
       </div>

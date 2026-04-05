@@ -2272,37 +2272,38 @@ const SocialProofBlock = ({ block }: { block: SiteBlock }) => {
   const c = block.content || {};
   const items = (c.items || []) as Record<string, string>[];
   const cols = parseInt(c.columns || "3", 10);
-  return wrapBlock(
-    block,
-    <div className="space-y-6 py-10">
+  return withSection(block, "py-10", (
+    <div className="container mx-auto space-y-6">
       {c.heading && <h2 className="text-2xl font-bold text-center">{getLocalizedValue(c.heading)}</h2>}
       {c.subheading && <p className="text-center text-muted-foreground">{getLocalizedValue(c.subheading)}</p>}
-      <div className={`grid gap-6`} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
-        {items.map((item, i) => (
-          <div key={i} className="rounded-xl border border-border bg-card p-6 text-center space-y-2">
-            {item.icon && <DynamicIcon name={item.icon} className="mx-auto h-8 w-8 text-primary" />}
-            {item.value && <p className="text-3xl font-bold">{item.value}</p>}
-            {item.label && <p className="text-sm text-muted-foreground">{item.label}</p>}
-          </div>
-        ))}
+      <div className="grid gap-6" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+        {items.map((item, i) => {
+          const Icon = iconForName(item.icon);
+          return (
+            <div key={i} className="rounded-xl border border-border bg-card p-6 text-center space-y-2">
+              {item.icon && <Icon className="mx-auto h-8 w-8 text-primary" />}
+              {item.value && <p className="text-3xl font-bold">{item.value}</p>}
+              {item.label && <p className="text-sm text-muted-foreground">{item.label}</p>}
+            </div>
+          );
+        })}
       </div>
-    </div>,
-  );
+    </div>
+  ));
 };
 
 const TestimonialsBlock = ({ block }: { block: SiteBlock }) => {
   const c = block.content || {};
   const items = (c.items || []) as Record<string, string>[];
   const cols = parseInt(c.columns || "2", 10);
-  return wrapBlock(
-    block,
-    <div className="space-y-6 py-10">
+  return withSection(block, "py-10", (
+    <div className="container mx-auto space-y-6">
       {c.heading && <h2 className="text-2xl font-bold text-center">{getLocalizedValue(c.heading)}</h2>}
       {c.subheading && <p className="text-center text-muted-foreground">{getLocalizedValue(c.subheading)}</p>}
-      <div className={`grid gap-6`} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+      <div className="grid gap-6" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
         {items.map((item, i) => (
           <div key={i} className="rounded-xl border border-border bg-card p-6 space-y-3">
-            {item.quote && <p className="italic text-foreground">"{item.quote}"</p>}
+            {item.quote && <p className="italic text-foreground">&ldquo;{item.quote}&rdquo;</p>}
             <div className="flex items-center gap-3">
               {item.avatar && <img src={item.avatar} alt={item.name || ""} className="h-10 w-10 rounded-full object-cover" />}
               <div>
@@ -2313,20 +2314,19 @@ const TestimonialsBlock = ({ block }: { block: SiteBlock }) => {
           </div>
         ))}
       </div>
-    </div>,
-  );
+    </div>
+  ));
 };
 
 const GalleryBlock = ({ block }: { block: SiteBlock }) => {
   const c = block.content || {};
   const images = (c.images || []) as Record<string, string>[];
   const cols = parseInt(c.columns || "3", 10);
-  return wrapBlock(
-    block,
-    <div className="space-y-6 py-10">
+  return withSection(block, "py-10", (
+    <div className="container mx-auto space-y-6">
       {c.heading && <h2 className="text-2xl font-bold text-center">{getLocalizedValue(c.heading)}</h2>}
       {c.subheading && <p className="text-center text-muted-foreground">{getLocalizedValue(c.subheading)}</p>}
-      <div className={`grid gap-4`} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+      <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
         {images.map((img, i) => (
           <div key={i} className="overflow-hidden rounded-xl">
             {img.url ? (
@@ -2338,45 +2338,40 @@ const GalleryBlock = ({ block }: { block: SiteBlock }) => {
           </div>
         ))}
       </div>
-    </div>,
-  );
+    </div>
+  ));
 };
 
 const RecentlyViewedBlock = ({ block }: { block: SiteBlock }) => {
   const c = block.content || {};
-  return wrapBlock(
-    block,
-    <div className="space-y-4 py-10">
+  return withSection(block, "py-10", (
+    <div className="container mx-auto space-y-4">
       {c.heading && <h2 className="text-2xl font-bold text-center">{getLocalizedValue(c.heading)}</h2>}
       {c.subheading && <p className="text-center text-muted-foreground">{getLocalizedValue(c.subheading)}</p>}
       <div className="flex items-center justify-center rounded-xl border-2 border-dashed border-muted-foreground/20 bg-muted/10 p-12 text-muted-foreground">
         Recently viewed products appear here at runtime
       </div>
-    </div>,
-  );
+    </div>
+  ));
 };
 
 const GiftFinderBlock = ({ block }: { block: SiteBlock }) => {
   const c = block.content || {};
-  return wrapBlock(
-    block,
-    <div className="space-y-4 py-10 text-center">
+  return withSection(block, "py-10", (
+    <div className="container mx-auto space-y-4 text-center">
       {c.heading && <h2 className="text-2xl font-bold">{getLocalizedValue(c.heading)}</h2>}
       {c.subheading && <p className="text-muted-foreground">{getLocalizedValue(c.subheading)}</p>}
       {c.button_text && (
-        <button className="rounded-lg bg-primary px-6 py-3 text-primary-foreground font-medium">
-          {getLocalizedValue(c.button_text)}
-        </button>
+        <Button className="mt-2">{getLocalizedValue(c.button_text)}</Button>
       )}
-    </div>,
-  );
+    </div>
+  ));
 };
 
 const CountdownBlock = ({ block }: { block: SiteBlock }) => {
   const c = block.content || {};
-  return wrapBlock(
-    block,
-    <div className="space-y-4 py-10 text-center">
+  return withSection(block, "py-10", (
+    <div className="container mx-auto space-y-4 text-center">
       {c.heading && <h2 className="text-2xl font-bold">{getLocalizedValue(c.heading)}</h2>}
       {c.subheading && <p className="text-muted-foreground">{getLocalizedValue(c.subheading)}</p>}
       <div className="flex justify-center gap-4">
@@ -2388,26 +2383,23 @@ const CountdownBlock = ({ block }: { block: SiteBlock }) => {
         ))}
       </div>
       {c.button_text && (
-        <button className="rounded-lg bg-primary px-6 py-3 text-primary-foreground font-medium">
-          {getLocalizedValue(c.button_text)}
-        </button>
+        <Button className="mt-2">{getLocalizedValue(c.button_text)}</Button>
       )}
-    </div>,
-  );
+    </div>
+  ));
 };
 
 const DividerBlock = ({ block }: { block: SiteBlock }) => {
   const c = block.content || {};
   const style = c.style || "line";
-  return wrapBlock(
-    block,
-    <div className="py-4">
+  return withSection(block, "py-4", (
+    <>
       {style === "line" && <hr className="border-border" />}
       {style === "dots" && <p className="text-center text-muted-foreground tracking-[1em]">•••</p>}
       {style === "gradient" && <div className="h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />}
       {style === "space" && <div className="h-8" />}
-    </div>,
-  );
+    </>
+  ));
 };
 
 export default renderBlock;

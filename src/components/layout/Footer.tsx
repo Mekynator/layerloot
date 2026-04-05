@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Mail, MapPin, Phone, Instagram, Facebook } from "lucide-react";
+import { Mail, MapPin, Phone, Instagram, Facebook, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
@@ -132,6 +133,8 @@ const getFacebookUrl = (contact: ContactSettings): string => {
 
 const Footer = () => {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const [contact, setContact] = useState<ContactSettings>(defaultContact);
   const [branding, setBranding] = useState<BrandingSettings>({ logo_text_left: "Layer", logo_text_right: "Loot", logo_image_url: "", logo_link: "/", logo_alt: "LayerLoot" });
   const [footerSettings, setFooterSettings] = useState<FooterSettings>(defaultFooterSettings);
@@ -196,8 +199,8 @@ const Footer = () => {
       >
         <div className="absolute top-0 left-1/2 -translate-x-1/2 h-px w-2/3 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
-        <div className="container py-10 md:py-16">
-          <div className="grid gap-8 grid-cols-2 md:grid-cols-3 lg:grid-cols-5 md:gap-10">
+        <div className="container py-8 md:py-16">
+          <div className="grid gap-8 grid-cols-1 md:grid-cols-3 lg:grid-cols-5 md:gap-10">
             <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="col-span-2 md:col-span-1">
               <Link to={branding.logo_link || "/"} className="mb-5 flex items-center gap-2.5 group">
                 {branding.logo_image_url ? (
@@ -218,8 +221,14 @@ const Footer = () => {
 
             {footerSettings.show_quick_links && (
               <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.04 }}>
-                <h4 className="mb-5 font-display text-xs font-semibold uppercase tracking-[0.2em] text-foreground">{quickLinksTitle}</h4>
-                <ul className="space-y-2.5 text-sm text-muted-foreground">
+                <button
+                  className="mb-3 md:mb-5 flex w-full items-center justify-between font-display text-xs font-semibold uppercase tracking-[0.2em] text-foreground md:pointer-events-none"
+                  onClick={() => isMobile && setOpenSections((s) => ({ ...s, quickLinks: !s.quickLinks }))}
+                >
+                  {quickLinksTitle}
+                  <ChevronDown className={`h-4 w-4 md:hidden transition-transform ${openSections.quickLinks ? "rotate-180" : ""}`} />
+                </button>
+                <ul className={`space-y-2.5 text-sm text-muted-foreground ${isMobile && !openSections.quickLinks ? "hidden" : ""} md:block`}>
                   {footerLinks.map((link) => (
                     <li key={`${link.to}-${link.localizedLabel}`}>
                       <Link to={link.to} className="transition-all duration-200 hover:translate-x-1 hover:text-primary">{link.localizedLabel}</Link>
@@ -231,8 +240,14 @@ const Footer = () => {
 
             {footerSettings.show_account_links && (
               <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.08 }}>
-                <h4 className="mb-5 font-display text-xs font-semibold uppercase tracking-[0.2em] text-foreground">{accountTitle}</h4>
-                <ul className="space-y-2.5 text-sm text-muted-foreground">
+                <button
+                  className="mb-3 md:mb-5 flex w-full items-center justify-between font-display text-xs font-semibold uppercase tracking-[0.2em] text-foreground md:pointer-events-none"
+                  onClick={() => isMobile && setOpenSections((s) => ({ ...s, account: !s.account }))}
+                >
+                  {accountTitle}
+                  <ChevronDown className={`h-4 w-4 md:hidden transition-transform ${openSections.account ? "rotate-180" : ""}`} />
+                </button>
+                <ul className={`space-y-2.5 text-sm text-muted-foreground ${isMobile && !openSections.account ? "hidden" : ""} md:block`}>
                   <li><Link to="/auth" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">{authLinkLabel}</Link></li>
                   <li><Link to="/account" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">{accountLinkLabel}</Link></li>
                   <li><Link to="/account/orders" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">{ordersLinkLabel}</Link></li>
@@ -242,10 +257,14 @@ const Footer = () => {
 
             {footerSettings.show_policies !== false && (
               <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.10 }}>
-                <h4 className="mb-5 font-display text-xs font-semibold uppercase tracking-[0.2em] text-foreground">
+                <button
+                  className="mb-3 md:mb-5 flex w-full items-center justify-between font-display text-xs font-semibold uppercase tracking-[0.2em] text-foreground md:pointer-events-none"
+                  onClick={() => isMobile && setOpenSections((s) => ({ ...s, policies: !s.policies }))}
+                >
                   {getLocalizedValue(footerSettings.policies_title, t("footer.policies", "Policies"))}
-                </h4>
-                <ul className="space-y-2.5 text-sm text-muted-foreground">
+                  <ChevronDown className={`h-4 w-4 md:hidden transition-transform ${openSections.policies ? "rotate-180" : ""}`} />
+                </button>
+                <ul className={`space-y-2.5 text-sm text-muted-foreground ${isMobile && !openSections.policies ? "hidden" : ""} md:block`}>
                   {(footerSettings.policy_links ?? defaultFooterSettings.policy_links ?? []).map((link) => (
                     <li key={link.path}>
                       <Link to={link.path} className="transition-all duration-200 hover:translate-x-1 hover:text-primary">
@@ -291,14 +310,14 @@ const Footer = () => {
                     <p className="mb-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground/70">{socialTitle}</p>
                     <div className="flex items-center gap-3">
                       {hasInstagram && (
-                        <motion.a whileHover={{ y: -2, scale: 1.05 }} whileTap={{ scale: 0.98 }} href={instagramUrl} target="_blank" rel="noreferrer"
+                        <motion.a whileTap={{ scale: 0.98 }} href={instagramUrl} target="_blank" rel="noreferrer"
                           className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border/20 bg-card/30 text-muted-foreground transition-all hover:border-primary/30 hover:text-primary hover:shadow-[0_0_20px_hsl(217_91%_60%/0.15)]"
                           aria-label={t("footer.instagram", "Instagram")}>
                           <Instagram className="h-4 w-4" />
                         </motion.a>
                       )}
                       {hasFacebook && (
-                        <motion.a whileHover={{ y: -2, scale: 1.05 }} whileTap={{ scale: 0.98 }} href={facebookUrl} target="_blank" rel="noreferrer"
+                        <motion.a whileTap={{ scale: 0.98 }} href={facebookUrl} target="_blank" rel="noreferrer"
                           className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border/20 bg-card/30 text-muted-foreground transition-all hover:border-primary/30 hover:text-primary hover:shadow-[0_0_20px_hsl(217_91%_60%/0.15)]"
                           aria-label={t("footer.facebook", "Facebook")}>
                           <Facebook className="h-4 w-4" />

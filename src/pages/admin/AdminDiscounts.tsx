@@ -192,7 +192,7 @@ const AdminDiscounts = () => {
       });
     }
 
-    setDiscounts((discountData as DiscountCode[]) ?? []);
+    setDiscounts((discountData as unknown as DiscountCode[]) ?? []);
     setProducts((productData as ProductOption[]) ?? []);
     setCategories((categoryData as CategoryOption[]) ?? []);
 

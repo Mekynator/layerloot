@@ -198,6 +198,38 @@ const createDefaultContent = (type: string): Record<string, any> => {
       return { heading: "Section Title", body: "Your text content here." };
     case "spacer":
       return { height: 40 };
+    case "social_proof":
+      return { heading: "Trusted by Thousands", stats: [{ label: "Happy Customers", value: "2,000+" }, { label: "5-Star Reviews", value: "500+" }] };
+    case "testimonials":
+      return { heading: "What Our Customers Say", items: [{ name: "Customer", quote: "Amazing quality!", rating: 5 }] };
+    case "gallery":
+      return { heading: "Gallery", images: [], columns: 3 };
+    case "countdown":
+      return { heading: "Sale Ends Soon", targetDate: new Date(Date.now() + 7 * 86400000).toISOString(), visibility: true };
+    case "divider":
+      return { style: "solid", thickness: 1, color: "" };
+    case "recently_viewed":
+      return { heading: "Recently Viewed", limit: 6 };
+    case "gift_finder":
+      return { heading: "Find the Perfect Gift", subheading: "Answer a few questions and we'll recommend the best products" };
+    case "banner":
+      return { heading: "Special Offer", body: "Check out our latest deals", buttonText: "Shop Now", buttonLink: "/products" };
+    case "cta":
+      return { heading: "Ready to get started?", subheading: "Join thousands of happy customers", buttonText: "Get Started", buttonLink: "/products" };
+    case "button":
+      return { text: "Click Here", link: "/", variant: "default", alignment: "center" };
+    case "video":
+      return { heading: "Watch", videoUrl: "", autoplay: false };
+    case "newsletter":
+      return { heading: "Stay Updated", subheading: "Subscribe to our newsletter for the latest news", buttonText: "Subscribe" };
+    case "embed":
+      return { code: "", height: 400 };
+    case "image":
+      return { images: [], columns: 2, gap: 8 };
+    case "carousel":
+      return { slides: [{ image: "", caption: "" }], autoplay: true, interval: 5000 };
+    case "instagram_auto_feed":
+      return { heading: "Follow Us", limit: 12 };
     default:
       return {};
   }
@@ -274,10 +306,21 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     setUndoVersion(0);
   }, []);
 
+  const GLOBAL_PAGE_LABELS: Record<string, string> = {
+    global_header: "Header",
+    global_footer: "Footer",
+    global_header_top: "Above Header",
+    global_header_bottom: "Below Header",
+    global_before_main: "Before Content",
+    global_after_main: "After Content",
+    global_footer_top: "Above Footer",
+    global_footer_bottom: "Below Footer",
+  };
+
   const setActivePage = useCallback(async (page: string) => {
-    // Auto-create global_header / global_footer pages if they don't exist yet
-    if ((page === "global_header" || page === "global_footer") && !pages.find(p => p.slug === page)) {
-      const label = page === "global_header" ? "Header" : "Footer";
+    // Auto-create any global_* page if it doesn't exist yet
+    if (page.startsWith("global_") && !pages.find(p => p.slug === page)) {
+      const label = GLOBAL_PAGE_LABELS[page] || page.replace("global_", "").replace(/_/g, " ");
       const { error } = await supabase.from("site_pages").insert({
         slug: page,
         name: label,

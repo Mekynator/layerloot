@@ -2,27 +2,24 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trash2, Plus, ArrowUp, ArrowDown, X, Palette, Type, Settings2, Layers, Monitor, Tablet, Smartphone, MousePointerClick, Square } from "lucide-react";
+import { Palette, Type, Settings2, Layers, Monitor, Tablet, Smartphone, MousePointerClick, Square, X } from "lucide-react";
 import { useVisualEditor, type SelectedElement } from "@/contexts/VisualEditorContext";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
 import SliderField from "./controls/SliderField";
-import TileSectionControls from "./controls/TileSectionControls";
 import ColorPickerField from "./controls/ColorPickerField";
 import ImageUploadField from "./controls/ImageUploadField";
-import IconPickerField from "./controls/IconPickerField";
 import TypographyControls from "./controls/TypographyControls";
 import BorderControls from "./controls/BorderControls";
 import BackgroundSlideshowControls from "./controls/BackgroundSlideshowControls";
 import ImageEffectsControls from "./controls/ImageEffectsControls";
 import AnimationControls from "./controls/AnimationControls";
 import VisualEffectsControls from "./controls/VisualEffectsControls";
-import { getBlockSchema, type EditableNode } from "./editable-schema";
+import { getBlockSchema } from "./editable-schema";
+import BlockFieldGroups from "./BlockFieldGroups";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const getRepeaterKey = (blockType?: string) => {
   switch (blockType) {
@@ -64,18 +61,18 @@ export default function SettingsPanel() {
 }
 
 function BlockSettings({ block, selectedElement, onSelectElement }: { block: SiteBlock; selectedElement: SelectedElement | null; onSelectElement: (el: SelectedElement | null) => void }) {
-  const { updateBlockContent, updateBlockMeta, selectBlock } = useVisualEditor();
+  const { updateBlockContent, updateBlockMeta, selectBlock, pages } = useVisualEditor();
 
   const content = useMemo(() => {
-    const raw = typeof block.content === "object" && block.content ? { ...(block.content as Record<string, any>) } : {};
+    const raw = typeof block.content === "object" && block.content ? { ...(block.content as Record<string, unknown>) } : {};
     const repeaterKey = getRepeaterKey(block.block_type);
     if (repeaterKey && !Array.isArray(raw[repeaterKey])) {
       raw[repeaterKey] = [];
     }
-    return raw;
+    return raw as Record<string, unknown>;
   }, [block]);
 
-  const [localContent, setLocalContent] = useState<Record<string, any>>(content);
+  const [localContent, setLocalContent] = useState<Record<string, unknown>>(content);
   const [title, setTitle] = useState(block.title || "");
   const [isActive, setIsActive] = useState(block.is_active ?? true);
 
@@ -86,28 +83,28 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
   }, [block.id]);
 
   const repeaterKey = getRepeaterKey(block.block_type);
-  const repeaterItems = repeaterKey ? (Array.isArray(localContent[repeaterKey]) ? localContent[repeaterKey] : []) : [];
+  const repeaterItems = repeaterKey ? (Array.isArray(localContent[repeaterKey]) ? localContent[repeaterKey] as Record<string, unknown>[] : []) : [];
 
-  const commitContent = useCallback((next: Record<string, any>) => {
+  const commitContent = useCallback((next: Record<string, unknown>) => {
     setLocalContent(next);
     updateBlockContent(block.id, next);
   }, [block.id, updateBlockContent]);
 
-  const patchContent = useCallback((key: string, value: any) => {
+  const patchContent = useCallback((key: string, value: unknown) => {
     commitContent({ ...localContent, [key]: value });
   }, [localContent, commitContent]);
 
-  const patchItem = useCallback((index: number, patch: Record<string, any>) => {
+  const patchItem = useCallback((index: number, patch: Record<string, unknown>) => {
     if (!repeaterKey) return;
-    const items = Array.isArray(localContent[repeaterKey]) ? [...localContent[repeaterKey]] : [];
+    const items = Array.isArray(localContent[repeaterKey]) ? [...(localContent[repeaterKey] as Record<string, unknown>[])] : [];
     items[index] = { ...items[index], ...patch };
     commitContent({ ...localContent, [repeaterKey]: items });
   }, [localContent, repeaterKey, commitContent]);
 
   const addItem = useCallback(() => {
     if (!repeaterKey) return;
-    const items = Array.isArray(localContent[repeaterKey]) ? [...localContent[repeaterKey]] : [];
-    const template: Record<string, any> = block.block_type === "faq"
+    const items = Array.isArray(localContent[repeaterKey]) ? [...(localContent[repeaterKey] as Record<string, unknown>[])] : [];
+    const template: Record<string, unknown> = block.block_type === "faq"
       ? { question: "New question", answer: "Answer here", visible: true }
       : block.block_type === "how_it_works"
         ? { icon: "Star", title: "New Step", desc: "Description", visible: true }
@@ -122,18 +119,18 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
 
   const removeItem = useCallback((index: number) => {
     if (!repeaterKey) return;
-    const items = [...(localContent[repeaterKey] || [])];
+    const items = [...(localContent[repeaterKey] as Record<string, unknown>[] || [])];
     items.splice(index, 1);
-    commitContent({ ...localContent, [repeaterKey]: items.map((item: any, i: number) => ({ ...item, order: i + 1 })) });
+    commitContent({ ...localContent, [repeaterKey]: items.map((item, i) => ({ ...item, order: i + 1 })) });
   }, [localContent, repeaterKey, commitContent]);
 
   const moveItem = useCallback((index: number, dir: -1 | 1) => {
     if (!repeaterKey) return;
-    const items = [...(localContent[repeaterKey] || [])];
+    const items = [...(localContent[repeaterKey] as Record<string, unknown>[] || [])];
     const next = index + dir;
     if (next < 0 || next >= items.length) return;
     [items[index], items[next]] = [items[next], items[index]];
-    commitContent({ ...localContent, [repeaterKey]: items.map((item: any, i: number) => ({ ...item, order: i + 1 })) });
+    commitContent({ ...localContent, [repeaterKey]: items.map((item, i) => ({ ...item, order: i + 1 })) });
   }, [localContent, repeaterKey, commitContent]);
 
   const handleTitleChange = useCallback((value: string) => {
@@ -146,23 +143,27 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
     updateBlockMeta(block.id, { is_active: value });
   }, [block.id, updateBlockMeta]);
 
-  // Typography controls for a specific text element
-  const handleTypographyChange = useCallback((elementKey: string, typoKey: string, value: any) => {
+  const handleTypographyChange = useCallback((elementKey: string, typoKey: string, value: unknown) => {
     const typoPath = `_typography_${elementKey}`;
-    const current = localContent[typoPath] || {};
+    const current = (localContent[typoPath] as Record<string, unknown>) || {};
     patchContent(typoPath, { ...current, [typoKey]: value });
   }, [localContent, patchContent]);
 
   const getTypography = useCallback((elementKey: string) => {
-    return localContent[`_typography_${elementKey}`] || {};
+    return (localContent[`_typography_${elementKey}`] as Record<string, unknown>) || {};
   }, [localContent]);
 
-  // Check if an element is currently selected
   const isElementSelected = selectedElement?.blockId === block.id;
   const selectedNodeKey = isElementSelected ? selectedElement?.nodeKey : null;
   const selectedNodeType = isElementSelected ? selectedElement?.nodeType : null;
 
   const schema = getBlockSchema(block.block_type);
+
+  // Page paths for BlockFieldGroups action editor
+  const pageList = useMemo(
+    () => pages.map(p => p.full_path || `/${p.slug}`),
+    [pages],
+  );
 
   return (
     <div className="flex h-full flex-col border-l border-border/30 bg-card/80 backdrop-blur-xl">
@@ -219,26 +220,24 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
                       Back to block
                     </button>
                   </div>
-                  {/* Element text input */}
                   {schema.nodes.find(n => n.key === selectedNodeKey && n.type === "text") && (
                     <div>
                       <Label className="text-[10px]">Text</Label>
-                      {(schema.nodes.find(n => n.key === selectedNodeKey) as any)?.multiline ? (
+                      {(schema.nodes.find(n => n.key === selectedNodeKey) as { multiline?: boolean })?.multiline ? (
                         <Textarea
-                          value={localContent[selectedNodeKey] || ""}
+                          value={String(localContent[selectedNodeKey] || "")}
                           onChange={(e) => patchContent(selectedNodeKey, e.target.value)}
                           rows={4} className="text-xs"
                         />
                       ) : (
                         <Input
-                          value={localContent[selectedNodeKey] || ""}
+                          value={String(localContent[selectedNodeKey] || "")}
                           onChange={(e) => patchContent(selectedNodeKey, e.target.value)}
                           className="h-8 text-xs"
                         />
                       )}
                     </div>
                   )}
-                  {/* Typography controls for the selected text element */}
                   <TypographyControls
                     typography={getTypography(selectedNodeKey)}
                     onChange={(key, val) => handleTypographyChange(selectedNodeKey, key, val)}
@@ -246,7 +245,8 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
                 </div>
               )}
 
-              <ContentEditor
+              {/* Unified BlockFieldGroups — replaces the old per-block ContentEditor */}
+              <BlockFieldGroups
                 blockType={block.block_type}
                 content={localContent}
                 patchContent={patchContent}
@@ -255,8 +255,8 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
                 addItem={addItem}
                 removeItem={removeItem}
                 moveItem={moveItem}
-                onSelectElement={(nodeKey, nodeType) => onSelectElement({ blockId: block.id, nodeKey, nodeType })}
-                selectedNodeKey={selectedNodeKey}
+                compact
+                pages={pageList}
               />
             </TabsContent>
 
@@ -265,7 +265,6 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
               <ImageEffectsControls content={localContent} patchContent={patchContent} />
               <BackgroundSlideshowControls content={localContent} patchContent={patchContent} />
               <VisualEffectsControls content={localContent} patchContent={patchContent} />
-              {/* Per-element typography when an element is selected */}
               {isElementSelected && selectedNodeKey && selectedNodeType === "text" && (
                 <div className="rounded-lg border border-primary/30 bg-primary/5 p-2">
                   <TypographyControls
@@ -304,13 +303,12 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
                 />
               </div>
 
-              {/* Animation & Motion Controls */}
               <AnimationControls content={localContent} patchContent={patchContent} />
 
               <div>
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Anchor ID</Label>
                 <Input
-                  value={localContent.anchorId || ""}
+                  value={String(localContent.anchorId || "")}
                   onChange={(e) => patchContent("anchorId", e.target.value)}
                   className="h-8 text-xs" placeholder="e.g. about-section"
                 />
@@ -320,7 +318,7 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
               <div>
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Custom CSS Class</Label>
                 <Input
-                  value={localContent.customClassName || ""}
+                  value={String(localContent.customClassName || "")}
                   onChange={(e) => patchContent("customClassName", e.target.value)}
                   className="h-8 text-xs"
                 />
@@ -333,613 +331,45 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
   );
 }
 
-// ─── Content Editor ──────────────────────────────────────────────
-function ContentEditor({
-  blockType, content, patchContent,
-  repeaterItems, patchItem, addItem, removeItem, moveItem,
-  onSelectElement, selectedNodeKey,
-}: {
-  blockType: string;
-  content: Record<string, any>;
-  patchContent: (key: string, value: any) => void;
-  repeaterItems: any[];
-  patchItem: (index: number, patch: Record<string, any>) => void;
-  addItem: () => void;
-  removeItem: (index: number) => void;
-  moveItem: (index: number, dir: -1 | 1) => void;
-  onSelectElement: (nodeKey: string, nodeType: "text" | "icon" | "button" | "media" | "layout") => void;
-  selectedNodeKey: string | null;
-}) {
-  const schema = getBlockSchema(blockType);
-
-  const renderEditableNode = (node: EditableNode) => {
-    const isSelected = selectedNodeKey === node.key;
-    const wrapperClass = isSelected ? "ring-1 ring-primary/40 rounded-md p-1 bg-primary/5" : "";
-
-    switch (node.type) {
-      case "text":
-        return (
-          <div key={node.key} className={wrapperClass} onClick={() => onSelectElement(node.key, "text")}>
-            <Label className="text-[10px] cursor-pointer hover:text-primary transition-colors">{node.label}</Label>
-            {node.multiline ? (
-              <Textarea
-                value={content[node.key] || ""}
-                onChange={(e) => patchContent(node.key, e.target.value)}
-                rows={3} className="text-xs" placeholder={node.placeholder}
-              />
-            ) : (
-              <Input
-                value={content[node.key] || ""}
-                onChange={(e) => patchContent(node.key, e.target.value)}
-                className="h-8 text-xs" placeholder={node.placeholder}
-              />
-            )}
-          </div>
-        );
-      case "icon":
-        return (
-          <div key={node.key} className={wrapperClass}>
-            <IconPickerField
-              label={node.label}
-              value={content[node.key] || ""}
-              onChange={(v) => patchContent(node.key, v)}
-            />
-            {node.sizeKey && (
-              <SliderField
-                label="Icon Size"
-                value={content[node.sizeKey] ?? 24}
-                onChange={(v) => patchContent(node.sizeKey!, v)}
-                min={12} max={64} step={2}
-              />
-            )}
-            {node.colorKey && (
-              <ColorPickerField
-                label="Icon Color"
-                value={content[node.colorKey] || ""}
-                onChange={(v) => patchContent(node.colorKey!, v)}
-              />
-            )}
-          </div>
-        );
-      case "media":
-        return (
-          <ImageUploadField
-            key={node.key}
-            label={node.label}
-            value={content[node.key] || ""}
-            onChange={(v) => patchContent(node.key, v)}
-          />
-        );
-      case "layout":
-        return (
-          <div key={node.key}>
-            <Label className="text-[10px]">{node.label}</Label>
-            <Select value={String(content[node.key] || node.options[0]?.value || "")} onValueChange={(v) => patchContent(node.key, v)}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {node.options.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
-
-  const renderRepeaterControls = (label: string) => (
-    <div className="flex items-center justify-between">
-      <Label className="text-[10px] uppercase tracking-wider">{label}</Label>
-      <Button type="button" size="sm" variant="outline" onClick={addItem} className="h-6 gap-1 text-[10px]">
-        <Plus className="h-3 w-3" /> Add
-      </Button>
-    </div>
-  );
-
-  const renderItemControls = (index: number) => (
-    <div className="flex gap-1">
-      <Button variant="outline" size="sm" onClick={() => moveItem(index, -1)} disabled={index === 0} className="h-6 text-[10px]">
-        <ArrowUp className="h-3 w-3" />
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => moveItem(index, 1)} disabled={index === repeaterItems.length - 1} className="h-6 text-[10px]">
-        <ArrowDown className="h-3 w-3" />
-      </Button>
-      <Button variant="destructive" size="sm" onClick={() => removeItem(index)} className="ml-auto h-6 text-[10px]">
-        <Trash2 className="h-3 w-3" />
-      </Button>
-    </div>
-  );
-
-  // Categorize schema nodes by type for grouped accordion layout
-  const textNodes = schema.nodes.filter(n => n.type === "text");
-  const mediaNodes = schema.nodes.filter(n => n.type === "media");
-  const iconNodes = schema.nodes.filter(n => n.type === "icon");
-  const layoutNodes = schema.nodes.filter(n => n.type === "layout");
-
-  // Hero-specific buttons
-  const renderHeroButtons = () => {
-    if (blockType !== "hero" || !Array.isArray(content.buttons)) return null;
-    return (
-      <div className="space-y-2">
-        <Label className="text-[10px] uppercase tracking-wider">Buttons</Label>
-        <Accordion type="multiple" className="space-y-1">
-          {content.buttons.map((btn: any, i: number) => (
-            <AccordionItem key={i} value={`btn-${i}`} className="rounded-md border border-border/30 px-2">
-              <AccordionTrigger className="py-2 text-[11px]">{btn.text || `Button ${i + 1}`}</AccordionTrigger>
-              <AccordionContent className="space-y-2 pb-2">
-                <Input value={btn.text || ""} onChange={(e) => {
-                  const buttons = [...content.buttons];
-                  buttons[i] = { ...buttons[i], text: e.target.value };
-                  patchContent("buttons", buttons);
-                }} className="h-7 text-xs" placeholder="Button text" />
-                <Select value={btn.actionType || "none"} onValueChange={(v) => {
-                  const buttons = [...content.buttons];
-                  buttons[i] = { ...buttons[i], actionType: v };
-                  patchContent("buttons", buttons);
-                }}>
-                  <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No action</SelectItem>
-                    <SelectItem value="internal_link">Internal page</SelectItem>
-                    <SelectItem value="external_link">External URL</SelectItem>
-                    <SelectItem value="scroll_to">Scroll to section</SelectItem>
-                  </SelectContent>
-                </Select>
-                {btn.actionType && btn.actionType !== "none" && (
-                  <Input value={btn.actionTarget || ""} onChange={(e) => {
-                    const buttons = [...content.buttons];
-                    buttons[i] = { ...buttons[i], actionTarget: e.target.value };
-                    patchContent("buttons", buttons);
-                  }} className="h-7 text-xs" placeholder={btn.actionType === "external_link" ? "https://..." : btn.actionType === "scroll_to" ? "#section-id" : "/page"} />
-                )}
-                <div className="grid grid-cols-2 gap-2">
-                  <Select value={btn.variant || "default"} onValueChange={(v) => {
-                    const buttons = [...content.buttons];
-                    buttons[i] = { ...buttons[i], variant: v };
-                    patchContent("buttons", buttons);
-                  }}>
-                    <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="default">Primary</SelectItem>
-                      <SelectItem value="outline">Outline</SelectItem>
-                      <SelectItem value="ghost">Ghost</SelectItem>
-                      <SelectItem value="secondary">Secondary</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <IconPickerField
-                    label=""
-                    value={btn.icon || ""}
-                    onChange={(v) => {
-                      const buttons = [...content.buttons];
-                      buttons[i] = { ...buttons[i], icon: v };
-                      patchContent("buttons", buttons);
-                    }}
-                  />
-                </div>
-                <SliderField
-                  label="Border Radius"
-                  value={btn.borderRadius ?? 8}
-                  onChange={(v) => {
-                    const buttons = [...content.buttons];
-                    buttons[i] = { ...buttons[i], borderRadius: v };
-                    patchContent("buttons", buttons);
-                  }}
-                  min={0} max={32} step={2}
-                />
-                <ColorPickerField
-                  label="Button Color"
-                  value={btn.bgColor || ""}
-                  onChange={(v) => {
-                    const buttons = [...content.buttons];
-                    buttons[i] = { ...buttons[i], bgColor: v };
-                    patchContent("buttons", buttons);
-                  }}
-                />
-                <ColorPickerField
-                  label="Text Color"
-                  value={btn.textColor || ""}
-                  onChange={(v) => {
-                    const buttons = [...content.buttons];
-                    buttons[i] = { ...buttons[i], textColor: v };
-                    patchContent("buttons", buttons);
-                  }}
-                />
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </div>
-    );
-  };
-
-  // Render repeater items with schema-driven per-item nodes
-  const renderSchemaRepeater = () => {
-    if (!schema.repeaterKey || !schema.repeaterItemNodes) return null;
-    const repeaterLabel = schema.repeaterKey === "items" ? "Items" :
-      schema.repeaterKey === "steps" ? "Steps" :
-      schema.repeaterKey === "badges" ? "Badges" :
-      schema.repeaterKey === "cards" ? "Cards" :
-      schema.repeaterKey === "slides" ? "Slides" :
-      schema.repeaterKey === "images" ? "Images" : "Items";
-
-    return (
-      <>
-        {renderRepeaterControls(repeaterLabel)}
-        <Accordion type="multiple" className="space-y-1">
-          {repeaterItems.map((item: any, index: number) => (
-            <AccordionItem key={index} value={`item-${index}`} className="rounded-md border border-border/30 px-2">
-              <AccordionTrigger className="py-2 text-[11px]">
-                {item.title || item.question || item.name || item.label || item.caption || item.text || `${repeaterLabel.slice(0, -1)} ${index + 1}`}
-              </AccordionTrigger>
-              <AccordionContent className="space-y-2 pb-2">
-                {schema.repeaterItemNodes!.map((node) => {
-                  switch (node.type) {
-                    case "text":
-                      return (
-                        <div key={node.key}>
-                          <Label className="text-[10px]">{node.label}</Label>
-                          {node.multiline ? (
-                            <Textarea
-                              value={item[node.key] || ""}
-                              onChange={(e) => patchItem(index, { [node.key]: e.target.value })}
-                              rows={2} className="text-xs" placeholder={node.placeholder}
-                            />
-                          ) : (
-                            <Input
-                              value={item[node.key] || ""}
-                              onChange={(e) => patchItem(index, { [node.key]: e.target.value })}
-                              className="h-7 text-xs" placeholder={node.placeholder || node.label}
-                            />
-                          )}
-                        </div>
-                      );
-                    case "icon":
-                      return (
-                        <IconPickerField
-                          key={node.key}
-                          label={node.label}
-                          value={item[node.key] || "Star"}
-                          onChange={(v) => patchItem(index, { [node.key]: v })}
-                        />
-                      );
-                    case "media":
-                      return (
-                        <ImageUploadField
-                          key={node.key}
-                          label={node.label}
-                          value={item[node.key] || ""}
-                          onChange={(v) => patchItem(index, { [node.key]: v })}
-                        />
-                      );
-                    default:
-                      return null;
-                  }
-                })}
-                <div className="flex items-center justify-between">
-                  <Label className="text-[10px]">Visible</Label>
-                  <Switch checked={item.visible !== false} onCheckedChange={(v) => patchItem(index, { visible: v })} />
-                </div>
-                {(blockType === "entry_cards" || blockType === "how_it_works" || blockType === "trust_badges") && (
-                  <div className="space-y-1">
-                    <Label className="text-[10px]">Link</Label>
-                    <Input
-                      value={item.link || item.actionTarget || ""}
-                      onChange={(e) => patchItem(index, { link: e.target.value, actionType: e.target.value ? "internal_link" : "none", actionTarget: e.target.value })}
-                      className="h-7 text-xs" placeholder="/page-link"
-                    />
-                  </div>
-                )}
-                {renderItemControls(index)}
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </>
-    );
-  };
-
-  // Build block-specific extras
-  const renderBlockExtras = () => {
-    const extras: React.ReactNode[] = [];
-
-    if (blockType === "hero") {
-      extras.push(
-        <SliderField key="overlayOpacity" label="Overlay Opacity" value={content.overlayOpacity ?? 50}
-          onChange={(v) => patchContent("overlayOpacity", v)} min={0} max={100} step={5} unit="%" />
-      );
-    }
-    if (blockType === "spacer") {
-      extras.push(
-        <SliderField key="height" label="Height" value={content.height || 40}
-          onChange={(v) => patchContent("height", v)} min={8} max={200} step={4} />
-      );
-    }
-    if (blockType === "embed") {
-      extras.push(
-        <SliderField key="height" label="Height" value={content.height || 400}
-          onChange={(v) => patchContent("height", v)} min={100} max={800} step={20} />
-      );
-    }
-    if (blockType === "categories" || blockType === "featured_products") {
-      extras.push(
-        <SliderField key="limit" label="Items to Show" value={content.limit || 6}
-          onChange={(v) => patchContent("limit", v)} min={1} max={24} step={1} unit="" />
-      );
-    }
-    if (blockType === "featured_products") {
-      extras.push(
-        <div key="productSource" className="space-y-2">
-          <Label className="text-[10px] text-muted-foreground">Product Source</Label>
-          <Select value={(content.productSource as string) || "featured"} onValueChange={(v) => patchContent("productSource", v)}>
-            <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="featured">Featured</SelectItem>
-              <SelectItem value="best_sellers">Best Sellers</SelectItem>
-              <SelectItem value="newest">Newest</SelectItem>
-              <SelectItem value="discounted">Discounted</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      );
-    }
-    if (blockType === "categories") {
-      extras.push(
-        <div key="catSource" className="space-y-2">
-          <Label className="text-[10px] text-muted-foreground">Category Source</Label>
-          <Select value={(content.categorySource as string) || "automatic"} onValueChange={(v) => patchContent("categorySource", v)}>
-            <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="automatic">Automatic (by sort order)</SelectItem>
-              <SelectItem value="manual">Manual Selection</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="flex items-center justify-between">
-            <Label className="text-[10px]">Hide Empty Categories</Label>
-            <Switch checked={content.hideEmpty === true} onCheckedChange={(v) => patchContent("hideEmpty", v)} />
-          </div>
-        </div>
-      );
-    }
-    if (blockType === "featured_products" || blockType === "categories") {
-      extras.push(<TileSectionControls key="tile" content={content} patchContent={patchContent} />);
-    }
-    if (blockType === "instagram_auto_feed") {
-      extras.push(
-        <SliderField key="itemsToShow" label="Items to Show" value={content.itemsToShow || 10}
-          onChange={(v) => patchContent("itemsToShow", v)} min={1} max={30} step={1} unit="" />
-      );
-    }
-    if (blockType === "button") {
-      extras.push(
-        <div key="variant" className="space-y-2">
-          <Select value={content.variant || "default"} onValueChange={(v) => patchContent("variant", v)}>
-            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="default">Primary</SelectItem>
-              <SelectItem value="outline">Outline</SelectItem>
-              <SelectItem value="ghost">Ghost</SelectItem>
-              <SelectItem value="secondary">Secondary</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      );
-    }
-    if ((blockType === "image" || blockType === "carousel") && repeaterItems.length > 0 && blockType === "image") {
-      extras.push(
-        <div key="columns">
-          <Label className="text-[10px]">Columns</Label>
-          <Select value={String(content.columns || 3)} onValueChange={(v) => patchContent("columns", Number(v))}>
-            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {[1,2,3,4].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      );
-    }
-    return extras.length > 0 ? extras : null;
-  };
-
-  // Grouped accordion layout
-  const hasTextNodes = textNodes.length > 0;
-  const hasMediaNodes = mediaNodes.length > 0;
-  const hasIconNodes = iconNodes.length > 0;
-  const hasLayoutNodes = layoutNodes.length > 0;
-  const hasRepeater = !!schema.repeaterKey && !!schema.repeaterItemNodes;
-  const hasHeroButtons = blockType === "hero" && Array.isArray(content.buttons);
-  const blockExtras = renderBlockExtras();
-  const hasExtras = !!blockExtras;
-
-  // For simple blocks with few nodes, skip accordion grouping
-  const totalGroups = [hasTextNodes, hasMediaNodes, hasIconNodes, hasLayoutNodes, hasRepeater, hasHeroButtons, hasExtras].filter(Boolean).length;
-
-  if (totalGroups <= 1 && schema.nodes.length > 0) {
-    // Simple flat layout for blocks with very few fields
-    return (
-      <div className="space-y-3">
-        {schema.nodes.map(renderEditableNode)}
-        {renderHeroButtons()}
-        {blockExtras}
-        {hasRepeater && renderSchemaRepeater()}
-      </div>
-    );
-  }
-
-  if (schema.nodes.length === 0 && !hasRepeater && !hasExtras) {
-    // Fallback for unknown block types
-    return (
-      <div className="space-y-2">
-        {Object.entries(content).map(([key, value]) => {
-          if (Array.isArray(value) || typeof value === "object") return null;
-          if (key.startsWith("_")) return null;
-          if (typeof value === "boolean") {
-            return (
-              <div key={key} className="flex items-center justify-between rounded-lg border border-border/30 px-3 py-2">
-                <Label className="text-xs capitalize">{key.replace(/_/g, " ")}</Label>
-                <Switch checked={value} onCheckedChange={(v) => patchContent(key, v)} />
-              </div>
-            );
-          }
-          if (typeof value === "string" && value.length > 100) {
-            return (
-              <div key={key}>
-                <Label className="text-[10px] capitalize">{key.replace(/_/g, " ")}</Label>
-                <Textarea value={String(value)} onChange={(e) => patchContent(key, e.target.value)} rows={4} className="text-xs" />
-              </div>
-            );
-          }
-          return (
-            <div key={key}>
-              <Label className="text-[10px] capitalize">{key.replace(/_/g, " ")}</Label>
-              <Input value={String(value ?? "")} onChange={(e) => patchContent(key, e.target.value)} className="h-8 text-xs" />
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-
-  // Full grouped accordion layout
-  const defaultOpen = ["content"];
-  if (hasRepeater) defaultOpen.push("items");
-
-  return (
-    <Accordion type="multiple" defaultValue={defaultOpen} className="space-y-1">
-      {hasTextNodes && (
-        <AccordionItem value="content" className="rounded-lg border border-border/30 px-2">
-          <AccordionTrigger className="py-2 text-[11px] font-semibold uppercase tracking-wider gap-1.5">
-            <span className="flex items-center gap-1.5"><Type className="h-3 w-3" /> Content</span>
-          </AccordionTrigger>
-          <AccordionContent className="space-y-2 pb-2">
-            {textNodes.map(renderEditableNode)}
-          </AccordionContent>
-        </AccordionItem>
-      )}
-
-      {(hasMediaNodes || hasIconNodes) && (
-        <AccordionItem value="media" className="rounded-lg border border-border/30 px-2">
-          <AccordionTrigger className="py-2 text-[11px] font-semibold uppercase tracking-wider gap-1.5">
-            <span className="flex items-center gap-1.5"><Layers className="h-3 w-3" /> Media & Icons</span>
-          </AccordionTrigger>
-          <AccordionContent className="space-y-2 pb-2">
-            {mediaNodes.map(renderEditableNode)}
-            {iconNodes.map(renderEditableNode)}
-          </AccordionContent>
-        </AccordionItem>
-      )}
-
-      {hasHeroButtons && (
-        <AccordionItem value="buttons" className="rounded-lg border border-border/30 px-2">
-          <AccordionTrigger className="py-2 text-[11px] font-semibold uppercase tracking-wider gap-1.5">
-            <span className="flex items-center gap-1.5"><MousePointerClick className="h-3 w-3" /> Buttons</span>
-          </AccordionTrigger>
-          <AccordionContent className="space-y-2 pb-2">
-            {renderHeroButtons()}
-          </AccordionContent>
-        </AccordionItem>
-      )}
-
-      {hasLayoutNodes && (
-        <AccordionItem value="layout" className="rounded-lg border border-border/30 px-2">
-          <AccordionTrigger className="py-2 text-[11px] font-semibold uppercase tracking-wider gap-1.5">
-            <span className="flex items-center gap-1.5"><Settings2 className="h-3 w-3" /> Layout</span>
-          </AccordionTrigger>
-          <AccordionContent className="space-y-2 pb-2">
-            {layoutNodes.map(renderEditableNode)}
-          </AccordionContent>
-        </AccordionItem>
-      )}
-
-      {hasExtras && (
-        <AccordionItem value="extras" className="rounded-lg border border-border/30 px-2">
-          <AccordionTrigger className="py-2 text-[11px] font-semibold uppercase tracking-wider gap-1.5">
-            <span className="flex items-center gap-1.5"><Settings2 className="h-3 w-3" /> Settings</span>
-          </AccordionTrigger>
-          <AccordionContent className="space-y-2 pb-2">
-            {blockExtras}
-          </AccordionContent>
-        </AccordionItem>
-      )}
-
-      {hasRepeater && (
-        <AccordionItem value="items" className="rounded-lg border border-border/30 px-2">
-          <AccordionTrigger className="py-2 text-[11px] font-semibold uppercase tracking-wider gap-1.5">
-            <span className="flex items-center gap-1.5">
-              <Layers className="h-3 w-3" />
-              {schema.repeaterKey === "steps" ? "Steps" : schema.repeaterKey === "badges" ? "Badges" : schema.repeaterKey === "cards" ? "Cards" : schema.repeaterKey === "slides" ? "Slides" : schema.repeaterKey === "images" ? "Images" : "Items"}
-              <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-normal">{repeaterItems.length}</span>
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="space-y-2 pb-2">
-            {renderSchemaRepeater()}
-          </AccordionContent>
-        </AccordionItem>
-      )}
-    </Accordion>
-  );
-}
-
 // ─── Advanced Style Editor ───────────────────────────────────────
-function AdvancedStyleEditor({ content, patchContent }: { content: Record<string, any>; patchContent: (key: string, value: any) => void }) {
+function AdvancedStyleEditor({ content, patchContent }: { content: Record<string, unknown>; patchContent: (key: string, value: unknown) => void }) {
   return (
     <div className="space-y-4">
-      {/* Colors */}
       <div className="space-y-2">
         <Label className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
           <Palette className="h-3 w-3" /> Colors
         </Label>
         <div className="grid grid-cols-2 gap-2">
-          <ColorPickerField
-            label="Background"
-            value={content.backgroundColor || ""}
-            onChange={(v) => patchContent("backgroundColor", v)}
-          />
-          <ColorPickerField
-            label="Text"
-            value={content.textColor || ""}
-            onChange={(v) => patchContent("textColor", v)}
-          />
+          <ColorPickerField label="Background" value={String(content.backgroundColor || "")} onChange={(v) => patchContent("backgroundColor", v)} />
+          <ColorPickerField label="Text" value={String(content.textColor || "")} onChange={(v) => patchContent("textColor", v)} />
         </div>
       </div>
 
-      {/* Background Image */}
-      <ImageUploadField
-        label="Background Image"
-        value={content.backgroundImage || ""}
-        onChange={(v) => patchContent("backgroundImage", v)}
-      />
+      <ImageUploadField label="Background Image" value={String(content.backgroundImage || "")} onChange={(v) => patchContent("backgroundImage", v)} />
 
-      {/* Spacing */}
       <div className="space-y-2">
         <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Padding</Label>
         <div className="grid grid-cols-2 gap-2">
-          <SliderField label="Top" value={content.paddingTop ?? 0} onChange={(v) => patchContent("paddingTop", v)} min={0} max={120} step={4} />
-          <SliderField label="Bottom" value={content.paddingBottom ?? 0} onChange={(v) => patchContent("paddingBottom", v)} min={0} max={120} step={4} />
-          <SliderField label="Left" value={content.paddingLeft ?? 0} onChange={(v) => patchContent("paddingLeft", v)} min={0} max={120} step={4} />
-          <SliderField label="Right" value={content.paddingRight ?? 0} onChange={(v) => patchContent("paddingRight", v)} min={0} max={120} step={4} />
+          <SliderField label="Top" value={(content.paddingTop as number) ?? 0} onChange={(v) => patchContent("paddingTop", v)} min={0} max={120} step={4} />
+          <SliderField label="Bottom" value={(content.paddingBottom as number) ?? 0} onChange={(v) => patchContent("paddingBottom", v)} min={0} max={120} step={4} />
+          <SliderField label="Left" value={(content.paddingLeft as number) ?? 0} onChange={(v) => patchContent("paddingLeft", v)} min={0} max={120} step={4} />
+          <SliderField label="Right" value={(content.paddingRight as number) ?? 0} onChange={(v) => patchContent("paddingRight", v)} min={0} max={120} step={4} />
         </div>
       </div>
 
       <div className="space-y-2">
         <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Margin</Label>
         <div className="grid grid-cols-2 gap-2">
-          <SliderField label="Top" value={content.marginTop ?? 0} onChange={(v) => patchContent("marginTop", v)} min={0} max={120} step={4} />
-          <SliderField label="Bottom" value={content.marginBottom ?? 0} onChange={(v) => patchContent("marginBottom", v)} min={0} max={120} step={4} />
+          <SliderField label="Top" value={(content.marginTop as number) ?? 0} onChange={(v) => patchContent("marginTop", v)} min={0} max={120} step={4} />
+          <SliderField label="Bottom" value={(content.marginBottom as number) ?? 0} onChange={(v) => patchContent("marginBottom", v)} min={0} max={120} step={4} />
         </div>
       </div>
 
-      {/* Gap */}
-      <SliderField
-        label="Content Gap"
-        value={content.gap ?? 0}
-        onChange={(v) => patchContent("gap", v)}
-        min={0} max={60} step={4}
-      />
+      <SliderField label="Content Gap" value={(content.gap as number) ?? 0} onChange={(v) => patchContent("gap", v)} min={0} max={60} step={4} />
 
-      {/* Section Width */}
       <div>
         <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Section Width</Label>
-        <Select value={content.sectionWidth || "default"} onValueChange={(v) => patchContent("sectionWidth", v)}>
+        <Select value={String(content.sectionWidth || "default")} onValueChange={(v) => patchContent("sectionWidth", v)}>
           <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="default">Default</SelectItem>
@@ -950,45 +380,22 @@ function AdvancedStyleEditor({ content, patchContent }: { content: Record<string
         </Select>
       </div>
 
-      {/* Min Height */}
-      <SliderField
-        label="Min Height"
-        value={content.minHeight ?? 0}
-        onChange={(v) => patchContent("minHeight", v)}
-        min={0} max={800} step={20}
-      />
+      <SliderField label="Min Height" value={(content.minHeight as number) ?? 0} onChange={(v) => patchContent("minHeight", v)} min={0} max={800} step={20} />
+      <SliderField label="Section Opacity" value={(content.opacity as number) ?? 100} onChange={(v) => patchContent("opacity", v)} min={0} max={100} step={5} unit="%" />
 
-      {/* Section Opacity */}
-      <SliderField
-        label="Section Opacity"
-        value={content.opacity ?? 100}
-        onChange={(v) => patchContent("opacity", v)}
-        min={0} max={100} step={5} unit="%"
-      />
-
-      {/* Overlay Color + Opacity */}
-      <ColorPickerField
-        label="Overlay Color"
-        value={content.overlayColor || ""}
-        onChange={(v) => patchContent("overlayColor", v)}
-      />
+      <ColorPickerField label="Overlay Color" value={String(content.overlayColor || "")} onChange={(v) => patchContent("overlayColor", v)} />
       {content.overlayColor && (
-        <SliderField
-          label="Overlay Opacity"
-          value={content.overlayOpacity ?? 50}
-          onChange={(v) => patchContent("overlayOpacity", v)}
-          min={0} max={100} step={5} unit="%"
-        />
+        <SliderField label="Overlay Opacity" value={(content.overlayOpacity as number) ?? 50} onChange={(v) => patchContent("overlayOpacity", v)} min={0} max={100} step={5} unit="%" />
       )}
     </div>
   );
 }
 
 // ─── Responsive Editor ───────────────────────────────────────────
-function ResponsiveEditor({ content, patchContent }: { content: Record<string, any>; patchContent: (key: string, value: any) => void }) {
-  const responsive = content.responsive || {};
+function ResponsiveEditor({ content, patchContent }: { content: Record<string, unknown>; patchContent: (key: string, value: unknown) => void }) {
+  const responsive = (content.responsive as Record<string, Record<string, unknown>>) || {};
 
-  const patchResponsive = useCallback((device: string, key: string, value: any) => {
+  const patchResponsive = useCallback((device: string, key: string, value: unknown) => {
     const updated = {
       ...responsive,
       [device]: { ...(responsive[device] || {}), [key]: value },
@@ -999,7 +406,7 @@ function ResponsiveEditor({ content, patchContent }: { content: Record<string, a
   const devices = [
     { key: "tablet", label: "Tablet", icon: Tablet },
     { key: "mobile", label: "Mobile", icon: Smartphone },
-  ];
+  ] as const;
 
   return (
     <div className="space-y-4">
@@ -1017,14 +424,14 @@ function ResponsiveEditor({ content, patchContent }: { content: Record<string, a
           <div className="flex items-center justify-between">
             <Label className="text-[10px]">Hide on {label}</Label>
             <Switch
-              checked={responsive[device]?.hidden ?? false}
+              checked={(responsive[device]?.hidden as boolean) ?? false}
               onCheckedChange={(v) => patchResponsive(device, "hidden", v)}
             />
           </div>
 
           <div>
             <Label className="text-[10px]">Font Scale</Label>
-            <Select value={responsive[device]?.fontScale || "default"} onValueChange={(v) => patchResponsive(device, "fontScale", v)}>
+            <Select value={String(responsive[device]?.fontScale || "default")} onValueChange={(v) => patchResponsive(device, "fontScale", v)}>
               <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="default">Default</SelectItem>
@@ -1038,7 +445,7 @@ function ResponsiveEditor({ content, patchContent }: { content: Record<string, a
 
           <div>
             <Label className="text-[10px]">Alignment</Label>
-            <Select value={responsive[device]?.alignment || "default"} onValueChange={(v) => patchResponsive(device, "alignment", v)}>
+            <Select value={String(responsive[device]?.alignment || "default")} onValueChange={(v) => patchResponsive(device, "alignment", v)}>
               <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="default">Default</SelectItem>
@@ -1051,7 +458,7 @@ function ResponsiveEditor({ content, patchContent }: { content: Record<string, a
 
           <div>
             <Label className="text-[10px]">Stack Direction</Label>
-            <Select value={responsive[device]?.stack || "default"} onValueChange={(v) => patchResponsive(device, "stack", v)}>
+            <Select value={String(responsive[device]?.stack || "default")} onValueChange={(v) => patchResponsive(device, "stack", v)}>
               <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="default">Default</SelectItem>
@@ -1064,13 +471,13 @@ function ResponsiveEditor({ content, patchContent }: { content: Record<string, a
           <div className="grid grid-cols-2 gap-2">
             <SliderField
               label="Padding Top"
-              value={responsive[device]?.paddingTop ?? 0}
+              value={(responsive[device]?.paddingTop as number) ?? 0}
               onChange={(v) => patchResponsive(device, "paddingTop", v)}
               min={0} max={80} step={4}
             />
             <SliderField
               label="Padding Bottom"
-              value={responsive[device]?.paddingBottom ?? 0}
+              value={(responsive[device]?.paddingBottom as number) ?? 0}
               onChange={(v) => patchResponsive(device, "paddingBottom", v)}
               min={0} max={80} step={4}
             />

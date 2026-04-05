@@ -3115,6 +3115,45 @@ export type Database = {
         }
         Relationships: []
       }
+      published_site_blocks: {
+        Row: {
+          block_type: string | null
+          content: Json | null
+          created_at: string | null
+          id: string | null
+          is_active: boolean | null
+          page: string | null
+          published_at: string | null
+          sort_order: number | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          block_type?: string | null
+          content?: Json | null
+          created_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          page?: string | null
+          published_at?: string | null
+          sort_order?: number | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          block_type?: string | null
+          content?: Json | null
+          created_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          page?: string | null
+          published_at?: string | null
+          sort_order?: number | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       referral_admin_summary: {
         Row: {
           accepted: number | null

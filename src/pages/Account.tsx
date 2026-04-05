@@ -143,7 +143,7 @@ const Account = () => {
             </h1>
             <p className="text-sm text-muted-foreground">{user.email}</p>
           </div>
-          <div className="flex gap-2 shrink-0">
+          <div className="flex flex-wrap gap-2 shrink-0">
             {isAdmin && (
               <Link to="/admin">
                 <Button variant="outline" size="sm" className="font-display uppercase tracking-wider"><Shield className="mr-1 h-4 w-4" /> {tt("nav.admin", "Admin")}</Button>
@@ -163,7 +163,7 @@ const Account = () => {
                   variant={tab === id ? "default" : "ghost"}
                   size="sm"
                   onClick={() => changeTab(id)}
-                  className={`relative shrink-0 font-display text-xs uppercase tracking-wider transition-all ${
+                  className={`relative shrink-0 font-display text-xs uppercase tracking-wider transition-all min-h-[44px] ${
                     tab === id ? "glow-primary shadow-md" : "bg-card/60 hover:bg-muted/40 border border-border/20"
                   }`}
                 >

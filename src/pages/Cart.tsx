@@ -302,7 +302,7 @@ export default function CartPage() {
     <div className="py-8 md:py-10">
       <div className="container max-w-6xl">
         <div className="mb-8 flex items-center justify-between gap-4">
-          <h1 className="font-display text-4xl font-bold uppercase text-foreground">{t("cart.title")}</h1>
+          <h1 className="font-display text-2xl font-bold uppercase text-foreground md:text-4xl">{t("cart.title")}</h1>
 
           <AnimatePresence>
             {savedToast && (
@@ -352,7 +352,7 @@ export default function CartPage() {
                     >
                       <div className="flex flex-col gap-4 md:flex-row md:items-center">
                         <div className="flex gap-4">
-                          <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-muted">
+                          <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-muted md:h-24 md:w-24">
                             <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
                           </div>
 

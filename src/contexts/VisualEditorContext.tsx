@@ -257,7 +257,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   const [activePage, setActivePageRaw] = useState("home");
   const [draftBlocks, setDraftBlocks] = useState<SiteBlock[]>([]);
   const [savedBlocks, setSavedBlocks] = useState<SiteBlock[]>([]);
-  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [selectedBlockId, setSelectedBlockIdRaw] = useState<string | null>(null);
   const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [viewport, setViewport] = useState<Viewport>("desktop");
@@ -267,6 +267,56 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   const [draftStatus, setDraftStatus] = useState<DraftStatus>("published");
   const [scheduledAt, setScheduledAt] = useState<string | null>(null);
   const [layoutOrder, setLayoutOrderState] = useState<LayoutEntry[] | null>(null);
+
+  // Static section selection & settings
+  const [selectedStaticId, setSelectedStaticId] = useState<string | null>(null);
+  const [staticSettings, setStaticSettings] = useState<Record<string, Record<string, unknown>>>({});
+
+  const { getStaticSections } = require("@/lib/static-page-sections") as typeof import("@/lib/static-page-sections");
+
+  const selectedStatic = useMemo<StaticSection | null>(() => {
+    if (!selectedStaticId) return null;
+    const sections = getStaticSections(activePage);
+    return sections.find(s => s.id === selectedStaticId) ?? null;
+  }, [selectedStaticId, activePage]);
+
+  const selectStaticSection = useCallback((id: string | null) => {
+    setSelectedStaticId(id);
+    if (id) setSelectedBlockIdRaw(null);
+  }, []);
+
+  const setSelectedBlockId = useCallback((id: string | null) => {
+    setSelectedBlockIdRaw(id);
+    if (id) setSelectedStaticId(null);
+  }, []);
+
+  const loadStaticSettings = useCallback(async (page: string) => {
+    const key = `static_section_settings_${page}`;
+    const { data } = await supabase.from("site_settings").select("value").eq("key", key).maybeSingle();
+    if (data?.value && typeof data.value === "object" && !Array.isArray(data.value)) {
+      setStaticSettings(data.value as Record<string, Record<string, unknown>>);
+    } else {
+      setStaticSettings({});
+    }
+  }, []);
+
+  const saveStaticSettings = useCallback(async (page: string, settings: Record<string, Record<string, unknown>>) => {
+    const key = `static_section_settings_${page}`;
+    const { data: existing } = await supabase.from("site_settings").select("id").eq("key", key).maybeSingle();
+    if (existing) {
+      await supabase.from("site_settings").update({ value: settings as any }).eq("key", key);
+    } else {
+      await supabase.from("site_settings").insert({ key, value: settings as any });
+    }
+  }, []);
+
+  const updateStaticSettings = useCallback((sectionId: string, fieldKey: string, value: unknown) => {
+    setStaticSettings(prev => {
+      const next = { ...prev, [sectionId]: { ...(prev[sectionId] || {}), [fieldKey]: value } };
+      void saveStaticSettings(activePage, next);
+      return next;
+    });
+  }, [activePage, saveStaticSettings]);
 
   const selectElement = useCallback((el: SelectedElement | null) => {
     setSelectedElement(el);

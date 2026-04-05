@@ -314,7 +314,13 @@
 }
 
 .page-enter {
-  animation: pageEnter 0.4s ease-out;
+  animation: pageEnter 0.25s ease-out;
+}
+
+@media (max-width: 767px) {
+  .page-enter {
+    animation: none;
+  }
 }
 
 /* ─── Scrollbar ─── */
@@ -373,8 +379,14 @@
 
   /* Disable hover lift on mobile */
   .glass-card:hover,
-  .card-interactive:hover {
-    transform: none;
+  .card-interactive:hover,
+  .hover\:-translate-y-2:hover {
+    transform: none !important;
+  }
+
+  /* Prevent unnecessary GPU layer promotion */
+  * {
+    will-change: auto !important;
   }
 
   /* iOS safe area for fixed bottom bars */

@@ -22,7 +22,7 @@ export default function HomeSocialProof() {
   if (!data || (!data.recentPrints.length && !data.popularProducts.length)) return null;
 
   return (
-    <div className="container space-y-16 py-16 lg:py-20">
+    <div className="container space-y-10 py-10 lg:space-y-16 lg:py-20">
       {data.recentPrints.length > 0 ? (
         <motion.section
           initial="hidden"
@@ -44,10 +44,10 @@ export default function HomeSocialProof() {
               are about to order.
             </p>
           </div>
-          <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
             {data.recentPrints.map((item, index) => (
               <motion.div key={item.id} variants={fadeUp}>
-                <Card className="overflow-hidden rounded-2xl border-0 bg-card/60 backdrop-blur-md shadow-[0_8px_40px_-8px_hsl(225_44%_4%/0.5)] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_24px_80px_-12px_hsl(217_91%_60%/0.18)]">
+                <Card className="overflow-hidden rounded-2xl border-0 bg-card/60 backdrop-blur-md shadow-[0_8px_40px_-8px_hsl(225_44%_4%/0.5)] transition-all duration-500 md:hover:-translate-y-2 md:hover:shadow-[0_24px_80px_-12px_hsl(217_91%_60%/0.18)]">
                   <div className="aspect-[4/5] overflow-hidden bg-muted">
                     <img
                       src={item.image_url}
@@ -102,7 +102,7 @@ export default function HomeSocialProof() {
               Browse all products
             </Link>
           </div>
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 md:gap-6 xl:grid-cols-4">
             {data.popularProducts.map(({ product, socialProof }, index) => (
               <ProductCard key={product.id} product={product} socialProof={socialProof} index={index} />
             ))}

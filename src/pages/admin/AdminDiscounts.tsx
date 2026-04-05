@@ -198,6 +198,9 @@ const AdminDiscounts = () => {
     const authUsers = ((authUsersRes.data as { users?: AuthUser[] } | null)?.users ?? []) as AuthUser[];
     const profiles = (profilesRes.data ?? []) as ProfileRow[];
     const profileMap = new Map(profiles.map((profile) => [profile.user_id, profile]));
+    const invitedUserIds = new Set(
+      ((referralData ?? []) as Array<{ invited_user_id: string }>).map((r) => r.invited_user_id),
+    );
 
     const mappedUsers = authUsers.map((authUser) => {
       const profile = profileMap.get(authUser.id) ?? null;
@@ -210,6 +213,7 @@ const AdminDiscounts = () => {
         searchText: `${email} ${fullName} ${authUser.id}`.toLowerCase(),
         created_at: authUser.created_at,
         last_sign_in_at: authUser.last_sign_in_at,
+        is_invited: invitedUserIds.has(authUser.id),
       } satisfies UserOption;
     });
 

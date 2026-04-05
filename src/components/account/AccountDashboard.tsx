@@ -173,6 +173,14 @@ function computeSmartActions(
 
   // Reorder section removed per design
 
+  // Invite friends (always show at moderate priority)
+  actions.push({
+    label: tt("account.smart.inviteFriends", "Invite friends"),
+    icon: UserPlus,
+    priority: 55,
+    onClick: () => onSwitchTab("referrals"),
+  });
+
   // New custom request (always available, low priority)
   actions.push({
     label: tt("account.smart.newCustom", "New custom request"),

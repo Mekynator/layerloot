@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 import { useVisualEditor } from "@/contexts/VisualEditorContext";
-import { Plus, Eye, EyeOff, Copy, Trash2, ChevronUp, ChevronDown, GripVertical, Lock } from "lucide-react";
+import { Plus, Eye, EyeOff, Copy, Trash2, ChevronUp, ChevronDown, GripVertical, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBlockSchema, getInlineTextKeys } from "./editable-schema";
 import { buildPreviewList, previewListToLayout, type PreviewItem } from "@/lib/static-page-sections";
@@ -20,6 +20,7 @@ export default function EditorCanvas() {
     deleteBlock, duplicateBlock, toggleBlockActive, addBlock, moveBlock,
     updateBlockContent, selectElement, inlineEditingKey, setInlineEditingKey,
     layoutOrder, setLayoutOrder,
+    selectedStaticId, selectStaticSection,
   } = useVisualEditor();
 
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -151,7 +152,9 @@ export default function EditorCanvas() {
                       item={item}
                       index={index}
                       totalItems={previewItems.length}
+                      isSelected={selectedStaticId === item.id}
                       isDragOver={dropIdx === index && dragIdx !== index}
+                      onSelect={() => selectStaticSection(item.id)}
                       onDragStart={() => handleUnifiedDragStart(index)}
                       onDragOver={(e) => handleUnifiedDragOver(e, index)}
                       onDragEnd={handleUnifiedDragEnd}

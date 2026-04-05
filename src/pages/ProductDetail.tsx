@@ -195,7 +195,7 @@ const ProductDetail = () => {
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-3 md:space-y-4">
             {show3D && product.model_url ? (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <ModelViewer url={product.model_url} className="aspect-square" />
+                <ModelViewer url={product.model_url} className="aspect-square" productId={product.id} />
               </motion.div>
             ) : (
               <div

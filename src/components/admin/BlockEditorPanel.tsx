@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { SiteBlock } from "./BlockRenderer";
+import type { Json } from "@/integrations/supabase/types";
 import BlockFieldGroups from "./editor/BlockFieldGroups";
 
 interface BlockEditorPanelProps {

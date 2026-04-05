@@ -53,6 +53,9 @@ const ProductDetail = () => {
   const [submitting, setSubmitting] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
   const [selectedColors, setSelectedColors] = useState<SelectedColor[]>([]);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const isMobile = useIsMobile();
 
   const heroImageRef = useRef<HTMLImageElement | null>(null);
   const addToCartSectionRef = useRef<HTMLDivElement | null>(null);

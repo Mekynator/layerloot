@@ -492,3 +492,108 @@ function ResponsiveEditor({ content, patchContent }: { content: Record<string, u
     </div>
   );
 }
+
+/* ─── Static Section Settings Panel ─── */
+
+function StaticSectionSettings({ section, sectionId, settings, onUpdate, onClose }: {
+  section: StaticSection;
+  sectionId: string;
+  settings: Record<string, unknown>;
+  onUpdate: (sectionId: string, key: string, value: unknown) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="flex h-full flex-col border-l border-border/30 bg-card/80 backdrop-blur-xl">
+      <div className="flex items-center justify-between border-b border-border/30 px-3 py-2">
+        <div className="flex items-center gap-2">
+          <Settings2 className="h-3.5 w-3.5 text-primary" />
+          <span className="font-display text-[10px] font-bold uppercase tracking-widest text-foreground">
+            {section.label}
+          </span>
+        </div>
+        <button onClick={onClose} className="rounded p-1 text-muted-foreground hover:text-foreground">
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      <ScrollArea className="flex-1">
+        <div className="space-y-3 p-3">
+          <p className="text-[10px] text-muted-foreground">{section.description}</p>
+
+          {section.fields.map((field) => {
+            const value = settings[field.key] ?? field.defaultValue ?? "";
+
+            if (field.type === "switch") {
+              return (
+                <div key={field.key} className="flex items-center justify-between rounded-lg border border-border/30 px-3 py-2">
+                  <Label className="text-xs">{field.label}</Label>
+                  <Switch
+                    checked={value as boolean ?? true}
+                    onCheckedChange={(v) => onUpdate(sectionId, field.key, v)}
+                  />
+                </div>
+              );
+            }
+
+            if (field.type === "select" && field.options) {
+              return (
+                <div key={field.key}>
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{field.label}</Label>
+                  <Select value={String(value)} onValueChange={(v) => onUpdate(sectionId, field.key, v)}>
+                    <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {field.options.map(o => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            }
+
+            if (field.type === "number") {
+              return (
+                <div key={field.key}>
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{field.label}</Label>
+                  <Input
+                    type="number"
+                    value={String(value)}
+                    onChange={(e) => onUpdate(sectionId, field.key, Number(e.target.value))}
+                    className="mt-1 h-8 text-xs"
+                  />
+                </div>
+              );
+            }
+
+            if (field.type === "textarea") {
+              return (
+                <div key={field.key}>
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{field.label}</Label>
+                  <Textarea
+                    value={String(value)}
+                    onChange={(e) => onUpdate(sectionId, field.key, e.target.value)}
+                    placeholder={field.placeholder}
+                    rows={3}
+                    className="mt-1 text-xs"
+                  />
+                </div>
+              );
+            }
+
+            return (
+              <div key={field.key}>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{field.label}</Label>
+                <Input
+                  value={String(value)}
+                  onChange={(e) => onUpdate(sectionId, field.key, e.target.value)}
+                  placeholder={field.placeholder}
+                  className="mt-1 h-8 text-xs"
+                />
+              </div>
+            );
+          })}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}

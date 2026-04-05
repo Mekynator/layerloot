@@ -83,7 +83,8 @@ export const DEFAULT_SETTINGS: PageBackgroundSettings = {
 const num = (v: unknown, fallback: number) => typeof v === "number" ? v : fallback;
 const str = (v: unknown, fallback: string) => typeof v === "string" && v ? v : fallback;
 
-export function normalizeSettings(value: Record<string, unknown> | null | undefined): PageBackgroundSettings {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function normalizeSettings(value: any): PageBackgroundSettings {
   return {
     enabled: Boolean(value?.enabled),
     images: Array.isArray(value?.images) ? (value.images as string[]).filter(Boolean) : [],

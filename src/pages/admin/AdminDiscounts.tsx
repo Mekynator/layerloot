@@ -800,7 +800,7 @@ const AdminDiscounts = () => {
                     { value: "existing" as AudienceGroup, label: "All Existing Users", desc: "Every registered account" },
                     { value: "new_registered" as AudienceGroup, label: "Newly Registered", desc: "Users who signed up recently" },
                     { value: "newcomers" as AudienceGroup, label: "Newcomers", desc: "New users based on configurable logic" },
-                    { value: "invited" as AudienceGroup, label: "Invited Users", desc: "Users who haven't signed in yet (pending invites)" },
+                    { value: "invited" as AudienceGroup, label: "Invited Users", desc: "Users who joined through a referral invite link or email" },
                   ]).map((opt) => (
                     <label key={opt.value} className="flex items-start gap-3 rounded-md border border-border/30 bg-card/60 p-3 cursor-pointer hover:bg-accent/10 transition-colors">
                       <Checkbox

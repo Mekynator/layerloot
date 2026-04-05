@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import {
   Package, Truck, Star, Heart, ShoppingCart, ArrowRight, Sparkles, Gift, Zap, Plus,
   RotateCcw, Eye, FileText, CheckCircle, MessageSquare, Download, CreditCard,
+  UserPlus, Users,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { useBehaviorTracking } from "@/hooks/use-behavior-tracking";
 import { usePersonalizationEngine } from "@/hooks/use-personalization-engine";
 import { useStorefrontCatalog } from "@/hooks/use-storefront";
 import { useRecentlyViewedProducts } from "@/hooks/use-recently-viewed";
+import { useReferrals } from "@/hooks/use-referrals";
 import { formatPrice } from "@/lib/currency";
 import { motion } from "framer-motion";
 
@@ -171,6 +173,14 @@ function computeSmartActions(
 
   // Reorder section removed per design
 
+  // Invite friends (always show at moderate priority)
+  actions.push({
+    label: tt("account.smart.inviteFriends", "Invite friends"),
+    icon: UserPlus,
+    priority: 55,
+    onClick: () => onSwitchTab("referrals"),
+  });
+
   // New custom request (always available, low priority)
   actions.push({
     label: tt("account.smart.newCustom", "New custom request"),
@@ -190,7 +200,7 @@ function computeSmartActions(
   return actions.sort((a, b) => b.priority - a.priority).slice(0, 5);
 }
 
-export default function AccountDashboard({ overview, tt, orders, customOrders, userVouchers, onSwitchTab }: Props) {
+export default function AccountDashboard({ overview, tt, orders, customOrders, userVouchers, onSwitchTab, user }: Props & { user?: { id: string } }) {
   const pointsBalance = overview?.pointsBalance ?? 0;
   const pointsEarned = overview?.pointsEarned ?? 0;
   const pointsSpent = overview?.pointsSpent ?? 0;
@@ -202,6 +212,8 @@ export default function AccountDashboard({ overview, tt, orders, customOrders, u
   const { data: catalogData } = useStorefrontCatalog();
   const products = catalogData?.products ?? [];
   const { recentProducts } = useRecentlyViewedProducts();
+  const { data: referralData } = useReferrals(user?.id);
+  const refStats = referralData ?? { totalInvited: 0, accountsCreated: 0, firstOrders: 0, pointsEarned: 0 };
 
   const latestOrder = orders[0];
   const activeCustomOrders = customOrders.filter((o) => !isCustomOrderDone(o));
@@ -349,6 +361,30 @@ export default function AccountDashboard({ overview, tt, orders, customOrders, u
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* Referral Summary Cards */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { icon: UserPlus, label: tt("account.dashboard.friendsInvited", "Friends Invited"), value: refStats.totalInvited },
+          { icon: Users, label: tt("account.dashboard.accountsFromInvites", "Accounts Created"), value: refStats.accountsCreated },
+          { icon: ShoppingCart, label: tt("account.dashboard.firstOrdersFromInvites", "First Orders"), value: refStats.firstOrders },
+          { icon: Star, label: tt("account.dashboard.referralPoints", "Referral Points"), value: refStats.pointsEarned },
+        ].map(({ icon: Icon, label, value }, i) => (
+          <motion.div key={label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+            <Card className="border-primary/10 cursor-pointer hover:border-primary/30 transition-colors" onClick={() => onSwitchTab("referrals")}>
+              <CardContent className="flex items-center gap-3 p-4">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                  <Icon className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">{label}</p>
+                  <p className="font-display text-xl font-bold text-foreground">{value}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
       </div>
 
       {/* Row 2: Custom Orders (conditional) + Preferences */}

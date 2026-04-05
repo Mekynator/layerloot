@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Copy, Mail, Users, ShoppingCart, Star, Trophy, UserPlus, Check, Link2 } from "lucide-react";
+import { Copy, Mail, Users, ShoppingCart, Star, Trophy, UserPlus, Check, Link2, Gift } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useReferrals, useSendInvite } from "@/hooks/use-referrals";
 import { motion } from "framer-motion";
@@ -16,6 +17,7 @@ const statusConfig: Record<string, { label: string; color: string }> = {
   pending: { label: "Invited", color: "bg-yellow-500/10 text-yellow-600 border-yellow-500/30" },
   registered: { label: "Account Created", color: "bg-blue-500/10 text-blue-600 border-blue-500/30" },
   ordered: { label: "First Order ✓", color: "bg-green-500/10 text-green-600 border-green-500/30" },
+  rewarded: { label: "Rewarded ★", color: "bg-purple-500/10 text-purple-600 border-purple-500/30" },
 };
 
 interface Props extends AccountModuleProps {}
@@ -26,6 +28,27 @@ const ReferralModule = ({ user, tt }: Props) => {
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [copied, setCopied] = useState(false);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <Skeleton className="h-6 w-48 mb-2" />
+          <Skeleton className="h-4 w-72" />
+        </div>
+        <Skeleton className="h-40 rounded-xl" />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 rounded-xl" />
+          ))}
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Skeleton className="h-32 rounded-xl" />
+          <Skeleton className="h-32 rounded-xl" />
+        </div>
+      </div>
+    );
+  }
 
   const stats = referralData ?? { totalInvited: 0, accountsCreated: 0, firstOrders: 0, pointsEarned: 0, invites: [], inviteCode: "" };
 
@@ -61,6 +84,11 @@ const ReferralModule = ({ user, tt }: Props) => {
 
   const personalInvites = stats.invites.filter((i) => i.invited_email || i.invited_user_id);
 
+  const getInvitePoints = (invite: typeof stats.invites[0]): number => {
+    if (!invite.inviter_points_granted) return 0;
+    return (invite as unknown as { inviter_points_amount?: number }).inviter_points_amount ?? 25;
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -72,6 +100,30 @@ const ReferralModule = ({ user, tt }: Props) => {
           {tt("referral.subtitle", "Invite friends and earn rewards when they sign up and shop")}
         </p>
       </div>
+
+      {/* How It Works */}
+      <Card className="border-border/30 bg-muted/20">
+        <CardContent className="p-4 space-y-2">
+          <p className="text-sm font-display font-semibold uppercase text-foreground flex items-center gap-2">
+            <Gift className="h-4 w-4 text-primary" />
+            {tt("referral.howItWorks", "How It Works")}
+          </p>
+          <div className="grid gap-2 sm:grid-cols-3 text-xs text-muted-foreground">
+            <div className="flex items-start gap-2">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">1</span>
+              <span>{tt("referral.step1", "Share your invite link with friends")}</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">2</span>
+              <span>{tt("referral.step2", "Your friend signs up and places their first order")}</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">3</span>
+              <span>{tt("referral.step3", "You earn 25 points and your friend earns 15 points!")}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Invite Link Card */}
       <Card className="border-primary/20 glow-border">
@@ -92,6 +144,12 @@ const ReferralModule = ({ user, tt }: Props) => {
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
+
+          {stats.inviteCode && (
+            <p className="text-xs text-muted-foreground">
+              {tt("referral.codeLabel", "Your code:")} <code className="font-mono text-foreground font-semibold">{stats.inviteCode}</code>
+            </p>
+          )}
 
           <div className="flex gap-2">
             <Input
@@ -180,16 +238,24 @@ const ReferralModule = ({ user, tt }: Props) => {
       </div>
 
       {/* Referral History */}
-      {personalInvites.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-display uppercase">
-              {tt("referral.history", "Referral History")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {personalInvites.map((invite) => {
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-display uppercase">
+            {tt("referral.history", "Referral History")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {personalInvites.length === 0 ? (
+            <div className="py-8 text-center">
+              <UserPlus className="mx-auto h-8 w-8 text-muted-foreground/40 mb-2" />
+              <p className="text-sm text-muted-foreground">
+                {tt("referral.noInvites", "No invites sent yet. Share your link to start earning rewards!")}
+              </p>
+            </div>
+          ) : (
+            personalInvites.map((invite) => {
               const sc = statusConfig[invite.status] ?? statusConfig.pending;
+              const pts = getInvitePoints(invite);
               return (
                 <div key={invite.id} className="flex items-center justify-between rounded-lg border border-border/20 bg-background/50 px-3 py-2.5">
                   <div className="flex items-center gap-3">
@@ -198,18 +264,29 @@ const ReferralModule = ({ user, tt }: Props) => {
                     </div>
                     <div>
                       <p className="text-sm font-medium">{invite.invited_email || "Via link"}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {new Date(invite.created_at).toLocaleDateString()}
-                      </p>
+                      <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                        <span>{new Date(invite.created_at).toLocaleDateString()}</span>
+                        {invite.account_created_at && (
+                          <span>· Joined {new Date(invite.account_created_at).toLocaleDateString()}</span>
+                        )}
+                        {invite.first_order_at && (
+                          <span>· Ordered {new Date(invite.first_order_at).toLocaleDateString()}</span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <Badge variant="outline" className={sc.color}>{sc.label}</Badge>
+                  <div className="flex items-center gap-2">
+                    {pts > 0 && (
+                      <span className="text-xs font-display font-bold text-primary">+{pts} pts</span>
+                    )}
+                    <Badge variant="outline" className={sc.color}>{sc.label}</Badge>
+                  </div>
                 </div>
               );
-            })}
-          </CardContent>
-        </Card>
-      )}
+            })
+          )}
+        </CardContent>
+      </Card>
 
       {/* Points Info */}
       <Card className="border-border/20 bg-muted/20">

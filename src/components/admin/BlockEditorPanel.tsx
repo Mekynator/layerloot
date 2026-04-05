@@ -176,7 +176,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
 
     const { error } = await supabase
       .from("site_blocks")
-      .update({ title: title.trim() || block.title, content: payloadContent, is_active: isActive })
+      .update({ title: title.trim() || block.title, content: payloadContent as Record<string, Json>, is_active: isActive })
       .eq("id", block.id);
     setSaving(false);
 

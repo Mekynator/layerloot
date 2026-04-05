@@ -175,6 +175,19 @@ serve(async (req) => {
           }
         }
 
+        // Trigger referral rewards for invited users
+        const cartUserId = session.metadata?.user_id;
+        if (cartUserId) {
+          try {
+            await supabase.functions.invoke('process-referral-rewards', {
+              body: { order_id: session.id, user_id: cartUserId },
+            });
+            console.log(`Referral rewards triggered for user ${cartUserId}`);
+          } catch (refErr) {
+            console.error('Referral rewards trigger failed:', refErr);
+          }
+        }
+
         // Send order confirmation + receipt emails
         const customerEmail = session.customer_details?.email || session.customer_email;
         const customerName = session.customer_details?.name || '';

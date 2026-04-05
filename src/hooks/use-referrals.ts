@@ -42,7 +42,9 @@ async function fetchReferralData(userId: string): Promise<ReferralStats> {
   const allInvites = (invites ?? []) as ReferralInvite[];
   const accountsCreated = allInvites.filter((i) => i.status === "registered" || i.status === "ordered").length;
   const firstOrders = allInvites.filter((i) => i.status === "ordered").length;
-  const pointsFromInviter = allInvites.filter((i) => i.inviter_points_granted).length * 25;
+  const pointsFromInviter = allInvites
+    .filter((i) => i.inviter_points_granted)
+    .reduce((sum, i) => sum + ((i as unknown as { inviter_points_amount?: number }).inviter_points_amount ?? 25), 0);
 
   // Find or generate a reusable invite code (the latest one without an invited user)
   let reusableInvite = allInvites.find((i) => !i.invited_email && !i.invited_user_id);

@@ -15,6 +15,7 @@ import { ThreeMFLoader } from "three/examples/jsm/loaders/3MFLoader.js";
 import { Maximize2, RotateCcw, Grid3X3, ScanLine, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { getSignedModelUrl } from "@/lib/signed-model-url";
 
 interface ModelViewerProps {
   url: string;
@@ -22,6 +23,7 @@ interface ModelViewerProps {
   showFullscreen?: boolean;
   selectedColor?: string;
   fileName?: string;
+  productId?: string | null;
 }
 
 function getFileExtension(url: string, fileName?: string): string {
@@ -306,6 +308,7 @@ export default function ModelViewer({
   showFullscreen = true,
   selectedColor = "#b0b0b0",
   fileName,
+  productId,
 }: ModelViewerProps) {
   const [autoRotate, setAutoRotate] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
@@ -313,6 +316,27 @@ export default function ModelViewer({
   const [showGrid, setShowGrid] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const [mobile, setMobile] = useState(false);
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
+  const [urlError, setUrlError] = useState(false);
+
+  // Resolve signed URL for private 3d-models bucket
+  useEffect(() => {
+    let mounted = true;
+    setUrlError(false);
+    setResolvedUrl(null);
+
+    if (url.includes("3d-models")) {
+      getSignedModelUrl(url, productId).then((signed) => {
+        if (!mounted) return;
+        if (signed) setResolvedUrl(signed);
+        else setUrlError(true);
+      });
+    } else {
+      setResolvedUrl(url);
+    }
+
+    return () => { mounted = false; };
+  }, [url, productId]);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 768px)");
@@ -335,6 +359,22 @@ export default function ModelViewer({
     setResetKey((v) => v + 1);
   };
 
+  if (urlError) {
+    return (
+      <div className={`relative flex items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-b from-white to-zinc-100 min-h-[260px] sm:min-h-[320px] ${className}`}>
+        <p className="text-sm text-muted-foreground">Unable to load 3D model</p>
+      </div>
+    );
+  }
+
+  if (!resolvedUrl) {
+    return (
+      <div className={`relative flex items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-b from-white to-zinc-100 min-h-[260px] sm:min-h-[320px] ${className}`}>
+        <div className="rounded-md bg-black/80 px-3 py-2 text-sm text-white shadow-lg">Loading 3D preview...</div>
+      </div>
+    );
+  }
+
   const viewer = (full = false) => (
     <div
       className={`relative h-full w-full overflow-hidden bg-gradient-to-b from-white to-zinc-100 ${
@@ -343,7 +383,7 @@ export default function ModelViewer({
     >
       <div className="absolute inset-0 flex items-center justify-center">
         <ViewerCanvas
-          url={url}
+          url={resolvedUrl}
           autoRotate={autoRotate}
           wireframe={wireframe}
           showGrid={showGrid}

@@ -76,12 +76,12 @@ const ProductDetail = () => {
   const hasSimpleVariants = variants.length > 0 && !hasConfiguratorAttrs;
 
   useEffect(() => {
-    if (show3D || images.length <= 1) return;
+    if (show3D || images.length <= 1 || lightboxOpen) return;
     const timer = window.setInterval(() => {
       setCurrentImage((p) => (p + 1) % images.length);
     }, AUTO_GALLERY_MS);
     return () => window.clearInterval(timer);
-  }, [images.length, show3D]);
+  }, [images.length, show3D, lightboxOpen]);
 
   useEffect(() => {
     if (!justAdded) return;
@@ -191,8 +191,8 @@ const ProductDetail = () => {
           </Link>
         </motion.div>
 
-        <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+        <div className="grid gap-4 md:gap-6 lg:grid-cols-2 lg:gap-8">
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-3 md:space-y-4">
             {show3D && product.model_url ? (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <ModelViewer url={product.model_url} className="aspect-square" />

@@ -2217,6 +2217,7 @@ export type Database = {
           full_name: string | null
           id: string
           language: string | null
+          referred_by_invite_id: string | null
           shipping_address: Json | null
           updated_at: string
           user_id: string
@@ -2227,6 +2228,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           language?: string | null
+          referred_by_invite_id?: string | null
           shipping_address?: Json | null
           updated_at?: string
           user_id: string
@@ -2237,11 +2239,20 @@ export type Database = {
           full_name?: string | null
           id?: string
           language?: string | null
+          referred_by_invite_id?: string | null
           shipping_address?: Json | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_invite_id_fkey"
+            columns: ["referred_by_invite_id"]
+            isOneToOne: false
+            referencedRelation: "referral_invites"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       referral_invites: {
         Row: {
@@ -2252,10 +2263,15 @@ export type Database = {
           id: string
           invite_code: string
           invited_email: string | null
+          invited_points_amount: number
           invited_points_granted: boolean
           invited_user_id: string | null
+          inviter_points_amount: number
           inviter_points_granted: boolean
           inviter_user_id: string
+          metadata: Json
+          notes: string | null
+          reward_granted_at: string | null
           status: string
           updated_at: string
         }
@@ -2267,10 +2283,15 @@ export type Database = {
           id?: string
           invite_code: string
           invited_email?: string | null
+          invited_points_amount?: number
           invited_points_granted?: boolean
           invited_user_id?: string | null
+          inviter_points_amount?: number
           inviter_points_granted?: boolean
           inviter_user_id: string
+          metadata?: Json
+          notes?: string | null
+          reward_granted_at?: string | null
           status?: string
           updated_at?: string
         }
@@ -2282,10 +2303,15 @@ export type Database = {
           id?: string
           invite_code?: string
           invited_email?: string | null
+          invited_points_amount?: number
           invited_points_granted?: boolean
           invited_user_id?: string | null
+          inviter_points_amount?: number
           inviter_points_granted?: boolean
           inviter_user_id?: string
+          metadata?: Json
+          notes?: string | null
+          reward_granted_at?: string | null
           status?: string
           updated_at?: string
         }
@@ -3074,6 +3100,26 @@ export type Database = {
           unread_by_user?: boolean | null
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      referral_admin_summary: {
+        Row: {
+          accepted: number | null
+          first_orders: number | null
+          total_invited_points: number | null
+          total_inviter_points: number | null
+          total_invites: number | null
+        }
+        Relationships: []
+      }
+      referral_user_stats: {
+        Row: {
+          accounts_created: number | null
+          first_orders: number | null
+          inviter_user_id: string | null
+          points_earned: number | null
+          total_invited: number | null
         }
         Relationships: []
       }

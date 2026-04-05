@@ -463,7 +463,7 @@ const ActionButton = ({
   className?: string;
 }) => {
   if (button.visible === false) return null;
-  const text = button.text || fallbackText;
+  const text = getLocalizedValue(button.text, "") || fallbackText;
   if (!text) return null;
 
   const action = normalizeAction(button);

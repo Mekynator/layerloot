@@ -15,6 +15,7 @@ import { ThreeMFLoader } from "three/examples/jsm/loaders/3MFLoader.js";
 import { Maximize2, RotateCcw, Grid3X3, ScanLine, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { getSignedModelUrl } from "@/lib/signed-model-url";
 
 interface ModelViewerProps {
   url: string;
@@ -22,6 +23,7 @@ interface ModelViewerProps {
   showFullscreen?: boolean;
   selectedColor?: string;
   fileName?: string;
+  productId?: string | null;
 }
 
 function getFileExtension(url: string, fileName?: string): string {
@@ -306,6 +308,7 @@ export default function ModelViewer({
   showFullscreen = true,
   selectedColor = "#b0b0b0",
   fileName,
+  productId,
 }: ModelViewerProps) {
   const [autoRotate, setAutoRotate] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
@@ -313,6 +316,27 @@ export default function ModelViewer({
   const [showGrid, setShowGrid] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const [mobile, setMobile] = useState(false);
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
+  const [urlError, setUrlError] = useState(false);
+
+  // Resolve signed URL for private 3d-models bucket
+  useEffect(() => {
+    let mounted = true;
+    setUrlError(false);
+    setResolvedUrl(null);
+
+    if (url.includes("3d-models")) {
+      getSignedModelUrl(url, productId).then((signed) => {
+        if (!mounted) return;
+        if (signed) setResolvedUrl(signed);
+        else setUrlError(true);
+      });
+    } else {
+      setResolvedUrl(url);
+    }
+
+    return () => { mounted = false; };
+  }, [url, productId]);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 768px)");

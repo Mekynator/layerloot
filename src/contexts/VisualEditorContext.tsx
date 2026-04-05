@@ -272,7 +272,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   const [selectedStaticId, setSelectedStaticId] = useState<string | null>(null);
   const [staticSettings, setStaticSettings] = useState<Record<string, Record<string, unknown>>>({});
 
-  const { getStaticSections } = require("@/lib/static-page-sections") as typeof import("@/lib/static-page-sections");
+  
 
   const selectedStatic = useMemo<StaticSection | null>(() => {
     if (!selectedStaticId) return null;
@@ -405,7 +405,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   }, [pages, loadPages]);
 
   useEffect(() => { void loadPages(); }, [loadPages]);
-  useEffect(() => { if (activePage) { void fetchBlocks(activePage); void loadLayoutOrder(activePage); } }, [activePage, fetchBlocks]);
+  useEffect(() => { if (activePage) { void fetchBlocks(activePage); void loadLayoutOrder(activePage); void loadStaticSettings(activePage); } }, [activePage, fetchBlocks]);
 
   // Layout order persistence
   const loadLayoutOrder = useCallback(async (page: string) => {
@@ -640,6 +640,11 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     selectedBlockId,
     selectedBlock,
     hoveredBlockId,
+    selectedStaticId,
+    selectedStatic,
+    staticSettings,
+    selectStaticSection,
+    updateStaticSettings,
     selectedElement,
     selectElement,
     inlineEditingKey,
@@ -674,7 +679,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     frontendPages,
     globalPages,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [pages, activePage, selectedPage, pageBlocks, savedBlocks, isDirty, selectedBlockId, selectedBlock, hoveredBlockId, saving, publishing, draftStatus, scheduledAt, viewport, frontendPages, globalPages, undoVersion, selectedElement, inlineEditingKey, layoutOrder]);
+  }), [pages, activePage, selectedPage, pageBlocks, savedBlocks, isDirty, selectedBlockId, selectedBlock, hoveredBlockId, saving, publishing, draftStatus, scheduledAt, viewport, frontendPages, globalPages, undoVersion, selectedElement, inlineEditingKey, layoutOrder, selectedStaticId, selectedStatic, staticSettings]);
 
   return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;
 }

@@ -156,6 +156,13 @@ export const BLOCK_EDITABLE_SCHEMAS: Record<string, BlockEditableSchema> = {
       { type: "text", key: "heading", label: "Heading" },
       { type: "text", key: "subheading", label: "Subheading", multiline: true },
       { type: "layout", key: "alignment", label: "Alignment", options: ALIGNMENT_OPTIONS },
+      { type: "layout", key: "tileLayoutMode", label: "Layout Mode", options: [
+        { value: "grid", label: "Grid" },
+        { value: "carousel", label: "Carousel" },
+      ]},
+      { type: "layout", key: "tileGridColumns", label: "Columns", options: [
+        { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "4", label: "4" }, { value: "5", label: "5" },
+      ]},
     ],
   },
   featured_products: {

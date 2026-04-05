@@ -235,7 +235,7 @@ function StaticSectionShell({ item, index, totalItems, isDragOver, onDragStart, 
 
   return (
     <div
-      draggable
+      data-preview-id={item.id}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
@@ -367,7 +367,7 @@ function CanvasBlockWrapper({
 
   return (
     <div
-      draggable
+      data-preview-id={block.id}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}

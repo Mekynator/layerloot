@@ -24,6 +24,7 @@ const FloatingCartSummary = () => {
       initial={{ x: 80, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       className="fixed bottom-20 right-4 z-40 w-72 md:bottom-6"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="glass-card overflow-hidden glow-border">
         {/* Header – always visible */}

@@ -350,6 +350,37 @@
     padding-left: 1rem;
     padding-right: 1rem;
   }
+
+  /* Performance: hide heavy GPU effects on mobile */
+  .ambient-blob,
+  .bg-grid-overlay,
+  .noise-overlay {
+    display: none !important;
+  }
+
+  /* Reduce backdrop-blur on mobile for GPU savings */
+  .glass,
+  .glass-card,
+  .section-surface {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .glass-nav {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  /* Disable hover lift on mobile */
+  .glass-card:hover,
+  .card-interactive:hover {
+    transform: none;
+  }
+
+  /* iOS safe area for fixed bottom bars */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }
 
 /* ─── Selection ─── */

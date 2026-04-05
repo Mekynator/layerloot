@@ -264,7 +264,7 @@ function ViewerCanvas({
   return (
     <div className="h-full w-full">
       <Canvas
-        dpr={[1, 2]}
+        dpr={mobile ? [1, 1.5] : [1, 2]}
         style={{ touchAction: "none" }}
         camera={{
           fov: mobile ? 50 : 42,
@@ -307,7 +307,7 @@ export default function ModelViewer({
   selectedColor = "#b0b0b0",
   fileName,
 }: ModelViewerProps) {
-  const [autoRotate, setAutoRotate] = useState(true);
+  const [autoRotate, setAutoRotate] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [wireframe, setWireframe] = useState(false);
   const [showGrid, setShowGrid] = useState(false);

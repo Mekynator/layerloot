@@ -18,12 +18,18 @@ import { toast } from "sonner";
 import InsertReusableDialog from "@/components/admin/reusable/InsertReusableDialog";
 import { buildPreviewList, previewListToLayout, type PreviewItem } from "@/lib/static-page-sections";
 
+import {
+  Award, Clock, MessageSquare as MessageSquareIcon, Eye as EyeIcon2, Gift, Minus, ThumbsUp,
+} from "lucide-react";
+
 const BLOCK_ICONS: Record<string, any> = {
   hero: Square, shipping_banner: Truck, entry_cards: Layers, categories: FolderTree,
   featured_products: Star, how_it_works: Package, faq: HelpCircle, trust_badges: ShieldCheck,
   text: Type, image: Image, carousel: Columns, video: PlayCircle,
   banner: Square, cta: MousePointer, button: Link2, spacer: Square,
   html: Code, embed: Globe, newsletter: Mail, instagram_auto_feed: Globe,
+  social_proof: ThumbsUp, testimonials: MessageSquareIcon, gallery: Image,
+  recently_viewed: EyeIcon2, gift_finder: Gift, countdown: Clock, divider: Minus,
 };
 
 const BLOCK_COLORS: Record<string, string> = {
@@ -34,6 +40,9 @@ const BLOCK_COLORS: Record<string, string> = {
   banner: "border-l-amber-500", cta: "border-l-emerald-500", button: "border-l-cyan-500",
   spacer: "border-l-muted-foreground", html: "border-l-orange-500", embed: "border-l-indigo-500",
   newsletter: "border-l-pink-500", instagram_auto_feed: "border-l-fuchsia-500",
+  social_proof: "border-l-rose-500", testimonials: "border-l-orange-500", gallery: "border-l-lime-500",
+  recently_viewed: "border-l-slate-500", gift_finder: "border-l-pink-500", countdown: "border-l-red-500",
+  divider: "border-l-muted-foreground",
 };
 
 interface LayersPanelProps {

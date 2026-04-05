@@ -8,6 +8,7 @@ import EditorCanvas from "@/components/admin/editor/EditorCanvas";
 import SettingsPanel from "@/components/admin/editor/SettingsPanel";
 import AddBlockDialog from "@/components/admin/editor/AddBlockDialog";
 import PageManagerDialog from "@/components/admin/editor/PageManagerDialog";
+import PageBackgroundEditor from "@/components/admin/PageBackgroundEditor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,12 +18,13 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/componen
 function EditorInner() {
   const navigate = useNavigate();
   const { isAdmin, loading, user } = useAuth();
-  const { selectedPage, loadPages, setActivePage, pages, isDirty, save, undo, redo } = useVisualEditor();
+  const { selectedPage, loadPages, setActivePage, activePage, pages, isDirty, save, undo, redo } = useVisualEditor();
 
   const [addBlockOpen, setAddBlockOpen] = useState(false);
   const [pageDialogOpen, setPageDialogOpen] = useState(false);
   const [pageDialogMode, setPageDialogMode] = useState<"create" | "edit">("create");
   const [deletePageOpen, setDeletePageOpen] = useState(false);
+  const [bgEditorOpen, setBgEditorOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) navigate("/");
@@ -95,6 +97,7 @@ function EditorInner() {
           setPageDialogOpen(true);
         }}
         onDeletePage={() => setDeletePageOpen(true)}
+        onBackgroundEditor={() => setBgEditorOpen(true)}
       />
 
       <ResizablePanelGroup direction="horizontal" className="flex-1">
@@ -137,6 +140,12 @@ function EditorInner() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <PageBackgroundEditor
+        page={activePage}
+        open={bgEditorOpen}
+        onOpenChange={setBgEditorOpen}
+      />
     </div>
   );
 }

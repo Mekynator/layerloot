@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Save, Undo2, Redo2, Plus, Monitor, Tablet, Smartphone,
   X, AlertCircle, Settings2, Trash2, ExternalLink, Eye, Upload, RotateCcw, CheckCircle2,
-  History, Clock, ChevronDown, Globe,
+  History, Clock, ChevronDown, Globe, Paintbrush,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -23,9 +23,10 @@ interface EditorToolbarProps {
   onAddBlock: () => void;
   onPageSettings: () => void;
   onDeletePage: () => void;
+  onBackgroundEditor?: () => void;
 }
 
-export default function EditorToolbar({ onAddBlock, onPageSettings, onDeletePage }: EditorToolbarProps) {
+export default function EditorToolbar({ onAddBlock, onPageSettings, onDeletePage, onBackgroundEditor }: EditorToolbarProps) {
   const navigate = useNavigate();
   const {
     activePage, setActivePage, selectedPage,
@@ -119,6 +120,19 @@ export default function EditorToolbar({ onAddBlock, onPageSettings, onDeletePage
                   ))}
                 </SelectGroup>
               )}
+              <SelectGroup>
+                <SelectLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Global Slots</SelectLabel>
+                {[
+                  { key: "global_header_top", label: "Above Header" },
+                  { key: "global_header_bottom", label: "Below Header" },
+                  { key: "global_before_main", label: "Before Content" },
+                  { key: "global_after_main", label: "After Content" },
+                  { key: "global_footer_top", label: "Above Footer" },
+                  { key: "global_footer_bottom", label: "Below Footer" },
+                ].map(slot => (
+                  <SelectItem key={slot.key} value={slot.key}>{slot.label}</SelectItem>
+                ))}
+              </SelectGroup>
               <SelectItem value="__new__" className="font-semibold text-primary">+ Create Page</SelectItem>
             </SelectContent>
           </Select>
@@ -143,6 +157,14 @@ export default function EditorToolbar({ onAddBlock, onPageSettings, onDeletePage
                   <TooltipContent>Delete page</TooltipContent>
                 </Tooltip>
               )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={onBackgroundEditor} className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                    <Paintbrush className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Background settings</TooltipContent>
+              </Tooltip>
             </>
           )}
         </div>

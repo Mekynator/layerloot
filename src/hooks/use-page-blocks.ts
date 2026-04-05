@@ -49,7 +49,7 @@ async function fetchPageBlocks(page: string, includeUnpublished = false) {
 
   const query = supabase
     .from("site_blocks")
-    .select("*")
+    .select("id, page, block_type, title, content, sort_order, is_active, created_at, updated_at, published_at")
     .eq("page", normalizedPage)
     .eq("is_active", true)
     .order("sort_order");

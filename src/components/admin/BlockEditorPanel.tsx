@@ -101,6 +101,17 @@ const DEFAULT_ITEMS: Record<string, RepeaterItem[]> = {
       visible: true,
     },
   ],
+  social_proof: [
+    { icon: "Users", label: "Happy Customers", value: "2,500+", visible: true },
+    { icon: "Star", label: "Average Rating", value: "4.9/5", visible: true },
+    { icon: "Package", label: "Orders Shipped", value: "10,000+", visible: true },
+  ],
+  testimonials: [
+    { name: "Customer", quote: "Amazing quality!", rating: "5", visible: true },
+  ],
+  gallery: [
+    { url: "", caption: "", alt: "", visible: true },
+  ],
 };
 
 const getRepeaterKey = (blockType?: string | null) => {
@@ -117,6 +128,12 @@ const getRepeaterKey = (blockType?: string | null) => {
       return "items";
     case "carousel":
       return "slides";
+    case "social_proof":
+      return "items";
+    case "testimonials":
+      return "items";
+    case "gallery":
+      return "images";
     default:
       return null;
   }
@@ -864,6 +881,384 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
     </div>
   );
 
+  const renderSocialProofEditor = () => (
+    <div className="space-y-3">
+      {renderSectionTop(true)}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <Label>Columns</Label>
+          <Select value={String(content.columns || 3)} onValueChange={(v) => patchContent("columns", Number(v))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="2">2</SelectItem><SelectItem value="3">3</SelectItem><SelectItem value="4">4</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Alignment</Label>
+          <Select value={String(content.alignment || "center")} onValueChange={(v) => patchContent("alignment", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="left">Left</SelectItem><SelectItem value="center">Center</SelectItem><SelectItem value="right">Right</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="flex items-center justify-between">
+        <Label>Proof items</Label>
+        <Button type="button" size="sm" variant="outline" onClick={addItem}><Plus className="mr-1 h-4 w-4" /> Add item</Button>
+      </div>
+      <Accordion type="multiple" className="space-y-2">
+        {repeaterItems.map((item, index) => (
+          <AccordionItem key={`sp-${index}`} value={`sp-${index}`} className="rounded-md border border-border px-3">
+            <AccordionTrigger className="py-3 text-left text-sm">{item.label || `Item ${index + 1}`}</AccordionTrigger>
+            <AccordionContent className="space-y-3 pb-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div><Label>Label</Label><Input value={item.label || ""} onChange={(e) => patchItem(index, { label: e.target.value })} /></div>
+                <div><Label>Value</Label><Input value={item.value || ""} onChange={(e) => patchItem(index, { value: e.target.value })} /></div>
+              </div>
+              <div><Label>Icon</Label>
+                <Select value={item.icon || "Star"} onValueChange={(v) => patchItem(index, { icon: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{ICON_OPTIONS.map((i) => <SelectItem key={i} value={i}>{i}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                <p className="text-sm font-medium">Visible</p>
+                <Switch checked={item.visible ?? true} onCheckedChange={(c) => patchItem(index, { visible: c })} />
+              </div>
+              {renderMoveDeleteRow(index)}
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </div>
+  );
+
+  const renderTestimonialsEditor = () => (
+    <div className="space-y-3">
+      {renderSectionTop(true)}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div><Label>Columns</Label>
+          <Select value={String(content.columns || 2)} onValueChange={(v) => patchContent("columns", Number(v))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="1">1</SelectItem><SelectItem value="2">2</SelectItem><SelectItem value="3">3</SelectItem></SelectContent>
+          </Select>
+        </div>
+        <div><Label>Alignment</Label>
+          <Select value={String(content.alignment || "center")} onValueChange={(v) => patchContent("alignment", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="left">Left</SelectItem><SelectItem value="center">Center</SelectItem><SelectItem value="right">Right</SelectItem></SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="flex items-center justify-between">
+        <Label>Testimonials</Label>
+        <Button type="button" size="sm" variant="outline" onClick={addItem}><Plus className="mr-1 h-4 w-4" /> Add</Button>
+      </div>
+      <Accordion type="multiple" className="space-y-2">
+        {repeaterItems.map((item, index) => (
+          <AccordionItem key={`test-${index}`} value={`test-${index}`} className="rounded-md border border-border px-3">
+            <AccordionTrigger className="py-3 text-left text-sm">{item.name || `Testimonial ${index + 1}`}</AccordionTrigger>
+            <AccordionContent className="space-y-3 pb-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div><Label>Name</Label><Input value={item.name || ""} onChange={(e) => patchItem(index, { name: e.target.value })} /></div>
+                <div><Label>Rating (1-5)</Label><Input type="number" min={1} max={5} value={item.rating || 5} onChange={(e) => patchItem(index, { rating: e.target.value })} /></div>
+              </div>
+              <div><Label>Quote</Label><Textarea value={item.quote || ""} onChange={(e) => patchItem(index, { quote: e.target.value })} rows={3} /></div>
+              <div><Label>Avatar URL</Label><Input value={item.avatar || ""} onChange={(e) => patchItem(index, { avatar: e.target.value })} placeholder="https://..." /></div>
+              <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                <p className="text-sm font-medium">Visible</p>
+                <Switch checked={item.visible ?? true} onCheckedChange={(c) => patchItem(index, { visible: c })} />
+              </div>
+              {renderMoveDeleteRow(index)}
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </div>
+  );
+
+  const renderGalleryEditor = () => (
+    <div className="space-y-3">
+      {renderSectionTop(true)}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div><Label>Columns</Label>
+          <Select value={String(content.columns || 3)} onValueChange={(v) => patchContent("columns", Number(v))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="2">2</SelectItem><SelectItem value="3">3</SelectItem><SelectItem value="4">4</SelectItem></SelectContent>
+          </Select>
+        </div>
+        <div><Label>Alignment</Label>
+          <Select value={String(content.alignment || "center")} onValueChange={(v) => patchContent("alignment", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="left">Left</SelectItem><SelectItem value="center">Center</SelectItem><SelectItem value="right">Right</SelectItem></SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="flex items-center justify-between">
+        <Label>Images</Label>
+        <Button type="button" size="sm" variant="outline" onClick={addItem}><Plus className="mr-1 h-4 w-4" /> Add image</Button>
+      </div>
+      <Accordion type="multiple" className="space-y-2">
+        {repeaterItems.map((item, index) => (
+          <AccordionItem key={`gal-${index}`} value={`gal-${index}`} className="rounded-md border border-border px-3">
+            <AccordionTrigger className="py-3 text-left text-sm">{item.caption || `Image ${index + 1}`}</AccordionTrigger>
+            <AccordionContent className="space-y-3 pb-3">
+              <div><Label>Image URL</Label><Input value={item.url || ""} onChange={(e) => patchItem(index, { url: e.target.value })} placeholder="https://..." /></div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div><Label>Caption</Label><Input value={item.caption || ""} onChange={(e) => patchItem(index, { caption: e.target.value })} /></div>
+                <div><Label>Alt text</Label><Input value={item.alt || ""} onChange={(e) => patchItem(index, { alt: e.target.value })} /></div>
+              </div>
+              <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                <p className="text-sm font-medium">Visible</p>
+                <Switch checked={item.visible ?? true} onCheckedChange={(c) => patchItem(index, { visible: c })} />
+              </div>
+              {renderMoveDeleteRow(index)}
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </div>
+  );
+
+  const renderHeroEditor = () => (
+    <div className="space-y-3">
+      <div><Label>Eyebrow text</Label><Input value={content.eyebrow || ""} onChange={(e) => patchContent("eyebrow", e.target.value)} /></div>
+      <div><Label>Heading</Label><Input value={content.heading || ""} onChange={(e) => patchContent("heading", e.target.value)} /></div>
+      <div><Label>Subheading</Label><Textarea value={content.subheading || ""} onChange={(e) => patchContent("subheading", e.target.value)} rows={3} /></div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div><Label>Primary button text</Label><Input value={content.button_text || ""} onChange={(e) => patchContent("button_text", e.target.value)} /></div>
+        <div><Label>Primary button link</Label><Input value={content.button_link || ""} onChange={(e) => patchContent("button_link", e.target.value)} /></div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div><Label>Secondary button text</Label><Input value={content.secondary_button_text || ""} onChange={(e) => patchContent("secondary_button_text", e.target.value)} /></div>
+        <div><Label>Secondary button link</Label><Input value={content.secondary_button_link || ""} onChange={(e) => patchContent("secondary_button_link", e.target.value)} /></div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div><Label>Alignment</Label>
+          <Select value={content.alignment || "left"} onValueChange={(v) => patchContent("alignment", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="left">Left</SelectItem><SelectItem value="center">Center</SelectItem><SelectItem value="right">Right</SelectItem></SelectContent>
+          </Select>
+        </div>
+        <div><Label>Icon</Label>
+          <Select value={content.icon || "Printer"} onValueChange={(v) => patchContent("icon", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>{ICON_OPTIONS.map((i) => <SelectItem key={i} value={i}>{i}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div><Label>Background image URL</Label><Input value={content.bg_image || ""} onChange={(e) => patchContent("bg_image", e.target.value)} placeholder="https://..." /></div>
+    </div>
+  );
+
+  const renderCtaEditor = () => (
+    <div className="space-y-3">
+      <div><Label>Heading</Label><Input value={content.heading || ""} onChange={(e) => patchContent("heading", e.target.value)} /></div>
+      <div><Label>Subheading</Label><Textarea value={content.subheading || ""} onChange={(e) => patchContent("subheading", e.target.value)} rows={3} /></div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div><Label>Button text</Label><Input value={content.button_text || ""} onChange={(e) => patchContent("button_text", e.target.value)} /></div>
+        <div><Label>Button link</Label><Input value={content.button_link || ""} onChange={(e) => patchContent("button_link", e.target.value)} /></div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div><Label>Alignment</Label>
+          <Select value={content.alignment || "center"} onValueChange={(v) => patchContent("alignment", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="left">Left</SelectItem><SelectItem value="center">Center</SelectItem><SelectItem value="right">Right</SelectItem></SelectContent>
+          </Select>
+        </div>
+        <div><Label>Icon</Label>
+          <Select value={content.icon || ""} onValueChange={(v) => patchContent("icon", v)}>
+            <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+            <SelectContent><SelectItem value="">None</SelectItem>{ICON_OPTIONS.map((i) => <SelectItem key={i} value={i}>{i}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div><Label>Background image URL</Label><Input value={content.bg_image || ""} onChange={(e) => patchContent("bg_image", e.target.value)} placeholder="https://..." /></div>
+    </div>
+  );
+
+  const renderVideoEditor = () => (
+    <div className="space-y-3">
+      <div><Label>Video URL</Label><Input value={content.video_url || ""} onChange={(e) => patchContent("video_url", e.target.value)} placeholder="YouTube, Vimeo, or direct video URL" /></div>
+      <div><Label>Caption</Label><Input value={content.caption || ""} onChange={(e) => patchContent("caption", e.target.value)} /></div>
+      <div><Label>Poster image URL</Label><Input value={content.poster_image || ""} onChange={(e) => patchContent("poster_image", e.target.value)} placeholder="https://..." /></div>
+    </div>
+  );
+
+  const renderNewsletterEditor = () => (
+    <div className="space-y-3">
+      <div><Label>Heading</Label><Input value={content.heading || ""} onChange={(e) => patchContent("heading", e.target.value)} /></div>
+      <div><Label>Subheading</Label><Textarea value={content.subheading || ""} onChange={(e) => patchContent("subheading", e.target.value)} rows={3} /></div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div><Label>Submit button text</Label><Input value={content.submit_text || ""} onChange={(e) => patchContent("submit_text", e.target.value)} /></div>
+        <div><Label>Placeholder text</Label><Input value={content.placeholder_text || ""} onChange={(e) => patchContent("placeholder_text", e.target.value)} /></div>
+      </div>
+      <div><Label>Alignment</Label>
+        <Select value={content.alignment || "center"} onValueChange={(v) => patchContent("alignment", v)}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent><SelectItem value="left">Left</SelectItem><SelectItem value="center">Center</SelectItem><SelectItem value="right">Right</SelectItem></SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
+
+  const renderFeaturedProductsEditor = () => (
+    <div className="space-y-3">
+      {renderSectionTop(true)}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div><Label>Product limit</Label>
+          <Select value={String(content.limit || 8)} onValueChange={(v) => patchContent("limit", Number(v))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="4">4</SelectItem><SelectItem value="6">6</SelectItem><SelectItem value="8">8</SelectItem><SelectItem value="12">12</SelectItem></SelectContent>
+          </Select>
+        </div>
+        <div><Label>Grid columns</Label>
+          <Select value={String(content.tileGridColumns || 4)} onValueChange={(v) => patchContent("tileGridColumns", Number(v))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="2">2</SelectItem><SelectItem value="3">3</SelectItem><SelectItem value="4">4</SelectItem><SelectItem value="5">5</SelectItem></SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div><Label>Layout mode</Label>
+          <Select value={content.tileLayoutMode || "grid"} onValueChange={(v) => patchContent("tileLayoutMode", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="grid">Grid</SelectItem><SelectItem value="carousel">Carousel</SelectItem></SelectContent>
+          </Select>
+        </div>
+        <div><Label>Alignment</Label>
+          <Select value={content.alignment || "left"} onValueChange={(v) => patchContent("alignment", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="left">Left</SelectItem><SelectItem value="center">Center</SelectItem><SelectItem value="right">Right</SelectItem></SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div><Label>View all text</Label><Input value={content.view_all_text || ""} onChange={(e) => patchContent("view_all_text", e.target.value)} /></div>
+        <div><Label>View all link</Label><Input value={content.view_all_link || ""} onChange={(e) => patchContent("view_all_link", e.target.value)} /></div>
+      </div>
+      <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+        <div><p className="text-sm font-medium">Show title</p></div>
+        <Switch checked={content.tileShowTitle !== false} onCheckedChange={(c) => patchContent("tileShowTitle", c)} />
+      </div>
+      <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+        <div><p className="text-sm font-medium">Show subtitle</p></div>
+        <Switch checked={content.tileShowSubtitle !== false} onCheckedChange={(c) => patchContent("tileShowSubtitle", c)} />
+      </div>
+    </div>
+  );
+
+  const renderCategoriesEditor = () => (
+    <div className="space-y-3">
+      {renderSectionTop(true)}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div><Label>Category limit</Label>
+          <Select value={String(content.limit || 6)} onValueChange={(v) => patchContent("limit", Number(v))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="3">3</SelectItem><SelectItem value="4">4</SelectItem><SelectItem value="6">6</SelectItem><SelectItem value="8">8</SelectItem></SelectContent>
+          </Select>
+        </div>
+        <div><Label>Grid columns</Label>
+          <Select value={String(content.tileGridColumns || 3)} onValueChange={(v) => patchContent("tileGridColumns", Number(v))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="2">2</SelectItem><SelectItem value="3">3</SelectItem><SelectItem value="4">4</SelectItem><SelectItem value="5">5</SelectItem></SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div><Label>Layout mode</Label>
+          <Select value={content.tileLayoutMode || "grid"} onValueChange={(v) => patchContent("tileLayoutMode", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="grid">Grid</SelectItem><SelectItem value="carousel">Carousel</SelectItem></SelectContent>
+          </Select>
+        </div>
+        <div><Label>Alignment</Label>
+          <Select value={content.alignment || "center"} onValueChange={(v) => patchContent("alignment", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="left">Left</SelectItem><SelectItem value="center">Center</SelectItem><SelectItem value="right">Right</SelectItem></SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+        <div><p className="text-sm font-medium">Show title</p></div>
+        <Switch checked={content.tileShowTitle !== false} onCheckedChange={(c) => patchContent("tileShowTitle", c)} />
+      </div>
+      <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+        <div><p className="text-sm font-medium">Show subtitle</p></div>
+        <Switch checked={content.tileShowSubtitle !== false} onCheckedChange={(c) => patchContent("tileShowSubtitle", c)} />
+      </div>
+    </div>
+  );
+
+  const renderCountdownEditor = () => (
+    <div className="space-y-3">
+      <div><Label>Heading</Label><Input value={content.heading || ""} onChange={(e) => patchContent("heading", e.target.value)} /></div>
+      <div><Label>Subheading</Label><Textarea value={content.subheading || ""} onChange={(e) => patchContent("subheading", e.target.value)} rows={2} /></div>
+      <div><Label>Target date (ISO format)</Label><Input type="datetime-local" value={content.target_date ? content.target_date.substring(0, 16) : ""} onChange={(e) => patchContent("target_date", new Date(e.target.value).toISOString())} /></div>
+      <div><Label>Expired text</Label><Input value={content.expired_text || ""} onChange={(e) => patchContent("expired_text", e.target.value)} /></div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div><Label>Button text</Label><Input value={content.button_text || ""} onChange={(e) => patchContent("button_text", e.target.value)} /></div>
+        <div><Label>Button link</Label><Input value={content.button_link || ""} onChange={(e) => patchContent("button_link", e.target.value)} /></div>
+      </div>
+      <div><Label>Alignment</Label>
+        <Select value={content.alignment || "center"} onValueChange={(v) => patchContent("alignment", v)}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent><SelectItem value="left">Left</SelectItem><SelectItem value="center">Center</SelectItem><SelectItem value="right">Right</SelectItem></SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
+
+  const renderDividerEditor = () => (
+    <div className="space-y-3">
+      <div><Label>Style</Label>
+        <Select value={content.style || "line"} onValueChange={(v) => patchContent("style", v)}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent><SelectItem value="line">Line</SelectItem><SelectItem value="dots">Dots</SelectItem><SelectItem value="gradient">Gradient</SelectItem><SelectItem value="space">Space Only</SelectItem></SelectContent>
+        </Select>
+      </div>
+      <div><Label>Height (px)</Label><Input type="number" min={8} max={200} value={content.height || 40} onChange={(e) => patchContent("height", Number(e.target.value))} /></div>
+    </div>
+  );
+
+  const renderRecentlyViewedEditor = () => (
+    <div className="space-y-3">
+      <div><Label>Heading</Label><Input value={content.heading || ""} onChange={(e) => patchContent("heading", e.target.value)} /></div>
+      <div><Label>Subheading</Label><Input value={content.subheading || ""} onChange={(e) => patchContent("subheading", e.target.value)} /></div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div><Label>Max items</Label>
+          <Select value={String(content.maxItems || 4)} onValueChange={(v) => patchContent("maxItems", Number(v))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="4">4</SelectItem><SelectItem value="6">6</SelectItem><SelectItem value="8">8</SelectItem></SelectContent>
+          </Select>
+        </div>
+        <div><Label>Columns</Label>
+          <Select value={String(content.columns || 4)} onValueChange={(v) => patchContent("columns", Number(v))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="2">2</SelectItem><SelectItem value="3">3</SelectItem><SelectItem value="4">4</SelectItem></SelectContent>
+          </Select>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderGiftFinderEditor = () => (
+    <div className="space-y-3">
+      <div><Label>Heading</Label><Input value={content.heading || ""} onChange={(e) => patchContent("heading", e.target.value)} /></div>
+      <div><Label>Subheading</Label><Textarea value={content.subheading || ""} onChange={(e) => patchContent("subheading", e.target.value)} rows={2} /></div>
+      <div><Label>Button text</Label><Input value={content.button_text || ""} onChange={(e) => patchContent("button_text", e.target.value)} /></div>
+      <div><Label>Alignment</Label>
+        <Select value={content.alignment || "center"} onValueChange={(v) => patchContent("alignment", v)}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent><SelectItem value="left">Left</SelectItem><SelectItem value="center">Center</SelectItem><SelectItem value="right">Right</SelectItem></SelectContent>
+        </Select>
+      </div>
+      <p className="text-xs text-muted-foreground">Gift finder tags are managed in the admin Gift Finder Tags settings. This block automatically displays all active tags.</p>
+    </div>
+  );
+
   const renderGenericEditor = () => (
     <div className="space-y-4">
       {Object.entries(content).map(([key, value]) => {
@@ -928,8 +1323,23 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
           {block.block_type === "entry_cards" && renderEntryCardsEditor()}
           {block.block_type === "image" && renderImageCollectionEditor("image")}
           {block.block_type === "carousel" && renderImageCollectionEditor("carousel")}
-          {!["faq", "how_it_works", "trust_badges", "entry_cards", "image", "carousel"].includes(block.block_type) &&
-            renderGenericEditor()}
+          {block.block_type === "social_proof" && renderSocialProofEditor()}
+          {block.block_type === "testimonials" && renderTestimonialsEditor()}
+          {block.block_type === "gallery" && renderGalleryEditor()}
+          {block.block_type === "hero" && renderHeroEditor()}
+          {block.block_type === "cta" && renderCtaEditor()}
+          {block.block_type === "video" && renderVideoEditor()}
+          {block.block_type === "newsletter" && renderNewsletterEditor()}
+          {block.block_type === "featured_products" && renderFeaturedProductsEditor()}
+          {block.block_type === "categories" && renderCategoriesEditor()}
+          {block.block_type === "countdown" && renderCountdownEditor()}
+          {block.block_type === "divider" && renderDividerEditor()}
+          {block.block_type === "recently_viewed" && renderRecentlyViewedEditor()}
+          {block.block_type === "gift_finder" && renderGiftFinderEditor()}
+          {!["faq", "how_it_works", "trust_badges", "entry_cards", "image", "carousel",
+            "social_proof", "testimonials", "gallery", "hero", "cta", "video", "newsletter",
+            "featured_products", "categories", "countdown", "divider", "recently_viewed", "gift_finder"
+          ].includes(block.block_type) && renderGenericEditor()}
 
           <div className="flex gap-2 pt-2">
             <Button variant="outline" onClick={onClose} className="flex-1" disabled={saving}>

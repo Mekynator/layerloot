@@ -904,6 +904,20 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
       return <NewsletterBlock block={block} />;
     case "instagram_auto_feed":
       return <InstagramAutoFeedBlock block={block} />;
+    case "social_proof":
+      return <SocialProofBlock block={block} />;
+    case "testimonials":
+      return <TestimonialsBlock block={block} />;
+    case "gallery":
+      return <GalleryBlock block={block} />;
+    case "recently_viewed":
+      return <RecentlyViewedBlock block={block} />;
+    case "gift_finder":
+      return <GiftFinderBlock block={block} />;
+    case "countdown":
+      return <CountdownBlock block={block} />;
+    case "divider":
+      return <DividerBlock block={block} />;
     default:
       return (
         <div

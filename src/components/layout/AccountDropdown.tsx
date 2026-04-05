@@ -14,7 +14,7 @@ interface AccountDropdownProps {
 }
 
 /** Safely resolve a translation value – never return a raw object. */
-function safeT(t: (key: string, fallback?: string) => unknown, key: string, fallback: string): string {
+function safeT(t: ReturnType<typeof useTranslation>["t"], key: string, fallback: string): string {
   const v = t(key, fallback);
   return typeof v === "string" ? v : fallback;
 }

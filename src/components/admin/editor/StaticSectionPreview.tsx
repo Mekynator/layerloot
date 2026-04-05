@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { StaticSection } from "@/lib/static-page-sections";
 import {
   Search, LayoutGrid, Mail, Image, Palette, Wrench, Star,
-  Upload, ShoppingCart, User, Package, FileText,
+  Upload, ShoppingCart, User, Package, FileText, Sparkles, MessageSquare, ThumbsUp,
 } from "lucide-react";
 
 /**
@@ -38,6 +38,10 @@ const StaticSectionPreview = memo(function StaticSectionPreview({
       return <AccountDashboardPreview />;
     case "order_tracking":
       return <OrderTrackingPreview />;
+    case "home_smart_sections":
+      return <HomeSmartSectionsPreview />;
+    case "home_social_proof":
+      return <HomeSocialProofPreview />;
     default:
       return <FallbackPreview section={section} />;
   }
@@ -322,6 +326,83 @@ function OrderTrackingPreview() {
           <div className="h-10 rounded-lg border border-border/40 bg-background/50" />
         </div>
         <div className="h-10 w-full rounded-lg bg-primary/80" />
+      </div>
+    </div>
+  );
+}
+
+function HomeSmartSectionsPreview() {
+  return (
+    <div className="px-6 py-8 space-y-6">
+      <div className="flex items-center gap-2">
+        <Sparkles className="h-5 w-5 text-primary" />
+        <h2 className="font-display text-xl font-bold uppercase text-foreground">Recommended for You</h2>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="space-y-2">
+            <div className="aspect-square rounded-2xl bg-muted/20 border border-border/20 flex items-center justify-center">
+              <Sparkles className="h-6 w-6 text-muted-foreground/20" />
+            </div>
+            <div className="space-y-1 px-1">
+              <div className="h-3 w-3/4 rounded bg-muted/30" />
+              <div className="h-3 w-1/2 rounded bg-primary/15" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-2 pt-2">
+        <Sparkles className="h-5 w-5 text-primary" />
+        <h2 className="font-display text-xl font-bold uppercase text-foreground">Recently Viewed</h2>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="space-y-2">
+            <div className="aspect-square rounded-2xl bg-muted/15 border border-border/15 flex items-center justify-center">
+              <Package className="h-6 w-6 text-muted-foreground/15" />
+            </div>
+            <div className="space-y-1 px-1">
+              <div className="h-3 w-2/3 rounded bg-muted/25" />
+              <div className="h-3 w-1/3 rounded bg-primary/10" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HomeSocialProofPreview() {
+  return (
+    <div className="px-6 py-8 space-y-6">
+      <h2 className="font-display text-xl font-bold uppercase text-foreground text-center">What Our Customers Say</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {["Amazing quality!", "Love my custom print", "Fast delivery"].map((text, i) => (
+          <div key={i} className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-3">
+            <div className="flex gap-1">
+              {Array.from({ length: 5 }).map((_, s) => (
+                <Star key={s} className="h-3.5 w-3.5 fill-primary text-primary" />
+              ))}
+            </div>
+            <p className="text-sm text-muted-foreground italic">"{text}"</p>
+            <div className="flex items-center gap-2">
+              <div className="h-7 w-7 rounded-full bg-muted/30" />
+              <div className="h-3 w-16 rounded bg-muted/25" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="flex justify-center gap-6 pt-2">
+        {[
+          { icon: ThumbsUp, label: "500+ Happy Customers" },
+          { icon: MessageSquare, label: "4.9 Average Rating" },
+          { icon: Package, label: "1000+ Orders Delivered" },
+        ].map((badge, i) => (
+          <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+            <badge.icon className="h-4 w-4 text-primary/60" />
+            <span>{badge.label}</span>
+          </div>
+        ))}
       </div>
     </div>
   );

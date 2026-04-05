@@ -5,7 +5,7 @@ import {
   Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
   Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone,
   BarChart3, Wallet, ImageIcon, Shield, Activity, Globe, MessageCircle,
-  Instagram, Brain,
+  Instagram, Brain, UserPlus,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminPermissions } from "@/hooks/use-admin-permissions";
@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 const ICON_MAP: Record<string, typeof Package> = {
   LayoutDashboard, Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
   Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone, BarChart3,
-  Wallet, Tags, Layers, ImageIcon, Shield, Activity, Globe, MessageCircle, Instagram, Brain,
+  Wallet, Tags, Layers, ImageIcon, Shield, Activity, Globe, MessageCircle, Instagram, Brain, UserPlus,
 };
 
 export interface SidebarItem {

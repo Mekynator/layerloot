@@ -2243,6 +2243,54 @@ export type Database = {
         }
         Relationships: []
       }
+      referral_invites: {
+        Row: {
+          account_created_at: string | null
+          created_at: string
+          first_order_at: string | null
+          first_order_id: string | null
+          id: string
+          invite_code: string
+          invited_email: string | null
+          invited_points_granted: boolean
+          invited_user_id: string | null
+          inviter_points_granted: boolean
+          inviter_user_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_created_at?: string | null
+          created_at?: string
+          first_order_at?: string | null
+          first_order_id?: string | null
+          id?: string
+          invite_code: string
+          invited_email?: string | null
+          invited_points_granted?: boolean
+          invited_user_id?: string | null
+          inviter_points_granted?: boolean
+          inviter_user_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_created_at?: string | null
+          created_at?: string
+          first_order_at?: string | null
+          first_order_id?: string | null
+          id?: string
+          invite_code?: string
+          invited_email?: string | null
+          invited_points_granted?: boolean
+          invited_user_id?: string | null
+          inviter_points_granted?: boolean
+          inviter_user_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       reusable_blocks: {
         Row: {
           block_type: string

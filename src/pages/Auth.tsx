@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import logoImg from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,16 @@ const Auth = () => {
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
+  const refCode = searchParams.get("ref") || "";
+
+  // Store ref code in sessionStorage for use after signup
+  useEffect(() => {
+    if (refCode) {
+      sessionStorage.setItem("ll_ref_code", refCode);
+      if (isLogin) setIsLogin(false); // Switch to signup if coming from invite
+    }
+  }, [refCode]);
 
   if (user) {
     navigate("/account");

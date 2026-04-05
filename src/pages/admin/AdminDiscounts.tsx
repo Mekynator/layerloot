@@ -141,12 +141,14 @@ const AdminDiscounts = () => {
       { data: categoryData, error: categoryError },
       authUsersRes,
       profilesRes,
+      { data: referralData, error: referralError },
     ] = await Promise.all([
       supabase.from("discount_codes").select("*").order("created_at", { ascending: false }),
       supabase.from("products").select("id, name").order("name"),
       supabase.from("categories").select("id, name").order("name"),
       supabase.functions.invoke("admin-users"),
       supabase.from("profiles").select("id, user_id, full_name, created_at, updated_at"),
+      supabase.from("referral_invites").select("invited_user_id").not("invited_user_id", "is", null),
     ]);
 
     if (discountError) {
@@ -196,6 +198,9 @@ const AdminDiscounts = () => {
     const authUsers = ((authUsersRes.data as { users?: AuthUser[] } | null)?.users ?? []) as AuthUser[];
     const profiles = (profilesRes.data ?? []) as ProfileRow[];
     const profileMap = new Map(profiles.map((profile) => [profile.user_id, profile]));
+    const invitedUserIds = new Set(
+      ((referralData ?? []) as Array<{ invited_user_id: string }>).map((r) => r.invited_user_id),
+    );
 
     const mappedUsers = authUsers.map((authUser) => {
       const profile = profileMap.get(authUser.id) ?? null;
@@ -208,6 +213,7 @@ const AdminDiscounts = () => {
         searchText: `${email} ${fullName} ${authUser.id}`.toLowerCase(),
         created_at: authUser.created_at,
         last_sign_in_at: authUser.last_sign_in_at,
+        is_invited: invitedUserIds.has(authUser.id),
       } satisfies UserOption;
     });
 
@@ -364,10 +370,9 @@ const AdminDiscounts = () => {
           });
         }
       } else if (group === "invited") {
-        // Invited users — users whose metadata indicates invitation
-        // Currently marks users who have never signed in as "invited"
+        // Invited users — users who have a referral invite record
         users.forEach((u) => {
-          if (!u.last_sign_in_at) ids.add(u.id);
+          if (u.is_invited) ids.add(u.id);
         });
       }
     }
@@ -795,7 +800,7 @@ const AdminDiscounts = () => {
                     { value: "existing" as AudienceGroup, label: "All Existing Users", desc: "Every registered account" },
                     { value: "new_registered" as AudienceGroup, label: "Newly Registered", desc: "Users who signed up recently" },
                     { value: "newcomers" as AudienceGroup, label: "Newcomers", desc: "New users based on configurable logic" },
-                    { value: "invited" as AudienceGroup, label: "Invited Users", desc: "Users who haven't signed in yet (pending invites)" },
+                    { value: "invited" as AudienceGroup, label: "Invited Users", desc: "Users who joined through a referral invite link or email" },
                   ]).map((opt) => (
                     <label key={opt.value} className="flex items-start gap-3 rounded-md border border-border/30 bg-card/60 p-3 cursor-pointer hover:bg-accent/10 transition-colors">
                       <Checkbox

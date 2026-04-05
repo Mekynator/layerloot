@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import {
   Package, Gift, LogOut, Shield, Settings, LayoutDashboard,
-  MessageSquare, FileText, Heart, Star,
+  MessageSquare, FileText, Heart, Star, UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -20,6 +20,7 @@ import VouchersModule from "@/components/account/VouchersModule";
 import SettingsModule from "@/components/account/SettingsModule";
 import SavedPreferencesModule from "@/components/account/SavedPreferencesModule";
 import InvoicesModule from "@/components/account/InvoicesModule";
+import ReferralModule from "@/components/account/ReferralModule";
 import type {
   AccountPageConfig, Order, CustomOrder, CustomOrderMessage,
   Voucher, UserVoucher, SeenState,
@@ -29,9 +30,9 @@ import {
   isAfter, getLatestDate,
 } from "@/components/account/types";
 
-type MainTab = "dashboard" | "orders" | "custom-requests" | "invoices" | "rewards" | "vouchers" | "preferences" | "settings";
+type MainTab = "dashboard" | "orders" | "custom-requests" | "invoices" | "rewards" | "vouchers" | "referrals" | "preferences" | "settings";
 
-const VALID_TABS: MainTab[] = ["dashboard", "orders", "custom-requests", "invoices", "rewards", "vouchers", "preferences", "settings"];
+const VALID_TABS: MainTab[] = ["dashboard", "orders", "custom-requests", "invoices", "rewards", "vouchers", "referrals", "preferences", "settings"];
 
 const Account = () => {
   const { user, isAdmin, signOut, loading } = useAuth();
@@ -126,6 +127,7 @@ const Account = () => {
     { id: "invoices", label: tt("account.tabs.invoices", "Invoices"), icon: FileText },
     { id: "rewards", label: tt("account.tabs.rewards", "Rewards"), icon: Star },
     { id: "vouchers", label: tt("account.tabs.vouchers", "Vouchers"), icon: Gift },
+    { id: "referrals", label: tt("account.tabs.referrals", "Invite Friends"), icon: UserPlus },
     { id: "preferences", label: tt("account.tabs.preferences", "Preferences"), icon: Heart },
     { id: "settings", label: tt("account.tabs.settings", "Settings"), icon: Settings },
   ];
@@ -231,6 +233,10 @@ const Account = () => {
 
             {tab === "vouchers" && (
               <VouchersModule {...moduleProps} userVouchers={userVouchers} overviewLoading={overviewLoading} />
+            )}
+
+            {tab === "referrals" && (
+              <ReferralModule {...moduleProps} />
             )}
 
             {tab === "preferences" && (

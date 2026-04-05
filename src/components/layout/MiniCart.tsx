@@ -8,6 +8,7 @@ import { formatPrice } from "@/lib/currency";
 import { useFreeShippingProgress } from "@/hooks/use-free-shipping-progress";
 import { Progress } from "@/components/ui/progress";
 import { useTranslation } from "react-i18next";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface MiniCartProps {
   cartButtonRef: React.RefObject<HTMLButtonElement | null>;
@@ -19,17 +20,20 @@ interface MiniCartProps {
 const MiniCart = ({ cartButtonRef, cartPulse, cartGlow, totalItems }: MiniCartProps) => {
   const { t } = useTranslation();
   const { items, removeItem, updateQuantity, totalPrice } = useCart();
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleEnter = useCallback(() => {
+    if (isMobile) return;
     if (closeTimer.current) clearTimeout(closeTimer.current);
     setOpen(true);
-  }, []);
+  }, [isMobile]);
 
   const handleLeave = useCallback(() => {
+    if (isMobile) return;
     closeTimer.current = setTimeout(() => setOpen(false), 250);
-  }, []);
+  }, [isMobile]);
 
   const { remaining, progress, unlocked } = useFreeShippingProgress(totalPrice);
 
@@ -63,7 +67,7 @@ const MiniCart = ({ cartButtonRef, cartPulse, cartGlow, totalItems }: MiniCartPr
       </Link>
 
       <AnimatePresence>
-        {open && (
+        {open && !isMobile && (
           <motion.div
             initial={{ opacity: 0, y: 8, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}

@@ -13,10 +13,10 @@ function jsonRes(body: Record<string, unknown>, status = 200) {
 }
 
 interface AudienceConfig {
-  mode?: string;
   groups?: string[];
   specific_ids?: string[];
   new_registered_days?: number;
+  newcomer_logic?: string;
   newcomer_days?: number;
 }
 
@@ -63,33 +63,26 @@ Deno.serve(async (req) => {
       return jsonRes({ eligible: false, reason: "Discount usage limit reached" });
     }
 
-    // Check min order amount (caller should pass this if needed)
-    // For now we focus on audience targeting
-
-    // Parse audience config from scope_target_user_id
+    // Determine audience config:
+    // 1. New approach: discount_rules JSONB column
+    // 2. Legacy: scope_target_user_id as single UUID
     let audience: AudienceConfig = {};
-    if (discount.scope_target_user_id) {
-      try {
-        const raw = discount.scope_target_user_id;
-        audience = typeof raw === "string" ? JSON.parse(raw) : {};
-      } catch {
-        // If it's a plain UUID, treat as specific user
-        audience = { mode: "specific", specific_ids: [discount.scope_target_user_id] };
-      }
+
+    if (discount.discount_rules && typeof discount.discount_rules === "object") {
+      audience = discount.discount_rules as AudienceConfig;
+    } else if (discount.scope_target_user_id) {
+      // Legacy: single UUID stored directly
+      audience = { groups: ["specific"], specific_ids: [discount.scope_target_user_id] };
     }
 
     // If no audience config, discount is available to all
-    if (!audience.mode && (!audience.groups || audience.groups.length === 0)) {
+    const groups = audience.groups || [];
+    if (groups.length === 0) {
       return jsonRes({
         eligible: true,
         discount_type: discount.discount_type,
         discount_value: discount.discount_value,
       });
-    }
-
-    const groups = audience.groups || [];
-    if (groups.length === 0 && audience.mode === "specific") {
-      groups.push("specific");
     }
 
     let eligible = false;
@@ -98,7 +91,7 @@ Deno.serve(async (req) => {
       if (eligible) break;
 
       switch (group) {
-        case "all_existing":
+        case "existing":
           eligible = true;
           break;
 
@@ -130,19 +123,23 @@ Deno.serve(async (req) => {
           break;
         }
 
-        case "newcomer": {
+        case "newcomers": {
           const days = audience.newcomer_days || 14;
+          const logic = audience.newcomer_logic || "days";
           const { data: authData } = await sb.auth.admin.getUserById(userId);
           if (authData?.user?.created_at) {
             const created = new Date(authData.user.created_at);
             const diffMs = now.getTime() - created.getTime();
-            if (diffMs <= days * 86400000) {
-              // Also check no orders
-              const { count } = await sb
-                .from("orders")
-                .select("id", { count: "exact", head: true })
-                .eq("user_id", userId);
-              eligible = (count ?? 0) === 0;
+            if (logic === "zero_orders") {
+              if (diffMs <= days * 86400000) {
+                const { count } = await sb
+                  .from("orders")
+                  .select("id", { count: "exact", head: true })
+                  .eq("user_id", userId);
+                eligible = (count ?? 0) === 0;
+              }
+            } else {
+              eligible = diffMs <= days * 86400000;
             }
           }
           break;

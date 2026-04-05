@@ -26,6 +26,7 @@ interface DiscountCode {
   scope: string;
   scope_target_id: string | null;
   scope_target_user_id: string | null;
+  discount_rules: Record<string, unknown> | null;
   min_order_amount: number;
   min_quantity: number;
   max_uses: number | null;
@@ -78,7 +79,7 @@ interface UserOption {
 
 type AudienceGroup = "specific" | "existing" | "new_registered" | "newcomers" | "invited";
 
-type DiscountForm = Omit<DiscountCode, "id" | "created_at" | "used_count" | "scope_target_user_id"> & {
+type DiscountForm = Omit<DiscountCode, "id" | "created_at" | "used_count" | "scope_target_user_id" | "discount_rules"> & {
   scope_target_user_ids: string[];
   audience_groups: AudienceGroup[];
   new_registered_days: number;
@@ -191,7 +192,7 @@ const AdminDiscounts = () => {
       });
     }
 
-    setDiscounts((discountData as DiscountCode[]) ?? []);
+    setDiscounts((discountData as unknown as DiscountCode[]) ?? []);
     setProducts((productData as ProductOption[]) ?? []);
     setCategories((categoryData as CategoryOption[]) ?? []);
 
@@ -260,31 +261,25 @@ const AdminDiscounts = () => {
     setEditing(discount);
     setUserSearch("");
 
-    // Parse audience config from stored JSON, or fall back to legacy comma-separated IDs
     let audienceGroups: AudienceGroup[] = ["specific"];
     let specificIds: string[] = [];
     let newRegisteredDays = 14;
     let newcomerLogic: "days" | "zero_orders" = "days";
     let newcomerDays = 30;
 
-    if (discount.scope === "user" && discount.scope_target_user_id) {
-      try {
-        const parsed = JSON.parse(discount.scope_target_user_id);
-        if (parsed.groups && Array.isArray(parsed.groups)) {
-          audienceGroups = parsed.groups;
-          specificIds = parsed.specific_ids || [];
-          newRegisteredDays = parsed.new_registered_days || 14;
-          newcomerLogic = parsed.newcomer_logic || "days";
-          newcomerDays = parsed.newcomer_days || 30;
-        } else {
-          // Not valid audience JSON, treat as legacy
-          specificIds = normalizeUserIds(discount.scope_target_user_id);
-          audienceGroups = specificIds.length > 0 ? ["specific"] : ["existing"];
-        }
-      } catch {
-        // Legacy comma-separated user IDs
-        specificIds = normalizeUserIds(discount.scope_target_user_id);
-        audienceGroups = specificIds.length > 0 ? ["specific"] : ["existing"];
+    if (discount.scope === "user") {
+      // Read from discount_rules JSONB column (new approach)
+      const rules = discount.discount_rules as Record<string, unknown> | null;
+      if (rules && Array.isArray(rules.groups)) {
+        audienceGroups = rules.groups as AudienceGroup[];
+        specificIds = (rules.specific_ids as string[]) || [];
+        newRegisteredDays = (rules.new_registered_days as number) || 14;
+        newcomerLogic = (rules.newcomer_logic as "days" | "zero_orders") || "days";
+        newcomerDays = (rules.newcomer_days as number) || 30;
+      } else if (discount.scope_target_user_id) {
+        // Legacy: single UUID in scope_target_user_id
+        specificIds = [discount.scope_target_user_id];
+        audienceGroups = ["specific"];
       }
     }
 
@@ -403,20 +398,29 @@ const AdminDiscounts = () => {
 
     setSaving(true);
 
-    // For user scope, store audience config as JSON so it applies dynamically
+    // Separate single-user UUID from group-based JSONB rules
     let scopeTargetUserIdValue: string | null = null;
+    let discountRulesValue: Record<string, unknown> | null = null;
+
     if (form.scope === "user") {
-      const audienceConfig = {
-        groups: form.audience_groups,
-        specific_ids: form.audience_groups.includes("specific") ? form.scope_target_user_ids : [],
-        new_registered_days: form.new_registered_days,
-        newcomer_logic: form.newcomer_logic,
-        newcomer_days: form.newcomer_days,
-      };
-      scopeTargetUserIdValue = JSON.stringify(audienceConfig);
+      const isOnlySpecific = form.audience_groups.length === 1 && form.audience_groups[0] === "specific";
+
+      if (isOnlySpecific && form.scope_target_user_ids.length === 1) {
+        // Single user → store as UUID
+        scopeTargetUserIdValue = form.scope_target_user_ids[0];
+      } else {
+        // Group/multi-user targeting → store as JSONB in discount_rules
+        discountRulesValue = {
+          groups: form.audience_groups,
+          specific_ids: form.audience_groups.includes("specific") ? form.scope_target_user_ids : [],
+          new_registered_days: form.new_registered_days,
+          newcomer_logic: form.newcomer_logic,
+          newcomer_days: form.newcomer_days,
+        };
+      }
     }
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       code: form.code.toUpperCase(),
       description: form.description || null,
       discount_type: form.discount_type,
@@ -424,6 +428,7 @@ const AdminDiscounts = () => {
       scope: form.scope,
       scope_target_id: form.scope === "product" || form.scope === "category" ? form.scope_target_id : null,
       scope_target_user_id: scopeTargetUserIdValue,
+      discount_rules: discountRulesValue,
       min_order_amount: Number(form.min_order_amount) || 0,
       min_quantity: Number(form.min_quantity) || 1,
       max_uses: form.max_uses ? Number(form.max_uses) : null,
@@ -434,8 +439,8 @@ const AdminDiscounts = () => {
     };
 
     const { error } = editing
-      ? await supabase.from("discount_codes").update(payload).eq("id", editing.id)
-      : await supabase.from("discount_codes").insert(payload);
+      ? await supabase.from("discount_codes").update(payload as never).eq("id", editing.id)
+      : await supabase.from("discount_codes").insert(payload as never);
 
     setSaving(false);
 
@@ -501,26 +506,21 @@ const AdminDiscounts = () => {
     }
 
     if (discount.scope === "user") {
-      if (!discount.scope_target_user_id) return "User audience";
-      try {
-        const parsed = JSON.parse(discount.scope_target_user_id);
-        if (parsed.groups && Array.isArray(parsed.groups)) {
-          const labels: string[] = [];
-          if (parsed.groups.includes("specific") && parsed.specific_ids?.length) labels.push(`${parsed.specific_ids.length} specific`);
-          if (parsed.groups.includes("existing")) labels.push("all existing");
-          if (parsed.groups.includes("new_registered")) labels.push(`new (${parsed.new_registered_days || 14}d)`);
-          if (parsed.groups.includes("newcomers")) labels.push("newcomers");
-          if (parsed.groups.includes("invited")) labels.push("invited");
-          return labels.join(" + ") || "User audience";
-        }
-      } catch {
-        // Legacy format
-        const selectedIds = normalizeUserIds(discount.scope_target_user_id);
-        if (selectedIds.length === 0) return "User audience";
-        const matchedUsers = users.filter((user) => selectedIds.includes(user.id));
-        if (matchedUsers.length <= 3) return matchedUsers.map((u) => u.label).join(", ") || `${selectedIds.length} user(s)`;
-        return `${matchedUsers.length} targeted users`;
+      const rules = discount.discount_rules as Record<string, unknown> | null;
+      if (rules && Array.isArray(rules.groups)) {
+        const labels: string[] = [];
+        if (rules.groups.includes("specific") && Array.isArray(rules.specific_ids) && rules.specific_ids.length) labels.push(`${rules.specific_ids.length} specific`);
+        if (rules.groups.includes("existing")) labels.push("all existing");
+        if (rules.groups.includes("new_registered")) labels.push(`new (${(rules.new_registered_days as number) || 14}d)`);
+        if (rules.groups.includes("newcomers")) labels.push("newcomers");
+        if (rules.groups.includes("invited")) labels.push("invited");
+        return labels.join(" + ") || "User audience";
       }
+      if (discount.scope_target_user_id) {
+        const matched = users.find((u) => u.id === discount.scope_target_user_id);
+        return matched ? matched.label : "1 specific user";
+      }
+      return "User audience";
     }
 
     if (discount.scope === "bulk") {

@@ -17,6 +17,25 @@ import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
 import RewardsStoreEditor from "@/components/admin/RewardsStoreEditor";
 
+type TargetMode = "all" | "specific_user" | "specific_users" | "rules_based";
+
+type RuleGroup = "existing" | "new_registered" | "newcomer" | "invited" | "min_points" | "min_orders" | "referral" | "achievement";
+
+interface DiscountRules {
+  specific_ids?: string[];
+  groups?: RuleGroup[];
+  new_registered_days?: number;
+  newcomer_logic?: "days" | "zero_orders";
+  newcomer_days?: number;
+  min_points?: number;
+  min_orders?: number;
+  achievement_keys?: string[];
+  referral_requirements?: {
+    min_successful_invites?: number;
+    min_registered_invites?: number;
+  };
+}
+
 interface DiscountCode {
   id: string;
   code: string;
@@ -26,7 +45,10 @@ interface DiscountCode {
   scope: string;
   scope_target_id: string | null;
   scope_target_user_id: string | null;
-  discount_rules: Record<string, unknown> | null;
+  target_mode: TargetMode;
+  discount_rules: DiscountRules | null;
+  per_user_limit: number | null;
+  priority: number;
   min_order_amount: number;
   min_quantity: number;
   max_uses: number | null;
@@ -38,15 +60,8 @@ interface DiscountCode {
   created_at: string;
 }
 
-interface ProductOption {
-  id: string;
-  name: string;
-}
-
-interface CategoryOption {
-  id: string;
-  name: string;
-}
+interface ProductOption { id: string; name: string; }
+interface CategoryOption { id: string; name: string; }
 
 interface AuthUser {
   id: string;
@@ -54,9 +69,7 @@ interface AuthUser {
   created_at: string;
   last_sign_in_at: string | null;
   role: string | null;
-  user_metadata?: {
-    full_name?: string;
-  } | null;
+  user_metadata?: { full_name?: string } | null;
 }
 
 interface ProfileRow {
@@ -73,48 +86,83 @@ interface UserOption {
   searchText: string;
   created_at: string;
   last_sign_in_at: string | null;
-  order_count?: number;
   is_invited?: boolean;
 }
 
-type AudienceGroup = "specific" | "existing" | "new_registered" | "newcomers" | "invited";
-
-type DiscountForm = Omit<DiscountCode, "id" | "created_at" | "used_count" | "scope_target_user_id" | "discount_rules"> & {
-  scope_target_user_ids: string[];
-  audience_groups: AudienceGroup[];
+interface DiscountForm {
+  code: string;
+  description: string | null;
+  discount_type: string;
+  discount_value: number;
+  scope: string;
+  scope_target_id: string | null;
+  target_mode: TargetMode;
+  // specific_user
+  scope_target_user_id: string | null;
+  // specific_users
+  specific_user_ids: string[];
+  // rules_based
+  rule_groups: RuleGroup[];
   new_registered_days: number;
   newcomer_logic: "days" | "zero_orders";
   newcomer_days: number;
-};
+  min_points: number;
+  min_orders: number;
+  achievement_keys: string[];
+  referral_min_successful: number;
+  referral_min_registered: number;
+  // common
+  min_order_amount: number;
+  min_quantity: number;
+  max_uses: number | null;
+  per_user_limit: number | null;
+  priority: number;
+  is_stackable: boolean;
+  is_active: boolean;
+  starts_at: string | null;
+  expires_at: string | null;
+}
 
-const emptyDiscount: DiscountForm = {
+const emptyForm: DiscountForm = {
   code: "",
   description: "",
   discount_type: "percentage",
   discount_value: 10,
   scope: "all",
   scope_target_id: null,
+  target_mode: "all",
+  scope_target_user_id: null,
+  specific_user_ids: [],
+  rule_groups: [],
+  new_registered_days: 14,
+  newcomer_logic: "days",
+  newcomer_days: 30,
+  min_points: 0,
+  min_orders: 0,
+  achievement_keys: [],
+  referral_min_successful: 0,
+  referral_min_registered: 0,
   min_order_amount: 0,
   min_quantity: 1,
   max_uses: null,
+  per_user_limit: null,
+  priority: 0,
   is_stackable: false,
   is_active: true,
   starts_at: null,
   expires_at: null,
-  scope_target_user_ids: [],
-  audience_groups: ["specific"],
-  new_registered_days: 14,
-  newcomer_logic: "days",
-  newcomer_days: 30,
 };
 
-const normalizeUserIds = (value: string | null) => {
-  if (!value) return [];
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-};
+const RULE_GROUP_OPTIONS: { value: RuleGroup; label: string; desc: string }[] = [
+  { value: "existing", label: "All Existing Users", desc: "Every registered account" },
+  { value: "new_registered", label: "Newly Registered", desc: "Users who signed up within X days" },
+  { value: "newcomer", label: "Newcomers", desc: "New users based on configurable logic" },
+  { value: "invited", label: "Invited Users", desc: "Users who joined via referral invite" },
+  { value: "min_points", label: "Min Loyalty Points", desc: "Users with at least X loyalty points" },
+  { value: "min_orders", label: "Min Completed Orders", desc: "Users with at least X completed orders" },
+  { value: "referral", label: "Referral Milestones", desc: "Users who invited X people" },
+  { value: "achievement", label: "Achievement Holders", desc: "Users with specific achievements" },
+];
 
 const AdminDiscounts = () => {
   const { toast } = useToast();
@@ -126,7 +174,7 @@ const AdminDiscounts = () => {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<DiscountCode | null>(null);
-  const [form, setForm] = useState<DiscountForm>(emptyDiscount);
+  const [form, setForm] = useState<DiscountForm>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -138,11 +186,11 @@ const AdminDiscounts = () => {
 
     const [
       { data: discountData, error: discountError },
-      { data: productData, error: productError },
-      { data: categoryData, error: categoryError },
+      { data: productData },
+      { data: categoryData },
       authUsersRes,
       profilesRes,
-      { data: referralData, error: referralError },
+      { data: referralData },
     ] = await Promise.all([
       supabase.from("discount_codes").select("*").order("created_at", { ascending: false }),
       supabase.from("products").select("id, name").order("name"),
@@ -153,43 +201,7 @@ const AdminDiscounts = () => {
     ]);
 
     if (discountError) {
-      toast({
-        title: "Failed to load discounts",
-        description: discountError.message,
-        variant: "destructive",
-      });
-    }
-
-    if (productError) {
-      toast({
-        title: "Failed to load products",
-        description: productError.message,
-        variant: "destructive",
-      });
-    }
-
-    if (categoryError) {
-      toast({
-        title: "Failed to load categories",
-        description: categoryError.message,
-        variant: "destructive",
-      });
-    }
-
-    if (authUsersRes.error) {
-      toast({
-        title: "Failed to load users",
-        description: authUsersRes.error.message || "Admin user directory is not available.",
-        variant: "destructive",
-      });
-    }
-
-    if (profilesRes.error) {
-      toast({
-        title: "Failed to load profiles",
-        description: profilesRes.error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Failed to load discounts", description: discountError.message, variant: "destructive" });
     }
 
     setDiscounts((discountData as unknown as DiscountCode[]) ?? []);
@@ -198,47 +210,45 @@ const AdminDiscounts = () => {
 
     const authUsers = ((authUsersRes.data as { users?: AuthUser[] } | null)?.users ?? []) as AuthUser[];
     const profiles = (profilesRes.data ?? []) as ProfileRow[];
-    const profileMap = new Map(profiles.map((profile) => [profile.user_id, profile]));
+    const profileMap = new Map(profiles.map((p) => [p.user_id, p]));
     const invitedUserIds = new Set(
       ((referralData ?? []) as Array<{ invited_user_id: string }>).map((r) => r.invited_user_id),
     );
 
-    const mappedUsers = authUsers.map((authUser) => {
-      const profile = profileMap.get(authUser.id) ?? null;
-      const email = (authUser.email || "").trim();
-      const fullName = (profile?.full_name || authUser.user_metadata?.full_name || "").trim();
-
+    const mappedUsers = authUsers.map((u) => {
+      const profile = profileMap.get(u.id);
+      const email = (u.email || "").trim();
+      const fullName = (profile?.full_name || u.user_metadata?.full_name || "").trim();
       return {
-        id: authUser.id,
-        label: email || fullName || authUser.id,
-        searchText: `${email} ${fullName} ${authUser.id}`.toLowerCase(),
-        created_at: authUser.created_at,
-        last_sign_in_at: authUser.last_sign_in_at,
-        is_invited: invitedUserIds.has(authUser.id),
+        id: u.id,
+        label: email || fullName || u.id,
+        searchText: `${email} ${fullName} ${u.id}`.toLowerCase(),
+        created_at: u.created_at,
+        last_sign_in_at: u.last_sign_in_at,
+        is_invited: invitedUserIds.has(u.id),
       } satisfies UserOption;
     });
 
-    const uniqueUsers = Array.from(new Map(mappedUsers.map((user) => [user.id, user])).values()).sort((a, b) =>
-      a.label.localeCompare(b.label),
-    );
-
-    setUsers(uniqueUsers);
+    setUsers(Array.from(new Map(mappedUsers.map((u) => [u.id, u])).values()).sort((a, b) => a.label.localeCompare(b.label)));
     setLoading(false);
   };
 
-  useEffect(() => {
-    fetchAll();
-  }, []);
+  useEffect(() => { fetchAll(); }, []);
+
+  // Derive selected user labels
+  const selectedUserIds = form.target_mode === "specific_user"
+    ? (form.scope_target_user_id ? [form.scope_target_user_id] : [])
+    : form.specific_user_ids;
 
   const selectedUsers = useMemo(
-    () => users.filter((user) => form.scope_target_user_ids.includes(user.id)),
-    [users, form.scope_target_user_ids],
+    () => users.filter((u) => selectedUserIds.includes(u.id)),
+    [users, selectedUserIds],
   );
 
   const filteredUsers = useMemo(() => {
-    const query = userSearch.trim().toLowerCase();
-    if (!query) return users;
-    return users.filter((user) => user.searchText.includes(query));
+    const q = userSearch.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((u) => u.searchText.includes(q));
   }, [users, userSearch]);
 
   const userButtonLabel = useMemo(() => {
@@ -250,174 +260,126 @@ const AdminDiscounts = () => {
   const openCreate = () => {
     setEditing(null);
     setUserSearch("");
-    setForm({
-      ...emptyDiscount,
-      code: `LL-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-    });
+    setForm({ ...emptyForm, code: `LL-${Math.random().toString(36).substring(2, 8).toUpperCase()}` });
     setDialogOpen(true);
   };
 
-  const openEdit = (discount: DiscountCode) => {
-    setEditing(discount);
+  const openEdit = (d: DiscountCode) => {
+    setEditing(d);
     setUserSearch("");
 
-    let audienceGroups: AudienceGroup[] = ["specific"];
-    let specificIds: string[] = [];
-    let newRegisteredDays = 14;
-    let newcomerLogic: "days" | "zero_orders" = "days";
-    let newcomerDays = 30;
-
-    if (discount.scope === "user") {
-      // Read from discount_rules JSONB column (new approach)
-      const rules = discount.discount_rules as Record<string, unknown> | null;
-      if (rules && Array.isArray(rules.groups)) {
-        audienceGroups = rules.groups as AudienceGroup[];
-        specificIds = (rules.specific_ids as string[]) || [];
-        newRegisteredDays = (rules.new_registered_days as number) || 14;
-        newcomerLogic = (rules.newcomer_logic as "days" | "zero_orders") || "days";
-        newcomerDays = (rules.newcomer_days as number) || 30;
-      } else if (discount.scope_target_user_id) {
-        // Legacy: single UUID in scope_target_user_id
-        specificIds = [discount.scope_target_user_id];
-        audienceGroups = ["specific"];
-      }
-    }
+    const rules = d.discount_rules || {};
+    const targetMode = (d.target_mode || "all") as TargetMode;
 
     setForm({
-      code: discount.code,
-      description: discount.description || "",
-      discount_type: discount.discount_type,
-      discount_value: discount.discount_value,
-      scope: discount.scope,
-      scope_target_id: discount.scope_target_id,
-      min_order_amount: discount.min_order_amount,
-      min_quantity: discount.min_quantity,
-      max_uses: discount.max_uses,
-      is_stackable: discount.is_stackable,
-      is_active: discount.is_active,
-      starts_at: discount.starts_at,
-      expires_at: discount.expires_at,
-      scope_target_user_ids: specificIds,
-      audience_groups: audienceGroups,
-      new_registered_days: newRegisteredDays,
-      newcomer_logic: newcomerLogic,
-      newcomer_days: newcomerDays,
+      code: d.code,
+      description: d.description || "",
+      discount_type: d.discount_type,
+      discount_value: d.discount_value,
+      scope: d.scope,
+      scope_target_id: d.scope_target_id,
+      target_mode: targetMode,
+      scope_target_user_id: d.scope_target_user_id,
+      specific_user_ids: rules.specific_ids || [],
+      rule_groups: (rules.groups || []) as RuleGroup[],
+      new_registered_days: rules.new_registered_days || 14,
+      newcomer_logic: (rules.newcomer_logic as "days" | "zero_orders") || "days",
+      newcomer_days: rules.newcomer_days || 30,
+      min_points: rules.min_points || 0,
+      min_orders: rules.min_orders || 0,
+      achievement_keys: rules.achievement_keys || [],
+      referral_min_successful: rules.referral_requirements?.min_successful_invites || 0,
+      referral_min_registered: rules.referral_requirements?.min_registered_invites || 0,
+      min_order_amount: d.min_order_amount,
+      min_quantity: d.min_quantity,
+      max_uses: d.max_uses,
+      per_user_limit: d.per_user_limit,
+      priority: d.priority,
+      is_stackable: d.is_stackable,
+      is_active: d.is_active,
+      starts_at: d.starts_at,
+      expires_at: d.expires_at,
     });
     setDialogOpen(true);
   };
 
   const toggleUserSelection = (userId: string) => {
-    setForm((current) => {
-      const exists = current.scope_target_user_ids.includes(userId);
-      return {
-        ...current,
-        scope_target_user_ids: exists
-          ? current.scope_target_user_ids.filter((id) => id !== userId)
-          : [...current.scope_target_user_ids, userId],
-      };
-    });
+    if (form.target_mode === "specific_user") {
+      setForm((c) => ({ ...c, scope_target_user_id: c.scope_target_user_id === userId ? null : userId }));
+    } else {
+      setForm((c) => {
+        const exists = c.specific_user_ids.includes(userId);
+        return { ...c, specific_user_ids: exists ? c.specific_user_ids.filter((id) => id !== userId) : [...c.specific_user_ids, userId] };
+      });
+    }
   };
 
   const removeSelectedUser = (userId: string) => {
-    setForm((current) => ({
-      ...current,
-      scope_target_user_ids: current.scope_target_user_ids.filter((id) => id !== userId),
-    }));
+    if (form.target_mode === "specific_user") {
+      setForm((c) => ({ ...c, scope_target_user_id: null }));
+    } else {
+      setForm((c) => ({ ...c, specific_user_ids: c.specific_user_ids.filter((id) => id !== userId) }));
+    }
   };
 
-  const toggleAudienceGroup = (group: AudienceGroup) => {
-    setForm((current) => {
-      const has = current.audience_groups.includes(group);
-      const next = has
-        ? current.audience_groups.filter((g) => g !== group)
-        : [...current.audience_groups, group];
-      return { ...current, audience_groups: next.length > 0 ? next : [group] };
+  const toggleRuleGroup = (group: RuleGroup) => {
+    setForm((c) => {
+      const has = c.rule_groups.includes(group);
+      return { ...c, rule_groups: has ? c.rule_groups.filter((g) => g !== group) : [...c.rule_groups, group] };
     });
   };
-
-  const matchedAudienceUsers = useMemo(() => {
-    if (form.scope !== "user") return [];
-    const now = Date.now();
-    const ids = new Set<string>();
-
-    for (const group of form.audience_groups) {
-      if (group === "specific") {
-        form.scope_target_user_ids.forEach((id) => ids.add(id));
-      } else if (group === "existing") {
-        users.forEach((u) => ids.add(u.id));
-      } else if (group === "new_registered") {
-        const cutoff = now - form.new_registered_days * 86400000;
-        users.forEach((u) => {
-          if (new Date(u.created_at).getTime() >= cutoff) ids.add(u.id);
-        });
-      } else if (group === "newcomers") {
-        if (form.newcomer_logic === "days") {
-          const cutoff = now - form.newcomer_days * 86400000;
-          users.forEach((u) => {
-            if (new Date(u.created_at).getTime() >= cutoff) ids.add(u.id);
-          });
-        } else {
-          // zero_orders — all users (order filtering would need orders data; for now treat as all users with no order history indicator)
-          users.forEach((u) => {
-            if (!u.last_sign_in_at || new Date(u.created_at).getTime() === new Date(u.last_sign_in_at).getTime()) {
-              ids.add(u.id);
-            }
-          });
-        }
-      } else if (group === "invited") {
-        // Invited users — users who have a referral invite record
-        users.forEach((u) => {
-          if (u.is_invited) ids.add(u.id);
-        });
-      }
-    }
-
-    return Array.from(ids);
-  }, [form.scope, form.audience_groups, form.scope_target_user_ids, form.new_registered_days, form.newcomer_logic, form.newcomer_days, users]);
 
   const handleSave = async () => {
     if (!form.code.trim()) {
       toast({ title: "Code required", variant: "destructive" });
       return;
     }
-
-    if (form.scope === "user" && form.audience_groups.length === 0) {
-      toast({ title: "Select at least one audience group.", variant: "destructive" });
-      return;
-    }
-
-    if (form.scope === "user" && form.audience_groups.length === 1 && form.audience_groups[0] === "specific" && form.scope_target_user_ids.length === 0) {
-      toast({ title: "Select at least one user.", variant: "destructive" });
-      return;
-    }
-
     if ((form.scope === "product" || form.scope === "category") && !form.scope_target_id) {
       toast({ title: "Select a target", variant: "destructive" });
+      return;
+    }
+    if (form.target_mode === "specific_user" && !form.scope_target_user_id) {
+      toast({ title: "Select a user", variant: "destructive" });
+      return;
+    }
+    if (form.target_mode === "specific_users" && form.specific_user_ids.length === 0) {
+      toast({ title: "Select at least one user", variant: "destructive" });
+      return;
+    }
+    if (form.target_mode === "rules_based" && form.rule_groups.length === 0) {
+      toast({ title: "Select at least one rule group", variant: "destructive" });
       return;
     }
 
     setSaving(true);
 
-    // Separate single-user UUID from group-based JSONB rules
-    let scopeTargetUserIdValue: string | null = null;
-    let discountRulesValue: Record<string, unknown> | null = null;
+    // Build discount_rules JSONB
+    let discountRules: DiscountRules | null = null;
+    let scopeTargetUserId: string | null = null;
 
-    if (form.scope === "user") {
-      const isOnlySpecific = form.audience_groups.length === 1 && form.audience_groups[0] === "specific";
-
-      if (isOnlySpecific && form.scope_target_user_ids.length === 1) {
-        // Single user → store as UUID
-        scopeTargetUserIdValue = form.scope_target_user_ids[0];
-      } else {
-        // Group/multi-user targeting → store as JSONB in discount_rules
-        discountRulesValue = {
-          groups: form.audience_groups,
-          specific_ids: form.audience_groups.includes("specific") ? form.scope_target_user_ids : [],
-          new_registered_days: form.new_registered_days,
-          newcomer_logic: form.newcomer_logic,
-          newcomer_days: form.newcomer_days,
+    switch (form.target_mode) {
+      case "specific_user":
+        scopeTargetUserId = form.scope_target_user_id;
+        break;
+      case "specific_users":
+        discountRules = { specific_ids: form.specific_user_ids };
+        break;
+      case "rules_based":
+        discountRules = {
+          groups: form.rule_groups,
+          ...(form.rule_groups.includes("new_registered") && { new_registered_days: form.new_registered_days }),
+          ...(form.rule_groups.includes("newcomer") && { newcomer_logic: form.newcomer_logic, newcomer_days: form.newcomer_days }),
+          ...(form.rule_groups.includes("min_points") && form.min_points > 0 && { min_points: form.min_points }),
+          ...(form.rule_groups.includes("min_orders") && form.min_orders > 0 && { min_orders: form.min_orders }),
+          ...(form.rule_groups.includes("achievement") && form.achievement_keys.length > 0 && { achievement_keys: form.achievement_keys }),
+          ...(form.rule_groups.includes("referral") && {
+            referral_requirements: {
+              min_successful_invites: form.referral_min_successful,
+              min_registered_invites: form.referral_min_registered,
+            },
+          }),
         };
-      }
+        break;
     }
 
     const payload: Record<string, unknown> = {
@@ -427,11 +389,14 @@ const AdminDiscounts = () => {
       discount_value: Number(form.discount_value),
       scope: form.scope,
       scope_target_id: form.scope === "product" || form.scope === "category" ? form.scope_target_id : null,
-      scope_target_user_id: scopeTargetUserIdValue,
-      discount_rules: discountRulesValue,
+      target_mode: form.target_mode,
+      scope_target_user_id: scopeTargetUserId,
+      discount_rules: discountRules,
       min_order_amount: Number(form.min_order_amount) || 0,
       min_quantity: Number(form.min_quantity) || 1,
       max_uses: form.max_uses ? Number(form.max_uses) : null,
+      per_user_limit: form.per_user_limit ? Number(form.per_user_limit) : null,
+      priority: Number(form.priority) || 0,
       is_stackable: form.is_stackable,
       is_active: form.is_active,
       starts_at: form.starts_at || null,
@@ -445,90 +410,55 @@ const AdminDiscounts = () => {
     setSaving(false);
 
     if (error) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
       return;
     }
 
-    toast({
-      title: editing ? "Discount updated" : "Discount created",
-    });
-
+    toast({ title: editing ? "Discount updated" : "Discount created" });
     setDialogOpen(false);
     setUserPickerOpen(false);
     fetchAll();
   };
 
-  const toggleActive = async (discount: DiscountCode) => {
-    const { error } = await supabase
-      .from("discount_codes")
-      .update({ is_active: !discount.is_active })
-      .eq("id", discount.id);
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const toggleActive = async (d: DiscountCode) => {
+    const { error } = await supabase.from("discount_codes").update({ is_active: !d.is_active }).eq("id", d.id);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     fetchAll();
   };
 
   const deleteDiscount = async (id: string) => {
     const { error } = await supabase.from("discount_codes").delete().eq("id", id);
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-      return;
-    }
-
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     toast({ title: "Discount deleted" });
     fetchAll();
   };
 
-  const getScopeLabel = (discount: DiscountCode) => {
-    if (discount.scope === "product") {
-      return products.find((product) => product.id === discount.scope_target_id)?.name || "Specific product";
+  const getTargetLabel = (d: DiscountCode): string => {
+    const mode = d.target_mode || "all";
+    if (mode === "all") return "All users";
+    if (mode === "specific_user") {
+      const u = users.find((u) => u.id === d.scope_target_user_id);
+      return u ? u.label : "1 specific user";
     }
-
-    if (discount.scope === "category") {
-      return categories.find((category) => category.id === discount.scope_target_id)?.name || "Specific category";
+    if (mode === "specific_users") {
+      const ids = d.discount_rules?.specific_ids || [];
+      return `${ids.length} specific user${ids.length !== 1 ? "s" : ""}`;
     }
-
-    if (discount.scope === "user") {
-      const rules = discount.discount_rules as Record<string, unknown> | null;
-      if (rules && Array.isArray(rules.groups)) {
-        const labels: string[] = [];
-        if (rules.groups.includes("specific") && Array.isArray(rules.specific_ids) && rules.specific_ids.length) labels.push(`${rules.specific_ids.length} specific`);
-        if (rules.groups.includes("existing")) labels.push("all existing");
-        if (rules.groups.includes("new_registered")) labels.push(`new (${(rules.new_registered_days as number) || 14}d)`);
-        if (rules.groups.includes("newcomers")) labels.push("newcomers");
-        if (rules.groups.includes("invited")) labels.push("invited");
-        return labels.join(" + ") || "User audience";
-      }
-      if (discount.scope_target_user_id) {
-        const matched = users.find((u) => u.id === discount.scope_target_user_id);
-        return matched ? matched.label : "1 specific user";
-      }
-      return "User audience";
+    if (mode === "rules_based") {
+      const groups = d.discount_rules?.groups || [];
+      return groups.length > 0 ? groups.join(", ") : "Rules";
     }
+    return "—";
+  };
 
-    if (discount.scope === "bulk") {
-      return `Bulk (min ${discount.min_quantity})`;
-    }
-
+  const getScopeLabel = (d: DiscountCode) => {
+    if (d.scope === "product") return products.find((p) => p.id === d.scope_target_id)?.name || "Specific product";
+    if (d.scope === "category") return categories.find((c) => c.id === d.scope_target_id)?.name || "Specific category";
+    if (d.scope === "bulk") return `Bulk (min ${d.min_quantity})`;
     return "All products";
   };
+
+  const showUserPicker = form.target_mode === "specific_user" || form.target_mode === "specific_users";
 
   return (
     <AdminLayout>
@@ -546,326 +476,159 @@ const AdminDiscounts = () => {
         <TabsContent value="discounts" className="space-y-6">
           <div className="flex justify-end">
             <Button onClick={openCreate} className="font-display uppercase tracking-wider">
-              <Plus className="mr-1 h-4 w-4" />
-              New Discount
+              <Plus className="mr-1 h-4 w-4" /> New Discount
             </Button>
           </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Code</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Value</TableHead>
-                <TableHead>Scope</TableHead>
-                <TableHead>Uses</TableHead>
-                <TableHead>Stackable</TableHead>
-                <TableHead>Period</TableHead>
-                <TableHead>Active</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-
-            <TableBody>
-              {discounts.map((discount) => (
-                <TableRow key={discount.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <code className="font-mono text-sm font-bold">{discount.code}</code>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => {
-                          navigator.clipboard.writeText(discount.code);
-                          toast({ title: "Copied!" });
-                        }}
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </TableCell>
-
-                  <TableCell className="text-sm capitalize">{discount.discount_type.replace("_", " ")}</TableCell>
-
-                  <TableCell className="font-display text-sm font-semibold">
-                    {discount.discount_type === "percentage"
-                      ? `${discount.discount_value}%`
-                      : discount.discount_type === "free_shipping"
-                        ? "Free"
-                        : `${discount.discount_value} kr`}
-                  </TableCell>
-
-                  <TableCell className="text-sm">{getScopeLabel(discount)}</TableCell>
-
-                  <TableCell className="text-sm">
-                    {discount.used_count}
-                    {discount.max_uses ? `/${discount.max_uses}` : ""}
-                  </TableCell>
-
-                  <TableCell>
-                    {discount.is_stackable ? (
-                      <Badge variant="outline" className="text-xs">
-                        Yes
-                      </Badge>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">No</span>
-                    )}
-                  </TableCell>
-
-                  <TableCell className="text-xs text-muted-foreground">
-                    {discount.expires_at ? `Until ${new Date(discount.expires_at).toLocaleDateString()}` : "No expiry"}
-                  </TableCell>
-
-                  <TableCell>
-                    <Switch checked={discount.is_active} onCheckedChange={() => toggleActive(discount)} />
-                  </TableCell>
-
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => openEdit(discount)}>
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive"
-                        onClick={() => deleteDiscount(discount.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-
-              {!loading && discounts.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
-                    No discount codes yet.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      <Dialog
-        open={dialogOpen}
-        onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) {
-            setUserPickerOpen(false);
-            setUserSearch("");
-          }
-        }}
-      >
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle className="font-display uppercase">
-              {editing ? "Edit Discount" : "Create Discount"}
-            </DialogTitle>
-            <DialogDescription>Configure discount code settings.</DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Code</Label>
-                <Input
-                  value={form.code}
-                  onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-                  placeholder="SUMMER2026"
-                />
-              </div>
-
-              <div>
-                <Label>Description</Label>
-                <Input
-                  value={form.description || ""}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="Summer sale 20% off"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Discount Type</Label>
-                <Select
-                  value={form.discount_type}
-                  onValueChange={(value) => setForm({ ...form, discount_type: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="percentage">Percentage (%)</SelectItem>
-                    <SelectItem value="fixed">Fixed Amount (kr)</SelectItem>
-                    <SelectItem value="free_shipping">Free Shipping</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>{form.discount_type === "percentage" ? "Percentage" : "Amount (kr)"}</Label>
-                <Input
-                  type="number"
-                  value={form.discount_value}
-                  onChange={(e) => setForm({ ...form, discount_value: Number(e.target.value) })}
-                  disabled={form.discount_type === "free_shipping"}
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label>Scope</Label>
-              <Select
-                value={form.scope}
-                onValueChange={(value) =>
-                  setForm({
-                    ...form,
-                    scope: value,
-                    scope_target_id: null,
-                    scope_target_user_ids: [],
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Products</SelectItem>
-                  <SelectItem value="product">Specific Product</SelectItem>
-                  <SelectItem value="category">Specific Category</SelectItem>
-                  <SelectItem value="user">User Audience</SelectItem>
-                  <SelectItem value="bulk">Bulk Discount</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {form.scope === "product" && (
-              <div>
-                <Label>Product</Label>
-                <Select
-                  value={form.scope_target_id ?? undefined}
-                  onValueChange={(value) => setForm({ ...form, scope_target_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select product" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {products.map((product) => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {form.scope === "category" && (
-              <div>
-                <Label>Category</Label>
-                <Select
-                  value={form.scope_target_id ?? undefined}
-                  onValueChange={(value) => setForm({ ...form, scope_target_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {form.scope === "user" && (
-              <div className="space-y-4 rounded-lg border border-border/40 bg-muted/20 p-4">
-                <Label className="text-sm font-semibold">Audience Targeting</Label>
-
-                {/* Audience group checkboxes */}
-                <div className="space-y-2">
-                  {([
-                    { value: "specific" as AudienceGroup, label: "Specific Users", desc: "Pick individual users by email or name" },
-                    { value: "existing" as AudienceGroup, label: "All Existing Users", desc: "Every registered account" },
-                    { value: "new_registered" as AudienceGroup, label: "Newly Registered", desc: "Users who signed up recently" },
-                    { value: "newcomers" as AudienceGroup, label: "Newcomers", desc: "New users based on configurable logic" },
-                    { value: "invited" as AudienceGroup, label: "Invited Users", desc: "Users who joined through a referral invite link or email" },
-                  ]).map((opt) => (
-                    <label key={opt.value} className="flex items-start gap-3 rounded-md border border-border/30 bg-card/60 p-3 cursor-pointer hover:bg-accent/10 transition-colors">
-                      <Checkbox
-                        checked={form.audience_groups.includes(opt.value)}
-                        onCheckedChange={() => toggleAudienceGroup(opt.value)}
-                        className="mt-0.5"
-                      />
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground">{opt.label}</p>
-                        <p className="text-xs text-muted-foreground">{opt.desc}</p>
-                      </div>
-                    </label>
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Value</TableHead>
+                    <TableHead>Scope</TableHead>
+                    <TableHead>Target</TableHead>
+                    <TableHead>Uses</TableHead>
+                    <TableHead>Period</TableHead>
+                    <TableHead>Active</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {discounts.map((d) => (
+                    <TableRow key={d.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <code className="font-mono text-sm font-bold">{d.code}</code>
+                          <Button variant="ghost" size="icon" className="h-6 w-6"
+                            onClick={() => { navigator.clipboard.writeText(d.code); toast({ title: "Copied!" }); }}>
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm capitalize">{d.discount_type.replace("_", " ")}</TableCell>
+                      <TableCell className="font-display text-sm font-semibold">
+                        {d.discount_type === "percentage" ? `${d.discount_value}%` : d.discount_type === "free_shipping" ? "Free" : `${d.discount_value} kr`}
+                      </TableCell>
+                      <TableCell className="text-sm">{getScopeLabel(d)}</TableCell>
+                      <TableCell className="text-sm">{getTargetLabel(d)}</TableCell>
+                      <TableCell className="text-sm">{d.used_count}{d.max_uses ? `/${d.max_uses}` : ""}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {d.expires_at ? `Until ${new Date(d.expires_at).toLocaleDateString()}` : "No expiry"}
+                      </TableCell>
+                      <TableCell><Switch checked={d.is_active} onCheckedChange={() => toggleActive(d)} /></TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(d)}>Edit</Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteDiscount(d.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   ))}
+                  {!loading && discounts.length === 0 && (
+                    <TableRow><TableCell colSpan={9} className="py-8 text-center text-muted-foreground">No discount codes yet.</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Create/Edit Dialog */}
+          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setUserPickerOpen(false); setUserSearch(""); } }}>
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+              <DialogHeader>
+                <DialogTitle className="font-display uppercase">{editing ? "Edit Discount" : "Create Discount"}</DialogTitle>
+                <DialogDescription>Configure discount code settings.</DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                {/* Code + Description */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label>Code</Label>
+                    <Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="SUMMER2026" />
+                  </div>
+                  <div>
+                    <Label>Description</Label>
+                    <Input value={form.description || ""} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Summer sale 20% off" />
+                  </div>
                 </div>
 
-                {/* Newly registered config */}
-                {form.audience_groups.includes("new_registered") && (
-                  <div className="rounded-md border border-border/30 bg-card/40 p-3 space-y-2">
-                    <Label className="text-xs">Registered within last</Label>
-                    <Select value={String(form.new_registered_days)} onValueChange={(v) => setForm({ ...form, new_registered_days: Number(v) })}>
-                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                {/* Type + Value */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label>Discount Type</Label>
+                    <Select value={form.discount_type} onValueChange={(v) => setForm({ ...form, discount_type: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="7">7 days</SelectItem>
-                        <SelectItem value="14">14 days</SelectItem>
-                        <SelectItem value="30">30 days</SelectItem>
-                        <SelectItem value="60">60 days</SelectItem>
-                        <SelectItem value="90">90 days</SelectItem>
+                        <SelectItem value="percentage">Percentage (%)</SelectItem>
+                        <SelectItem value="fixed">Fixed Amount (kr)</SelectItem>
+                        <SelectItem value="free_shipping">Free Shipping</SelectItem>
                       </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>{form.discount_type === "percentage" ? "Percentage" : "Amount (kr)"}</Label>
+                    <Input type="number" value={form.discount_value} onChange={(e) => setForm({ ...form, discount_value: Number(e.target.value) })} disabled={form.discount_type === "free_shipping"} />
+                  </div>
+                </div>
+
+                {/* Scope (product targeting) */}
+                <div>
+                  <Label>Product Scope</Label>
+                  <Select value={form.scope} onValueChange={(v) => setForm({ ...form, scope: v, scope_target_id: null })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Products</SelectItem>
+                      <SelectItem value="product">Specific Product</SelectItem>
+                      <SelectItem value="category">Specific Category</SelectItem>
+                      <SelectItem value="bulk">Bulk Discount</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {form.scope === "product" && (
+                  <div>
+                    <Label>Product</Label>
+                    <Select value={form.scope_target_id ?? undefined} onValueChange={(v) => setForm({ ...form, scope_target_id: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select product" /></SelectTrigger>
+                      <SelectContent>{products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                 )}
 
-                {/* Newcomers config */}
-                {form.audience_groups.includes("newcomers") && (
-                  <div className="rounded-md border border-border/30 bg-card/40 p-3 space-y-2">
-                    <Label className="text-xs">Newcomer logic</Label>
-                    <Select value={form.newcomer_logic} onValueChange={(v) => setForm({ ...form, newcomer_logic: v as "days" | "zero_orders" })}>
-                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="days">Registered within X days</SelectItem>
-                        <SelectItem value="zero_orders">Users with no activity</SelectItem>
-                      </SelectContent>
+                {form.scope === "category" && (
+                  <div>
+                    <Label>Category</Label>
+                    <Select value={form.scope_target_id ?? undefined} onValueChange={(v) => setForm({ ...form, scope_target_id: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                      <SelectContent>{categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                     </Select>
-                    {form.newcomer_logic === "days" && (
-                      <div className="pt-1">
-                        <Label className="text-xs">Within last</Label>
-                        <Select value={String(form.newcomer_days)} onValueChange={(v) => setForm({ ...form, newcomer_days: Number(v) })}>
-                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="7">7 days</SelectItem>
-                            <SelectItem value="14">14 days</SelectItem>
-                            <SelectItem value="30">30 days</SelectItem>
-                            <SelectItem value="60">60 days</SelectItem>
-                            <SelectItem value="90">90 days</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
                   </div>
                 )}
 
-                {/* Specific users picker */}
-                {form.audience_groups.includes("specific") && (
-                  <div className="space-y-2">
-                    <Label className="text-xs">Search & select users</Label>
+                {/* Target Mode (user targeting) */}
+                <div>
+                  <Label>User Targeting</Label>
+                  <Select value={form.target_mode} onValueChange={(v) => setForm({ ...form, target_mode: v as TargetMode, scope_target_user_id: null, specific_user_ids: [], rule_groups: [] })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Users</SelectItem>
+                      <SelectItem value="specific_user">Specific User</SelectItem>
+                      <SelectItem value="specific_users">Multiple Users</SelectItem>
+                      <SelectItem value="rules_based">Rules-Based</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* User Picker for specific_user / specific_users */}
+                {showUserPicker && (
+                  <div className="space-y-2 rounded-lg border border-border/40 bg-muted/20 p-4">
+                    <Label className="text-xs">{form.target_mode === "specific_user" ? "Select one user" : "Select users"}</Label>
                     <Popover open={userPickerOpen} onOpenChange={setUserPickerOpen}>
                       <PopoverTrigger asChild>
                         <Button type="button" variant="outline" role="combobox" className="w-full justify-between font-normal">
@@ -881,18 +644,16 @@ const AdminDiscounts = () => {
                           </div>
                         </div>
                         <div className="max-h-64 overflow-y-auto">
-                          {filteredUsers.length > 0 ? (
-                            filteredUsers.map((user) => {
-                              const selected = form.scope_target_user_ids.includes(user.id);
-                              return (
-                                <button key={user.id} type="button" onClick={() => toggleUserSelection(user.id)}
-                                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground">
-                                  <span className="truncate">{user.label}</span>
-                                  <Check className={`ml-3 h-4 w-4 ${selected ? "opacity-100" : "opacity-0"}`} />
-                                </button>
-                              );
-                            })
-                          ) : (
+                          {filteredUsers.length > 0 ? filteredUsers.map((u) => {
+                            const selected = selectedUserIds.includes(u.id);
+                            return (
+                              <button key={u.id} type="button" onClick={() => toggleUserSelection(u.id)}
+                                className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground">
+                                <span className="truncate">{u.label}</span>
+                                <Check className={`ml-3 h-4 w-4 ${selected ? "opacity-100" : "opacity-0"}`} />
+                              </button>
+                            );
+                          }) : (
                             <div className="px-3 py-3 text-sm text-muted-foreground">No users found</div>
                           )}
                         </div>
@@ -901,10 +662,10 @@ const AdminDiscounts = () => {
 
                     {selectedUsers.length > 0 && (
                       <div className="flex flex-wrap gap-2">
-                        {selectedUsers.map((user) => (
-                          <Badge key={user.id} variant="secondary" className="flex items-center gap-1 pr-1">
-                            <span className="max-w-[220px] truncate">{user.label}</span>
-                            <button type="button" onClick={() => removeSelectedUser(user.id)} className="rounded-full p-0.5 hover:bg-black/10">
+                        {selectedUsers.map((u) => (
+                          <Badge key={u.id} variant="secondary" className="flex items-center gap-1 pr-1">
+                            <span className="max-w-[220px] truncate">{u.label}</span>
+                            <button type="button" onClick={() => removeSelectedUser(u.id)} className="rounded-full p-0.5 hover:bg-black/10">
                               <X className="h-3 w-3" />
                             </button>
                           </Badge>
@@ -914,127 +675,162 @@ const AdminDiscounts = () => {
                   </div>
                 )}
 
-                {/* Live audience preview */}
-                <div className="rounded-md border border-primary/20 bg-primary/5 p-3 flex items-start gap-3">
-                  <Users className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    {form.audience_groups.includes("specific") && (
-                      <p className="text-sm text-foreground">
-                        <span className="font-semibold">{form.scope_target_user_ids.length}</span> manually selected user{form.scope_target_user_ids.length !== 1 ? "s" : ""}
-                      </p>
+                {/* Rules-Based targeting */}
+                {form.target_mode === "rules_based" && (
+                  <div className="space-y-3 rounded-lg border border-border/40 bg-muted/20 p-4">
+                    <Label className="text-sm font-semibold">Rule Groups</Label>
+                    <p className="text-xs text-muted-foreground">User must match at least one selected group (OR logic).</p>
+
+                    <div className="space-y-2">
+                      {RULE_GROUP_OPTIONS.map((opt) => (
+                        <label key={opt.value} className="flex items-start gap-3 rounded-md border border-border/30 bg-card/60 p-3 cursor-pointer hover:bg-accent/10 transition-colors">
+                          <Checkbox checked={form.rule_groups.includes(opt.value)} onCheckedChange={() => toggleRuleGroup(opt.value)} className="mt-0.5" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-foreground">{opt.label}</p>
+                            <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+
+                    {/* Conditional config panels */}
+                    {form.rule_groups.includes("new_registered") && (
+                      <div className="rounded-md border border-border/30 bg-card/40 p-3 space-y-2">
+                        <Label className="text-xs">Registered within last</Label>
+                        <Select value={String(form.new_registered_days)} onValueChange={(v) => setForm({ ...form, new_registered_days: Number(v) })}>
+                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {[7, 14, 30, 60, 90].map((d) => <SelectItem key={d} value={String(d)}>{d} days</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     )}
-                    {form.audience_groups.filter((g) => g !== "specific").length > 0 && (
-                      <p className="text-sm text-foreground">
-                        <span className="font-semibold">Dynamic groups:</span>{" "}
-                        {form.audience_groups.filter((g) => g !== "specific").map((g) => {
-                          if (g === "existing") return "all existing users";
-                          if (g === "new_registered") return `registered in last ${form.new_registered_days} days`;
-                          if (g === "newcomers") return form.newcomer_logic === "days" ? `newcomers (last ${form.newcomer_days} days)` : "newcomers (no activity)";
-                          if (g === "invited") return "invited users";
-                          return g;
-                        }).join(", ")}
-                      </p>
+
+                    {form.rule_groups.includes("newcomer") && (
+                      <div className="rounded-md border border-border/30 bg-card/40 p-3 space-y-2">
+                        <Label className="text-xs">Newcomer logic</Label>
+                        <Select value={form.newcomer_logic} onValueChange={(v) => setForm({ ...form, newcomer_logic: v as "days" | "zero_orders" })}>
+                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="days">Registered within X days</SelectItem>
+                            <SelectItem value="zero_orders">No completed orders yet</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <div className="pt-1">
+                          <Label className="text-xs">Within last</Label>
+                          <Select value={String(form.newcomer_days)} onValueChange={(v) => setForm({ ...form, newcomer_days: Number(v) })}>
+                            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {[7, 14, 30, 60, 90].map((d) => <SelectItem key={d} value={String(d)}>{d} days</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
                     )}
-                    {form.audience_groups.some((g) => g !== "specific") && (
-                      <p className="text-xs text-muted-foreground italic">
-                        Applies to current and future users who match the criteria
-                      </p>
+
+                    {form.rule_groups.includes("min_points") && (
+                      <div className="rounded-md border border-border/30 bg-card/40 p-3 space-y-2">
+                        <Label className="text-xs">Minimum loyalty points</Label>
+                        <Input type="number" value={form.min_points} onChange={(e) => setForm({ ...form, min_points: Number(e.target.value) })} className="h-9" />
+                      </div>
                     )}
-                    {form.audience_groups.length === 1 && form.audience_groups[0] === "specific" && (
-                      <p className="text-xs text-muted-foreground">Only the selected users above will receive this discount</p>
+
+                    {form.rule_groups.includes("min_orders") && (
+                      <div className="rounded-md border border-border/30 bg-card/40 p-3 space-y-2">
+                        <Label className="text-xs">Minimum completed orders</Label>
+                        <Input type="number" value={form.min_orders} onChange={(e) => setForm({ ...form, min_orders: Number(e.target.value) })} className="h-9" />
+                      </div>
                     )}
+
+                    {form.rule_groups.includes("referral") && (
+                      <div className="rounded-md border border-border/30 bg-card/40 p-3 space-y-2">
+                        <Label className="text-xs">Min successful invite orders</Label>
+                        <Input type="number" value={form.referral_min_successful} onChange={(e) => setForm({ ...form, referral_min_successful: Number(e.target.value) })} className="h-9" />
+                        <Label className="text-xs">Min registered invites</Label>
+                        <Input type="number" value={form.referral_min_registered} onChange={(e) => setForm({ ...form, referral_min_registered: Number(e.target.value) })} className="h-9" />
+                      </div>
+                    )}
+
+                    {form.rule_groups.includes("achievement") && (
+                      <div className="rounded-md border border-border/30 bg-card/40 p-3 space-y-2">
+                        <Label className="text-xs">Achievement keys (comma-separated)</Label>
+                        <Input value={form.achievement_keys.join(", ")} onChange={(e) => setForm({ ...form, achievement_keys: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} placeholder="invite_5, first_order" className="h-9" />
+                      </div>
+                    )}
+
+                    {/* Summary */}
+                    <div className="rounded-md border border-primary/20 bg-primary/5 p-3 flex items-start gap-3">
+                      <Users className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="text-sm text-foreground">
+                          <span className="font-semibold">{form.rule_groups.length}</span> rule group{form.rule_groups.length !== 1 ? "s" : ""} active
+                        </p>
+                        <p className="text-xs text-muted-foreground italic">Applies to current and future users matching these criteria</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Limits */}
+                <div className="grid gap-4 sm:grid-cols-4">
+                  <div>
+                    <Label>Min Order (kr)</Label>
+                    <Input type="number" value={form.min_order_amount} onChange={(e) => setForm({ ...form, min_order_amount: Number(e.target.value) })} />
+                  </div>
+                  <div>
+                    <Label>Min Quantity</Label>
+                    <Input type="number" value={form.min_quantity} onChange={(e) => setForm({ ...form, min_quantity: Number(e.target.value) })} />
+                  </div>
+                  <div>
+                    <Label>Max Uses</Label>
+                    <Input type="number" value={form.max_uses ?? ""} onChange={(e) => setForm({ ...form, max_uses: e.target.value ? Number(e.target.value) : null })} placeholder="∞" />
+                  </div>
+                  <div>
+                    <Label>Per-User Limit</Label>
+                    <Input type="number" value={form.per_user_limit ?? ""} onChange={(e) => setForm({ ...form, per_user_limit: e.target.value ? Number(e.target.value) : null })} placeholder="∞" />
                   </div>
                 </div>
-              </div>
-            )}
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div>
-                <Label>Min Order (kr)</Label>
-                <Input
-                  type="number"
-                  value={form.min_order_amount}
-                  onChange={(e) => setForm({ ...form, min_order_amount: Number(e.target.value) })}
-                />
-              </div>
+                {/* Dates */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label>Starts At</Label>
+                    <Input type="datetime-local" value={form.starts_at ? new Date(form.starts_at).toISOString().slice(0, 16) : ""} onChange={(e) => setForm({ ...form, starts_at: e.target.value ? new Date(e.target.value).toISOString() : null })} />
+                  </div>
+                  <div>
+                    <Label>Expires At</Label>
+                    <Input type="datetime-local" value={form.expires_at ? new Date(form.expires_at).toISOString().slice(0, 16) : ""} onChange={(e) => setForm({ ...form, expires_at: e.target.value ? new Date(e.target.value).toISOString() : null })} />
+                  </div>
+                </div>
 
-              <div>
-                <Label>Min Quantity</Label>
-                <Input
-                  type="number"
-                  value={form.min_quantity}
-                  onChange={(e) => setForm({ ...form, min_quantity: Number(e.target.value) })}
-                />
-              </div>
+                {/* Priority */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label>Priority</Label>
+                    <Input type="number" value={form.priority} onChange={(e) => setForm({ ...form, priority: Number(e.target.value) })} />
+                    <p className="text-xs text-muted-foreground mt-1">Higher = applied first when stacking</p>
+                  </div>
+                </div>
 
-              <div>
-                <Label>Max Uses</Label>
-                <Input
-                  type="number"
-                  value={form.max_uses ?? ""}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      max_uses: e.target.value ? Number(e.target.value) : null,
-                    })
-                  }
-                  placeholder="Unlimited"
-                />
-              </div>
-            </div>
+                {/* Toggles */}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
+                  <div className="flex items-center gap-2">
+                    <Switch checked={form.is_stackable} onCheckedChange={(v) => setForm({ ...form, is_stackable: v })} />
+                    <Label>Stackable</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
+                    <Label>Active</Label>
+                  </div>
+                </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Starts At</Label>
-                <Input
-                  type="datetime-local"
-                  value={form.starts_at ? new Date(form.starts_at).toISOString().slice(0, 16) : ""}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      starts_at: e.target.value ? new Date(e.target.value).toISOString() : null,
-                    })
-                  }
-                />
+                <Button onClick={handleSave} disabled={saving} className="w-full font-display uppercase tracking-wider">
+                  <Save className="mr-1 h-4 w-4" />
+                  {saving ? "Saving..." : editing ? "Update Discount" : "Create Discount"}
+                </Button>
               </div>
-
-              <div>
-                <Label>Expires At</Label>
-                <Input
-                  type="datetime-local"
-                  value={form.expires_at ? new Date(form.expires_at).toISOString().slice(0, 16) : ""}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      expires_at: e.target.value ? new Date(e.target.value).toISOString() : null,
-                    })
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={form.is_stackable}
-                  onCheckedChange={(value) => setForm({ ...form, is_stackable: value })}
-                />
-                <Label>Stackable with other discounts/vouchers</Label>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Switch checked={form.is_active} onCheckedChange={(value) => setForm({ ...form, is_active: value })} />
-                <Label>Active</Label>
-              </div>
-            </div>
-
-            <Button onClick={handleSave} disabled={saving} className="w-full font-display uppercase tracking-wider">
-              <Save className="mr-1 h-4 w-4" />
-              {saving ? "Saving..." : editing ? "Update Discount" : "Create Discount"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         <TabsContent value="rewards">

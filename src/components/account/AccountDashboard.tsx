@@ -363,6 +363,30 @@ export default function AccountDashboard({ overview, tt, orders, customOrders, u
         </Card>
       </div>
 
+      {/* Referral Summary Cards */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { icon: UserPlus, label: tt("account.dashboard.friendsInvited", "Friends Invited"), value: refStats.totalInvited },
+          { icon: Users, label: tt("account.dashboard.accountsFromInvites", "Accounts Created"), value: refStats.accountsCreated },
+          { icon: ShoppingCart, label: tt("account.dashboard.firstOrdersFromInvites", "First Orders"), value: refStats.firstOrders },
+          { icon: Star, label: tt("account.dashboard.referralPoints", "Referral Points"), value: refStats.pointsEarned },
+        ].map(({ icon: Icon, label, value }, i) => (
+          <motion.div key={label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+            <Card className="border-primary/10 cursor-pointer hover:border-primary/30 transition-colors" onClick={() => onSwitchTab("referrals")}>
+              <CardContent className="flex items-center gap-3 p-4">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                  <Icon className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">{label}</p>
+                  <p className="font-display text-xl font-bold text-foreground">{value}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
+      </div>
+
       {/* Row 2: Custom Orders (conditional) + Preferences */}
       <div className={`grid gap-4 ${showCustomOrders ? "lg:grid-cols-2" : ""}`}>
         {showCustomOrders && (

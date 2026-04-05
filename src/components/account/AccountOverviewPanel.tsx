@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Star, History, ChevronDown, ChevronUp, Package, Gift, CreditCard, TrendingUp, TrendingDown } from "lucide-react";
+import { Star, History, ChevronDown, ChevronUp, Package, Gift, CreditCard, TrendingUp, TrendingDown, UserPlus } from "lucide-react";
 import { motion } from "framer-motion";
 import type { AccountModuleProps, AccountPageConfig, UserVoucher } from "./types";
 import { classifyVoucher } from "./types";
@@ -84,20 +84,23 @@ const AccountOverviewPanel = ({ overview, tt, config }: Props) => {
                   {tt("account.points.noActivity", "No loyalty activity yet.")}
                 </div>
               ) : (
-                loyaltyHistory.slice(0, 8).map(row => (
+                loyaltyHistory.slice(0, 8).map(row => {
+                  const isReferral = (row.reason ?? "").toLowerCase().includes("referral");
+                  return (
                   <div key={row.id} className="flex items-center gap-3 rounded-xl border border-border bg-background/60 px-4 py-3">
-                    <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${row.points >= 0 ? "bg-green-500/10" : "bg-destructive/10"}`}>
-                      {row.points >= 0 ? <TrendingUp className="h-3.5 w-3.5 text-green-600" /> : <TrendingDown className="h-3.5 w-3.5 text-destructive" />}
+                    <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${isReferral ? "bg-purple-500/10" : row.points >= 0 ? "bg-green-500/10" : "bg-destructive/10"}`}>
+                      {isReferral ? <UserPlus className="h-3.5 w-3.5 text-purple-600" /> : row.points >= 0 ? <TrendingUp className="h-3.5 w-3.5 text-green-600" /> : <TrendingDown className="h-3.5 w-3.5 text-destructive" />}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm text-foreground">{row.reason || tt("account.points.pointsUpdate", "Points update")}</p>
                       <p className="text-xs text-muted-foreground">{new Date(row.created_at).toLocaleString()}</p>
                     </div>
-                    <div className={`font-display text-sm font-bold ${row.points >= 0 ? "text-green-600" : "text-destructive"}`}>
+                    <div className={`font-display text-sm font-bold ${isReferral ? "text-purple-600" : row.points >= 0 ? "text-green-600" : "text-destructive"}`}>
                       {row.points >= 0 ? `+${row.points}` : row.points}
                     </div>
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
           )}

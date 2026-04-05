@@ -33,6 +33,8 @@ import FrequentlyBoughtTogether from "@/components/smart/FrequentlyBoughtTogethe
 import ProductColorPicker, { type SelectedColor } from "@/components/product/ProductColorPicker";
 import ProductDetailSections from "@/components/product/ProductDetailSections";
 import ProductColorSummary from "@/components/product/ProductColorSummary";
+import ProductMediaLightbox from "@/components/product/ProductMediaLightbox";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const AUTO_GALLERY_MS = 6500;
 

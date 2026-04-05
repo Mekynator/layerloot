@@ -1,91 +1,91 @@
 
 
-## Final Mobile Performance, QA & Polish Pass
+## Redesign Page Editor Settings UI
 
-This is a refinement phase — no new features, just optimization and stabilization of what exists.
+### Problem
+Both editor panels (`BlockEditorPanel.tsx` at 1362 lines and `SettingsPanel.tsx` at 1008 lines) contain massive per-block render functions with flat, ungrouped fields. `BlockEditorPanel` has no tabs or sections — just one long scrolling form. Fields are inconsistently ordered across block types.
 
-### Analysis
+### Architecture
 
-After reviewing the codebase, the previous mobile passes already covered the major structural changes. What remains are targeted performance wins and consistency fixes:
+Extract a shared `BlockFieldGroups` component that both panels use. This component takes a block type + content and renders fields organized into standard collapsible groups. Each block type declares which groups it uses via a config map.
 
-**Already done well:**
-- Ambient blobs/grid/noise hidden on mobile
-- Backdrop-blur reduced on mobile
-- Hover lifts disabled on mobile
-- ProductCard has mobile-visible add button
-- Footer has collapsible sections
-- Products page has mobile filter drawer
-- Hero headings scale responsively
-- Safe area padding on sticky bars
-
-**Remaining issues found:**
-
-1. **HomeSocialProof cards** still have `hover:-translate-y-2` inline (not caught by CSS mobile override since it's inline Tailwind, not `.glass-card`)
-2. **ProductCard** uses `AnimatePresence` with crossfade for image cycling — expensive on mobile with many cards on screen
-3. **ProductCard** entrance animation has staggered delay (`index * 0.08`) — with 10+ cards this causes visible delay
-4. **HomeSocialProof** recent prints grid is `md:grid-cols-3 xl:grid-cols-4` — on mobile defaults to 1-col, should be 2-col
-5. **ChatWidget** is 669 lines, always mounted — should be lazy loaded
-6. **PromotionPopup** and **GiftClaimPopup** always mounted — should be lazy
-7. **Loading skeletons** use `aspect-square` but ProductCard uses `aspect-[4/5]` — mismatch causes CLS
-8. **`page-enter` animation** on every route change adds 400ms perceived delay
+```text
+BlockFieldGroups
+├── Content group (heading, subheading, body text)
+├── Media group (images, videos, backgrounds)
+├── Buttons / Links group (CTAs, actions)
+├── Data Source group (product source, category source, limits)
+├── Layout group (columns, alignment, layout mode)
+├── Repeater Items group (FAQ items, badges, slides, etc.)
+└── Visibility group (active, visible toggles)
+```
 
 ### Changes
 
-#### 1. Lazy Load Heavy Non-Critical Components
-**File:** `src/App.tsx`
+#### 1. New shared component: `src/components/admin/editor/BlockFieldGroups.tsx`
 
-Wrap `ChatWidget`, `PromotionPopup`, and `GiftClaimPopup` in `React.lazy` + `Suspense`. These are non-critical overlays that don't need to block initial render.
+A single reusable component that renders organized, collapsible accordion sections for any block type. It uses the existing `editable-schema.ts` to know which nodes exist, plus a new config map that assigns each field to a group.
 
-#### 2. Fix HomeSocialProof Mobile Layout
-**File:** `src/components/social/HomeSocialProof.tsx`
+- **Content**: text nodes (heading, subheading, body, eyebrow, caption, etc.)
+- **Media**: media nodes (bg_image, poster_image, image uploads)
+- **Buttons & Links**: button text/link pairs, action editors, CTA fields
+- **Data Source**: product source, category source, limits, filters (block-specific)
+- **Layout**: alignment, columns, layout mode, vertical alignment, width
+- **Items**: repeater section (FAQ items, badges, cards, slides, testimonials, gallery images)
+- **Visibility**: active toggle, section visibility, anchor ID
 
-- Change recent prints grid from `grid gap-4 md:grid-cols-3 xl:grid-cols-4` to `grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4`
-- Change popular products grid from `grid gap-6 sm:grid-cols-2 xl:grid-cols-4` to `grid grid-cols-2 gap-3 md:gap-6 xl:grid-cols-4`
-- Remove `hover:-translate-y-2` from recent prints cards (replace with conditional via CSS or remove entirely — the CSS mobile override doesn't catch inline Tailwind classes)
-- Reduce `space-y-16 py-16` to `space-y-10 py-10 lg:space-y-16 lg:py-20` on mobile
+Each group is a collapsible `AccordionItem`. Groups with no applicable fields are hidden. The "Content" group defaults open; others collapsed.
 
-#### 3. Optimize ProductCard Rendering
-**File:** `src/components/ProductCard.tsx`
+#### 2. Refactor `BlockEditorPanel.tsx`
 
-- Reduce entrance animation delay cap: change `delay: index * 0.08` to `delay: Math.min(index * 0.06, 0.3)` so cards beyond 5th all appear together
-- On mobile, skip `AnimatePresence` crossfade for image cycling — use instant swap (no `motion.img` wrapper, just regular `img`) to reduce GPU compositing
+Replace all 19 `render*Editor()` functions (~900 lines) with a single `<BlockFieldGroups>` call. Keep the Sheet wrapper, block header (title + active toggle), and save button.
 
-#### 4. Fix Skeleton CLS Mismatch
-**File:** `src/components/shared/loading-states.tsx`
+**New block header**: Shows block type badge, title input, active/inactive toggle, and save button in a compact sticky header area.
 
-- Change `ProductCardSkeleton` from `aspect-square` to `aspect-[4/5]` to match actual `ProductCard` image ratio
+**Before**: 1362 lines with 19 render functions
+**After**: ~200 lines — Sheet + header + `<BlockFieldGroups>` + save
 
-#### 5. Reduce Page Transition Delay
-**File:** `src/index.css`
+#### 3. Refactor `SettingsPanel.tsx` ContentEditor
 
-- Reduce `pageEnter` animation from `0.4s` to `0.25s` for snappier route changes
-- On mobile, disable the `pageEnter` animation entirely to feel instant
+Replace the `ContentEditor` function's schema-driven rendering + block-specific cases (~400 lines) with the same `<BlockFieldGroups>` component (content-only mode, since Style/Border/Device/More tabs already exist in SettingsPanel).
 
-#### 6. Memoize SmartHomeSections
-**File:** `src/components/smart/SmartHomeSections.tsx`
+#### 4. Field group config per block type
 
-- Wrap component export in `React.memo` to prevent re-renders when parent (Index) re-renders from unrelated state changes
+A simple config object mapping block types to their group overrides:
 
-#### 7. Global Mobile CSS Polish
-**File:** `src/index.css`
+```typescript
+const BLOCK_GROUP_CONFIG: Record<string, GroupConfig> = {
+  hero: {
+    content: ["eyebrow", "heading", "subheading"],
+    media: ["bg_image"],
+    buttons: ["buttons"], // special hero buttons array
+    layout: ["alignment", "buttonAlignment", "verticalAlignment"],
+    dataSource: [],
+    extra: [{ key: "overlayOpacity", type: "slider", min: 0, max: 100 }],
+  },
+  featured_products: {
+    content: ["heading", "subheading", "view_all_text", "view_all_link"],
+    dataSource: ["productSource", "limit", "tileShowTitle", "tileShowSubtitle"],
+    layout: ["alignment", "tileLayoutMode", "tileGridColumns"],
+  },
+  // ... etc for each block type
+};
+```
 
-- Add mobile rule to disable `hover:-translate-y-2` on all elements (catch-all for inline Tailwind hover transforms): `@media (max-width: 767px) { * { --tw-translate-y: 0 !important; } }` — too broad. Instead, add `.hover\:-translate-y-2:hover { transform: none; }` inside the existing mobile media query
-- Add `will-change: auto` reset on mobile to prevent unnecessary GPU layer promotion
+Fields not in any group fall to a generic "Advanced" accordion at the bottom.
 
-### Files Summary
+### Files
 
-| File | Changes |
-|------|---------|
-| `src/App.tsx` | Lazy load ChatWidget, PromotionPopup, GiftClaimPopup |
-| `src/components/social/HomeSocialProof.tsx` | 2-col mobile grid, remove hover lifts, tighter spacing |
-| `src/components/ProductCard.tsx` | Cap entrance delay, simplify mobile image swap |
-| `src/components/shared/loading-states.tsx` | Fix skeleton aspect ratio to match cards |
-| `src/index.css` | Faster page transition, mobile hover transform override |
-| `src/components/smart/SmartHomeSections.tsx` | React.memo wrapper |
+| File | Action |
+|------|--------|
+| `src/components/admin/editor/BlockFieldGroups.tsx` | **New** — shared grouped field renderer |
+| `src/components/admin/BlockEditorPanel.tsx` | **Refactor** — replace 19 render functions with BlockFieldGroups |
+| `src/components/admin/editor/SettingsPanel.tsx` | **Refactor** — replace ContentEditor internals with BlockFieldGroups |
 
 ### Technical Notes
 - No database changes
-- No new dependencies
-- All changes are CSS/component-level optimizations
-- Desktop behavior unchanged
+- No new dependencies — uses existing Accordion, Input, Select, Switch, Slider components
+- Existing `editable-schema.ts` is used as the field registry; the new config adds grouping metadata on top
+- All current editing capabilities preserved — just reorganized into collapsible groups
+- Desktop behavior unchanged; the grouped layout actually helps on smaller admin screens too
 

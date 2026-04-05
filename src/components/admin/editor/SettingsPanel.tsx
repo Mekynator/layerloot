@@ -12,6 +12,7 @@ import { Trash2, Plus, ArrowUp, ArrowDown, X, Palette, Type, Settings2, Layers, 
 import { useVisualEditor, type SelectedElement } from "@/contexts/VisualEditorContext";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
 import SliderField from "./controls/SliderField";
+import TileSectionControls from "./controls/TileSectionControls";
 import ColorPickerField from "./controls/ColorPickerField";
 import ImageUploadField from "./controls/ImageUploadField";
 import IconPickerField from "./controls/IconPickerField";
@@ -681,96 +682,43 @@ function ContentEditor({
           />
         )}
 
-        {/* Tile section settings for featured_products */}
+        {/* Product source for featured_products */}
         {blockType === "featured_products" && (
-          <Accordion type="single" collapsible className="mt-2">
-            <AccordionItem value="tile-settings" className="rounded-md border border-border/30 px-2">
-              <AccordionTrigger className="py-2 text-[11px] font-semibold uppercase tracking-wider">
-                Tile & Layout Settings
-              </AccordionTrigger>
-              <AccordionContent className="space-y-3 pb-3">
-                <SliderField
-                  label="Spacing (px)"
-                  value={content.tileSpacing ?? 16}
-                  onChange={(v) => patchContent("tileSpacing", v)}
-                  min={4} max={48} step={2}
-                />
-                <SliderField
-                  label="Card Min Width (carousel)"
-                  value={content.tileCardMinWidth ?? 260}
-                  onChange={(v) => patchContent("tileCardMinWidth", v)}
-                  min={150} max={400} step={10}
-                />
-                <SliderField
-                  label="Card Height (0=auto)"
-                  value={content.tileCardHeight ?? 0}
-                  onChange={(v) => patchContent("tileCardHeight", v)}
-                  min={0} max={600} step={10}
-                />
-                <div className="flex items-center justify-between">
-                  <Label className="text-[10px]">Show Title</Label>
-                  <Switch checked={content.tileShowTitle !== false} onCheckedChange={(v) => patchContent("tileShowTitle", v)} />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label className="text-[10px]">Show Subtitle</Label>
-                  <Switch checked={content.tileShowSubtitle !== false} onCheckedChange={(v) => patchContent("tileShowSubtitle", v)} />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label className="text-[10px]">Show Arrows</Label>
-                  <Switch checked={content.tileShowArrows !== false} onCheckedChange={(v) => patchContent("tileShowArrows", v)} />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label className="text-[10px]">Show Dots</Label>
-                  <Switch checked={content.tileShowDots !== false} onCheckedChange={(v) => patchContent("tileShowDots", v)} />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label className="text-[10px]">Auto Slideshow</Label>
-                  <Switch checked={content.tileAutoSlideshow === true} onCheckedChange={(v) => patchContent("tileAutoSlideshow", v)} />
-                </div>
-                {content.tileAutoSlideshow && (
-                  <SliderField
-                    label="Slideshow Speed (ms)"
-                    value={content.tileSlideshowSpeed ?? 5000}
-                    onChange={(v) => patchContent("tileSlideshowSpeed", v)}
-                    min={1000} max={15000} step={500}
-                  />
-                )}
-                <div className="flex items-center justify-between">
-                  <Label className="text-[10px]">Loop</Label>
-                  <Switch checked={content.tileLoop !== false} onCheckedChange={(v) => patchContent("tileLoop", v)} />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label className="text-[10px]">Drag/Scroll</Label>
-                  <Switch checked={content.tileDragEnabled !== false} onCheckedChange={(v) => patchContent("tileDragEnabled", v)} />
-                </div>
+          <div className="space-y-2">
+            <Label className="text-[10px] text-muted-foreground">Product Source</Label>
+            <Select value={(content.productSource as string) || "featured"} onValueChange={(v) => patchContent("productSource", v)}>
+              <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="featured">Featured</SelectItem>
+                <SelectItem value="best_sellers">Best Sellers</SelectItem>
+                <SelectItem value="newest">Newest</SelectItem>
+                <SelectItem value="discounted">Discounted</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
-                <div className="mt-2 border-t border-border/20 pt-2">
-                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Mobile Overrides</p>
-                  <div>
-                    <Label className="text-[10px]">Mobile Columns</Label>
-                    <Select value={String(content.tileMobileColumns ?? 2)} onValueChange={(v) => patchContent("tileMobileColumns", Number(v))}>
-                      <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1</SelectItem>
-                        <SelectItem value="2">2</SelectItem>
-                        <SelectItem value="3">3</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="mt-1">
-                    <Label className="text-[10px]">Mobile Layout</Label>
-                    <Select value={content.tileMobileLayoutMode || "carousel"} onValueChange={(v) => patchContent("tileMobileLayoutMode", v)}>
-                      <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="grid">Grid</SelectItem>
-                        <SelectItem value="carousel">Carousel</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+        {/* Category source controls */}
+        {blockType === "categories" && (
+          <div className="space-y-2">
+            <Label className="text-[10px] text-muted-foreground">Category Source</Label>
+            <Select value={(content.categorySource as string) || "automatic"} onValueChange={(v) => patchContent("categorySource", v)}>
+              <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="automatic">Automatic (by sort order)</SelectItem>
+                <SelectItem value="manual">Manual Selection</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="flex items-center justify-between">
+              <Label className="text-[10px]">Hide Empty Categories</Label>
+              <Switch checked={content.hideEmpty === true} onCheckedChange={(v) => patchContent("hideEmpty", v)} />
+            </div>
+          </div>
+        )}
+
+        {/* Tile section settings for featured_products and categories */}
+        {(blockType === "featured_products" || blockType === "categories") && (
+          <TileSectionControls content={content} patchContent={patchContent} />
         )}
 
         {/* Instagram feed specifics */}

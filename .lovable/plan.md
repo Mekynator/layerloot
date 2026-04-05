@@ -1,97 +1,107 @@
 
 
-## Redesign Account Area — Unified Dashboard Hub
+## Production-Ready Discount Engine Architecture
 
-### Current State
-
-The account area has **9 separate tabs** in a sidebar: Dashboard, Orders, Custom Requests, Invoices, Rewards, Vouchers, Referrals, Preferences, Settings. The Dashboard tab itself (`AccountDashboard.tsx`, 513 lines) already shows summary cards for orders, rewards, referrals, custom orders, preferences, recently viewed, and recommendations. `AccountOverviewPanel.tsx` adds a loyalty points banner on top. This means the dashboard is already quite dense, and switching between 9 tabs feels fragmented.
+### Problem
+The current system tries to store JSON objects into `scope_target_user_id` (UUID column), causing "invalid input syntax for type uuid". The `discount_rules` JSONB column was planned but never actually created (migration was empty comments). There's no `target_mode` column — just `scope` which mixes product/category/user/all targeting.
 
 ### Architecture
 
-**Eliminate the sidebar/tab system.** Replace it with a single scrollable dashboard page where each feature area is a compact summary card. Clicking any card opens a **Sheet (drawer)** containing the full module. This removes the need for separate tab navigation entirely.
-
 ```text
-┌─────────────────────────────────────────────────┐
-│ Greeting + email + Sign Out           [Admin]   │
-├─────────────────────────────────────────────────┤
-│ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌────────┐ │
-│ │ Points  │ │ Orders  │ │Vouchers │ │Gift $  │ │  ← stat tiles
-│ └─────────┘ └─────────┘ └─────────┘ └────────┘ │
-├─────────────────────────────────────────────────┤
-│ Quick Actions (smart, contextual)               │
-├─────────────────────────────────────────────────┤
-│ ┌──────────────────┐ ┌──────────────────┐       │
-│ │ Latest Order     │ │ Rewards Progress │       │  ← summary cards
-│ │ [View All →]     │ │ [Reward Store →] │       │    click → Sheet
-│ └──────────────────┘ └──────────────────┘       │
-│ ┌──────────────────┐ ┌──────────────────┐       │
-│ │ Custom Requests  │ │ Invite Friends   │       │
-│ │ [View All →]     │ │ [Details →]      │       │
-│ └──────────────────┘ └──────────────────┘       │
-│ ┌──────────────────┐ ┌──────────────────┐       │
-│ │ My Vouchers      │ │ Settings         │       │
-│ │ [Manage →]       │ │ [Edit →]         │       │
-│ └──────────────────┘ └──────────────────┘       │
-│ Recently Viewed (if any)                        │
-│ Recommended (if any)                            │
-└─────────────────────────────────────────────────┘
+discount_codes table:
+├── target_mode TEXT (all | specific_user | specific_users | rules_based)
+├── discount_rules JSONB (dynamic rules for rules_based mode)
+├── scope_target_user_id UUID (single user only, for specific_user mode)
+├── per_user_limit INT (max uses per individual user)
+├── priority INT (for stacking precedence)
+└── existing columns preserved
 ```
 
-Clicking "View All" / "Details" / "Manage" opens a **right-side Sheet** containing the existing module component (OrdersModule, RewardsModule, etc.). The URL updates with `?section=orders` for deep-linking.
+**No join table needed** — `specific_ids` inside `discount_rules` JSONB handles multi-user targeting cleanly (avoids extra table complexity for a feature that typically targets <100 users).
 
 ### Changes
 
-#### 1. Redesign `Account.tsx` — Remove sidebar/tabs, single dashboard view
-- Remove the sidebar nav and mobile pill bar
-- Remove the tab-switching state machine
-- Render one unified dashboard layout
-- Add Sheet-based detail views: each "View All" button opens a `<Sheet>` with the full module
-- Keep `?section=X` URL param for deep-linking (auto-open the right sheet on load)
-- Keep notification dot logic for orders/custom-requests (show on summary cards)
+#### 1. Database Migration
+Add columns to `discount_codes`:
+- `discount_rules JSONB DEFAULT NULL` — stores all rule-based targeting config
+- `target_mode TEXT DEFAULT 'all'` — determines evaluation path
+- `per_user_limit INT DEFAULT NULL` — per-user usage cap
+- `priority INT DEFAULT 0` — stacking priority
 
-#### 2. Merge `AccountOverviewPanel` into the dashboard
-- Remove `AccountOverviewPanel` as a separate component
-- Integrate the stat tiles (points, orders, vouchers, gift card balance) directly into the dashboard header as a compact 4-tile row
-- Remove the collapsible loyalty history from the top — move it inside the Rewards sheet instead
+Migrate existing data:
+- Rows with `scope_target_user_id` set → `target_mode = 'specific_user'`
+- All other rows → `target_mode = 'all'`
 
-#### 3. Simplify `AccountDashboard.tsx` — Leaner summary cards
-- Remove the heavy referral stats grid (4 cards) — consolidate into 1 compact referral summary card
-- Remove inline recently-viewed and recommended product grids from the main dashboard — keep them as smaller preview rows (2 items max on mobile, 4 on desktop)
-- Make each summary card a clickable trigger that opens the corresponding Sheet
-- Remove redundant "View all" buttons — the entire card becomes clickable
-- Keep Smart Quick Actions but cap at 3 visible + overflow
+#### 2. Edge Function: `validate-discount-eligibility`
+Complete rewrite with structured evaluation pipeline:
 
-#### 4. Create `AccountSheetView.tsx` — Reusable detail drawer
-- New component wrapping `<Sheet>` with consistent header, close button, back-to-dashboard behavior
-- Receives `section` prop and renders the appropriate module: OrdersModule, CustomOrdersModule, InvoicesModule, RewardsModule, VouchersModule, ReferralModule, SavedPreferencesModule, SettingsModule
-- Full-height sheet sliding from right on desktop, bottom sheet on mobile
-- Pass all existing module props through
+1. **Fetch discount** → validate exists + active
+2. **Date check** → starts_at / expires_at
+3. **Global usage** → max_uses vs used_count
+4. **Per-user usage** → count from `orders` where discount was used (or a lightweight tracking approach via discount_rules metadata)
+5. **Target mode routing**:
+   - `all` → eligible
+   - `specific_user` → match `scope_target_user_id`
+   - `specific_users` → match against `discount_rules.specific_ids[]`
+   - `rules_based` → evaluate each rule group with AND/OR logic
+6. **Rules evaluation** (for `rules_based`):
+   - `invited` → check `referral_invites` for `invited_user_id`
+   - `new_registered` → user created within N days
+   - `newcomer` → created within N days + optional zero-orders check
+   - `min_points` → check `get_user_points_balance()`
+   - `min_orders` → count completed orders
+   - `achievement_keys` → check loyalty_points reasons or a future achievements table
+   - `referral_requirements` → count successful referral invites
+7. **Return** eligibility + discount details + debug reason
 
-#### 5. Mobile optimization
-- Dashboard cards stack vertically in a single column
-- Sheet opens as full-screen overlay on mobile (side="bottom" or "right" with full height)
-- Stat tiles become 2x2 grid on mobile
-- Quick actions wrap to 2 rows max, overflow hidden behind "more" button
+#### 3. Admin UI: `AdminDiscounts.tsx`
+Refactor the save/load logic:
+
+- Add `target_mode` selector: "All Users" | "Specific User" | "Multiple Users" | "Rules-Based"
+- **Specific User**: single user picker → stores UUID in `scope_target_user_id`
+- **Multiple Users**: multi-select picker → stores IDs in `discount_rules.specific_ids`
+- **Rules-Based**: show rule builder with checkboxes/inputs for each group type
+- **All**: no user targeting fields shown
+- Remove the `audience_groups` approach — replace with cleaner `target_mode` routing
+- Validation: prevent mixed payloads, require correct fields per mode
+- Show matched user count estimate for rules-based targeting
+
+#### 4. DiscountForm type update
+```typescript
+type TargetMode = "all" | "specific_user" | "specific_users" | "rules_based";
+
+type DiscountForm = {
+  // ...existing fields
+  target_mode: TargetMode;
+  scope_target_user_id: string | null;  // for specific_user
+  rules: {
+    specific_ids: string[];             // for specific_users
+    groups: string[];                   // invited, new_registered, newcomer
+    new_registered_days: number;
+    newcomer_logic: "days" | "zero_orders";
+    newcomer_days: number;
+    min_points: number;
+    min_orders: number;
+    achievement_keys: string[];
+    referral_requirements: {
+      min_successful_invites: number;
+      min_registered_invites: number;
+    };
+  };
+};
+```
 
 ### Files
 
 | File | Action |
 |------|--------|
-| `src/pages/Account.tsx` | Rewrite — remove sidebar/tabs, single dashboard + Sheet-based detail views |
-| `src/components/account/AccountDashboard.tsx` | Simplify — leaner summary cards, remove heavy inline sections |
-| `src/components/account/AccountOverviewPanel.tsx` | Remove — merge stat tiles into Account.tsx |
-| `src/components/account/AccountSheetView.tsx` | New — reusable Sheet wrapper that renders detail modules |
+| Migration SQL | Add `discount_rules`, `target_mode`, `per_user_limit`, `priority` columns + data migration |
+| `supabase/functions/validate-discount-eligibility/index.ts` | Rewrite with structured evaluation pipeline and debug logging |
+| `src/pages/admin/AdminDiscounts.tsx` | Refactor targeting UI with `target_mode` selector and clean payload routing |
 
 ### What stays unchanged
-- All module components (OrdersModule, CustomOrdersModule, InvoicesModule, RewardsModule, VouchersModule, ReferralModule, SavedPreferencesModule, SettingsModule) — their internals remain identical
-- All data hooks (useAccountOverview, useReferrals, etc.)
-- All types and utility functions
-- AccountDropdown in header
-
-### Technical Notes
-- No database changes
-- No new dependencies — uses existing Sheet, Card, Badge, Button components
-- Deep-linking via `?section=orders` opens the corresponding Sheet on mount
-- Notification dots (hasNewOrders, hasNewCustomRequests) move to summary card badges
-- Loyalty history moves inside the Rewards sheet (inside RewardsModule or as a collapsible within the sheet)
+- All other discount fields (code, type, value, scope for product/category, dates, stackable, etc.)
+- Rewards store tab
+- Checkout savings hook
+- Cart discount application logic (reads discount_type/value which don't change)
 

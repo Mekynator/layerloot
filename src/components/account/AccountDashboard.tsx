@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import {
   Package, Truck, Star, Heart, ShoppingCart, ArrowRight, Sparkles, Gift, Zap, Plus,
   RotateCcw, Eye, FileText, CheckCircle, MessageSquare, Download, CreditCard,
+  UserPlus, Users,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { useBehaviorTracking } from "@/hooks/use-behavior-tracking";
 import { usePersonalizationEngine } from "@/hooks/use-personalization-engine";
 import { useStorefrontCatalog } from "@/hooks/use-storefront";
 import { useRecentlyViewedProducts } from "@/hooks/use-recently-viewed";
+import { useReferrals } from "@/hooks/use-referrals";
 import { formatPrice } from "@/lib/currency";
 import { motion } from "framer-motion";
 
@@ -190,7 +192,7 @@ function computeSmartActions(
   return actions.sort((a, b) => b.priority - a.priority).slice(0, 5);
 }
 
-export default function AccountDashboard({ overview, tt, orders, customOrders, userVouchers, onSwitchTab }: Props) {
+export default function AccountDashboard({ overview, tt, orders, customOrders, userVouchers, onSwitchTab, user }: Props & { user?: { id: string } }) {
   const pointsBalance = overview?.pointsBalance ?? 0;
   const pointsEarned = overview?.pointsEarned ?? 0;
   const pointsSpent = overview?.pointsSpent ?? 0;
@@ -202,6 +204,8 @@ export default function AccountDashboard({ overview, tt, orders, customOrders, u
   const { data: catalogData } = useStorefrontCatalog();
   const products = catalogData?.products ?? [];
   const { recentProducts } = useRecentlyViewedProducts();
+  const { data: referralData } = useReferrals(user?.id);
+  const refStats = referralData ?? { totalInvited: 0, accountsCreated: 0, firstOrders: 0, pointsEarned: 0 };
 
   const latestOrder = orders[0];
   const activeCustomOrders = customOrders.filter((o) => !isCustomOrderDone(o));

@@ -127,6 +127,7 @@ const Account = () => {
     { id: "invoices", label: tt("account.tabs.invoices", "Invoices"), icon: FileText },
     { id: "rewards", label: tt("account.tabs.rewards", "Rewards"), icon: Star },
     { id: "vouchers", label: tt("account.tabs.vouchers", "Vouchers"), icon: Gift },
+    { id: "referrals", label: tt("account.tabs.referrals", "Invite Friends"), icon: UserPlus },
     { id: "preferences", label: tt("account.tabs.preferences", "Preferences"), icon: Heart },
     { id: "settings", label: tt("account.tabs.settings", "Settings"), icon: Settings },
   ];

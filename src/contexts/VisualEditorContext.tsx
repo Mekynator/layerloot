@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import type { LayoutEntry } from "@/lib/static-page-sections";
+import { type LayoutEntry, type StaticSection, getStaticSections as getStaticSectionsFromLib } from "@/lib/static-page-sections";
 import { supabase } from "@/integrations/supabase/client";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
 import type { Tables } from "@/integrations/supabase/types";
@@ -43,6 +43,13 @@ interface EditorState {
   selectedBlockId: string | null;
   selectedBlock: SiteBlock | null;
   hoveredBlockId: string | null;
+
+  // Static section selection
+  selectedStaticId: string | null;
+  selectedStatic: StaticSection | null;
+  staticSettings: Record<string, Record<string, unknown>>;
+  selectStaticSection: (id: string | null) => void;
+  updateStaticSettings: (sectionId: string, key: string, value: unknown) => void;
 
   // Element-level selection
   selectedElement: SelectedElement | null;
@@ -250,7 +257,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   const [activePage, setActivePageRaw] = useState("home");
   const [draftBlocks, setDraftBlocks] = useState<SiteBlock[]>([]);
   const [savedBlocks, setSavedBlocks] = useState<SiteBlock[]>([]);
-  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [selectedBlockId, setSelectedBlockIdRaw] = useState<string | null>(null);
   const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [viewport, setViewport] = useState<Viewport>("desktop");
@@ -260,6 +267,56 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   const [draftStatus, setDraftStatus] = useState<DraftStatus>("published");
   const [scheduledAt, setScheduledAt] = useState<string | null>(null);
   const [layoutOrder, setLayoutOrderState] = useState<LayoutEntry[] | null>(null);
+
+  // Static section selection & settings
+  const [selectedStaticId, setSelectedStaticId] = useState<string | null>(null);
+  const [staticSettings, setStaticSettings] = useState<Record<string, Record<string, unknown>>>({});
+
+  
+
+  const selectedStatic = useMemo<StaticSection | null>(() => {
+    if (!selectedStaticId) return null;
+    const sections = getStaticSectionsFromLib(activePage);
+    return sections.find(s => s.id === selectedStaticId) ?? null;
+  }, [selectedStaticId, activePage]);
+
+  const selectStaticSection = useCallback((id: string | null) => {
+    setSelectedStaticId(id);
+    if (id) setSelectedBlockIdRaw(null);
+  }, []);
+
+  const setSelectedBlockId = useCallback((id: string | null) => {
+    setSelectedBlockIdRaw(id);
+    if (id) setSelectedStaticId(null);
+  }, []);
+
+  const loadStaticSettings = useCallback(async (page: string) => {
+    const key = `static_section_settings_${page}`;
+    const { data } = await supabase.from("site_settings").select("value").eq("key", key).maybeSingle();
+    if (data?.value && typeof data.value === "object" && !Array.isArray(data.value)) {
+      setStaticSettings(data.value as Record<string, Record<string, unknown>>);
+    } else {
+      setStaticSettings({});
+    }
+  }, []);
+
+  const saveStaticSettings = useCallback(async (page: string, settings: Record<string, Record<string, unknown>>) => {
+    const key = `static_section_settings_${page}`;
+    const { data: existing } = await supabase.from("site_settings").select("id").eq("key", key).maybeSingle();
+    if (existing) {
+      await supabase.from("site_settings").update({ value: settings as any }).eq("key", key);
+    } else {
+      await supabase.from("site_settings").insert({ key, value: settings as any });
+    }
+  }, []);
+
+  const updateStaticSettings = useCallback((sectionId: string, fieldKey: string, value: unknown) => {
+    setStaticSettings(prev => {
+      const next = { ...prev, [sectionId]: { ...(prev[sectionId] || {}), [fieldKey]: value } };
+      void saveStaticSettings(activePage, next);
+      return next;
+    });
+  }, [activePage, saveStaticSettings]);
 
   const selectElement = useCallback((el: SelectedElement | null) => {
     setSelectedElement(el);
@@ -347,7 +404,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   }, [pages, loadPages]);
 
   useEffect(() => { void loadPages(); }, [loadPages]);
-  useEffect(() => { if (activePage) { void fetchBlocks(activePage); void loadLayoutOrder(activePage); } }, [activePage, fetchBlocks]);
+  useEffect(() => { if (activePage) { void fetchBlocks(activePage); void loadLayoutOrder(activePage); void loadStaticSettings(activePage); } }, [activePage, fetchBlocks]);
 
   // Layout order persistence
   const loadLayoutOrder = useCallback(async (page: string) => {
@@ -582,6 +639,11 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     selectedBlockId,
     selectedBlock,
     hoveredBlockId,
+    selectedStaticId,
+    selectedStatic,
+    staticSettings,
+    selectStaticSection,
+    updateStaticSettings,
     selectedElement,
     selectElement,
     inlineEditingKey,
@@ -616,7 +678,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     frontendPages,
     globalPages,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [pages, activePage, selectedPage, pageBlocks, savedBlocks, isDirty, selectedBlockId, selectedBlock, hoveredBlockId, saving, publishing, draftStatus, scheduledAt, viewport, frontendPages, globalPages, undoVersion, selectedElement, inlineEditingKey, layoutOrder]);
+  }), [pages, activePage, selectedPage, pageBlocks, savedBlocks, isDirty, selectedBlockId, selectedBlock, hoveredBlockId, saving, publishing, draftStatus, scheduledAt, viewport, frontendPages, globalPages, undoVersion, selectedElement, inlineEditingKey, layoutOrder, selectedStaticId, selectedStatic, staticSettings]);
 
   return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;
 }

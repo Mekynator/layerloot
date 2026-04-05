@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 import { useVisualEditor } from "@/contexts/VisualEditorContext";
-import { Plus, Eye, EyeOff, Copy, Trash2, ChevronUp, ChevronDown, GripVertical, Lock } from "lucide-react";
+import { Plus, Eye, EyeOff, Copy, Trash2, ChevronUp, ChevronDown, GripVertical, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBlockSchema, getInlineTextKeys } from "./editable-schema";
 import { buildPreviewList, previewListToLayout, type PreviewItem } from "@/lib/static-page-sections";
@@ -20,6 +20,7 @@ export default function EditorCanvas() {
     deleteBlock, duplicateBlock, toggleBlockActive, addBlock, moveBlock,
     updateBlockContent, selectElement, inlineEditingKey, setInlineEditingKey,
     layoutOrder, setLayoutOrder,
+    selectedStaticId, selectStaticSection,
   } = useVisualEditor();
 
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -151,7 +152,9 @@ export default function EditorCanvas() {
                       item={item}
                       index={index}
                       totalItems={previewItems.length}
+                      isSelected={selectedStaticId === item.id}
                       isDragOver={dropIdx === index && dragIdx !== index}
+                      onSelect={() => selectStaticSection(item.id)}
                       onDragStart={() => handleUnifiedDragStart(index)}
                       onDragOver={(e) => handleUnifiedDragOver(e, index)}
                       onDragEnd={handleUnifiedDragEnd}
@@ -216,13 +219,15 @@ export default function EditorCanvas() {
   );
 }
 
-/* ─── Static Section Shell — renders real content ─── */
+/* ─── Static Section Shell — renders real content, now selectable ─── */
 
-function StaticSectionShell({ item, index, totalItems, isDragOver, onDragStart, onDragOver, onDragEnd, onMoveUp, onMoveDown, onAddAfter }: {
+function StaticSectionShell({ item, index, totalItems, isSelected, isDragOver, onSelect, onDragStart, onDragOver, onDragEnd, onMoveUp, onMoveDown, onAddAfter }: {
   item: PreviewItem;
   index: number;
   totalItems: number;
+  isSelected?: boolean;
   isDragOver: boolean;
+  onSelect?: () => void;
   onDragStart: () => void;
   onDragOver: (e: React.DragEvent) => void;
   onDragEnd: () => void;
@@ -232,6 +237,7 @@ function StaticSectionShell({ item, index, totalItems, isDragOver, onDragStart, 
 }) {
   const [hovered, setHovered] = useState(false);
   const section = item.staticSection!;
+  const showControls = hovered || isSelected;
 
   return (
     <div
@@ -240,29 +246,34 @@ function StaticSectionShell({ item, index, totalItems, isDragOver, onDragStart, 
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
+      onClick={(e) => { e.stopPropagation(); onSelect?.(); }}
       className={cn(
-        "relative transition-all duration-150",
+        "relative cursor-pointer transition-all duration-150",
+        isSelected && "ring-2 ring-primary/60 ring-inset z-10",
+        hovered && !isSelected && "ring-1 ring-primary/30 ring-inset",
         isDragOver && "border-t-2 border-t-primary",
       )}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Locked badge + drag handle */}
-      <div className="absolute top-2 left-3 z-20 flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-card/95 px-2 py-1 shadow-lg backdrop-blur-xl">
-        <GripVertical className="h-3 w-3 text-amber-500/60 cursor-grab" />
-        <Lock className="h-3 w-3 text-amber-500" />
-        <span className="font-display text-[9px] font-semibold uppercase tracking-wider text-amber-600">
-          {section.label}
-        </span>
-      </div>
+      {/* Label badge + drag handle */}
+      {showControls && (
+        <div className="absolute top-1 left-2 z-20 flex items-center gap-1.5 rounded-lg border border-border/30 bg-card/95 px-2 py-0.5 shadow-lg backdrop-blur-xl">
+          <GripVertical className="h-3 w-3 text-muted-foreground cursor-grab" />
+          <Settings2 className="h-3 w-3 text-primary" />
+          <span className="font-display text-[9px] font-semibold uppercase tracking-wider text-primary">
+            {section.label}
+          </span>
+        </div>
+      )}
 
       {/* Reorder controls on hover */}
-      {hovered && (
-        <div className="absolute top-2 right-3 z-20 flex items-center gap-0.5 rounded-lg border border-amber-500/30 bg-card/95 px-1 py-0.5 shadow-lg backdrop-blur-xl">
+      {showControls && (
+        <div className="absolute top-1 right-2 z-20 flex items-center gap-0.5 rounded-lg border border-border/30 bg-card/95 px-1 py-0.5 shadow-lg backdrop-blur-xl">
           <button
             onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
             disabled={index === 0}
-            className={cn("rounded p-1 text-amber-600 hover:text-amber-500", index === 0 && "opacity-30 cursor-not-allowed")}
+            className={cn("rounded p-1 text-muted-foreground hover:text-foreground", index === 0 && "opacity-30 cursor-not-allowed")}
             title="Move up"
           >
             <ChevronUp className="h-3 w-3" />
@@ -270,7 +281,7 @@ function StaticSectionShell({ item, index, totalItems, isDragOver, onDragStart, 
           <button
             onClick={(e) => { e.stopPropagation(); onMoveDown(); }}
             disabled={index === totalItems - 1}
-            className={cn("rounded p-1 text-amber-600 hover:text-amber-500", index === totalItems - 1 && "opacity-30 cursor-not-allowed")}
+            className={cn("rounded p-1 text-muted-foreground hover:text-foreground", index === totalItems - 1 && "opacity-30 cursor-not-allowed")}
             title="Move down"
           >
             <ChevronDown className="h-3 w-3" />
@@ -279,7 +290,7 @@ function StaticSectionShell({ item, index, totalItems, isDragOver, onDragStart, 
       )}
 
       {/* Real content preview — pointer-events disabled */}
-      <div className="pointer-events-none border-y border-dashed border-amber-500/20">
+      <div className="pointer-events-none">
         <StaticSectionPreview section={section} />
       </div>
 

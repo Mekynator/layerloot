@@ -1,67 +1,123 @@
 
 
-# Customer Account Dashboard Redesign
+## Phase 2: Referral System Backend Hardening
 
-## What Already Exists (no rebuild needed)
-The account system is already comprehensive with: dashboard overview cards, order timeline component, custom order messaging with chat UI, rewards with interactive tier progress bar, vouchers (4-tab system), saved preferences with dynamic product options, settings with shipping address and language, notification dots, invoice download, reorder functionality, and product recommendations.
+### Current State
 
-## What This Plan Adds/Upgrades
+The foundation already exists:
+- **`referral_invites` table** with `invite_code`, `inviter_user_id`, `invited_user_id`, `status`, point-granted flags, indexes, and unique constraint on `invite_code`
+- **`process-referral-rewards` edge function** handling invite linking (by code and email) and order-based reward granting with idempotent point flags
+- **RLS policies** for users, admins, and service role
+- **Frontend hooks** (`use-referrals.ts`) and UI (`ReferralModule.tsx`)
+- **Auth integration** capturing `ref` param and invoking the edge function on sign-in
+- **Stripe webhook** handling cart checkout but NOT triggering referral rewards on order completion
 
-### 1. Sidebar navigation layout
-Replace the top tab bar with a responsive left sidebar menu inside the account page. On mobile, it collapses to a horizontal scroll bar. Sidebar items: Dashboard, Orders, Custom Requests, Invoices (new), Rewards, Vouchers, Preferences, Settings.
+### What Needs To Be Done
 
-**File:** `src/pages/Account.tsx` — restructure layout to 2-column with sidebar + content area. Add `Invoices` as a new tab value. Expand `MainTab` type.
+#### 1. Database Migration — Extend Schema
 
-### 2. Welcome header with customer name
-Fetch `full_name` from profiles (already in the overview hook's profile fetch path). Display "Hello, {name}" prominently at the top with a greeting based on time of day.
+Add missing columns and hardening to `referral_invites`:
+- `inviter_points_amount INT NOT NULL DEFAULT 25`
+- `invited_points_amount INT NOT NULL DEFAULT 15`
+- `reward_granted_at TIMESTAMPTZ`
+- `notes TEXT`
+- `metadata JSONB DEFAULT '{}'`
+- Index on `status`
+- Index on `invited_email`
 
-**File:** `src/hooks/use-account-overview.ts` — add `profile` (full_name) to the returned data.
-**File:** `src/pages/Account.tsx` — display personalized welcome.
+Add `referred_by_invite_id` to `profiles`:
+- `referred_by_invite_id UUID REFERENCES referral_invites(id) ON DELETE SET NULL`
 
-### 3. Dashboard quick actions
-Add a row of quick action buttons below the welcome: "Continue last order", "Create custom request", "View rewards", "Reorder previous".
+Add a **trigger** on `referral_invites` to auto-set `updated_at`.
 
-**File:** `src/components/account/AccountDashboard.tsx` — add quick actions row.
+#### 2. RLS Policy Hardening
 
-### 4. Recently viewed products widget
-Add a "Recently Viewed" row to the dashboard using the existing `useRecentlyViewedProducts` hook.
+Tighten the existing `"Users update own invites"` policy to prevent users from modifying reward fields:
+- Drop the current UPDATE policy for authenticated users
+- Create a new restricted UPDATE policy that only allows updating non-sensitive fields (`invited_email`, `notes`) where `inviter_user_id = auth.uid()`
+- All reward-related updates (status, points_granted, invited_user_id) remain service-role only
 
-**File:** `src/components/account/AccountDashboard.tsx` — add recently viewed section.
+#### 3. Edge Function — Harden `process-referral-rewards`
 
-### 5. Always-visible order timeline
-Show the order timeline directly on each order card (not hidden behind "Review" click). Move review form into an expandable section.
+Update the existing function with:
+- **Input validation** using manual checks (ref_code format, UUID format for user_id/order_id)
+- **Idempotency** — before inserting loyalty points, check if a point row with the same reason pattern and order_id already exists
+- **Set `reward_granted_at`** when both point flags become true
+- **Set `profiles.referred_by_invite_id`** when linking an invited user
+- **Exclude invalid order statuses** — keep existing `VALID_ORDER_STATUSES` but explicitly reject `cancelled`, `refunded`, `failed`
+- **Return structured response** with details of what was processed
 
-**File:** `src/components/account/OrdersModule.tsx` — show `OrderTimeline` inline on every card.
+#### 4. Stripe Webhook — Trigger Referral Rewards on Order Completion
 
-### 6. Invoices section (new tab)
-New dedicated Invoices tab listing all invoices with: invoice number, order reference, date, total, download button. Fetches from the `invoices` table.
+In `stripe-webhook/index.ts`, after a successful cart checkout (`source === "cart"`):
+- Extract `user_id` from session metadata (must be passed from `create-checkout`)
+- Call `process-referral-rewards` with `{ order_id, user_id }` via internal function invoke
+- This ensures referral rewards trigger automatically on paid orders
 
-**File:** New `src/components/account/InvoicesModule.tsx`
-**File:** `src/hooks/use-account-overview.ts` — add invoices to the fetched data.
+Also update `create-checkout` to include `user_id` in Stripe session metadata if not already present.
 
-### 7. Expanded order detail inline
-When clicking an order card, show expandable detail with: items list, shipping address, payment method (from order metadata if available).
+#### 5. Discount Engine — Backend Targeting for Invited Users
 
-**File:** `src/components/account/OrdersModule.tsx` — fetch and display order_items inline on expand. Query `order_items` for the expanded order.
+The `AdminDiscounts.tsx` currently stores audience config as JSON in `scope_target_user_id`. The backend validation at checkout needs to evaluate this:
 
-### 8. Mobile-responsive sidebar
-On screens < lg, the sidebar becomes a horizontal scrollable pill bar (similar to existing tab bar but with icons).
+Create a new edge function `validate-discount-eligibility`:
+- Accepts `{ discount_code, user_id }`
+- Parses the audience JSON config from `discount_codes.scope_target_user_id`
+- Evaluates group membership:
+  - **invited**: check `referral_invites` for `invited_user_id = user_id`
+  - **new_registered**: check `auth.users.created_at` within configured days
+  - **newcomer**: check order count = 0 or created within X days
+  - **specific**: check user_id in the specific_ids list
+  - **all_existing**: always true for authenticated users
+- Returns `{ eligible: boolean, discount_value, discount_type }`
 
-**File:** `src/pages/Account.tsx` — responsive classes.
+#### 6. Achievement Counters — Database View
 
----
+Create a SQL view `referral_user_stats` for efficient dashboard queries:
+```sql
+CREATE VIEW referral_user_stats AS
+SELECT
+  inviter_user_id,
+  COUNT(*) FILTER (WHERE invited_email IS NOT NULL OR invited_user_id IS NOT NULL) AS total_invited,
+  COUNT(*) FILTER (WHERE status IN ('registered','ordered')) AS accounts_created,
+  COUNT(*) FILTER (WHERE status = 'ordered') AS first_orders,
+  COALESCE(SUM(inviter_points_amount) FILTER (WHERE inviter_points_granted), 0) AS points_earned
+FROM referral_invites
+GROUP BY inviter_user_id;
+```
 
-## Files Changed
+#### 7. Admin Reporting — Aggregate View
 
-| File | Change |
-|---|---|
-| `src/pages/Account.tsx` | Sidebar layout, new Invoices tab, welcome header, expanded tab list |
-| `src/components/account/AccountDashboard.tsx` | Quick actions, recently viewed section |
-| `src/components/account/OrdersModule.tsx` | Always-visible timeline, expandable order detail with items |
-| `src/components/account/InvoicesModule.tsx` | **New** — dedicated invoices list |
-| `src/hooks/use-account-overview.ts` | Add profile name + invoices to query |
-| `src/components/account/types.ts` | Add Invoice type, expand MainTab |
+Create `referral_admin_summary` view for admin dashboard:
+```sql
+CREATE VIEW referral_admin_summary AS
+SELECT
+  COUNT(*) AS total_invites,
+  COUNT(*) FILTER (WHERE status != 'pending') AS accepted,
+  COUNT(*) FILTER (WHERE status = 'ordered') AS first_orders,
+  SUM(CASE WHEN inviter_points_granted THEN inviter_points_amount ELSE 0 END) AS total_inviter_points,
+  SUM(CASE WHEN invited_points_granted THEN invited_points_amount ELSE 0 END) AS total_invited_points
+FROM referral_invites;
+```
 
-### No database changes needed
-All required tables (`invoices`, `order_items`, `profiles`) already exist with correct RLS.
+#### 8. Update Frontend Hook
+
+Update `use-referrals.ts` to use the new `inviter_points_amount` column instead of hardcoded `* 25` calculation.
+
+### Files to Create/Edit
+
+| File | Action |
+|------|--------|
+| `supabase/migrations/...` | New migration with schema changes, views, trigger, policy updates |
+| `supabase/functions/process-referral-rewards/index.ts` | Harden with validation, idempotency, profile linking |
+| `supabase/functions/stripe-webhook/index.ts` | Add referral reward trigger after cart checkout |
+| `supabase/functions/validate-discount-eligibility/index.ts` | New function for backend discount targeting |
+| `src/hooks/use-referrals.ts` | Use dynamic point amounts from DB |
+
+### Technical Decisions
+
+- Views instead of materialized views — data is small enough for live queries
+- No profile `is_invited_user` column — derivable from `referred_by_invite_id IS NOT NULL`
+- Reward idempotency via both boolean flags AND duplicate loyalty_points check
+- Discount validation as separate edge function for reuse from checkout and cart
 

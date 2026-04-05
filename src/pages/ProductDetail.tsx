@@ -33,6 +33,8 @@ import FrequentlyBoughtTogether from "@/components/smart/FrequentlyBoughtTogethe
 import ProductColorPicker, { type SelectedColor } from "@/components/product/ProductColorPicker";
 import ProductDetailSections from "@/components/product/ProductDetailSections";
 import ProductColorSummary from "@/components/product/ProductColorSummary";
+import ProductMediaLightbox from "@/components/product/ProductMediaLightbox";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const AUTO_GALLERY_MS = 6500;
 
@@ -51,6 +53,9 @@ const ProductDetail = () => {
   const [submitting, setSubmitting] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
   const [selectedColors, setSelectedColors] = useState<SelectedColor[]>([]);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const isMobile = useIsMobile();
 
   const heroImageRef = useRef<HTMLImageElement | null>(null);
   const addToCartSectionRef = useRef<HTMLDivElement | null>(null);
@@ -71,12 +76,12 @@ const ProductDetail = () => {
   const hasSimpleVariants = variants.length > 0 && !hasConfiguratorAttrs;
 
   useEffect(() => {
-    if (show3D || images.length <= 1) return;
+    if (show3D || images.length <= 1 || lightboxOpen) return;
     const timer = window.setInterval(() => {
       setCurrentImage((p) => (p + 1) % images.length);
     }, AUTO_GALLERY_MS);
     return () => window.clearInterval(timer);
-  }, [images.length, show3D]);
+  }, [images.length, show3D, lightboxOpen]);
 
   useEffect(() => {
     if (!justAdded) return;
@@ -186,21 +191,25 @@ const ProductDetail = () => {
           </Link>
         </motion.div>
 
-        <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+        <div className="grid gap-4 md:gap-6 lg:grid-cols-2 lg:gap-8">
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-3 md:space-y-4">
             {show3D && product.model_url ? (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <ModelViewer url={product.model_url} className="aspect-square" />
               </motion.div>
             ) : (
               <div
-                className="glass-card relative aspect-square overflow-hidden rounded-xl md:rounded-[1.75rem]"
+                className="glass-card relative aspect-[4/3] md:aspect-square overflow-hidden rounded-xl md:rounded-[1.75rem] cursor-zoom-in"
                 onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
                 onTouchEnd={(e) => {
                   const diff = touchStartX.current - e.changedTouches[0].clientX;
                   if (Math.abs(diff) > 50) {
                     setCurrentImage((p) => diff > 0 ? (p + 1) % images.length : (p - 1 + images.length) % images.length);
                   }
+                }}
+                onClick={() => {
+                  setLightboxIndex(currentImage);
+                  setLightboxOpen(true);
                 }}
               >
                 <AnimatePresence mode="wait">
@@ -260,7 +269,7 @@ const ProductDetail = () => {
             <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none md:gap-2">
               {images.map((img, i) => (
                 <motion.button
-                  whileHover={{ y: -2 }}
+                  whileHover={isMobile ? undefined : { y: -2 }}
                   key={i}
                   onClick={() => {
                     setCurrentImage(i);
@@ -277,7 +286,7 @@ const ProductDetail = () => {
               ))}
               {product.model_url && (
                 <motion.button
-                  whileHover={{ y: -2 }}
+                  whileHover={isMobile ? undefined : { y: -2 }}
                   onClick={() => setShow3D(true)}
                   className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-xl transition-all duration-200 ${
                     show3D
@@ -327,7 +336,7 @@ const ProductDetail = () => {
             {/* Color summary tile under description */}
             <ProductColorSummary productId={product.id} />
 
-            <motion.div whileHover={{ y: -2 }} className="section-surface p-4">
+            <motion.div whileHover={isMobile ? undefined : { y: -2 }} className="section-surface p-4">
 
               {hasConfiguratorAttrs && (
                 <ProductConfigurator
@@ -345,7 +354,7 @@ const ProductDetail = () => {
                   <div className="flex flex-wrap gap-2">
                     {variants.map((variant) => (
                       <motion.button
-                        whileHover={{ y: -2 }}
+                        whileHover={isMobile ? undefined : { y: -2 }}
                         whileTap={{ scale: 0.98 }}
                         key={variant.id}
                         onClick={() => setSelectedVariantId(selectedVariant?.id === variant.id ? null : variant.id)}
@@ -363,7 +372,7 @@ const ProductDetail = () => {
               )}
             </motion.div>
 
-            <motion.div whileHover={{ y: -2 }}>
+            <motion.div whileHover={isMobile ? undefined : { y: -2 }}>
               <PrintInfo
                 printTimeHours={product.print_time_hours}
                 dimensionsCm={product.dimensions_cm}
@@ -375,7 +384,7 @@ const ProductDetail = () => {
 
             {/* Color Picker */}
             {(product as any).enable_color_picker && (
-              <motion.div whileHover={{ y: -2 }} className="section-surface p-4">
+              <motion.div whileHover={isMobile ? undefined : { y: -2 }} className="section-surface p-4">
                 <ProductColorPicker
                   productId={product.id}
                   selectionMode={(product as any).color_selection_mode ?? "single"}
@@ -579,6 +588,15 @@ const ProductDetail = () => {
           maxItems={6}
         />
       </div>
+
+      {/* Lightbox */}
+      {lightboxOpen && (
+        <ProductMediaLightbox
+          images={images}
+          startIndex={lightboxIndex}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
 
       {/* Sticky Add-to-Cart bar */}
       <StickyAddToCart

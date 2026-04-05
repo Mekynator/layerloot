@@ -338,7 +338,7 @@ export default function ModelViewer({
   const viewer = (full = false) => (
     <div
       className={`relative h-full w-full overflow-hidden bg-gradient-to-b from-white to-zinc-100 ${
-        full ? "rounded-none" : "min-h-[320px] rounded-2xl sm:min-h-[420px]"
+        full ? "rounded-none" : "min-h-[260px] sm:min-h-[320px] rounded-2xl sm:min-h-[420px]"
       } ${className}`}
     >
       <div className="absolute inset-0 flex items-center justify-center">

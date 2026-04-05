@@ -141,12 +141,14 @@ const AdminDiscounts = () => {
       { data: categoryData, error: categoryError },
       authUsersRes,
       profilesRes,
+      { data: referralData, error: referralError },
     ] = await Promise.all([
       supabase.from("discount_codes").select("*").order("created_at", { ascending: false }),
       supabase.from("products").select("id, name").order("name"),
       supabase.from("categories").select("id, name").order("name"),
       supabase.functions.invoke("admin-users"),
       supabase.from("profiles").select("id, user_id, full_name, created_at, updated_at"),
+      supabase.from("referral_invites").select("invited_user_id").not("invited_user_id", "is", null),
     ]);
 
     if (discountError) {

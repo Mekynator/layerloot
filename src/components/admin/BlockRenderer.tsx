@@ -487,7 +487,7 @@ const ActionButton = ({
   );
 
   if (isEditorPreviewMode()) return <span className="inline-flex">{buttonNode}</span>;
-  if (action.actionType === "none" || !action.actionTarget) return buttonNode;
+  if (action.actionType === "none" || !action.actionTarget || typeof action.actionTarget !== "string") return buttonNode;
 
   if (action.actionType === "external_link") {
     return (

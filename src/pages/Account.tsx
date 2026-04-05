@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import {
   Package, Gift, LogOut, Shield, Settings, LayoutDashboard,
-  MessageSquare, FileText, Heart, Star,
+  MessageSquare, FileText, Heart, Star, UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -20,6 +20,7 @@ import VouchersModule from "@/components/account/VouchersModule";
 import SettingsModule from "@/components/account/SettingsModule";
 import SavedPreferencesModule from "@/components/account/SavedPreferencesModule";
 import InvoicesModule from "@/components/account/InvoicesModule";
+import ReferralModule from "@/components/account/ReferralModule";
 import type {
   AccountPageConfig, Order, CustomOrder, CustomOrderMessage,
   Voucher, UserVoucher, SeenState,
@@ -29,9 +30,9 @@ import {
   isAfter, getLatestDate,
 } from "@/components/account/types";
 
-type MainTab = "dashboard" | "orders" | "custom-requests" | "invoices" | "rewards" | "vouchers" | "preferences" | "settings";
+type MainTab = "dashboard" | "orders" | "custom-requests" | "invoices" | "rewards" | "vouchers" | "referrals" | "preferences" | "settings";
 
-const VALID_TABS: MainTab[] = ["dashboard", "orders", "custom-requests", "invoices", "rewards", "vouchers", "preferences", "settings"];
+const VALID_TABS: MainTab[] = ["dashboard", "orders", "custom-requests", "invoices", "rewards", "vouchers", "referrals", "preferences", "settings"];
 
 const Account = () => {
   const { user, isAdmin, signOut, loading } = useAuth();

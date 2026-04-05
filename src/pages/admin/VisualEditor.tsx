@@ -18,7 +18,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/componen
 function EditorInner() {
   const navigate = useNavigate();
   const { isAdmin, loading, user } = useAuth();
-  const { selectedPage, loadPages, setActivePage, pages, isDirty, save, undo, redo } = useVisualEditor();
+  const { selectedPage, loadPages, setActivePage, activePage, pages, isDirty, save, undo, redo } = useVisualEditor();
 
   const [addBlockOpen, setAddBlockOpen] = useState(false);
   const [pageDialogOpen, setPageDialogOpen] = useState(false);

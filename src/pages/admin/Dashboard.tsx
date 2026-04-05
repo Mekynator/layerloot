@@ -24,6 +24,7 @@ import TranslationWidget from "@/components/admin/dashboard/TranslationWidget";
 import ProductAttentionWidget from "@/components/admin/dashboard/ProductAttentionWidget";
 import QuickActionsWidget from "@/components/admin/dashboard/QuickActionsWidget";
 import RecentActivityWidget from "@/components/admin/dashboard/RecentActivityWidget";
+import ReferralStatsWidget from "@/components/admin/dashboard/ReferralStatsWidget";
 
 const CHART_COLORS = [
   "hsl(var(--primary))", "hsl(160,60%,45%)", "hsl(45,90%,55%)",
@@ -32,11 +33,11 @@ const CHART_COLORS = [
 
 const TILE_CLASS = "rounded-xl border border-primary/20 shadow-[0_0_12px_-4px_hsl(var(--primary)/0.15)] transition-all duration-200 hover:border-primary/35 hover:shadow-[0_0_20px_-4px_hsl(var(--primary)/0.25)]";
 
-type WidgetKey = "action" | "kpi" | "content" | "operations" | "product" | "translation" | "charts" | "activity" | "shortcuts";
+type WidgetKey = "action" | "kpi" | "content" | "operations" | "product" | "translation" | "charts" | "activity" | "shortcuts" | "referrals";
 
 const ROLE_WIDGETS: Record<NonNullable<AdminRole>, WidgetKey[]> = {
-  super_admin: ["action", "kpi", "content", "operations", "product", "translation", "charts", "activity", "shortcuts"],
-  admin: ["action", "kpi", "content", "operations", "product", "translation", "charts", "activity", "shortcuts"],
+  super_admin: ["action", "kpi", "content", "operations", "product", "translation", "referrals", "charts", "activity", "shortcuts"],
+  admin: ["action", "kpi", "content", "operations", "product", "translation", "referrals", "charts", "activity", "shortcuts"],
   editor: ["content", "translation", "activity", "shortcuts"],
   support: ["action", "operations", "activity", "shortcuts"],
 };
@@ -176,6 +177,9 @@ const Dashboard = () => {
               {show("translation") && <TranslationWidget data={data} />}
             </div>
           )}
+
+          {/* Referral Program */}
+          {show("referrals") && <ReferralStatsWidget />}
 
           {/* Charts */}
           {show("charts") && (

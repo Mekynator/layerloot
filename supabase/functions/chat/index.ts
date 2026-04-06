@@ -135,7 +135,10 @@ function buildSystemPrompt(user: any, ctx: Record<string, any>, cart: any, page:
   const cartCount = Number(cart?.item_count ?? 0);
   const freeShipGap = Math.max(0, (ctx.shipping?.free_shipping_threshold ?? FREE_SHIPPING_THRESHOLD) - cartTotal);
 
-  const productList = (ctx.products ?? []).slice(0, 12).map((p: any) => `- ${p.name} (${p.price} kr) → ${p.url}`).join("\n");
+  const productList = (ctx.products ?? []).slice(0, 12).map((p: any) => {
+    const img = p.images?.[0] || "";
+    return `- ${p.name} | ${p.price} kr | id:${p.id} | img:${img} | ${p.url}`;
+  }).join("\n");
   const categoryList = (ctx.categories ?? []).map((c: any) => `- ${c.name} → /products?category=${c.slug}`).join("\n");
 
   // Find matching page rule

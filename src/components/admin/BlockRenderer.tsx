@@ -1813,7 +1813,7 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
         </div>
 
         {currentSlide && (currentSlide.title || currentSlide.subtitle) && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-5 text-white">
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-5 text-white hidden md:block">
             {currentSlide.title && (
               <h3 className="font-display text-lg font-bold uppercase">{getLocalizedValue(currentSlide.title)}</h3>
             )}

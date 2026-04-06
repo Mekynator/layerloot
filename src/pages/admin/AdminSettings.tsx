@@ -400,7 +400,7 @@ const AdminSettings = () => {
               </div>
               <div><Label className="text-xs">Custom Logo Image URL</Label><Input value={brandingDraft.value.logo_image_url} onChange={e => brandingDraft.setValue(prev => ({ ...prev, logo_image_url: e.target.value }))} placeholder="https://... (overrides text logo)" /></div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div><Label className="text-xs">Logo Link</Label><Input value={brandingDraft.value.logo_link} onChange={e => brandingDraft.setValue(prev => ({ ...prev, logo_link: e.target.value }))} placeholder="/" /></div>
+                <PageLinkSelect label="Logo Link" value={brandingDraft.value.logo_link} onChange={v => brandingDraft.setValue(prev => ({ ...prev, logo_link: v }))} />
                 <div><Label className="text-xs">Logo Alt Text</Label><Input value={brandingDraft.value.logo_alt} onChange={e => brandingDraft.setValue(prev => ({ ...prev, logo_alt: e.target.value }))} placeholder="LayerLoot" /></div>
               </div>
               <p className="text-[10px] text-muted-foreground">→ Affects: Header logo, Footer logo, page title</p>

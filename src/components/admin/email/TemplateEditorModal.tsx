@@ -57,9 +57,23 @@ export default function TemplateEditorModal({ template: initial, open, onClose, 
     }
   };
 
+  const TRANSACTIONAL_TEMPLATE_KEYS = new Set([
+    'welcome', 'order-confirmation', 'order-receipt', 'custom-order-confirmation',
+    'contact-auto-reply', 'quote-sent', 'payment-confirmation', 'shipping-update',
+    'delivered', 'gift-card', 'admin-notification',
+  ]);
+
   const handleTestSend = async () => {
     if (!user?.email) {
       toast({ title: "No email", description: "Could not determine your email address.", variant: "destructive" });
+      return;
+    }
+    if (!TRANSACTIONAL_TEMPLATE_KEYS.has(t.trigger_key)) {
+      toast({
+        title: "Test send not available",
+        description: "This template is a custom order message template, not a transactional email. Test sends are only available for transactional email templates.",
+        variant: "destructive",
+      });
       return;
     }
     setSendingTest(true);

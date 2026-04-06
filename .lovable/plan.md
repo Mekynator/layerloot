@@ -1,107 +1,110 @@
 
 
-## Production-Ready Discount Engine Architecture
+# Audit & Refactor: Remove Static Fallback Rendering Platform-Wide
 
-### Problem
-The current system tries to store JSON objects into `scope_target_user_id` (UUID column), causing "invalid input syntax for type uuid". The `discount_rules` JSONB column was planned but never actually created (migration was empty comments). There's no `target_mode` column — just `scope` which mixes product/category/user/all targeting.
+## Current Architecture Analysis
 
-### Architecture
+The platform has two rendering paths:
+1. **DynamicPage** — pure DB-driven block renderer (used by Home/Index wrapper, About, and catch-all `/:slug` routes). Correctly respects `is_active`, `sort_order`, and publish state.
+2. **Hybrid pages** — pages with their own dedicated React components that fetch `site_blocks` independently AND render hardcoded static JSX alongside them. The static JSX bypasses visibility controls.
 
-```text
-discount_codes table:
-├── target_mode TEXT (all | specific_user | specific_users | rules_based)
-├── discount_rules JSONB (dynamic rules for rules_based mode)
-├── scope_target_user_id UUID (single user only, for specific_user mode)
-├── per_user_limit INT (max uses per individual user)
-├── priority INT (for stacking precedence)
-└── existing columns preserved
-```
+### Pages with Static/Hybrid Rendering (the problem)
 
-**No join table needed** — `specific_ids` inside `discount_rules` JSONB handles multi-user targeting cleanly (avoids extra table complexity for a feature that typically targets <100 users).
+| Page | Static JSX present | Uses `isVisible()` | Fully DB-driven |
+|------|-------------------|-------------------|-----------------|
+| **Home (Index.tsx)** | SmartHomeSections, HomeSocialProof | Yes (partial) | No — static sections rendered after DynamicPage |
+| **Products** | Header/sidebar, product grid, search | Yes (partial) | No — static grid/header always rendered alongside DB blocks |
+| **Contact** | Contact form, contact info sidebar | No | No — form always renders |
+| **Gallery** | Gallery grid, upload dialog | No | No — gallery always renders |
+| **CreateYourOwn** | Tabs (custom print, lithophane, gift finder) | No | No — tools always render |
+| **Creations** | Showcase tabs, community gallery | No | No — tabs always render |
+| **SubmitDesign** | Upload form | No | No — form always renders |
+| **Cart** | Cart items, summary, upsell | No | No — cart always renders |
+| **Account** | Dashboard, orders, settings | No | No — dashboard always renders |
+| **OrderTracking** | Order detail, timeline | No | No — purely static |
+| **ProductDetail** | Product page (images, reviews, Q&A) | No | No — purely static |
+| **Policies** | Markdown from `site_settings` + hardcoded defaults | No | No — uses fallback defaults |
+| **Footer** | Contact info, nav links | No | N/A — layout component |
+| **Header** | Navigation | No | N/A — layout component |
 
-### Changes
+### Static Section Definitions (in `static-page-sections.ts`)
 
-#### 1. Database Migration
-Add columns to `discount_codes`:
-- `discount_rules JSONB DEFAULT NULL` — stores all rule-based targeting config
-- `target_mode TEXT DEFAULT 'all'` — determines evaluation path
-- `per_user_limit INT DEFAULT NULL` — per-user usage cap
-- `priority INT DEFAULT 0` — stacking priority
+Defined for: `home`, `products`, `contact`, `gallery`, `create`, `creations`, `submit-design`, `cart`, `account`, `order-tracking`. These appear in the Visual Editor as configurable items but their visibility toggles only work for `home` and `products` (the only two pages calling `useStaticSectionSettings`).
 
-Migrate existing data:
-- Rows with `scope_target_user_id` set → `target_mode = 'specific_user'`
-- All other rows → `target_mode = 'all'`
+### Core Problem
 
-#### 2. Edge Function: `validate-discount-eligibility`
-Complete rewrite with structured evaluation pipeline:
+- 10+ pages define static sections in the editor but don't check `isVisible()` before rendering
+- Contact, Gallery, CreateYourOwn, Creations, SubmitDesign, Cart, Account, OrderTracking all render their core content unconditionally
+- Policies page uses hardcoded fallback content that can't be toggled off
+- The Visual Editor shows visibility toggles for sections that have no effect
 
-1. **Fetch discount** → validate exists + active
-2. **Date check** → starts_at / expires_at
-3. **Global usage** → max_uses vs used_count
-4. **Per-user usage** → count from `orders` where discount was used (or a lightweight tracking approach via discount_rules metadata)
-5. **Target mode routing**:
-   - `all` → eligible
-   - `specific_user` → match `scope_target_user_id`
-   - `specific_users` → match against `discount_rules.specific_ids[]`
-   - `rules_based` → evaluate each rule group with AND/OR logic
-6. **Rules evaluation** (for `rules_based`):
-   - `invited` → check `referral_invites` for `invited_user_id`
-   - `new_registered` → user created within N days
-   - `newcomer` → created within N days + optional zero-orders check
-   - `min_points` → check `get_user_points_balance()`
-   - `min_orders` → count completed orders
-   - `achievement_keys` → check loyalty_points reasons or a future achievements table
-   - `referral_requirements` → count successful referral invites
-7. **Return** eligibility + discount details + debug reason
+## Proposed Solution
 
-#### 3. Admin UI: `AdminDiscounts.tsx`
-Refactor the save/load logic:
+### Approach: Add `useStaticSectionSettings` to all hybrid pages
 
-- Add `target_mode` selector: "All Users" | "Specific User" | "Multiple Users" | "Rules-Based"
-- **Specific User**: single user picker → stores UUID in `scope_target_user_id`
-- **Multiple Users**: multi-select picker → stores IDs in `discount_rules.specific_ids`
-- **Rules-Based**: show rule builder with checkboxes/inputs for each group type
-- **All**: no user targeting fields shown
-- Remove the `audience_groups` approach — replace with cleaner `target_mode` routing
-- Validation: prevent mixed payloads, require correct fields per mode
-- Show matched user count estimate for rules-based targeting
+Rather than migrating all static content into DB blocks (which would break functional components like forms, cart logic, auth flows), the correct approach is:
 
-#### 4. DiscountForm type update
-```typescript
-type TargetMode = "all" | "specific_user" | "specific_users" | "rules_based";
+1. **Wire up `useStaticSectionSettings` on every hybrid page** so each static section's visibility toggle actually works
+2. **Remove hardcoded fallback content** from Policies (use empty state instead of default policy text when no saved content exists — or keep defaults but make them editable-only, not hardcoded render)
+3. **Ensure no page renders static content that has been toggled off in the editor**
 
-type DiscountForm = {
-  // ...existing fields
-  target_mode: TargetMode;
-  scope_target_user_id: string | null;  // for specific_user
-  rules: {
-    specific_ids: string[];             // for specific_users
-    groups: string[];                   // invited, new_registered, newcomer
-    new_registered_days: number;
-    newcomer_logic: "days" | "zero_orders";
-    newcomer_days: number;
-    min_points: number;
-    min_orders: number;
-    achievement_keys: string[];
-    referral_requirements: {
-      min_successful_invites: number;
-      min_registered_invites: number;
-    };
-  };
-};
-```
+### Implementation Steps
 
-### Files
+#### Step 1: Wire visibility checks on all hybrid pages
 
-| File | Action |
-|------|--------|
-| Migration SQL | Add `discount_rules`, `target_mode`, `per_user_limit`, `priority` columns + data migration |
-| `supabase/functions/validate-discount-eligibility/index.ts` | Rewrite with structured evaluation pipeline and debug logging |
-| `src/pages/admin/AdminDiscounts.tsx` | Refactor targeting UI with `target_mode` selector and clean payload routing |
+For each page listed below, import `useStaticSectionSettings` and wrap static sections in `isVisible()` guards:
+
+- **Contact.tsx** — wrap contact form section in `isVisible("static_contact_form")`
+- **Gallery.tsx** — wrap gallery grid in `isVisible("static_gallery_grid")`  
+- **CreateYourOwn.tsx** — wrap hero in `isVisible("static_create_hero")`, tools tabs in `isVisible("static_create_tools")`
+- **Creations.tsx** — wrap showcase in `isVisible("static_creations_showcase")`
+- **SubmitDesign.tsx** — wrap form in `isVisible("static_submit_form")`
+- **Cart.tsx** — wrap cart view in `isVisible("static_cart_items")`
+- **Account.tsx** — wrap dashboard in `isVisible("static_account_dashboard")`
+- **OrderTracking.tsx** — wrap tracking in `isVisible("static_order_tracking")`
+
+#### Step 2: Migrate page-level block fetching to `usePageBlocks` hook
+
+Several hybrid pages (Contact, Gallery, CreateYourOwn, Creations, SubmitDesign) manually fetch blocks with `useEffect` + `useState`. Refactor these to use the existing `usePageBlocks` hook for consistency, which already handles `is_active` filtering.
+
+#### Step 3: Policies fallback cleanup
+
+Remove the `defaultPolicies` hardcoded object from `Policies.tsx`. If no saved content exists for a policy, show a clean empty state instead of rendering hardcoded placeholder text that can't be controlled from the editor.
+
+#### Step 4: Ensure preview/live consistency
+
+The `DynamicPage` renderer already filters `is_active !== false`. The hybrid pages' static sections will now also respect the same visibility source. The Visual Editor's `StaticSectionPreview` component already renders previews correctly — no changes needed there.
+
+#### Step 5: Duplicate rendering prevention
+
+Audit `Index.tsx` specifically — it renders `DynamicPage` (which loads DB blocks for "home") AND then renders `SmartHomeSections` and `HomeSocialProof` statically below. If those same sections were also added as DB blocks, they'd render twice. Add deduplication: if a DB block with matching `block_type` exists for a static section ID, skip the static render.
+
+### Files to Modify
+
+1. `src/pages/Contact.tsx` — add `useStaticSectionSettings`, use `usePageBlocks`, wrap form
+2. `src/pages/Gallery.tsx` — add `useStaticSectionSettings`, use `usePageBlocks`, wrap grid
+3. `src/pages/CreateYourOwn.tsx` — add `useStaticSectionSettings`, use `usePageBlocks`, wrap hero + tools
+4. `src/pages/Creations.tsx` — add `useStaticSectionSettings`, use `usePageBlocks`, wrap showcase
+5. `src/pages/SubmitDesign.tsx` — add `useStaticSectionSettings`, use `usePageBlocks`, wrap form
+6. `src/pages/Cart.tsx` — add `useStaticSectionSettings`, wrap cart section
+7. `src/pages/Account.tsx` — add `useStaticSectionSettings`, wrap dashboard
+8. `src/pages/OrderTracking.tsx` — add `useStaticSectionSettings`, wrap tracking
+9. `src/pages/Policies.tsx` — remove hardcoded default policy content, use empty state
+10. `src/pages/Index.tsx` — add deduplication guard for static sections vs DB blocks
 
 ### What stays unchanged
-- All other discount fields (code, type, value, scope for product/category, dates, stackable, etc.)
-- Rewards store tab
-- Checkout savings hook
-- Cart discount application logic (reads discount_type/value which don't change)
+
+- `DynamicPage.tsx` — already correct
+- `BlockRenderer` — already correct
+- `static-page-sections.ts` — definitions are correct, just unused by most pages
+- `StaticSectionPreview.tsx` — editor previews are correct
+- Header/Footer — these are layout components, not editor-managed content blocks (they use their own settings system which is already working)
+- `GlobalSectionRenderer` — already correct, filters by `is_active`
+
+### Backward Compatibility
+
+- All pages keep their existing layout and design
+- `isVisible()` defaults to `true` when no settings are saved, so nothing breaks for existing sites
+- Policies will show empty state only if admin explicitly clears content (existing saved content continues to work)
+- No database changes needed
 

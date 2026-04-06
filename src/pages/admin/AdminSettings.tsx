@@ -22,6 +22,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import AdminEmailManager from "@/components/admin/email/AdminEmailManager";
 import { Slider } from "@/components/ui/slider";
 import { parsePersonalizationWeights, type PersonalizationWeights } from "@/hooks/use-personalization-engine";
+import PageLinkSelect from "@/components/admin/PageLinkSelect";
 
 /* ─── Personalization Settings Component ─── */
 const PersonalizationSettings = () => {

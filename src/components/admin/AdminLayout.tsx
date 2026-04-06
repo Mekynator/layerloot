@@ -96,7 +96,6 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const { hasPermission, adminRole, isOwner } = useAdminPermissions();
   const location = useLocation();
   const navigate = useNavigate();
-  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarConfig, setSidebarConfig] = useState<SidebarConfig>(DEFAULT_SIDEBAR_CONFIG);
 

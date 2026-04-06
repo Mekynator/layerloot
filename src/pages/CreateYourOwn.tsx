@@ -1485,6 +1485,7 @@ const CreateYourOwn = () => {
     <div>
       {!blocksLoading && topBlocks.map((block) => <div key={block.id}>{renderBlock(block)}</div>)}
 
+      {showTools && (
       <section className="py-8 lg:py-12">
         <div className="container max-w-6xl">
           <Tabs
@@ -1549,6 +1550,7 @@ const CreateYourOwn = () => {
           </Tabs>
         </div>
       </section>
+      )}
 
       {!blocksLoading && bottomBlocks.map((block) => <div key={block.id}>{renderBlock(block)}</div>)}
     </div>

@@ -7,13 +7,15 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+const ADMIN_ROLES = [
+  "owner", "super_admin", "admin", "editor", "support",
+  "content_admin", "orders_admin", "support_admin", "marketing_admin", "custom",
+];
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: {
-      ...corsHeaders,
-      "Content-Type": "application/json",
-    },
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
 
@@ -46,30 +48,45 @@ serve(async (req) => {
       return jsonResponse({ error: "Unauthorized" }, 401);
     }
 
-    const metadataRole = user.app_metadata?.role;
-    const metadataRoles = Array.isArray(user.app_metadata?.roles) ? user.app_metadata.roles : [];
+    // Check if user has any admin role
+    const { data: roleRows } = await serviceClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .in("role", ADMIN_ROLES);
 
-    let isAdmin = metadataRole === "admin" || metadataRoles.includes("admin");
+    const hasAdminRole = (roleRows ?? []).length > 0;
 
-    if (!isAdmin) {
-      const { data: roleRow, error: roleError } = await serviceClient
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-
-      if (roleError) {
-        return jsonResponse({ error: roleError.message }, 403);
-      }
-
-      isAdmin = !!roleRow;
-    }
-
-    if (!isAdmin) {
+    if (!hasAdminRole) {
       return jsonResponse({ error: "Forbidden" }, 403);
     }
 
+    // Parse body for action routing
+    let body: Record<string, unknown> = {};
+    try { body = await req.json(); } catch { /* empty body OK for default list */ }
+    const action = (body.action as string) ?? "list_users";
+
+    // Action: lookup_by_email
+    if (action === "lookup_by_email") {
+      const email = body.email as string;
+      if (!email) return jsonResponse({ error: "Email required" }, 400);
+
+      const { data: lookupData } = await serviceClient.auth.admin.listUsers({ perPage: 1 });
+      // Search through users for email match
+      let page = 1;
+      while (true) {
+        const { data, error } = await serviceClient.auth.admin.listUsers({ page, perPage: 200 });
+        if (error) return jsonResponse({ error: error.message }, 500);
+        const batch = data?.users ?? [];
+        const found = batch.find(u => u.email?.toLowerCase() === email.toLowerCase());
+        if (found) return jsonResponse({ user_id: found.id, email: found.email });
+        if (batch.length < 200) break;
+        page++;
+      }
+      return jsonResponse({ error: "User not found" }, 404);
+    }
+
+    // Action: list_users (default)
     const users: Array<{
       id: string;
       email: string | null;
@@ -117,9 +134,7 @@ serve(async (req) => {
     return jsonResponse({ users });
   } catch (error) {
     return jsonResponse(
-      {
-        error: error instanceof Error ? error.message : "Unknown error",
-      },
+      { error: error instanceof Error ? error.message : "Unknown error" },
       500,
     );
   }

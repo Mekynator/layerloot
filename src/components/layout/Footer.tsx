@@ -97,6 +97,7 @@ const Footer = () => {
   const [branding, setBranding] = useState<BrandingSettings>({ logo_text_left: "Layer", logo_text_right: "Loot", logo_image_url: "", logo_link: "/", logo_alt: "LayerLoot" });
   const [footerSettings, setFooterSettings] = useState<FooterSettings>({});
   const [legacyContact, setLegacyContact] = useState<ContactSettings>({});
+  const [dynamicPolicies, setDynamicPolicies] = useState<Array<{ title: string; slug: string }>>([]);
   const footerNavLinks = useFooterNavLinks();
 
   useEffect(() => {
@@ -104,10 +105,12 @@ const Footer = () => {
       supabase.from("site_settings").select("value").eq("key", "branding").maybeSingle(),
       supabase.from("site_settings").select("value").eq("key", "footer_settings").maybeSingle(),
       supabase.from("site_settings").select("value").eq("key", "contact").maybeSingle(),
-    ]).then(([brandingRes, footerRes, contactRes]) => {
+      supabase.from("policies").select("title, slug").eq("is_visible", true).order("sort_order", { ascending: true }),
+    ]).then(([brandingRes, footerRes, contactRes, policiesRes]) => {
       if (brandingRes.data?.value) setBranding((prev) => ({ ...prev, ...(brandingRes.data.value as BrandingSettings) }));
       if (footerRes.data?.value) setFooterSettings(footerRes.data.value as FooterSettings);
       if (contactRes.data?.value) setLegacyContact(contactRes.data.value as ContactSettings);
+      if (policiesRes.data) setDynamicPolicies(policiesRes.data);
     });
   }, []);
 

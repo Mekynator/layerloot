@@ -2,11 +2,13 @@ import DynamicPage from "./DynamicPage";
 import HomeSocialProof from "@/components/social/HomeSocialProof";
 import SmartHomeSections from "@/components/smart/SmartHomeSections";
 import { useStorefrontCatalog } from "@/hooks/use-storefront";
+import { useStaticSectionSettings } from "@/hooks/use-static-section-settings";
 import { useTranslation } from "react-i18next";
 
 const Index = () => {
   const { t } = useTranslation("common");
   const { data: catalog } = useStorefrontCatalog("home");
+  const { isVisible } = useStaticSectionSettings("home");
 
   return (
     <>
@@ -16,8 +18,8 @@ const Index = () => {
         emptyDescription={t("pages.home.emptyDescription", "New arrivals and featured pieces are on the way.")}
       />
 
-      {/* Smart personalized sections */}
-      {catalog && (
+      {/* Smart personalized sections — respects visibility toggle */}
+      {isVisible("static_home_smart_sections") && catalog && (
         <div className="container space-y-4 pb-4">
           <SmartHomeSections
             products={catalog.products}
@@ -27,7 +29,7 @@ const Index = () => {
         </div>
       )}
 
-      <HomeSocialProof />
+      {isVisible("static_home_social_proof") && <HomeSocialProof />}
     </>
   );
 };

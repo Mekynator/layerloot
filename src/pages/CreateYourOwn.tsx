@@ -53,6 +53,8 @@ import Lithophane, { type LithophaneSubmitPayload } from "@/components/Lithophan
 import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 import { ReviewCardSkeleton, SectionCardSkeleton } from "@/components/shared/loading-states";
 import GiftFinderSection from "@/components/gift-finder/GiftFinderSection";
+import { usePageBlocks } from "@/hooks/use-page-blocks";
+import { useStaticSectionSettings } from "@/hooks/use-static-section-settings";
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },

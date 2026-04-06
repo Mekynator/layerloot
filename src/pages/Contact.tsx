@@ -21,9 +21,9 @@ type ContactSettings = {
 };
 
 const defaultContact: ContactSettings = {
-  email: "layerloot.support@neuraltune.me",
-  phone: "+45 00 00 00 00",
-  address: "Copenhagen, Denmark",
+  email: "",
+  phone: "",
+  address: "",
   social: { instagram: "", facebook: "", youtube: "" },
 };
 

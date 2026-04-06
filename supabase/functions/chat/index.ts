@@ -58,8 +58,8 @@ async function fetchContext(userId: string | null) {
   const ctx: Record<string, any> = {};
 
   try {
-    const { data } = await serviceSupabase.from("products").select("id,name,slug,price,category_id,is_featured").eq("is_active", true).order("created_at", { ascending: false }).limit(20);
-    ctx.products = (data ?? []).map((p: any) => ({ ...p, url: `/products/${p.slug}` }));
+    const { data } = await serviceSupabase.from("products").select("id,name,slug,price,category_id,is_featured,images,stock,is_made_to_order").eq("is_active", true).eq("published", true).order("created_at", { ascending: false }).limit(20);
+    ctx.products = (data ?? []).map((p: any) => ({ ...p, url: `/products/${p.slug}`, images: p.images ?? [] }));
   } catch { ctx.products = []; }
 
   try {

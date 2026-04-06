@@ -4,64 +4,67 @@ import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import { PageSkeleton } from "@/components/shared/loading-states";
 
-const POLICY_KEYS = [
-  { slug: "returns-policy", settingKey: "policy_returns", title: "Returns Policy" },
-  { slug: "cancellation-policy", settingKey: "policy_cancellation", title: "Cancellation Policy" },
-  { slug: "refund-policy", settingKey: "policy_refund", title: "Refund Policy" },
-  { slug: "privacy-policy", settingKey: "policy_privacy", title: "Privacy Policy" },
-  { slug: "terms-of-service", settingKey: "policy_terms", title: "Terms of Service" },
-  { slug: "safety-regulations", settingKey: "policy_safety", title: "Safety Regulations" },
-  { slug: "intellectual-property", settingKey: "policy_ip", title: "Intellectual Property & Rights" },
-  { slug: "shipping-policy", settingKey: "policy_shipping", title: "Shipping Policy" },
-];
-
-export { POLICY_KEYS };
-
-interface PolicyContent {
+interface PolicyData {
   title: string;
   body: string;
+  meta_title: string;
+  meta_description: string;
+  is_visible: boolean;
 }
 
 const Policies = () => {
   const { slug } = useParams<{ slug: string }>();
-  const [content, setContent] = useState<PolicyContent | null>(null);
+  const [policy, setPolicy] = useState<PolicyData | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const policyMeta = POLICY_KEYS.find((p) => p.slug === slug);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    if (!policyMeta) {
+    if (!slug) {
       setLoading(false);
+      setNotFound(true);
       return;
     }
 
     const load = async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from("site_settings")
-        .select("value")
-        .eq("key", policyMeta.settingKey)
+      setNotFound(false);
+
+      const { data, error } = await supabase
+        .from("policies")
+        .select("title, body, meta_title, meta_description, is_visible")
+        .eq("slug", slug)
+        .eq("is_visible", true)
         .maybeSingle();
 
-      if (data?.value && typeof data.value === "object") {
-        const val = data.value as Record<string, string>;
-        setContent({
-          title: val.title || policyMeta.title,
-          body: val.body || "",
-        });
+      if (error || !data) {
+        setNotFound(true);
       } else {
-        // No saved content — show empty state instead of hardcoded defaults
-        setContent({ title: policyMeta.title, body: "" });
+        setPolicy(data as PolicyData);
+
+        // Set document title for SEO
+        const metaTitle = data.meta_title || data.title;
+        if (metaTitle) document.title = `${metaTitle} | LayerLoot`;
+
+        // Set meta description
+        if (data.meta_description) {
+          let metaTag = document.querySelector('meta[name="description"]');
+          if (!metaTag) {
+            metaTag = document.createElement("meta");
+            metaTag.setAttribute("name", "description");
+            document.head.appendChild(metaTag);
+          }
+          metaTag.setAttribute("content", data.meta_description);
+        }
       }
       setLoading(false);
     };
 
     load();
-  }, [slug, policyMeta]);
+  }, [slug]);
 
   if (loading) return <PageSkeleton />;
 
-  if (!policyMeta || !content) {
+  if (notFound || !policy) {
     return (
       <div className="container py-20 text-center">
         <h1 className="font-display text-3xl font-bold uppercase text-foreground">Policy Not Found</h1>
@@ -70,10 +73,10 @@ const Policies = () => {
     );
   }
 
-  if (!content.body) {
+  if (!policy.body) {
     return (
       <div className="container max-w-3xl py-16">
-        <h1 className="mb-8 font-display text-3xl font-bold uppercase text-foreground">{content.title}</h1>
+        <h1 className="mb-8 font-display text-3xl font-bold uppercase text-foreground">{policy.title}</h1>
         <p className="text-muted-foreground">This policy has not been configured yet. Please check back later.</p>
       </div>
     );
@@ -81,9 +84,9 @@ const Policies = () => {
 
   return (
     <div className="container max-w-3xl py-16">
-      <h1 className="mb-8 font-display text-3xl font-bold uppercase text-foreground">{content.title}</h1>
+      <h1 className="mb-8 font-display text-3xl font-bold uppercase text-foreground">{policy.title}</h1>
       <div className="prose prose-invert max-w-none text-muted-foreground prose-headings:font-display prose-headings:text-foreground prose-strong:text-foreground prose-li:marker:text-primary">
-        <ReactMarkdown>{content.body}</ReactMarkdown>
+        <ReactMarkdown>{policy.body}</ReactMarkdown>
       </div>
     </div>
   );

@@ -12,27 +12,6 @@ import GlobalSectionRenderer from "@/components/layout/GlobalSectionRenderer";
 
 type LocalizedText = string | Record<string, string>;
 
-/**
- * Contact settings — unified structure shared with admin.
- * Admin saves: { email, phone, address, contact_description, email_label, phone_label, address_label, social_title, social: { instagram, facebook, youtube } }
- * Legacy format had instagram_url / facebook_url at top level — we support both for backwards compatibility.
- */
-type ContactSettings = {
-  email?: string;
-  phone?: string;
-  address?: LocalizedText;
-  contact_description?: LocalizedText;
-  email_label?: LocalizedText;
-  phone_label?: LocalizedText;
-  address_label?: LocalizedText;
-  social_title?: LocalizedText;
-  // New unified format (from admin)
-  social?: { instagram?: string; facebook?: string; youtube?: string };
-  // Legacy format (backwards compat)
-  instagram_url?: string;
-  facebook_url?: string;
-};
-
 type BrandingSettings = {
   logo_text_left?: LocalizedText;
   logo_text_right?: LocalizedText;
@@ -55,51 +34,41 @@ type FooterSettings = {
   show_logo_icon?: boolean;
   show_logo_text?: boolean;
   logo_height_px?: number;
+  footer_height_px?: number;
   auth_link_label?: LocalizedText;
   account_link_label?: LocalizedText;
   orders_link_label?: LocalizedText;
   policy_links?: Array<{ label: LocalizedText; path: string }>;
+  // Footer-owned contact fields (source of truth for footer rendering)
+  contact_description?: string;
+  contact_email_label?: string;
+  contact_email?: string;
+  contact_phone_label?: string;
+  contact_phone?: string;
+  contact_address_label?: string;
+  contact_address?: string;
+  contact_social_title?: string;
+  contact_social_instagram?: string;
+  contact_social_facebook?: string;
+  contact_social_youtube?: string;
 };
 
-const defaultContact: ContactSettings = {
-  email: "support@layerloot.lovable.app",
-  phone: "+45 00 00 00 00",
-  address: "Denmark",
-  contact_description: "Questions, custom requests, or order help? Reach out anytime.",
-  email_label: "Email",
-  phone_label: "Phone",
-  address_label: "Address",
-  social_title: "Follow us",
-  social: { instagram: "", facebook: "" },
-};
-
-const defaultFooterSettings: FooterSettings = {
-  description: "Premium 3D printing supplies and custom prints for makers, hobbyists, and professionals.",
-  quick_links_title: "Quick Links",
-  account_title: "Account",
-  contact_title: "Contact",
-  policies_title: "Policies",
-  copyright_text: "All rights reserved.",
-  show_quick_links: true,
-  show_account_links: true,
-  show_contact_block: true,
-  show_policies: true,
-  show_logo_icon: true,
-  show_logo_text: true,
-  logo_height_px: 32,
-  auth_link_label: "Login / Register",
-  account_link_label: "My Account",
-  orders_link_label: "Order History",
-  policy_links: [
-    { label: "Returns Policy", path: "/policies/returns-policy" },
-    { label: "Cancellation Policy", path: "/policies/cancellation-policy" },
-    { label: "Refund Policy", path: "/policies/refund-policy" },
-    { label: "Privacy Policy", path: "/policies/privacy-policy" },
-    { label: "Terms of Service", path: "/policies/terms-of-service" },
-    { label: "Safety Regulations", path: "/policies/safety-regulations" },
-    { label: "Intellectual Property", path: "/policies/intellectual-property" },
-    { label: "Shipping Policy", path: "/policies/shipping-policy" },
-  ],
+/**
+ * Legacy contact settings — used as fallback if footer-specific contact fields are empty.
+ * Once footer contact fields are populated, this is ignored.
+ */
+type ContactSettings = {
+  email?: string;
+  phone?: string;
+  address?: LocalizedText;
+  contact_description?: LocalizedText;
+  email_label?: LocalizedText;
+  phone_label?: LocalizedText;
+  address_label?: LocalizedText;
+  social_title?: LocalizedText;
+  social?: { instagram?: string; facebook?: string; youtube?: string };
+  instagram_url?: string;
+  facebook_url?: string;
 };
 
 const normalizePath = (value?: string | null) => {
@@ -121,34 +90,24 @@ const getLocalizedValue = (value: unknown, fallback = ""): string => {
   return map[lang] || map.en || fallback;
 };
 
-/** Resolve Instagram URL from either new or legacy format */
-const getInstagramUrl = (contact: ContactSettings): string => {
-  return contact.social?.instagram || contact.instagram_url || "";
-};
-
-/** Resolve Facebook URL from either new or legacy format */
-const getFacebookUrl = (contact: ContactSettings): string => {
-  return contact.social?.facebook || contact.facebook_url || "";
-};
-
 const Footer = () => {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
-  const [contact, setContact] = useState<ContactSettings>(defaultContact);
   const [branding, setBranding] = useState<BrandingSettings>({ logo_text_left: "Layer", logo_text_right: "Loot", logo_image_url: "", logo_link: "/", logo_alt: "LayerLoot" });
-  const [footerSettings, setFooterSettings] = useState<FooterSettings>(defaultFooterSettings);
+  const [footerSettings, setFooterSettings] = useState<FooterSettings>({});
+  const [legacyContact, setLegacyContact] = useState<ContactSettings>({});
   const footerNavLinks = useFooterNavLinks();
 
   useEffect(() => {
     Promise.all([
-      supabase.from("site_settings").select("value").eq("key", "contact").maybeSingle(),
       supabase.from("site_settings").select("value").eq("key", "branding").maybeSingle(),
       supabase.from("site_settings").select("value").eq("key", "footer_settings").maybeSingle(),
-    ]).then(([contactRes, brandingRes, footerRes]) => {
-      if (contactRes.data?.value) setContact({ ...defaultContact, ...(contactRes.data.value as ContactSettings) });
+      supabase.from("site_settings").select("value").eq("key", "contact").maybeSingle(),
+    ]).then(([brandingRes, footerRes, contactRes]) => {
       if (brandingRes.data?.value) setBranding((prev) => ({ ...prev, ...(brandingRes.data.value as BrandingSettings) }));
-      if (footerRes.data?.value) setFooterSettings({ ...defaultFooterSettings, ...(footerRes.data.value as FooterSettings) });
+      if (footerRes.data?.value) setFooterSettings(footerRes.data.value as FooterSettings);
+      if (contactRes.data?.value) setLegacyContact(contactRes.data.value as ContactSettings);
     });
   }, []);
 
@@ -162,8 +121,21 @@ const Footer = () => {
   );
 
   const logoHeight = Math.max(20, Number(footerSettings.logo_height_px || 32));
-  const instagramUrl = getInstagramUrl(contact);
-  const facebookUrl = getFacebookUrl(contact);
+  const footerHeight = Number(footerSettings.footer_height_px || 0);
+
+  // Resolve contact values: footer-specific fields take priority, then legacy contact, then empty (hide)
+  const contactEmail = footerSettings.contact_email || getLocalizedValue(legacyContact.email) || "";
+  const contactPhone = footerSettings.contact_phone || getLocalizedValue(legacyContact.phone) || "";
+  const contactAddress = footerSettings.contact_address || getLocalizedValue(legacyContact.address) || "";
+  const contactDescription = footerSettings.contact_description || getLocalizedValue(legacyContact.contact_description) || "";
+  const emailLabel = footerSettings.contact_email_label || getLocalizedValue(legacyContact.email_label) || "";
+  const phoneLabel = footerSettings.contact_phone_label || getLocalizedValue(legacyContact.phone_label) || "";
+  const addressLabel = footerSettings.contact_address_label || getLocalizedValue(legacyContact.address_label) || "";
+  const socialTitle = footerSettings.contact_social_title || getLocalizedValue(legacyContact.social_title) || "";
+
+  const instagramUrl = footerSettings.contact_social_instagram || legacyContact.social?.instagram || legacyContact.instagram_url || "";
+  const facebookUrl = footerSettings.contact_social_facebook || legacyContact.social?.facebook || legacyContact.facebook_url || "";
+
   const hasInstagram = isValidUrl(instagramUrl);
   const hasFacebook = isValidUrl(facebookUrl);
   const hasSocials = hasInstagram || hasFacebook;
@@ -171,20 +143,16 @@ const Footer = () => {
   const logoAlt = getLocalizedValue(branding.logo_alt, "LayerLoot");
   const logoLeft = getLocalizedValue(branding.logo_text_left, "Layer");
   const logoRight = getLocalizedValue(branding.logo_text_right, "Loot");
-  const description = getLocalizedValue(footerSettings.description, t("footer.description", "Premium 3D printing supplies and custom prints for makers, hobbyists, and professionals."));
+  const description = getLocalizedValue(footerSettings.description, "");
   const quickLinksTitle = getLocalizedValue(footerSettings.quick_links_title, t("footer.quickLinks", "Quick Links"));
   const accountTitle = getLocalizedValue(footerSettings.account_title, t("footer.account", "Account"));
   const contactTitle = getLocalizedValue(footerSettings.contact_title, t("footer.contact", "Contact"));
   const authLinkLabel = getLocalizedValue(footerSettings.auth_link_label, t("footer.loginRegister", "Login / Register"));
   const accountLinkLabel = getLocalizedValue(footerSettings.account_link_label, t("footer.myAccount", "My Account"));
   const ordersLinkLabel = getLocalizedValue(footerSettings.orders_link_label, t("footer.orderHistory", "Order History"));
-  const contactDescription = getLocalizedValue(contact.contact_description, t("footer.contactDescription", "Questions, custom requests, or order help? Reach out anytime."));
-  const emailLabel = getLocalizedValue(contact.email_label, t("footer.email", "Email"));
-  const phoneLabel = getLocalizedValue(contact.phone_label, t("footer.phone", "Phone"));
-  const addressLabel = getLocalizedValue(contact.address_label, t("footer.address", "Address"));
-  const socialTitle = getLocalizedValue(contact.social_title, t("footer.followUs", "Follow us"));
-  const addressText = getLocalizedValue(contact.address, "Denmark");
   const copyrightText = getLocalizedValue(footerSettings.copyright_text, t("footer.allRightsReserved", "All rights reserved."));
+
+  const hasAnyContact = contactEmail || contactPhone || contactAddress;
 
   return (
     <>
@@ -196,6 +164,7 @@ const Footer = () => {
         viewport={{ once: true, amount: 0.08 }}
         transition={{ duration: 0.4 }}
         className="relative border-t border-border/10 bg-background/80 backdrop-blur-xl"
+        style={footerHeight > 0 ? { minHeight: `${footerHeight}px` } : undefined}
       >
         <div className="absolute top-0 left-1/2 -translate-x-1/2 h-px w-2/3 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
@@ -207,8 +176,8 @@ const Footer = () => {
                   <img src={branding.logo_image_url} alt={logoAlt} style={{ height: `${logoHeight}px` }} className="w-auto object-contain" />
                 ) : (
                   <>
-                    {footerSettings.show_logo_icon && <img src={logoImg} alt={logoAlt} style={{ height: `${logoHeight}px` }} className="w-auto object-contain" />}
-                    {footerSettings.show_logo_text && (
+                    {footerSettings.show_logo_icon !== false && <img src={logoImg} alt={logoAlt} style={{ height: `${logoHeight}px` }} className="w-auto object-contain" />}
+                    {footerSettings.show_logo_text !== false && (
                       <span className="font-display text-xl font-bold uppercase tracking-wider text-foreground">
                         {logoLeft}<span className="gradient-text">{logoRight}</span>
                       </span>
@@ -216,10 +185,10 @@ const Footer = () => {
                   </>
                 )}
               </Link>
-              <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+              {description && <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>}
             </motion.div>
 
-            {footerSettings.show_quick_links && (
+            {footerSettings.show_quick_links !== false && (
               <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.04 }}>
                 <button
                   className="mb-3 md:mb-5 flex w-full items-center justify-between font-display text-xs font-semibold uppercase tracking-[0.2em] text-foreground md:pointer-events-none"
@@ -238,7 +207,7 @@ const Footer = () => {
               </motion.div>
             )}
 
-            {footerSettings.show_account_links && (
+            {footerSettings.show_account_links !== false && (
               <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.08 }}>
                 <button
                   className="mb-3 md:mb-5 flex w-full items-center justify-between font-display text-xs font-semibold uppercase tracking-[0.2em] text-foreground md:pointer-events-none"
@@ -265,7 +234,7 @@ const Footer = () => {
                   <ChevronDown className={`h-4 w-4 md:hidden transition-transform ${openSections.policies ? "rotate-180" : ""}`} />
                 </button>
                 <ul className={`space-y-2.5 text-sm text-muted-foreground ${isMobile && !openSections.policies ? "hidden" : ""} md:block`}>
-                  {(footerSettings.policy_links ?? defaultFooterSettings.policy_links ?? []).map((link) => (
+                  {(footerSettings.policy_links ?? []).map((link) => (
                     <li key={link.path}>
                       <Link to={link.path} className="transition-all duration-200 hover:translate-x-1 hover:text-primary">
                         {getLocalizedValue(link.label, typeof link.label === "string" ? link.label : "")}
@@ -276,38 +245,46 @@ const Footer = () => {
               </motion.div>
             )}
 
-            {footerSettings.show_contact_block && (
+            {footerSettings.show_contact_block !== false && (hasAnyContact || contactDescription || hasSocials) && (
               <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.12 }}>
                 <h4 className="mb-5 font-display text-xs font-semibold uppercase tracking-[0.2em] text-foreground">{contactTitle}</h4>
                 {contactDescription && <p className="mb-4 text-sm text-muted-foreground">{contactDescription}</p>}
 
-                <ul className="space-y-3 text-sm text-muted-foreground">
-                  <li className="flex items-start gap-2.5 transition-colors hover:text-primary">
-                    <Mail className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
-                    <div className="min-w-0">
-                      <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/70">{emailLabel}</p>
-                      <a href={`mailto:${contact.email || defaultContact.email}`} className="hover:text-primary break-all">{contact.email || defaultContact.email}</a>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <Phone className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
-                    <div>
-                      <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/70">{phoneLabel}</p>
-                      <p>{contact.phone || defaultContact.phone}</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
-                    <div>
-                      <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/70">{addressLabel}</p>
-                      <p>{addressText}</p>
-                    </div>
-                  </li>
-                </ul>
+                {hasAnyContact && (
+                  <ul className="space-y-3 text-sm text-muted-foreground">
+                    {contactEmail && (
+                      <li className="flex items-start gap-2.5 transition-colors hover:text-primary">
+                        <Mail className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
+                        <div className="min-w-0">
+                          {emailLabel && <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/70">{emailLabel}</p>}
+                          <a href={`mailto:${contactEmail}`} className="hover:text-primary break-all">{contactEmail}</a>
+                        </div>
+                      </li>
+                    )}
+                    {contactPhone && (
+                      <li className="flex items-start gap-2.5">
+                        <Phone className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
+                        <div>
+                          {phoneLabel && <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/70">{phoneLabel}</p>}
+                          <p>{contactPhone}</p>
+                        </div>
+                      </li>
+                    )}
+                    {contactAddress && (
+                      <li className="flex items-start gap-2.5">
+                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
+                        <div>
+                          {addressLabel && <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/70">{addressLabel}</p>}
+                          <p>{contactAddress}</p>
+                        </div>
+                      </li>
+                    )}
+                  </ul>
+                )}
 
                 {hasSocials && (
                   <div className="mt-6">
-                    <p className="mb-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground/70">{socialTitle}</p>
+                    {socialTitle && <p className="mb-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground/70">{socialTitle}</p>}
                     <div className="flex items-center gap-3">
                       {hasInstagram && (
                         <motion.a whileTap={{ scale: 0.98 }} href={instagramUrl} target="_blank" rel="noreferrer"

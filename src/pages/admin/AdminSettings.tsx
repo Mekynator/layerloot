@@ -22,6 +22,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import AdminEmailManager from "@/components/admin/email/AdminEmailManager";
 import { Slider } from "@/components/ui/slider";
 import { parsePersonalizationWeights, type PersonalizationWeights } from "@/hooks/use-personalization-engine";
+import PageLinkSelect from "@/components/admin/PageLinkSelect";
 
 /* ─── Personalization Settings Component ─── */
 const PersonalizationSettings = () => {
@@ -125,8 +126,14 @@ interface FooterConfig {
   policies_title: string; copyright_text: string;
   show_quick_links: boolean; show_account_links: boolean; show_contact_block: boolean; show_policies: boolean;
   show_logo_icon: boolean; show_logo_text: boolean; logo_height_px: number;
+  footer_height_px: number;
   auth_link_label: string; account_link_label: string; orders_link_label: string;
   policy_links: Array<{ label: string; path: string }>;
+  contact_description: string; contact_email_label: string; contact_email: string;
+  contact_phone_label: string; contact_phone: string;
+  contact_address_label: string; contact_address: string;
+  contact_social_title: string;
+  contact_social_instagram: string; contact_social_facebook: string; contact_social_youtube: string;
 }
 
 interface HeaderConfig {
@@ -158,7 +165,13 @@ const defaultFooter: FooterConfig = {
   policies_title: "Policies", copyright_text: "All rights reserved.",
   show_quick_links: true, show_account_links: true, show_contact_block: true, show_policies: true,
   show_logo_icon: true, show_logo_text: true, logo_height_px: 32,
+  footer_height_px: 0,
   auth_link_label: "Login / Register", account_link_label: "My Account", orders_link_label: "Order History",
+  contact_description: "", contact_email_label: "Email", contact_email: "",
+  contact_phone_label: "Phone", contact_phone: "",
+  contact_address_label: "Address", contact_address: "",
+  contact_social_title: "Follow us",
+  contact_social_instagram: "", contact_social_facebook: "", contact_social_youtube: "",
   policy_links: [
     { label: "Returns Policy", path: "/policies/returns-policy" },
     { label: "Cancellation Policy", path: "/policies/cancellation-policy" },
@@ -387,7 +400,7 @@ const AdminSettings = () => {
               </div>
               <div><Label className="text-xs">Custom Logo Image URL</Label><Input value={brandingDraft.value.logo_image_url} onChange={e => brandingDraft.setValue(prev => ({ ...prev, logo_image_url: e.target.value }))} placeholder="https://... (overrides text logo)" /></div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div><Label className="text-xs">Logo Link</Label><Input value={brandingDraft.value.logo_link} onChange={e => brandingDraft.setValue(prev => ({ ...prev, logo_link: e.target.value }))} placeholder="/" /></div>
+                <PageLinkSelect label="Logo Link" value={brandingDraft.value.logo_link} onChange={v => brandingDraft.setValue(prev => ({ ...prev, logo_link: v }))} />
                 <div><Label className="text-xs">Logo Alt Text</Label><Input value={brandingDraft.value.logo_alt} onChange={e => brandingDraft.setValue(prev => ({ ...prev, logo_alt: e.target.value }))} placeholder="LayerLoot" /></div>
               </div>
               <p className="text-[10px] text-muted-foreground">→ Affects: Header logo, Footer logo, page title</p>
@@ -452,6 +465,13 @@ const AdminSettings = () => {
               <CardContent className="space-y-3">
                 <div><Label className="text-xs">Description</Label><Textarea value={footerDraft.value.description} onChange={e => footerDraft.setValue(p => ({ ...p, description: e.target.value }))} rows={2} /></div>
                 <div><Label className="text-xs">Copyright Text</Label><Input value={footerDraft.value.copyright_text} onChange={e => footerDraft.setValue(p => ({ ...p, copyright_text: e.target.value }))} /></div>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Footer Height (px) — 0 = auto</Label>
+                    <span className="text-xs text-muted-foreground">{footerDraft.value.footer_height_px || 0}px</span>
+                  </div>
+                  <Slider min={0} max={600} step={10} value={[footerDraft.value.footer_height_px || 0]} onValueChange={([v]) => footerDraft.setValue(p => ({ ...p, footer_height_px: v }))} />
+                </div>
                 <div className="space-y-2 pt-2">
                   <SectionLabel>Section Visibility</SectionLabel>
                   <div className="flex items-center gap-2"><Switch checked={footerDraft.value.show_quick_links} onCheckedChange={v => footerDraft.setValue(p => ({ ...p, show_quick_links: v }))} /><Label className="text-xs">Quick Links column</Label></div>
@@ -483,6 +503,29 @@ const AdminSettings = () => {
               <div><Label className="text-xs">Account Title</Label><Input value={footerDraft.value.account_title} onChange={e => footerDraft.setValue(p => ({ ...p, account_title: e.target.value }))} /></div>
               <div><Label className="text-xs">Policies Title</Label><Input value={footerDraft.value.policies_title} onChange={e => footerDraft.setValue(p => ({ ...p, policies_title: e.target.value }))} /></div>
               <div><Label className="text-xs">Contact Title</Label><Input value={footerDraft.value.contact_title} onChange={e => footerDraft.setValue(p => ({ ...p, contact_title: e.target.value }))} /></div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="font-display text-sm uppercase">Footer Contact Fields</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-[10px] text-muted-foreground">These values are displayed in the footer contact block. Leave empty to hide a field.</p>
+              <div><Label className="text-xs">Contact Description</Label><Textarea value={footerDraft.value.contact_description || ""} onChange={e => footerDraft.setValue(p => ({ ...p, contact_description: e.target.value }))} rows={2} /></div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div><Label className="text-xs">Email Label</Label><Input value={footerDraft.value.contact_email_label || ""} onChange={e => footerDraft.setValue(p => ({ ...p, contact_email_label: e.target.value }))} /></div>
+                <div><Label className="text-xs">Email Value</Label><Input value={footerDraft.value.contact_email || ""} onChange={e => footerDraft.setValue(p => ({ ...p, contact_email: e.target.value }))} /></div>
+                <div><Label className="text-xs">Phone Label</Label><Input value={footerDraft.value.contact_phone_label || ""} onChange={e => footerDraft.setValue(p => ({ ...p, contact_phone_label: e.target.value }))} /></div>
+                <div><Label className="text-xs">Phone Value</Label><Input value={footerDraft.value.contact_phone || ""} onChange={e => footerDraft.setValue(p => ({ ...p, contact_phone: e.target.value }))} /></div>
+                <div><Label className="text-xs">Address Label</Label><Input value={footerDraft.value.contact_address_label || ""} onChange={e => footerDraft.setValue(p => ({ ...p, contact_address_label: e.target.value }))} /></div>
+                <div><Label className="text-xs">Address Value</Label><Input value={footerDraft.value.contact_address || ""} onChange={e => footerDraft.setValue(p => ({ ...p, contact_address: e.target.value }))} /></div>
+              </div>
+              <SectionLabel>Social Links</SectionLabel>
+              <div><Label className="text-xs">Social Section Title</Label><Input value={footerDraft.value.contact_social_title || ""} onChange={e => footerDraft.setValue(p => ({ ...p, contact_social_title: e.target.value }))} /></div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div><Label className="text-xs">Instagram URL</Label><Input value={footerDraft.value.contact_social_instagram || ""} onChange={e => footerDraft.setValue(p => ({ ...p, contact_social_instagram: e.target.value }))} placeholder="https://instagram.com/..." /></div>
+                <div><Label className="text-xs">Facebook URL</Label><Input value={footerDraft.value.contact_social_facebook || ""} onChange={e => footerDraft.setValue(p => ({ ...p, contact_social_facebook: e.target.value }))} placeholder="https://facebook.com/..." /></div>
+                <div><Label className="text-xs">YouTube URL</Label><Input value={footerDraft.value.contact_social_youtube || ""} onChange={e => footerDraft.setValue(p => ({ ...p, contact_social_youtube: e.target.value }))} placeholder="https://youtube.com/..." /></div>
+              </div>
             </CardContent>
           </Card>
 
@@ -578,7 +621,7 @@ const AdminSettings = () => {
               <div><Label className="text-xs">Message</Label><Textarea value={promoDraft.value.message} onChange={e => promoDraft.setValue(prev => ({ ...prev, message: e.target.value }))} rows={2} /></div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div><Label className="text-xs">Button Text</Label><Input value={promoDraft.value.button_text} onChange={e => promoDraft.setValue(prev => ({ ...prev, button_text: e.target.value }))} /></div>
-                <div><Label className="text-xs">Button Link</Label><Input value={promoDraft.value.button_link} onChange={e => promoDraft.setValue(prev => ({ ...prev, button_link: e.target.value }))} /></div>
+                <PageLinkSelect label="Button Link" value={promoDraft.value.button_link} onChange={v => promoDraft.setValue(prev => ({ ...prev, button_link: v }))} />
               </div>
               <div><Label className="text-xs">Image URL</Label><Input value={promoDraft.value.image_url} onChange={e => promoDraft.setValue(prev => ({ ...prev, image_url: e.target.value }))} /></div>
               <div><Label className="text-xs">Dismiss Key</Label><Input value={promoDraft.value.dismiss_key} onChange={e => promoDraft.setValue(prev => ({ ...prev, dismiss_key: e.target.value }))} /></div>

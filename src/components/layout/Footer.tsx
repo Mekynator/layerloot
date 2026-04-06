@@ -237,10 +237,10 @@ const Footer = () => {
                   <ChevronDown className={`h-4 w-4 md:hidden transition-transform ${openSections.policies ? "rotate-180" : ""}`} />
                 </button>
                 <ul className={`space-y-2.5 text-sm text-muted-foreground ${isMobile && !openSections.policies ? "hidden" : ""} md:block`}>
-                  {(footerSettings.policy_links ?? []).map((link) => (
-                    <li key={link.path}>
-                      <Link to={link.path} className="transition-all duration-200 hover:translate-x-1 hover:text-primary">
-                        {getLocalizedValue(link.label, typeof link.label === "string" ? link.label : "")}
+                  {dynamicPolicies.map((policy) => (
+                    <li key={policy.slug}>
+                      <Link to={`/policies/${policy.slug}`} className="transition-all duration-200 hover:translate-x-1 hover:text-primary">
+                        {policy.title}
                       </Link>
                     </li>
                   ))}

@@ -58,8 +58,8 @@ async function fetchContext(userId: string | null) {
   const ctx: Record<string, any> = {};
 
   try {
-    const { data } = await serviceSupabase.from("products").select("id,name,slug,price,category_id,is_featured").eq("is_active", true).order("created_at", { ascending: false }).limit(20);
-    ctx.products = (data ?? []).map((p: any) => ({ ...p, url: `/products/${p.slug}` }));
+    const { data } = await serviceSupabase.from("products").select("id,name,slug,price,category_id,is_featured,images,stock,is_made_to_order").eq("is_active", true).eq("published", true).order("created_at", { ascending: false }).limit(20);
+    ctx.products = (data ?? []).map((p: any) => ({ ...p, url: `/products/${p.slug}`, images: p.images ?? [] }));
   } catch { ctx.products = []; }
 
   try {
@@ -135,7 +135,10 @@ function buildSystemPrompt(user: any, ctx: Record<string, any>, cart: any, page:
   const cartCount = Number(cart?.item_count ?? 0);
   const freeShipGap = Math.max(0, (ctx.shipping?.free_shipping_threshold ?? FREE_SHIPPING_THRESHOLD) - cartTotal);
 
-  const productList = (ctx.products ?? []).slice(0, 12).map((p: any) => `- ${p.name} (${p.price} kr) → ${p.url}`).join("\n");
+  const productList = (ctx.products ?? []).slice(0, 12).map((p: any) => {
+    const img = p.images?.[0] || "";
+    return `- ${p.name} | ${p.price} kr | id:${p.id} | img:${img} | ${p.url}`;
+  }).join("\n");
   const categoryList = (ctx.categories ?? []).map((c: any) => `- ${c.name} → /products?category=${c.slug}`).join("\n");
 
   // Find matching page rule
@@ -256,12 +259,42 @@ ${categoryList || "No categories loaded"}
 ## Products (sample)
 ${productList || "No products loaded"}
 
+## Product Display Format (MANDATORY)
+When showing a product, ALWAYS use this exact format:
+• **{name}**
+  - {1 short benefit}
+  - {price} kr
+  - ![{name}]({image_url})
+  - → [View product]({product_url})
+
+Rules:
+- Max 2-3 products per response
+- Use REAL data from Products list above — never invent products
+- If no match found → suggest a category link
+- Prioritize: featured > best sellers > newest
+- Mention stock: "In stock" or "Made to order"
+
 ## Product Help Rules
 When a product is mentioned:
-- Show a short explanation
-- Mention: price, variants (color/material), stock or made-to-order info
+- Show short explanation + price + variants
 - Then guide: → "Tap Add to Cart to proceed"
-- When suggesting products, show max 3 options with: name, 1-line benefit
+
+## Upsell Mode
+After a recommendation, if relevant add ONE complementary product:
+→ "Pairs well with:" then show 1 product in the format above.
+
+## Cart Recovery
+If user has items in cart (${cartCount} items, ${cartTotal} kr):
+- Mention cart contents briefly
+- Encourage checkout: → "Ready to checkout?"
+${freeShipGap > 0 ? `- Mention: "${freeShipGap} kr more for free shipping"` : "- Mention: Qualifies for free shipping!"}
+
+## Smart Funnel (only if user is unsure)
+Ask max 2-3 quick questions:
+1. Gift or for yourself?
+2. Style? (fun / decor / custom)
+3. Budget? (low / mid / premium)
+Then show matching products immediately.
 
 ## Shipping
 - Free shipping threshold: ${ctx.shipping?.free_shipping_threshold ?? FREE_SHIPPING_THRESHOLD} kr

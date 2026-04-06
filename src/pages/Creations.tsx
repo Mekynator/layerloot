@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -9,30 +9,16 @@ import ShowcaseGallery from "@/components/creations/ShowcaseGallery";
 import MyShowcases from "@/components/creations/MyShowcases";
 import SavedShowcases from "@/components/creations/SavedShowcases";
 import CreateShowcaseForm from "@/components/creations/CreateShowcaseForm";
-import { supabase } from "@/integrations/supabase/client";
-import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
+import { renderBlock } from "@/components/admin/BlockRenderer";
+import { usePageBlocks } from "@/hooks/use-page-blocks";
+import { useStaticSectionSettings } from "@/hooks/use-static-section-settings";
 
 export default function Creations() {
   const { user, loading } = useAuth();
   const [tab, setTab] = useState("community");
   const [showForm, setShowForm] = useState(false);
-  const [pageBlocks, setPageBlocks] = useState<SiteBlock[]>([]);
-  const [blocksLoading, setBlocksLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchBlocks = async () => {
-      setBlocksLoading(true);
-      const { data } = await supabase
-        .from("site_blocks")
-        .select("*")
-        .eq("page", "creations")
-        .eq("is_active", true)
-        .order("sort_order");
-      setPageBlocks((data as SiteBlock[]) ?? []);
-      setBlocksLoading(false);
-    };
-    void fetchBlocks();
-  }, []);
+  const { data: pageBlocks = [], isLoading: blocksLoading } = usePageBlocks("creations");
+  const { isVisible } = useStaticSectionSettings("creations");
 
   const topBlocks = pageBlocks.filter(
     (block) => (block.content as Record<string, unknown> | null)?.placement !== "after_creations"
@@ -41,6 +27,8 @@ export default function Creations() {
     (block) => (block.content as Record<string, unknown> | null)?.placement === "after_creations"
   );
 
+  const showShowcase = isVisible("static_creations_showcase");
+
   if (loading) return null;
 
   if (!user) {
@@ -48,22 +36,24 @@ export default function Creations() {
       <div>
         {!blocksLoading && topBlocks.map((block) => <div key={block.id}>{renderBlock(block)}</div>)}
 
-        <div className="container mx-auto flex flex-col items-center justify-center gap-6 py-24 px-4 text-center">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/10">
-              <Sparkles className="h-10 w-10 text-primary" />
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight lg:text-4xl">Community Creations</h1>
-            <p className="text-muted-foreground max-w-md leading-relaxed">
-              Discover custom 3D printed creations from the community. Sign in to explore, share your own, and reorder designs you love.
-            </p>
-            <Button asChild size="lg" className="rounded-xl gap-2">
-              <Link to="/auth">
-                <LogIn className="h-4 w-4" /> Sign in to access
-              </Link>
-            </Button>
-          </motion.div>
-        </div>
+        {showShowcase && (
+          <div className="container mx-auto flex flex-col items-center justify-center gap-6 py-24 px-4 text-center">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/10">
+                <Sparkles className="h-10 w-10 text-primary" />
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight lg:text-4xl">Community Creations</h1>
+              <p className="text-muted-foreground max-w-md leading-relaxed">
+                Discover custom 3D printed creations from the community. Sign in to explore, share your own, and reorder designs you love.
+              </p>
+              <Button asChild size="lg" className="rounded-xl gap-2">
+                <Link to="/auth">
+                  <LogIn className="h-4 w-4" /> Sign in to access
+                </Link>
+              </Button>
+            </motion.div>
+          </div>
+        )}
 
         {!blocksLoading && bottomBlocks.map((block) => <div key={block.id}>{renderBlock(block)}</div>)}
       </div>
@@ -72,53 +62,52 @@ export default function Creations() {
 
   return (
     <div>
-      {/* Editor-managed blocks above the functional content */}
       {!blocksLoading && topBlocks.map((block) => <div key={block.id}>{renderBlock(block)}</div>)}
 
-      {/* Functional core – showcase tabs */}
-      <div className="container mx-auto px-4 py-8 space-y-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div />
-          <Button
-            onClick={() => { setTab("create"); setShowForm(true); }}
-            className="gap-2 rounded-xl shrink-0"
-          >
-            <Plus className="h-4 w-4" /> New Creation
-          </Button>
+      {showShowcase && (
+        <div className="container mx-auto px-4 py-8 space-y-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div />
+            <Button
+              onClick={() => { setTab("create"); setShowForm(true); }}
+              className="gap-2 rounded-xl shrink-0"
+            >
+              <Plus className="h-4 w-4" /> New Creation
+            </Button>
+          </div>
+
+          <Tabs value={tab} onValueChange={(v) => { setTab(v); if (v !== "create") setShowForm(false); }}>
+            <TabsList className="w-full sm:w-auto rounded-xl bg-muted/50 p-1">
+              <TabsTrigger value="community" className="gap-1.5 rounded-lg text-xs">
+                <Users className="h-3.5 w-3.5" /> Community
+              </TabsTrigger>
+              <TabsTrigger value="mine" className="gap-1.5 rounded-lg text-xs">
+                <Paintbrush className="h-3.5 w-3.5" /> My Creations
+              </TabsTrigger>
+              <TabsTrigger value="saved" className="gap-1.5 rounded-lg text-xs">
+                <Heart className="h-3.5 w-3.5" /> Saved
+              </TabsTrigger>
+              <TabsTrigger value="create" className="gap-1.5 rounded-lg text-xs">
+                <Plus className="h-3.5 w-3.5" /> Create
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="community" className="mt-6">
+              <ShowcaseGallery />
+            </TabsContent>
+            <TabsContent value="mine" className="mt-6">
+              <MyShowcases onCreateClick={() => { setTab("create"); setShowForm(true); }} />
+            </TabsContent>
+            <TabsContent value="saved" className="mt-6">
+              <SavedShowcases />
+            </TabsContent>
+            <TabsContent value="create" className="mt-6">
+              <CreateShowcaseForm onCreated={() => setTab("mine")} />
+            </TabsContent>
+          </Tabs>
         </div>
+      )}
 
-        <Tabs value={tab} onValueChange={(v) => { setTab(v); if (v !== "create") setShowForm(false); }}>
-          <TabsList className="w-full sm:w-auto rounded-xl bg-muted/50 p-1">
-            <TabsTrigger value="community" className="gap-1.5 rounded-lg text-xs">
-              <Users className="h-3.5 w-3.5" /> Community
-            </TabsTrigger>
-            <TabsTrigger value="mine" className="gap-1.5 rounded-lg text-xs">
-              <Paintbrush className="h-3.5 w-3.5" /> My Creations
-            </TabsTrigger>
-            <TabsTrigger value="saved" className="gap-1.5 rounded-lg text-xs">
-              <Heart className="h-3.5 w-3.5" /> Saved
-            </TabsTrigger>
-            <TabsTrigger value="create" className="gap-1.5 rounded-lg text-xs">
-              <Plus className="h-3.5 w-3.5" /> Create
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="community" className="mt-6">
-            <ShowcaseGallery />
-          </TabsContent>
-          <TabsContent value="mine" className="mt-6">
-            <MyShowcases onCreateClick={() => { setTab("create"); setShowForm(true); }} />
-          </TabsContent>
-          <TabsContent value="saved" className="mt-6">
-            <SavedShowcases />
-          </TabsContent>
-          <TabsContent value="create" className="mt-6">
-            <CreateShowcaseForm onCreated={() => setTab("mine")} />
-          </TabsContent>
-        </Tabs>
-      </div>
-
-      {/* Editor-managed blocks below the functional content */}
       {!blocksLoading && bottomBlocks.map((block) => <div key={block.id}>{renderBlock(block)}</div>)}
     </div>
   );

@@ -125,8 +125,14 @@ interface FooterConfig {
   policies_title: string; copyright_text: string;
   show_quick_links: boolean; show_account_links: boolean; show_contact_block: boolean; show_policies: boolean;
   show_logo_icon: boolean; show_logo_text: boolean; logo_height_px: number;
+  footer_height_px: number;
   auth_link_label: string; account_link_label: string; orders_link_label: string;
   policy_links: Array<{ label: string; path: string }>;
+  contact_description: string; contact_email_label: string; contact_email: string;
+  contact_phone_label: string; contact_phone: string;
+  contact_address_label: string; contact_address: string;
+  contact_social_title: string;
+  contact_social_instagram: string; contact_social_facebook: string; contact_social_youtube: string;
 }
 
 interface HeaderConfig {
@@ -158,7 +164,13 @@ const defaultFooter: FooterConfig = {
   policies_title: "Policies", copyright_text: "All rights reserved.",
   show_quick_links: true, show_account_links: true, show_contact_block: true, show_policies: true,
   show_logo_icon: true, show_logo_text: true, logo_height_px: 32,
+  footer_height_px: 0,
   auth_link_label: "Login / Register", account_link_label: "My Account", orders_link_label: "Order History",
+  contact_description: "", contact_email_label: "Email", contact_email: "",
+  contact_phone_label: "Phone", contact_phone: "",
+  contact_address_label: "Address", contact_address: "",
+  contact_social_title: "Follow us",
+  contact_social_instagram: "", contact_social_facebook: "", contact_social_youtube: "",
   policy_links: [
     { label: "Returns Policy", path: "/policies/returns-policy" },
     { label: "Cancellation Policy", path: "/policies/cancellation-policy" },

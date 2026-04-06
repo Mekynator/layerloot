@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Save, Plus, Trash2, GripVertical, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import AdminPageMultiSelect from "@/components/admin/AdminPageMultiSelect";
+import AdminPageSelect from "@/components/admin/AdminPageSelect";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -146,7 +148,7 @@ const AdminChatSettings = () => {
               </div>
               <div>
                 <Label className="text-xs">Disabled Pages (comma-separated paths)</Label>
-                <Input value={config.disabledPages.join(", ")} onChange={e => set("disabledPages", e.target.value.split(",").map(s => s.trim()).filter(Boolean))} placeholder="/admin, /auth" />
+                <AdminPageMultiSelect label="Disabled Pages" value={config.disabledPages} onChange={(v) => set("disabledPages", v)} allowAllPages={false} />
               </div>
             </CardContent>
           </Card>
@@ -487,7 +489,7 @@ const AdminChatSettings = () => {
                       <div><Label className="text-xs">Label</Label><Input value={getStr(qr.label)} onChange={e => updateQuickReply(qr.id, "label", e.target.value)} /></div>
                       <div><Label className="text-xs">Message sent</Label><Input value={getStr(qr.message)} onChange={e => updateQuickReply(qr.id, "message", e.target.value)} /></div>
                     </div>
-                    <div><Label className="text-xs">Pages (comma-separated, empty = all)</Label><Input value={qr.pages?.join(", ") ?? ""} onChange={e => updateQuickReply(qr.id, "pages", e.target.value.split(",").map(s => s.trim()).filter(Boolean))} placeholder="*, /products, /cart" /></div>
+                    <AdminPageMultiSelect label="Pages (empty = all)" value={qr.pages ?? []} onChange={(v) => updateQuickReply(qr.id, "pages", v.length > 0 ? v : undefined)} />
                   </div>
                   <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeQuickReply(qr.id)}>
                     <Trash2 className="h-4 w-4" />
@@ -510,7 +512,7 @@ const AdminChatSettings = () => {
                 <div key={idx} className="flex items-start gap-2 rounded-lg border border-border/30 bg-muted/30 p-3">
                   <div className="flex-1 space-y-2">
                     <div className="grid gap-2 sm:grid-cols-3">
-                      <div><Label className="text-xs">Page Pattern</Label><Input value={rule.page} onChange={e => updatePageRule(idx, "page", e.target.value)} /></div>
+                      <AdminPageSelect label="Page" value={rule.page} onChange={(v) => updatePageRule(idx, "page", v)} allowAdvanced={true} />
                       <div>
                         <Label className="text-xs">Focus Area</Label>
                         <Select value={rule.focusArea ?? "general"} onValueChange={v => updatePageRule(idx, "focusArea", v)}>

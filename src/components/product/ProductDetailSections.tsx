@@ -185,7 +185,7 @@ function ImageCarouselSection({ section }: { section: Section }) {
       className="space-y-3"
     >
       {section.title && (
-        <h3 className="font-display text-base font-bold uppercase text-foreground md:text-lg">{section.title}</h3>
+        <h3 className="font-display text-base font-bold uppercase text-foreground md:text-lg hidden md:block">{section.title}</h3>
       )}
       <div
         className="relative overflow-hidden rounded-xl bg-card md:rounded-2xl touch-pan-y"

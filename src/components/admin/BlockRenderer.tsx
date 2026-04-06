@@ -75,7 +75,7 @@ const ImageCollectionBlock = ({ content, className }: { content?: ImageCollectio
         style={{ objectFit: item.objectFit || "cover" }}
       />
       {(item.title || item.subtitle) && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-2xl bg-gradient-to-t from-black/70 to-transparent p-4 text-white">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-2xl bg-gradient-to-t from-black/70 to-transparent p-4 text-white hidden md:block">
           {item.title && (
             <p className="text-sm font-semibold uppercase tracking-wide">{getLocalizedValue(item.title)}</p>
           )}
@@ -1813,7 +1813,7 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
         </div>
 
         {currentSlide && (currentSlide.title || currentSlide.subtitle) && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-5 text-white">
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-5 text-white hidden md:block">
             {currentSlide.title && (
               <h3 className="font-display text-lg font-bold uppercase">{getLocalizedValue(currentSlide.title)}</h3>
             )}

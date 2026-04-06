@@ -230,7 +230,7 @@ export default function AdminUsers() {
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             {admin.full_name || "—"}
-                            {isOwnerAcc && <Crown className="h-3.5 w-3.5 text-amber-500" title="Owner" />}
+                            {isOwnerAcc && <Crown className="h-3.5 w-3.5 text-primary" />}
                           </div>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">{admin.email || admin.user_id.slice(0, 12)}</TableCell>

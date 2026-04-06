@@ -1761,6 +1761,48 @@ export type Database = {
         }
         Relationships: []
       }
+      policies: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          is_visible: boolean
+          meta_description: string
+          meta_title: string
+          short_description: string
+          slug: string
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          meta_description?: string
+          meta_title?: string
+          short_description?: string
+          slug: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          meta_description?: string
+          meta_title?: string
+          short_description?: string
+          slug?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       price_calculations: {
         Row: {
           admin_user_id: string

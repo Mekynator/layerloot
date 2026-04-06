@@ -97,6 +97,7 @@ const Footer = () => {
   const [branding, setBranding] = useState<BrandingSettings>({ logo_text_left: "Layer", logo_text_right: "Loot", logo_image_url: "", logo_link: "/", logo_alt: "LayerLoot" });
   const [footerSettings, setFooterSettings] = useState<FooterSettings>({});
   const [legacyContact, setLegacyContact] = useState<ContactSettings>({});
+  const [dynamicPolicies, setDynamicPolicies] = useState<Array<{ title: string; slug: string }>>([]);
   const footerNavLinks = useFooterNavLinks();
 
   useEffect(() => {
@@ -104,10 +105,12 @@ const Footer = () => {
       supabase.from("site_settings").select("value").eq("key", "branding").maybeSingle(),
       supabase.from("site_settings").select("value").eq("key", "footer_settings").maybeSingle(),
       supabase.from("site_settings").select("value").eq("key", "contact").maybeSingle(),
-    ]).then(([brandingRes, footerRes, contactRes]) => {
+      supabase.from("policies").select("title, slug").eq("is_visible", true).order("sort_order", { ascending: true }),
+    ]).then(([brandingRes, footerRes, contactRes, policiesRes]) => {
       if (brandingRes.data?.value) setBranding((prev) => ({ ...prev, ...(brandingRes.data.value as BrandingSettings) }));
       if (footerRes.data?.value) setFooterSettings(footerRes.data.value as FooterSettings);
       if (contactRes.data?.value) setLegacyContact(contactRes.data.value as ContactSettings);
+      if (policiesRes.data) setDynamicPolicies(policiesRes.data);
     });
   }, []);
 
@@ -234,10 +237,10 @@ const Footer = () => {
                   <ChevronDown className={`h-4 w-4 md:hidden transition-transform ${openSections.policies ? "rotate-180" : ""}`} />
                 </button>
                 <ul className={`space-y-2.5 text-sm text-muted-foreground ${isMobile && !openSections.policies ? "hidden" : ""} md:block`}>
-                  {(footerSettings.policy_links ?? []).map((link) => (
-                    <li key={link.path}>
-                      <Link to={link.path} className="transition-all duration-200 hover:translate-x-1 hover:text-primary">
-                        {getLocalizedValue(link.label, typeof link.label === "string" ? link.label : "")}
+                  {dynamicPolicies.map((policy) => (
+                    <li key={policy.slug}>
+                      <Link to={`/policies/${policy.slug}`} className="transition-all duration-200 hover:translate-x-1 hover:text-primary">
+                        {policy.title}
                       </Link>
                     </li>
                   ))}

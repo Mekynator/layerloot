@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { DEFAULT_SIDEBAR_CONFIG, SIDEBAR_ICON_MAP, type SidebarConfig } from "@/components/admin/AdminLayout";
 import { DEFAULT_SHORTCUTS, ICON_MAP, type DashboardShortcut } from "@/pages/admin/Dashboard";
-import { POLICY_KEYS } from "@/pages/Policies";
+
 import { useDraftSettings } from "@/hooks/use-draft-settings";
 import DraftActionBar from "@/components/admin/DraftActionBar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -227,8 +227,6 @@ const AdminSettings = () => {
   const brandingDraft = useDraftSettings<BrandingConfig>("branding", defaultBranding);
   const accountDraft = useDraftSettings<AccountPageConfig>("account_page_config", DEFAULT_ACCOUNT_CONFIG);
 
-  /* Policy drafts */
-  const policyDrafts = POLICY_KEYS.map(p => useDraftSettings<{ title: string; body: string }>(p.settingKey, { title: p.title, body: "" }));
 
   /* Admin-only settings (direct save, not draft) */
   const [shortcuts, setShortcuts] = useState<DashboardShortcut[]>(DEFAULT_SHORTCUTS);
@@ -249,7 +247,7 @@ const AdminSettings = () => {
   }, []);
 
   /* Combined draft status */
-  const allDrafts = [contactDraft, storeDraft, promoDraft, footerDraft, headerDraft, brandingDraft, accountDraft, ...policyDrafts];
+  const allDrafts = [contactDraft, storeDraft, promoDraft, footerDraft, headerDraft, brandingDraft, accountDraft];
   const anyDirty = allDrafts.some(d => d.dirty);
   const anyHasDraft = allDrafts.some(d => d.hasDraft);
   const combinedStatus = anyDirty ? "draft" as const : anyHasDraft ? "draft" as const : "published" as const;
@@ -380,7 +378,7 @@ const AdminSettings = () => {
           <TabsTrigger value="footer">Footer</TabsTrigger>
           <TabsTrigger value="store">Store & Contact</TabsTrigger>
           <TabsTrigger value="promo">Promotion</TabsTrigger>
-          <TabsTrigger value="policies">Policies</TabsTrigger>
+          
           <TabsTrigger value="account">Account Page</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="navigation">Navigation</TabsTrigger>
@@ -630,25 +628,6 @@ const AdminSettings = () => {
           </Card>
         </TabsContent>
 
-        {/* ─── POLICIES ─── */}
-        <TabsContent value="policies" className="space-y-6">
-          <p className="text-sm text-muted-foreground">Edit your store policies below. Content supports Markdown formatting. Linked from the Footer policies column.</p>
-          <div className="grid gap-4">
-            {POLICY_KEYS.map((policy, idx) => {
-              const draft = policyDrafts[idx];
-              return (
-                <Card key={policy.settingKey}>
-                  <CardHeader><CardTitle className="font-display text-sm uppercase">{policy.title}</CardTitle></CardHeader>
-                  <CardContent className="space-y-3">
-                    <div><Label className="text-xs">Page Title</Label><Input value={draft.value.title} onChange={e => draft.setValue(prev => ({ ...prev, title: e.target.value }))} /></div>
-                    <div><Label className="text-xs">Content (Markdown)</Label><Textarea value={draft.value.body} onChange={e => draft.setValue(prev => ({ ...prev, body: e.target.value }))} rows={10} className="font-mono text-xs" /></div>
-                    <p className="text-[10px] text-muted-foreground">Live at: <span className="font-mono text-primary">/policies/{policy.slug}</span></p>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </TabsContent>
 
         {/* ─── DASHBOARD SHORTCUTS ─── */}
         <TabsContent value="dashboard" className="space-y-6">

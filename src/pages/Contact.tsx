@@ -155,7 +155,7 @@ const Contact = () => {
                 {[
                   { icon: Mail, label: t("contact.emailLabel"), value: contact.email },
                   { icon: MapPin, label: t("contact.locationLabel"), value: contact.address },
-                ].map(({ icon: Icon, label, value }) => (
+                ].filter(({ value }) => !!value).map(({ icon: Icon, label, value }) => (
                   <div key={label} className="flex items-start gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-card/60 backdrop-blur-md shadow-[0_4px_16px_-4px_hsl(225_44%_4%/0.3)]">
                       <Icon className="h-5 w-5 text-primary" />

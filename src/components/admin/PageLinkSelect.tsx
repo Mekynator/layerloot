@@ -42,12 +42,12 @@ export default function PageLinkSelect({ label, value, onChange, className }: Pa
   useEffect(() => {
     if (cachedDynamic) return;
     (async () => {
-      const { data } = await supabase
+      const result: { data: { title: string; slug: string }[] | null } = await (supabase as any)
         .from("site_pages")
         .select("title, slug")
         .eq("is_active", true)
         .order("title");
-      const pages: PageOption[] = (data ?? []).map((p: { title: string; slug: string }) => ({ title: p.title, slug: `/${p.slug}` }));
+      const pages: PageOption[] = (result.data ?? []).map((p) => ({ title: p.title, slug: `/${p.slug}` }));
       cachedDynamic = pages;
       setDynamicPages(pages);
     })();

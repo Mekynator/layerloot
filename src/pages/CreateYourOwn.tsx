@@ -53,6 +53,8 @@ import Lithophane, { type LithophaneSubmitPayload } from "@/components/Lithophan
 import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 import { ReviewCardSkeleton, SectionCardSkeleton } from "@/components/shared/loading-states";
 import GiftFinderSection from "@/components/gift-finder/GiftFinderSection";
+import { usePageBlocks } from "@/hooks/use-page-blocks";
+import { useStaticSectionSettings } from "@/hooks/use-static-section-settings";
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },
@@ -1456,31 +1458,13 @@ const CustomPrintOrder = () => {
 
 const CreateYourOwn = () => {
   const { t } = useTranslation();
-  const [pageBlocks, setPageBlocks] = useState<SiteBlock[]>([]);
-  const [blocksLoading, setBlocksLoading] = useState(true);
+  const { data: pageBlocks = [], isLoading: blocksLoading } = usePageBlocks("create");
+  const { isVisible } = useStaticSectionSettings("create");
   const [activeTab, setActiveTab] = useState<CreateTabValue>(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("reorderLithophane") || params.get("modifyLithophane")) return "lithophane";
     return "custom-print";
   });
-
-  useEffect(() => {
-    const fetchBlocks = async () => {
-      setBlocksLoading(true);
-
-      const { data } = await supabase
-        .from("site_blocks")
-        .select("*")
-        .eq("page", "create")
-        .eq("is_active", true)
-        .order("sort_order");
-
-      setPageBlocks((data as SiteBlock[]) ?? []);
-      setBlocksLoading(false);
-    };
-
-    void fetchBlocks();
-  }, []);
 
   const { topBlocks, bottomBlocks } = useMemo(() => {
     const top: SiteBlock[] = [];
@@ -1495,10 +1479,13 @@ const CreateYourOwn = () => {
     return { topBlocks: top, bottomBlocks: bottom };
   }, [pageBlocks]);
 
+  const showTools = isVisible("static_create_tools");
+
   return (
     <div>
       {!blocksLoading && topBlocks.map((block) => <div key={block.id}>{renderBlock(block)}</div>)}
 
+      {showTools && (
       <section className="py-8 lg:py-12">
         <div className="container max-w-6xl">
           <Tabs
@@ -1563,6 +1550,7 @@ const CreateYourOwn = () => {
           </Tabs>
         </div>
       </section>
+      )}
 
       {!blocksLoading && bottomBlocks.map((block) => <div key={block.id}>{renderBlock(block)}</div>)}
     </div>

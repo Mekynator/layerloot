@@ -11,15 +11,18 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ModelViewer from "@/components/ModelViewer";
 import { motion } from "framer-motion";
-import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
+import { renderBlock } from "@/components/admin/BlockRenderer";
+import { usePageBlocks } from "@/hooks/use-page-blocks";
+import { useStaticSectionSettings } from "@/hooks/use-static-section-settings";
 
 const ACCEPTED_EXTENSIONS = ".stl,.obj,.3mf";
 
 const SubmitDesign = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { data: pageBlocks = [], isLoading: blocksLoading } = usePageBlocks("submit-design");
+  const { isVisible } = useStaticSectionSettings("submit-design");
 
-  const [pageBlocks, setPageBlocks] = useState<SiteBlock[]>([]);
   const [form, setForm] = useState({
     creator_name: "",
     email: "",
@@ -29,16 +32,6 @@ const SubmitDesign = () => {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    supabase
-      .from("site_blocks")
-      .select("*")
-      .eq("page", "submit-design")
-      .eq("is_active", true)
-      .order("sort_order")
-      .then(({ data }) => setPageBlocks((data as SiteBlock[]) ?? []));
-  }, []);
 
   useEffect(() => {
     return () => {
@@ -127,143 +120,147 @@ const SubmitDesign = () => {
     (block) => (block.content as Record<string, unknown> | null)?.placement === "after_submit_design",
   );
 
+  const showForm = isVisible("static_submit_form");
+
   return (
     <div>
-      {topBlocks.map((block) => (
+      {!blocksLoading && topBlocks.map((block) => (
         <div key={block.id}>{renderBlock(block)}</div>
       ))}
 
-      <section className="py-8 lg:py-12">
-        <div className="container max-w-4xl">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <div className="mb-2 flex items-center gap-2">
-              <Star className="h-5 w-5 text-primary" />
-              <span className="font-display text-sm uppercase tracking-widest text-primary">Creator Program</span>
-            </div>
+      {showForm && (
+        <section className="py-8 lg:py-12">
+          <div className="container max-w-4xl">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <div className="mb-2 flex items-center gap-2">
+                <Star className="h-5 w-5 text-primary" />
+                <span className="font-display text-sm uppercase tracking-widest text-primary">Creator Program</span>
+              </div>
 
-            <h1 className="mb-2 font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
-              Submit Your Design
-            </h1>
+              <h1 className="mb-2 font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
+                Submit Your Design
+              </h1>
 
-            <p className="mb-8 text-muted-foreground">
-              Share your 3D model with us. Approved designs join our Creator Series collection.
-            </p>
+              <p className="mb-8 text-muted-foreground">
+                Share your 3D model with us. Approved designs join our Creator Series collection.
+              </p>
 
-            <div className="grid gap-8 lg:grid-cols-2">
-              <div className="space-y-4">
+              <div className="grid gap-8 lg:grid-cols-2">
+                <div className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 font-display text-lg uppercase">
+                        <Upload className="h-5 w-5 text-primary" /> Upload Model
+                      </CardTitle>
+                    </CardHeader>
+
+                    <CardContent>
+                      <div
+                        className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-8 transition-colors hover:border-primary"
+                        onClick={() => document.getElementById("design-file-input")?.click()}
+                      >
+                        <Upload className="mb-2 h-8 w-8 text-muted-foreground" />
+                        <p className="text-sm font-medium text-foreground">{file ? file.name : "Click to upload"}</p>
+                        <p className="text-xs text-muted-foreground">STL, OBJ, 3MF files</p>
+                      </div>
+
+                      <input
+                        id="design-file-input"
+                        type="file"
+                        accept={ACCEPTED_EXTENSIONS}
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                    </CardContent>
+                  </Card>
+
+                  {previewUrl && (
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+                      <ModelViewer url={previewUrl} className="aspect-square" />
+                    </motion.div>
+                  )}
+                </div>
+
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 font-display text-lg uppercase">
-                      <Upload className="h-5 w-5 text-primary" /> Upload Model
+                      <Send className="h-5 w-5 text-primary" /> Creator Details
                     </CardTitle>
                   </CardHeader>
 
                   <CardContent>
-                    <div
-                      className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-8 transition-colors hover:border-primary"
-                      onClick={() => document.getElementById("design-file-input")?.click()}
-                    >
-                      <Upload className="mb-2 h-8 w-8 text-muted-foreground" />
-                      <p className="text-sm font-medium text-foreground">{file ? file.name : "Click to upload"}</p>
-                      <p className="text-xs text-muted-foreground">STL, OBJ, 3MF files</p>
-                    </div>
+                    {!user ? (
+                      <div className="py-8 text-center">
+                        <p className="text-muted-foreground">
+                          Please{" "}
+                          <Link to="/auth" className="text-primary hover:underline">
+                            sign in
+                          </Link>{" "}
+                          to submit a design.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div>
+                          <Label>Creator / Studio Name *</Label>
+                          <Input
+                            value={form.creator_name}
+                            onChange={(e) => setForm({ ...form, creator_name: e.target.value })}
+                            placeholder="Your name or studio"
+                            maxLength={100}
+                          />
+                        </div>
 
-                    <input
-                      id="design-file-input"
-                      type="file"
-                      accept={ACCEPTED_EXTENSIONS}
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
+                        <div>
+                          <Label>Email *</Label>
+                          <Input
+                            type="email"
+                            value={form.email}
+                            onChange={(e) => setForm({ ...form, email: e.target.value })}
+                            placeholder="your@email.com"
+                            maxLength={255}
+                          />
+                        </div>
+
+                        <div>
+                          <Label>Portfolio URL (optional)</Label>
+                          <Input
+                            value={form.portfolio_url}
+                            onChange={(e) => setForm({ ...form, portfolio_url: e.target.value })}
+                            placeholder="https://your-portfolio.com"
+                            maxLength={500}
+                          />
+                        </div>
+
+                        <div>
+                          <Label>Description *</Label>
+                          <Textarea
+                            value={form.description}
+                            onChange={(e) => setForm({ ...form, description: e.target.value })}
+                            placeholder="Tell us about your design..."
+                            rows={4}
+                            maxLength={2000}
+                          />
+                        </div>
+
+                        <Button
+                          onClick={handleSubmit}
+                          disabled={submitting || !file}
+                          className="w-full font-display uppercase tracking-wider"
+                        >
+                          {submitting ? "Submitting..." : "Submit Design"}
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
-
-                {previewUrl && (
-                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-                    <ModelViewer url={previewUrl} className="aspect-square" />
-                  </motion.div>
-                )}
               </div>
+            </motion.div>
+          </div>
+        </section>
+      )}
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 font-display text-lg uppercase">
-                    <Send className="h-5 w-5 text-primary" /> Creator Details
-                  </CardTitle>
-                </CardHeader>
-
-                <CardContent>
-                  {!user ? (
-                    <div className="py-8 text-center">
-                      <p className="text-muted-foreground">
-                        Please{" "}
-                        <Link to="/auth" className="text-primary hover:underline">
-                          sign in
-                        </Link>{" "}
-                        to submit a design.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div>
-                        <Label>Creator / Studio Name *</Label>
-                        <Input
-                          value={form.creator_name}
-                          onChange={(e) => setForm({ ...form, creator_name: e.target.value })}
-                          placeholder="Your name or studio"
-                          maxLength={100}
-                        />
-                      </div>
-
-                      <div>
-                        <Label>Email *</Label>
-                        <Input
-                          type="email"
-                          value={form.email}
-                          onChange={(e) => setForm({ ...form, email: e.target.value })}
-                          placeholder="your@email.com"
-                          maxLength={255}
-                        />
-                      </div>
-
-                      <div>
-                        <Label>Portfolio URL (optional)</Label>
-                        <Input
-                          value={form.portfolio_url}
-                          onChange={(e) => setForm({ ...form, portfolio_url: e.target.value })}
-                          placeholder="https://your-portfolio.com"
-                          maxLength={500}
-                        />
-                      </div>
-
-                      <div>
-                        <Label>Description *</Label>
-                        <Textarea
-                          value={form.description}
-                          onChange={(e) => setForm({ ...form, description: e.target.value })}
-                          placeholder="Tell us about your design..."
-                          rows={4}
-                          maxLength={2000}
-                        />
-                      </div>
-
-                      <Button
-                        onClick={handleSubmit}
-                        disabled={submitting || !file}
-                        className="w-full font-display uppercase tracking-wider"
-                      >
-                        {submitting ? "Submitting..." : "Submit Design"}
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {bottomBlocks.map((block) => (
+      {!blocksLoading && bottomBlocks.map((block) => (
         <div key={block.id}>{renderBlock(block)}</div>
       ))}
     </div>

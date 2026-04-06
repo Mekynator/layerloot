@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
+import { usePageBlocks } from "@/hooks/use-page-blocks";
+import { useStaticSectionSettings } from "@/hooks/use-static-section-settings";
 
 type ContactSettings = {
   email: string;
@@ -30,11 +32,12 @@ const defaultContact: ContactSettings = {
 const Contact = () => {
   const { toast } = useToast();
   const { t } = useTranslation();
+  const { isVisible } = useStaticSectionSettings("contact");
+  const { data: blocks = [], isLoading: blocksLoading } = usePageBlocks("contact");
 
   const [loading, setLoading] = useState(false);
-  const [pageLoading, setPageLoading] = useState(true);
-  const [blocks, setBlocks] = useState<SiteBlock[]>([]);
   const [contact, setContact] = useState<ContactSettings>(defaultContact);
+  const [contactLoading, setContactLoading] = useState(true);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -43,28 +46,18 @@ const Contact = () => {
 
   useEffect(() => {
     let mounted = true;
-
-    const fetchPageData = async () => {
-      const [settingsRes, blocksRes] = await Promise.all([
-        supabase.from("site_settings").select("value").eq("key", "contact").maybeSingle(),
-        supabase.from("site_blocks").select("*").eq("page", "contact").eq("is_active", true).order("sort_order"),
-      ]);
-
+    const fetchContactSettings = async () => {
+      const { data } = await supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", "contact")
+        .maybeSingle();
       if (!mounted) return;
-
-      if (settingsRes.data?.value) {
-        setContact(settingsRes.data.value as ContactSettings);
-      }
-
-      setBlocks((blocksRes.data as SiteBlock[]) ?? []);
-      setPageLoading(false);
+      if (data?.value) setContact(data.value as ContactSettings);
+      setContactLoading(false);
     };
-
-    fetchPageData();
-
-    return () => {
-      mounted = false;
-    };
+    fetchContactSettings();
+    return () => { mounted = false; };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -78,7 +71,6 @@ const Contact = () => {
 
       if (error) throw error;
 
-      // Send auto-reply confirmation email
       const ticketNumber = `TK-${Date.now().toString(36).toUpperCase()}`;
       await supabase.functions.invoke("send-transactional-email", {
         body: {
@@ -117,9 +109,11 @@ const Contact = () => {
     (block) => (block.content as Record<string, unknown> | null)?.placement === "after_contact",
   );
 
+  const showContactForm = isVisible("static_contact_form");
+
   return (
     <div>
-      {pageLoading ? (
+      {blocksLoading ? (
         <div className="flex min-h-[25vh] items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
@@ -127,75 +121,77 @@ const Contact = () => {
         beforeFormBlocks.map((block) => <div key={block.id}>{renderBlock(block)}</div>)
       )}
 
-      {/* Contact form – functional core, always rendered */}
-      <section className="py-16">
-        <div className="container max-w-4xl">
-          <div className="grid gap-12 md:grid-cols-2">
-            <motion.form
-              onSubmit={handleSubmit}
-              className="space-y-4"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-            >
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("contact.yourName")} required />
-              <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder={t("contact.yourEmail")} required />
-              <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t("contact.subject")} required />
-              <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder={t("contact.yourMessage")} rows={5} required />
+      {/* Contact form – functional core, respects visibility toggle */}
+      {showContactForm && (
+        <section className="py-16">
+          <div className="container max-w-4xl">
+            <div className="grid gap-12 md:grid-cols-2">
+              <motion.form
+                onSubmit={handleSubmit}
+                className="space-y-4"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+              >
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("contact.yourName")} required />
+                <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder={t("contact.yourEmail")} required />
+                <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t("contact.subject")} required />
+                <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder={t("contact.yourMessage")} rows={5} required />
 
-              <Button type="submit" disabled={loading} className="w-full font-display uppercase tracking-wider">
-                <Send className="mr-2 h-4 w-4" />
-                {loading ? t("contact.sending") : t("contact.sendMessage")}
-              </Button>
-            </motion.form>
+                <Button type="submit" disabled={loading} className="w-full font-display uppercase tracking-wider">
+                  <Send className="mr-2 h-4 w-4" />
+                  {loading ? t("contact.sending") : t("contact.sendMessage")}
+                </Button>
+              </motion.form>
 
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
-              <h2 className="font-display text-xl font-semibold uppercase text-foreground">{t("contact.getInTouch")}</h2>
+              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+                <h2 className="font-display text-xl font-semibold uppercase text-foreground">{t("contact.getInTouch")}</h2>
 
-              <div className="space-y-4">
-                {[
-                  { icon: Mail, label: t("contact.emailLabel"), value: contact.email },
-                  { icon: MapPin, label: t("contact.locationLabel"), value: contact.address },
-                ].filter(({ value }) => !!value).map(({ icon: Icon, label, value }) => (
-                  <div key={label} className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-card/60 backdrop-blur-md shadow-[0_4px_16px_-4px_hsl(225_44%_4%/0.3)]">
-                      <Icon className="h-5 w-5 text-primary" />
+                <div className="space-y-4">
+                  {[
+                    { icon: Mail, label: t("contact.emailLabel"), value: contact.email },
+                    { icon: MapPin, label: t("contact.locationLabel"), value: contact.address },
+                  ].filter(({ value }) => !!value).map(({ icon: Icon, label, value }) => (
+                    <div key={label} className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-card/60 backdrop-blur-md shadow-[0_4px_16px_-4px_hsl(225_44%_4%/0.3)]">
+                        <Icon className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-display text-sm font-semibold uppercase text-foreground">{label}</p>
+                        <p className="text-sm text-muted-foreground">{value}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-display text-sm font-semibold uppercase text-foreground">{label}</p>
-                      <p className="text-sm text-muted-foreground">{value}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {(contact.social?.instagram || contact.social?.facebook || contact.social?.youtube) && (
-                <div className="space-y-2 pt-4">
-                  <h3 className="font-display text-sm font-semibold uppercase text-foreground">{t("contact.followUs")}</h3>
-                  <div className="flex gap-3">
-                    {contact.social?.instagram && (
-                      <a href={contact.social.instagram} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary">
-                        Instagram
-                      </a>
-                    )}
-                    {contact.social?.facebook && (
-                      <a href={contact.social.facebook} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary">
-                        Facebook
-                      </a>
-                    )}
-                    {contact.social?.youtube && (
-                      <a href={contact.social.youtube} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary">
-                        YouTube
-                      </a>
-                    )}
-                  </div>
+                  ))}
                 </div>
-              )}
-            </motion.div>
-          </div>
-        </div>
-      </section>
 
-      {!pageLoading && afterFormBlocks.map((block) => <div key={block.id}>{renderBlock(block)}</div>)}
+                {(contact.social?.instagram || contact.social?.facebook || contact.social?.youtube) && (
+                  <div className="space-y-2 pt-4">
+                    <h3 className="font-display text-sm font-semibold uppercase text-foreground">{t("contact.followUs")}</h3>
+                    <div className="flex gap-3">
+                      {contact.social?.instagram && (
+                        <a href={contact.social.instagram} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary">
+                          Instagram
+                        </a>
+                      )}
+                      {contact.social?.facebook && (
+                        <a href={contact.social.facebook} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary">
+                          Facebook
+                        </a>
+                      )}
+                      {contact.social?.youtube && (
+                        <a href={contact.social.youtube} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary">
+                          YouTube
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {!blocksLoading && afterFormBlocks.map((block) => <div key={block.id}>{renderBlock(block)}</div>)}
     </div>
   );
 };

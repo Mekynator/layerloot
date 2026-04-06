@@ -621,7 +621,7 @@ const AdminSettings = () => {
               <div><Label className="text-xs">Message</Label><Textarea value={promoDraft.value.message} onChange={e => promoDraft.setValue(prev => ({ ...prev, message: e.target.value }))} rows={2} /></div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div><Label className="text-xs">Button Text</Label><Input value={promoDraft.value.button_text} onChange={e => promoDraft.setValue(prev => ({ ...prev, button_text: e.target.value }))} /></div>
-                <div><Label className="text-xs">Button Link</Label><Input value={promoDraft.value.button_link} onChange={e => promoDraft.setValue(prev => ({ ...prev, button_link: e.target.value }))} /></div>
+                <PageLinkSelect label="Button Link" value={promoDraft.value.button_link} onChange={v => promoDraft.setValue(prev => ({ ...prev, button_link: v }))} />
               </div>
               <div><Label className="text-xs">Image URL</Label><Input value={promoDraft.value.image_url} onChange={e => promoDraft.setValue(prev => ({ ...prev, image_url: e.target.value }))} /></div>
               <div><Label className="text-xs">Dismiss Key</Label><Input value={promoDraft.value.dismiss_key} onChange={e => promoDraft.setValue(prev => ({ ...prev, dismiss_key: e.target.value }))} /></div>

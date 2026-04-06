@@ -464,6 +464,13 @@ const AdminSettings = () => {
               <CardContent className="space-y-3">
                 <div><Label className="text-xs">Description</Label><Textarea value={footerDraft.value.description} onChange={e => footerDraft.setValue(p => ({ ...p, description: e.target.value }))} rows={2} /></div>
                 <div><Label className="text-xs">Copyright Text</Label><Input value={footerDraft.value.copyright_text} onChange={e => footerDraft.setValue(p => ({ ...p, copyright_text: e.target.value }))} /></div>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Footer Height (px) — 0 = auto</Label>
+                    <span className="text-xs text-muted-foreground">{footerDraft.value.footer_height_px || 0}px</span>
+                  </div>
+                  <Slider min={0} max={600} step={10} value={[footerDraft.value.footer_height_px || 0]} onValueChange={([v]) => footerDraft.setValue(p => ({ ...p, footer_height_px: v }))} />
+                </div>
                 <div className="space-y-2 pt-2">
                   <SectionLabel>Section Visibility</SectionLabel>
                   <div className="flex items-center gap-2"><Switch checked={footerDraft.value.show_quick_links} onCheckedChange={v => footerDraft.setValue(p => ({ ...p, show_quick_links: v }))} /><Label className="text-xs">Quick Links column</Label></div>
@@ -495,6 +502,29 @@ const AdminSettings = () => {
               <div><Label className="text-xs">Account Title</Label><Input value={footerDraft.value.account_title} onChange={e => footerDraft.setValue(p => ({ ...p, account_title: e.target.value }))} /></div>
               <div><Label className="text-xs">Policies Title</Label><Input value={footerDraft.value.policies_title} onChange={e => footerDraft.setValue(p => ({ ...p, policies_title: e.target.value }))} /></div>
               <div><Label className="text-xs">Contact Title</Label><Input value={footerDraft.value.contact_title} onChange={e => footerDraft.setValue(p => ({ ...p, contact_title: e.target.value }))} /></div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="font-display text-sm uppercase">Footer Contact Fields</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-[10px] text-muted-foreground">These values are displayed in the footer contact block. Leave empty to hide a field.</p>
+              <div><Label className="text-xs">Contact Description</Label><Textarea value={footerDraft.value.contact_description || ""} onChange={e => footerDraft.setValue(p => ({ ...p, contact_description: e.target.value }))} rows={2} /></div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div><Label className="text-xs">Email Label</Label><Input value={footerDraft.value.contact_email_label || ""} onChange={e => footerDraft.setValue(p => ({ ...p, contact_email_label: e.target.value }))} /></div>
+                <div><Label className="text-xs">Email Value</Label><Input value={footerDraft.value.contact_email || ""} onChange={e => footerDraft.setValue(p => ({ ...p, contact_email: e.target.value }))} /></div>
+                <div><Label className="text-xs">Phone Label</Label><Input value={footerDraft.value.contact_phone_label || ""} onChange={e => footerDraft.setValue(p => ({ ...p, contact_phone_label: e.target.value }))} /></div>
+                <div><Label className="text-xs">Phone Value</Label><Input value={footerDraft.value.contact_phone || ""} onChange={e => footerDraft.setValue(p => ({ ...p, contact_phone: e.target.value }))} /></div>
+                <div><Label className="text-xs">Address Label</Label><Input value={footerDraft.value.contact_address_label || ""} onChange={e => footerDraft.setValue(p => ({ ...p, contact_address_label: e.target.value }))} /></div>
+                <div><Label className="text-xs">Address Value</Label><Input value={footerDraft.value.contact_address || ""} onChange={e => footerDraft.setValue(p => ({ ...p, contact_address: e.target.value }))} /></div>
+              </div>
+              <SectionLabel>Social Links</SectionLabel>
+              <div><Label className="text-xs">Social Section Title</Label><Input value={footerDraft.value.contact_social_title || ""} onChange={e => footerDraft.setValue(p => ({ ...p, contact_social_title: e.target.value }))} /></div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div><Label className="text-xs">Instagram URL</Label><Input value={footerDraft.value.contact_social_instagram || ""} onChange={e => footerDraft.setValue(p => ({ ...p, contact_social_instagram: e.target.value }))} placeholder="https://instagram.com/..." /></div>
+                <div><Label className="text-xs">Facebook URL</Label><Input value={footerDraft.value.contact_social_facebook || ""} onChange={e => footerDraft.setValue(p => ({ ...p, contact_social_facebook: e.target.value }))} placeholder="https://facebook.com/..." /></div>
+                <div><Label className="text-xs">YouTube URL</Label><Input value={footerDraft.value.contact_social_youtube || ""} onChange={e => footerDraft.setValue(p => ({ ...p, contact_social_youtube: e.target.value }))} placeholder="https://youtube.com/..." /></div>
+              </div>
             </CardContent>
           </Card>
 

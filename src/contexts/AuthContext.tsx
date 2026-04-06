@@ -2,8 +2,9 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import i18n, { resolveLanguage, LANGUAGE_STORAGE_KEY } from "@/lib/i18n";
+import { ADMIN_ROLE_SET } from "@/lib/admin-permissions-map";
 
-type AdminRole = "super_admin" | "admin" | "editor" | "support" | null;
+type AdminRole = string | null;
 
 interface AuthContextType {
   user: User | null;
@@ -41,8 +42,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, resolved);
   };
 
-  const ADMIN_ROLES = new Set(["super_admin", "admin", "editor", "support"]);
-
   const checkAdminRole = async (authUser: User) => {
     const roleFromMetadata = authUser.app_metadata?.role;
     const rolesFromMetadata = authUser.app_metadata?.roles;
@@ -67,10 +66,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    const adminRoleRow = data.find((r: any) => ADMIN_ROLES.has(r.role));
+    const adminRoleRow = data.find((r: any) => ADMIN_ROLE_SET.has(r.role));
     if (adminRoleRow) {
       setIsAdmin(true);
-      setAdminRole(adminRoleRow.role as AdminRole);
+      setAdminRole(adminRoleRow.role as string);
     } else {
       setIsAdmin(false);
       setAdminRole(null);
@@ -80,7 +79,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let initialised = false;
 
-    // 1. Restore session from storage first — this is the source of truth
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -92,11 +90,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     });
 
-    // 2. Listen for subsequent auth changes (sign-in, sign-out, token refresh)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      // Skip the INITIAL_SESSION event that fires before getSession resolves
       if (!initialised && _event === "INITIAL_SESSION") return;
 
       setSession(session);
@@ -105,7 +101,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setTimeout(() => checkAdminRole(session.user), 0);
         syncLanguage(session.user.id);
 
-        // Link referral invite on first sign-in
         if (_event === "SIGNED_IN") {
           const refCode = sessionStorage.getItem("ll_ref_code");
           if (refCode) {
@@ -114,7 +109,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               body: { ref_code: refCode, user_id: session.user.id },
             }).catch(() => {});
           } else {
-            // Check email-based invites even without ref code
             supabase.functions.invoke("process-referral-rewards", {
               body: { ref_code: "__email_match__", user_id: session.user.id },
             }).catch(() => {});

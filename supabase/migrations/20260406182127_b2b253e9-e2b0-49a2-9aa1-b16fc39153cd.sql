@@ -1,0 +1,1 @@
+ALTER TABLE public.custom_orders ADD COLUMN IF NOT EXISTS paid_at timestamptz DEFAULT NULL;

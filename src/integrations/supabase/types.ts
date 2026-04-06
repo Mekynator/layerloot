@@ -967,6 +967,7 @@ export type Database = {
           model_filename: string
           model_url: string
           name: string
+          paid_at: string | null
           payment_status: string
           production_status: string
           quoted_price: number | null
@@ -992,6 +993,7 @@ export type Database = {
           model_filename: string
           model_url: string
           name: string
+          paid_at?: string | null
           payment_status?: string
           production_status?: string
           quoted_price?: number | null
@@ -1017,6 +1019,7 @@ export type Database = {
           model_filename?: string
           model_url?: string
           name?: string
+          paid_at?: string | null
           payment_status?: string
           production_status?: string
           quoted_price?: number | null

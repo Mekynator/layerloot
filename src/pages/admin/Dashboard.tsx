@@ -8,8 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { useAdminDashboard, Period } from "@/hooks/use-admin-dashboard";
-import { useAdminPermissions, AdminRole } from "@/hooks/use-admin-permissions";
+import { useAdminPermissions } from "@/hooks/use-admin-permissions";
+import type { AdminRole } from "@/hooks/use-admin-permissions";
 import { useAuth } from "@/contexts/AuthContext";
+import type { AdminRoleKey } from "@/lib/admin-permissions-map";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, CartesianGrid, PieChart, Pie, Cell, BarChart, Bar,
@@ -35,11 +37,17 @@ const TILE_CLASS = "rounded-xl border border-primary/20 shadow-[0_0_12px_-4px_hs
 
 type WidgetKey = "action" | "kpi" | "content" | "operations" | "product" | "translation" | "charts" | "activity" | "shortcuts" | "referrals";
 
-const ROLE_WIDGETS: Record<NonNullable<AdminRole>, WidgetKey[]> = {
+const ROLE_WIDGETS: Record<string, WidgetKey[]> = {
+  owner: ["action", "kpi", "content", "operations", "product", "translation", "referrals", "charts", "activity", "shortcuts"],
   super_admin: ["action", "kpi", "content", "operations", "product", "translation", "referrals", "charts", "activity", "shortcuts"],
   admin: ["action", "kpi", "content", "operations", "product", "translation", "referrals", "charts", "activity", "shortcuts"],
+  content_admin: ["content", "product", "translation", "activity", "shortcuts"],
+  orders_admin: ["action", "kpi", "operations", "activity", "shortcuts"],
+  support_admin: ["action", "operations", "activity", "shortcuts"],
+  marketing_admin: ["kpi", "referrals", "charts", "activity", "shortcuts"],
   editor: ["content", "translation", "activity", "shortcuts"],
   support: ["action", "operations", "activity", "shortcuts"],
+  custom: ["action", "activity", "shortcuts"],
 };
 
 const KpiCard = ({ label, value, icon: Icon, sub, to, accent = "primary" }: {

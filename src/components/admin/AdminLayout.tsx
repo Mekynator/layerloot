@@ -5,12 +5,14 @@ import {
   Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
   Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone,
   BarChart3, Wallet, ImageIcon, Shield, Activity, Globe, MessageCircle,
-  Instagram, Brain, UserPlus,
+  Instagram, Brain, UserPlus, Crown,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminPermissions } from "@/hooks/use-admin-permissions";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { ROLE_LABELS, isOwnerEmail, type AdminRoleKey } from "@/lib/admin-permissions-map";
 
 const ICON_MAP: Record<string, typeof Package> = {
   LayoutDashboard, Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
@@ -91,7 +93,7 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const { isAdmin, loading, user } = useAuth();
-  const { hasPermission } = useAdminPermissions();
+  const { hasPermission, adminRole, isOwner } = useAdminPermissions();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -166,6 +168,12 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
       </nav>
 
       <div className="border-t border-sidebar-border/30 p-3">
+        <div className="mb-2 flex items-center gap-2 px-3">
+          {isOwner && <Crown className="h-3.5 w-3.5 text-primary" />}
+          <Badge variant="outline" className="text-[9px]">
+            {ROLE_LABELS[(adminRole as AdminRoleKey) ?? "admin"] ?? adminRole ?? "Admin"}
+          </Badge>
+        </div>
         <Link
           to="/"
           className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"

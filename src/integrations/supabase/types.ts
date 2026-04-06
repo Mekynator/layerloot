@@ -83,6 +83,45 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_invitations: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          permissions: string[]
+          role: Database["public"]["Enums"]["app_role"]
+          status: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          permissions?: string[]
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          permissions?: string[]
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       admin_permissions: {
         Row: {
           created_at: string
@@ -3223,7 +3262,18 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user" | "super_admin" | "editor" | "support"
+      app_role:
+        | "admin"
+        | "user"
+        | "super_admin"
+        | "editor"
+        | "support"
+        | "owner"
+        | "content_admin"
+        | "orders_admin"
+        | "support_admin"
+        | "marketing_admin"
+        | "custom"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3351,7 +3401,19 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user", "super_admin", "editor", "support"],
+      app_role: [
+        "admin",
+        "user",
+        "super_admin",
+        "editor",
+        "support",
+        "owner",
+        "content_admin",
+        "orders_admin",
+        "support_admin",
+        "marketing_admin",
+        "custom",
+      ],
     },
   },
 } as const

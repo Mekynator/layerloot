@@ -39,7 +39,6 @@ type FooterSettings = {
   account_link_label?: LocalizedText;
   orders_link_label?: LocalizedText;
   policy_links?: Array<{ label: LocalizedText; path: string }>;
-  // Footer-owned contact fields (source of truth for footer rendering)
   contact_description?: string;
   contact_email_label?: string;
   contact_email?: string;
@@ -53,10 +52,6 @@ type FooterSettings = {
   contact_social_youtube?: string;
 };
 
-/**
- * Legacy contact settings — used as fallback if footer-specific contact fields are empty.
- * Once footer contact fields are populated, this is ignored.
- */
 type ContactSettings = {
   email?: string;
   phone?: string;
@@ -90,6 +85,16 @@ const getLocalizedValue = (value: unknown, fallback = ""): string => {
   return map[lang] || map.en || fallback;
 };
 
+/* ─── Animated footer link ─── */
+const FooterLink = ({ to, children }: { to: string; children: React.ReactNode }) => (
+  <Link
+    to={to}
+    className="relative inline-block text-muted-foreground transition-all duration-200 hover:translate-x-0.5 hover:text-primary after:absolute after:bottom-0 after:left-0 after:h-px after:w-0 after:bg-primary/60 after:transition-all after:duration-300 hover:after:w-full"
+  >
+    {children}
+  </Link>
+);
+
 const Footer = () => {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
@@ -97,7 +102,7 @@ const Footer = () => {
   const [branding, setBranding] = useState<BrandingSettings>({ logo_text_left: "Layer", logo_text_right: "Loot", logo_image_url: "", logo_link: "/", logo_alt: "LayerLoot" });
   const [footerSettings, setFooterSettings] = useState<FooterSettings>({});
   const [legacyContact, setLegacyContact] = useState<ContactSettings>({});
-  const [dynamicPolicies, setDynamicPolicies] = useState<Array<{ title: string; slug: string }>>([]);
+  const [hasPolicies, setHasPolicies] = useState(false);
   const footerNavLinks = useFooterNavLinks();
 
   useEffect(() => {
@@ -105,12 +110,12 @@ const Footer = () => {
       supabase.from("site_settings").select("value").eq("key", "branding").maybeSingle(),
       supabase.from("site_settings").select("value").eq("key", "footer_settings").maybeSingle(),
       supabase.from("site_settings").select("value").eq("key", "contact").maybeSingle(),
-      supabase.from("policies").select("title, slug").eq("is_visible", true).order("sort_order", { ascending: true }),
+      supabase.from("policies").select("id").eq("is_visible", true).limit(1),
     ]).then(([brandingRes, footerRes, contactRes, policiesRes]) => {
       if (brandingRes.data?.value) setBranding((prev) => ({ ...prev, ...(brandingRes.data.value as BrandingSettings) }));
       if (footerRes.data?.value) setFooterSettings(footerRes.data.value as FooterSettings);
       if (contactRes.data?.value) setLegacyContact(contactRes.data.value as ContactSettings);
-      if (policiesRes.data) setDynamicPolicies(policiesRes.data);
+      setHasPolicies((policiesRes.data?.length ?? 0) > 0);
     });
   }, []);
 
@@ -123,10 +128,9 @@ const Footer = () => {
     [footerNavLinks, i18n.resolvedLanguage, i18n.language],
   );
 
-  const logoHeight = Math.max(20, Number(footerSettings.logo_height_px || 32));
+  const logoHeight = Math.max(20, Number(footerSettings.logo_height_px || 28));
   const footerHeight = Number(footerSettings.footer_height_px || 0);
 
-  // Resolve contact values: footer-specific fields take priority, then legacy contact, then empty (hide)
   const contactEmail = footerSettings.contact_email || getLocalizedValue(legacyContact.email) || "";
   const contactPhone = footerSettings.contact_phone || getLocalizedValue(legacyContact.phone) || "";
   const contactAddress = footerSettings.contact_address || getLocalizedValue(legacyContact.address) || "";
@@ -157,160 +161,170 @@ const Footer = () => {
 
   const hasAnyContact = contactEmail || contactPhone || contactAddress;
 
+  /* Column header – collapsible on mobile */
+  const SectionHeader = ({ title, sectionKey }: { title: string; sectionKey: string }) => (
+    <button
+      className="mb-2 md:mb-3 flex w-full items-center justify-between font-display text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground md:pointer-events-none"
+      onClick={() => isMobile && setOpenSections((s) => ({ ...s, [sectionKey]: !s[sectionKey] }))}
+    >
+      {title}
+      <ChevronDown className={`h-3.5 w-3.5 md:hidden transition-transform duration-200 ${openSections[sectionKey] ? "rotate-180" : ""}`} />
+    </button>
+  );
+
+  const sectionVisible = (key: string) => isMobile ? !!openSections[key] : true;
+
   return (
     <>
       <GlobalSectionRenderer page="global_footer_top" />
 
+      {/* Separator gradient line */}
+      <div className="h-px w-full bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+
       <motion.footer
-        initial={{ opacity: 0, y: 14 }}
+        initial={{ opacity: 0, y: 10 }}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.08 }}
-        transition={{ duration: 0.4 }}
-        className="relative border-t border-border/10 bg-background/80 backdrop-blur-xl"
+        viewport={{ once: true, amount: 0.15 }}
+        transition={{ duration: 0.35 }}
+        className="relative bg-background/80 backdrop-blur-xl"
         style={footerHeight > 0 ? { minHeight: `${footerHeight}px` } : undefined}
       >
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 h-px w-2/3 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-
-        <div className="container py-8 md:py-16">
-          <div className="grid gap-8 grid-cols-1 md:grid-cols-3 lg:grid-cols-5 md:gap-10">
-            <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="col-span-2 md:col-span-1">
-              <Link to={branding.logo_link || "/"} className="mb-5 flex items-center gap-2.5 group">
+        <div className="container py-5 md:py-8">
+          <div className="grid gap-5 grid-cols-1 md:grid-cols-4 lg:grid-cols-5 md:gap-6">
+            {/* Brand column */}
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="md:col-span-1"
+            >
+              <Link to={branding.logo_link || "/"} className="mb-3 flex items-center gap-2 group">
                 {branding.logo_image_url ? (
                   <img src={branding.logo_image_url} alt={logoAlt} style={{ height: `${logoHeight}px` }} className="w-auto object-contain" />
                 ) : (
                   <>
                     {footerSettings.show_logo_icon !== false && <img src={logoImg} alt={logoAlt} style={{ height: `${logoHeight}px` }} className="w-auto object-contain" />}
                     {footerSettings.show_logo_text !== false && (
-                      <span className="font-display text-xl font-bold uppercase tracking-wider text-foreground">
+                      <span className="font-display text-lg font-bold uppercase tracking-wider text-foreground">
                         {logoLeft}<span className="gradient-text">{logoRight}</span>
                       </span>
                     )}
                   </>
                 )}
               </Link>
-              {description && <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>}
+              {description && <p className="text-xs leading-relaxed text-muted-foreground/80 max-w-[200px]">{description}</p>}
+
+              {/* Socials inline with brand */}
+              {hasSocials && (
+                <div className="mt-3 flex items-center gap-2">
+                  {socialTitle && <p className="mr-1 text-[9px] uppercase tracking-[0.15em] text-muted-foreground/60">{socialTitle}</p>}
+                  {hasInstagram && (
+                    <motion.a
+                      whileHover={{ scale: 1.08 }}
+                      whileTap={{ scale: 0.95 }}
+                      href={instagramUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/15 bg-card/20 text-muted-foreground transition-all duration-200 hover:border-primary/30 hover:text-primary hover:shadow-[0_0_12px_hsl(var(--primary)/0.15)]"
+                      aria-label={t("footer.instagram", "Instagram")}
+                    >
+                      <Instagram className="h-3.5 w-3.5" />
+                    </motion.a>
+                  )}
+                  {hasFacebook && (
+                    <motion.a
+                      whileHover={{ scale: 1.08 }}
+                      whileTap={{ scale: 0.95 }}
+                      href={facebookUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/15 bg-card/20 text-muted-foreground transition-all duration-200 hover:border-primary/30 hover:text-primary hover:shadow-[0_0_12px_hsl(var(--primary)/0.15)]"
+                      aria-label={t("footer.facebook", "Facebook")}
+                    >
+                      <Facebook className="h-3.5 w-3.5" />
+                    </motion.a>
+                  )}
+                </div>
+              )}
             </motion.div>
 
+            {/* Quick Links */}
             {footerSettings.show_quick_links !== false && (
-              <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.04 }}>
-                <button
-                  className="mb-3 md:mb-5 flex w-full items-center justify-between font-display text-xs font-semibold uppercase tracking-[0.2em] text-foreground md:pointer-events-none"
-                  onClick={() => isMobile && setOpenSections((s) => ({ ...s, quickLinks: !s.quickLinks }))}
-                >
-                  {quickLinksTitle}
-                  <ChevronDown className={`h-4 w-4 md:hidden transition-transform ${openSections.quickLinks ? "rotate-180" : ""}`} />
-                </button>
-                <ul className={`space-y-2.5 text-sm text-muted-foreground ${isMobile && !openSections.quickLinks ? "hidden" : ""} md:block`}>
+              <motion.div initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.04 }}>
+                <SectionHeader title={quickLinksTitle} sectionKey="quickLinks" />
+                <ul className={`space-y-1.5 text-xs ${!sectionVisible("quickLinks") ? "hidden" : ""} md:block`}>
                   {footerLinks.map((link) => (
                     <li key={`${link.to}-${link.localizedLabel}`}>
-                      <Link to={link.to} className="transition-all duration-200 hover:translate-x-1 hover:text-primary">{link.localizedLabel}</Link>
+                      <FooterLink to={link.to}>{link.localizedLabel}</FooterLink>
                     </li>
                   ))}
+                  {/* Single Policies link instead of listing all */}
+                  {footerSettings.show_policies !== false && hasPolicies && (
+                    <li>
+                      <FooterLink to="/policies">
+                        {getLocalizedValue(footerSettings.policies_title, t("footer.policies", "Policies"))}
+                      </FooterLink>
+                    </li>
+                  )}
                 </ul>
               </motion.div>
             )}
 
+            {/* Account */}
             {footerSettings.show_account_links !== false && (
-              <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.08 }}>
-                <button
-                  className="mb-3 md:mb-5 flex w-full items-center justify-between font-display text-xs font-semibold uppercase tracking-[0.2em] text-foreground md:pointer-events-none"
-                  onClick={() => isMobile && setOpenSections((s) => ({ ...s, account: !s.account }))}
-                >
-                  {accountTitle}
-                  <ChevronDown className={`h-4 w-4 md:hidden transition-transform ${openSections.account ? "rotate-180" : ""}`} />
-                </button>
-                <ul className={`space-y-2.5 text-sm text-muted-foreground ${isMobile && !openSections.account ? "hidden" : ""} md:block`}>
-                  <li><Link to="/auth" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">{authLinkLabel}</Link></li>
-                  <li><Link to="/account" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">{accountLinkLabel}</Link></li>
-                  <li><Link to="/account/orders" className="transition-all duration-200 hover:translate-x-1 hover:text-primary">{ordersLinkLabel}</Link></li>
+              <motion.div initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.06 }}>
+                <SectionHeader title={accountTitle} sectionKey="account" />
+                <ul className={`space-y-1.5 text-xs ${!sectionVisible("account") ? "hidden" : ""} md:block`}>
+                  <li><FooterLink to="/auth">{authLinkLabel}</FooterLink></li>
+                  <li><FooterLink to="/account">{accountLinkLabel}</FooterLink></li>
+                  <li><FooterLink to="/account/orders">{ordersLinkLabel}</FooterLink></li>
                 </ul>
               </motion.div>
             )}
 
-            {footerSettings.show_policies !== false && (
-              <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.10 }}>
-                <button
-                  className="mb-3 md:mb-5 flex w-full items-center justify-between font-display text-xs font-semibold uppercase tracking-[0.2em] text-foreground md:pointer-events-none"
-                  onClick={() => isMobile && setOpenSections((s) => ({ ...s, policies: !s.policies }))}
-                >
-                  {getLocalizedValue(footerSettings.policies_title, t("footer.policies", "Policies"))}
-                  <ChevronDown className={`h-4 w-4 md:hidden transition-transform ${openSections.policies ? "rotate-180" : ""}`} />
-                </button>
-                <ul className={`space-y-2.5 text-sm text-muted-foreground ${isMobile && !openSections.policies ? "hidden" : ""} md:block`}>
-                  {dynamicPolicies.map((policy) => (
-                    <li key={policy.slug}>
-                      <Link to={`/policies/${policy.slug}`} className="transition-all duration-200 hover:translate-x-1 hover:text-primary">
-                        {policy.title}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-            )}
-
-            {footerSettings.show_contact_block !== false && (hasAnyContact || contactDescription || hasSocials) && (
-              <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.12 }}>
-                <h4 className="mb-5 font-display text-xs font-semibold uppercase tracking-[0.2em] text-foreground">{contactTitle}</h4>
-                {contactDescription && <p className="mb-4 text-sm text-muted-foreground">{contactDescription}</p>}
+            {/* Contact – compact */}
+            {footerSettings.show_contact_block !== false && (hasAnyContact || contactDescription) && (
+              <motion.div initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.08 }} className="md:col-span-1 lg:col-span-2">
+                <h4 className="mb-2 md:mb-3 font-display text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground">{contactTitle}</h4>
+                {contactDescription && <p className="mb-2 text-xs text-muted-foreground/80">{contactDescription}</p>}
 
                 {hasAnyContact && (
-                  <ul className="space-y-3 text-sm text-muted-foreground">
+                  <ul className="space-y-1.5 text-xs text-muted-foreground">
                     {contactEmail && (
-                      <li className="flex items-start gap-2.5 transition-colors hover:text-primary">
-                        <Mail className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
+                      <li className="flex items-center gap-2 transition-colors duration-200 hover:text-primary">
+                        <Mail className="h-3 w-3 shrink-0 text-primary/60" />
                         <div className="min-w-0">
-                          {emailLabel && <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/70">{emailLabel}</p>}
+                          {emailLabel && <span className="mr-1 text-[9px] uppercase tracking-wider text-muted-foreground/50">{emailLabel}</span>}
                           <a href={`mailto:${contactEmail}`} className="hover:text-primary break-all">{contactEmail}</a>
                         </div>
                       </li>
                     )}
                     {contactPhone && (
-                      <li className="flex items-start gap-2.5">
-                        <Phone className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
+                      <li className="flex items-center gap-2">
+                        <Phone className="h-3 w-3 shrink-0 text-primary/60" />
                         <div>
-                          {phoneLabel && <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/70">{phoneLabel}</p>}
-                          <p>{contactPhone}</p>
+                          {phoneLabel && <span className="mr-1 text-[9px] uppercase tracking-wider text-muted-foreground/50">{phoneLabel}</span>}
+                          <span>{contactPhone}</span>
                         </div>
                       </li>
                     )}
                     {contactAddress && (
-                      <li className="flex items-start gap-2.5">
-                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
+                      <li className="flex items-center gap-2">
+                        <MapPin className="h-3 w-3 shrink-0 text-primary/60" />
                         <div>
-                          {addressLabel && <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/70">{addressLabel}</p>}
-                          <p>{contactAddress}</p>
+                          {addressLabel && <span className="mr-1 text-[9px] uppercase tracking-wider text-muted-foreground/50">{addressLabel}</span>}
+                          <span>{contactAddress}</span>
                         </div>
                       </li>
                     )}
                   </ul>
                 )}
-
-                {hasSocials && (
-                  <div className="mt-6">
-                    {socialTitle && <p className="mb-3 text-[10px] uppercase tracking-[0.15em] text-muted-foreground/70">{socialTitle}</p>}
-                    <div className="flex items-center gap-3">
-                      {hasInstagram && (
-                        <motion.a whileTap={{ scale: 0.98 }} href={instagramUrl} target="_blank" rel="noreferrer"
-                          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border/20 bg-card/30 text-muted-foreground transition-all hover:border-primary/30 hover:text-primary hover:shadow-[0_0_20px_hsl(217_91%_60%/0.15)]"
-                          aria-label={t("footer.instagram", "Instagram")}>
-                          <Instagram className="h-4 w-4" />
-                        </motion.a>
-                      )}
-                      {hasFacebook && (
-                        <motion.a whileTap={{ scale: 0.98 }} href={facebookUrl} target="_blank" rel="noreferrer"
-                          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border/20 bg-card/30 text-muted-foreground transition-all hover:border-primary/30 hover:text-primary hover:shadow-[0_0_20px_hsl(217_91%_60%/0.15)]"
-                          aria-label={t("footer.facebook", "Facebook")}>
-                          <Facebook className="h-4 w-4" />
-                        </motion.a>
-                      )}
-                    </div>
-                  </div>
-                )}
               </motion.div>
             )}
           </div>
 
-          <div className="mt-12 border-t border-border/10 pt-6 text-center text-xs text-muted-foreground/60">
+          {/* Copyright – tighter */}
+          <div className="mt-5 border-t border-border/8 pt-3 text-center text-[10px] text-muted-foreground/50">
             © {new Date().getFullYear()} {logoLeft}{logoRight}. {copyrightText}
           </div>
         </div>

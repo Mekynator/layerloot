@@ -285,15 +285,22 @@ export type Database = {
           category: string
           created_at: string
           created_by: string | null
+          currency: string
           description: string
           expense_date: string
           gross_amount: number
           id: string
           is_recurring: boolean
+          month_key: string | null
           net_amount: number
+          no_receipt_required: boolean
           notes: string | null
+          payment_method: string | null
+          receipt_file_name: string | null
           receipt_file_url: string | null
           receipt_reference: string | null
+          source: string
+          subcategory: string | null
           supplier: string | null
           updated_at: string
           vat_amount: number
@@ -302,15 +309,22 @@ export type Database = {
           category?: string
           created_at?: string
           created_by?: string | null
+          currency?: string
           description?: string
           expense_date?: string
           gross_amount?: number
           id?: string
           is_recurring?: boolean
+          month_key?: string | null
           net_amount?: number
+          no_receipt_required?: boolean
           notes?: string | null
+          payment_method?: string | null
+          receipt_file_name?: string | null
           receipt_file_url?: string | null
           receipt_reference?: string | null
+          source?: string
+          subcategory?: string | null
           supplier?: string | null
           updated_at?: string
           vat_amount?: number
@@ -319,15 +333,22 @@ export type Database = {
           category?: string
           created_at?: string
           created_by?: string | null
+          currency?: string
           description?: string
           expense_date?: string
           gross_amount?: number
           id?: string
           is_recurring?: boolean
+          month_key?: string | null
           net_amount?: number
+          no_receipt_required?: boolean
           notes?: string | null
+          payment_method?: string | null
+          receipt_file_name?: string | null
           receipt_file_url?: string | null
           receipt_reference?: string | null
+          source?: string
+          subcategory?: string | null
           supplier?: string | null
           updated_at?: string
           vat_amount?: number
@@ -1289,6 +1310,30 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_categories: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       gallery_posts: {
         Row: {
           comment: string | null
@@ -1645,6 +1690,45 @@ export type Database = {
           uploaded_by?: string | null
           usage_count?: number
           width?: number | null
+        }
+        Relationships: []
+      }
+      monthly_reports: {
+        Row: {
+          created_at: string
+          csv_file_url: string | null
+          generated_at: string
+          id: string
+          month: number
+          month_key: string
+          notes: string | null
+          pdf_file_url: string | null
+          snapshot_json: Json
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          csv_file_url?: string | null
+          generated_at?: string
+          id?: string
+          month: number
+          month_key: string
+          notes?: string | null
+          pdf_file_url?: string | null
+          snapshot_json?: Json
+          year: number
+        }
+        Update: {
+          created_at?: string
+          csv_file_url?: string | null
+          generated_at?: string
+          id?: string
+          month?: number
+          month_key?: string
+          notes?: string | null
+          pdf_file_url?: string | null
+          snapshot_json?: Json
+          year?: number
         }
         Relationships: []
       }
@@ -2403,6 +2487,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      recurring_expenses: {
+        Row: {
+          billing_day: number
+          category: string
+          created_at: string
+          default_gross_amount: number
+          default_net_amount: number
+          default_vat_amount: number
+          id: string
+          is_active: boolean
+          subcategory: string | null
+          title: string
+          updated_at: string
+          vendor_name: string | null
+        }
+        Insert: {
+          billing_day?: number
+          category?: string
+          created_at?: string
+          default_gross_amount?: number
+          default_net_amount?: number
+          default_vat_amount?: number
+          id?: string
+          is_active?: boolean
+          subcategory?: string | null
+          title: string
+          updated_at?: string
+          vendor_name?: string | null
+        }
+        Update: {
+          billing_day?: number
+          category?: string
+          created_at?: string
+          default_gross_amount?: number
+          default_net_amount?: number
+          default_vat_amount?: number
+          id?: string
+          is_active?: boolean
+          subcategory?: string | null
+          title?: string
+          updated_at?: string
+          vendor_name?: string | null
+        }
+        Relationships: []
       }
       referral_invites: {
         Row: {

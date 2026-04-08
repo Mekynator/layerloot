@@ -280,6 +280,60 @@ export type Database = {
         }
         Relationships: []
       }
+      business_expenses: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string
+          expense_date: string
+          gross_amount: number
+          id: string
+          is_recurring: boolean
+          net_amount: number
+          notes: string | null
+          receipt_file_url: string | null
+          receipt_reference: string | null
+          supplier: string | null
+          updated_at: string
+          vat_amount: number
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          expense_date?: string
+          gross_amount?: number
+          id?: string
+          is_recurring?: boolean
+          net_amount?: number
+          notes?: string | null
+          receipt_file_url?: string | null
+          receipt_reference?: string | null
+          supplier?: string | null
+          updated_at?: string
+          vat_amount?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          expense_date?: string
+          gross_amount?: number
+          id?: string
+          is_recurring?: boolean
+          net_amount?: number
+          notes?: string | null
+          receipt_file_url?: string | null
+          receipt_reference?: string | null
+          supplier?: string | null
+          updated_at?: string
+          vat_amount?: number
+        }
+        Relationships: []
+      }
       campaigns: {
         Row: {
           banner_config: Json

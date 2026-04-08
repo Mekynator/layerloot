@@ -7,7 +7,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import AdminLayout from "@/components/admin/AdminLayout";
 import DeclarationPreview from "@/components/admin/declaration/DeclarationPreview";
 import ExpenseManager from "@/components/admin/declaration/ExpenseManager";
+import RecurringExpenseManager from "@/components/admin/declaration/RecurringExpenseManager";
+import ReportsManager from "@/components/admin/declaration/ReportsManager";
 import { useMonthlyDeclaration, useBusinessExpenses } from "@/hooks/use-monthly-declaration";
+import { useRecurringExpenses } from "@/hooks/use-recurring-expenses";
+import { useMonthlyReports } from "@/hooks/use-monthly-reports";
 import { downloadDeclarationPDF, exportDeclarationCSV, generateDeclarationHTML } from "@/lib/generate-declaration-pdf";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -19,6 +23,8 @@ const AdminDeclaration = () => {
 
   const { data, loading } = useMonthlyDeclaration(year, month);
   const expenses = useBusinessExpenses(year, month);
+  const recurring = useRecurringExpenses();
+  const reports = useMonthlyReports();
 
   const prevMonth = () => {
     if (month === 1) { setMonth(12); setYear(y => y - 1); }
@@ -86,7 +92,7 @@ const AdminDeclaration = () => {
               <Printer className="h-3.5 w-3.5" /> Print
             </Button>
             <Button size="sm" onClick={() => downloadDeclarationPDF(data, month, year)} className="gap-1.5 text-xs">
-              <Download className="h-3.5 w-3.5" /> Download PDF
+              <Download className="h-3.5 w-3.5" /> PDF
             </Button>
             <Button variant="secondary" size="sm" onClick={() => downloadDeclarationPDF(data, month, year, true)} className="gap-1.5 text-xs">
               <Download className="h-3.5 w-3.5" /> Compact
@@ -99,13 +105,15 @@ const AdminDeclaration = () => {
             {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-xl" />)}
           </div>
         ) : (
-          <Tabs defaultValue="preview" className="space-y-4">
+          <Tabs defaultValue="overview" className="space-y-4">
             <TabsList>
-              <TabsTrigger value="preview">Report Preview</TabsTrigger>
-              <TabsTrigger value="expenses">Manage Expenses</TabsTrigger>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="expenses">Expenses</TabsTrigger>
+              <TabsTrigger value="recurring">Recurring</TabsTrigger>
+              <TabsTrigger value="reports">Reports</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="preview">
+            <TabsContent value="overview">
               <div className="rounded-xl border border-border/50 bg-card/20 p-6">
                 <DeclarationPreview data={data} month={month} year={year} />
               </div>
@@ -119,6 +127,35 @@ const AdminDeclaration = () => {
                   onAdd={expenses.addExpense}
                   onUpdate={expenses.updateExpense}
                   onDelete={expenses.deleteExpense}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="recurring">
+              <div className="rounded-xl border border-border/50 bg-card/20 p-6">
+                <RecurringExpenseManager
+                  items={recurring.items}
+                  loading={recurring.loading}
+                  onAdd={recurring.add}
+                  onUpdate={recurring.update}
+                  onRemove={recurring.remove}
+                  onApply={recurring.applyToMonth}
+                  year={year}
+                  month={month}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="reports">
+              <div className="rounded-xl border border-border/50 bg-card/20 p-6">
+                <ReportsManager
+                  reports={reports.reports}
+                  loading={reports.loading}
+                  onGenerate={reports.generateSnapshot}
+                  onDelete={reports.deleteReport}
+                  currentData={data}
+                  currentYear={year}
+                  currentMonth={month}
                 />
               </div>
             </TabsContent>

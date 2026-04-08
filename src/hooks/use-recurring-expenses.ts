@@ -89,7 +89,7 @@ export function useRecurringExpenses() {
         gross_amount: rec.default_gross_amount,
         is_recurring: true,
         source: "recurring",
-      } as Record<string, unknown>);
+      } as never);
       applied++;
     }
 

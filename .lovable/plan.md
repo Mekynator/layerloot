@@ -1,110 +1,117 @@
 
 
-# Audit & Refactor: Remove Static Fallback Rendering Platform-Wide
+# Finance System Expansion Plan
 
-## Current Architecture Analysis
+## What Already Exists
+- `business_expenses` table with basic CRUD
+- 2-tab admin page (Preview + Expenses)
+- Aggregation hook pulling from orders, custom_orders, business_expenses
+- HTML-based print/PDF and CSV export
+- DeclarationPreview and ExpenseManager components
 
-The platform has two rendering paths:
-1. **DynamicPage** — pure DB-driven block renderer (used by Home/Index wrapper, About, and catch-all `/:slug` routes). Correctly respects `is_active`, `sort_order`, and publish state.
-2. **Hybrid pages** — pages with their own dedicated React components that fetch `site_blocks` independently AND render hardcoded static JSX alongside them. The static JSX bypasses visibility controls.
+## What Needs to Be Built
 
-### Pages with Static/Hybrid Rendering (the problem)
+### 1. Database Changes (Migration)
 
-| Page | Static JSX present | Uses `isVisible()` | Fully DB-driven |
-|------|-------------------|-------------------|-----------------|
-| **Home (Index.tsx)** | SmartHomeSections, HomeSocialProof | Yes (partial) | No — static sections rendered after DynamicPage |
-| **Products** | Header/sidebar, product grid, search | Yes (partial) | No — static grid/header always rendered alongside DB blocks |
-| **Contact** | Contact form, contact info sidebar | No | No — form always renders |
-| **Gallery** | Gallery grid, upload dialog | No | No — gallery always renders |
-| **CreateYourOwn** | Tabs (custom print, lithophane, gift finder) | No | No — tools always render |
-| **Creations** | Showcase tabs, community gallery | No | No — tabs always render |
-| **SubmitDesign** | Upload form | No | No — form always renders |
-| **Cart** | Cart items, summary, upsell | No | No — cart always renders |
-| **Account** | Dashboard, orders, settings | No | No — dashboard always renders |
-| **OrderTracking** | Order detail, timeline | No | No — purely static |
-| **ProductDetail** | Product page (images, reviews, Q&A) | No | No — purely static |
-| **Policies** | Markdown from `site_settings` + hardcoded defaults | No | No — uses fallback defaults |
-| **Footer** | Contact info, nav links | No | N/A — layout component |
-| **Header** | Navigation | No | N/A — layout component |
+**Enhance `business_expenses`** — add missing columns rather than creating a parallel `monthly_expenses` table (avoids data migration complexity):
+- `month_key` (text, computed from expense_date, e.g. "2026-04")
+- `subcategory` (text, nullable)
+- `currency` (text, default "DKK")
+- `payment_method` (text, nullable)
+- `receipt_file_name` (text, nullable)
+- `no_receipt_required` (boolean, default false)
+- `source` (text, default "manual" — values: manual/recurring/system)
 
-### Static Section Definitions (in `static-page-sections.ts`)
+**New table: `recurring_expenses`**
+- id, title, vendor_name, category, subcategory, default_net_amount, default_vat_amount, default_gross_amount, billing_day, is_active, created_at, updated_at
+- RLS: admin/super_admin/owner only
 
-Defined for: `home`, `products`, `contact`, `gallery`, `create`, `creations`, `submit-design`, `cart`, `account`, `order-tracking`. These appear in the Visual Editor as configurable items but their visibility toggles only work for `home` and `products` (the only two pages calling `useStaticSectionSettings`).
+**New table: `monthly_reports`**
+- id, month_key, year, month, generated_at, pdf_file_url, csv_file_url, snapshot_json (jsonb), notes, created_at
+- RLS: admin/super_admin/owner only
 
-### Core Problem
+**New table: `expense_categories`**
+- id, name, sort_order, is_active, created_at
+- RLS: admin read/write, public read active
+- Seed with: Electricity, Internet, Software, Marketing, Shipping, Packaging, Materials, Tools, Accounting, Office, Misc
 
-- 10+ pages define static sections in the editor but don't check `isVisible()` before rendering
-- Contact, Gallery, CreateYourOwn, Creations, SubmitDesign, Cart, Account, OrderTracking all render their core content unconditionally
-- Policies page uses hardcoded fallback content that can't be toggled off
-- The Visual Editor shows visibility toggles for sections that have no effect
+### 2. Hooks (Data Layer)
 
-## Proposed Solution
+**`use-recurring-expenses.ts`** — CRUD for recurring expenses + "apply to month" function that inserts entries into business_expenses with source="recurring" (with duplicate prevention check).
 
-### Approach: Add `useStaticSectionSettings` to all hybrid pages
+**`use-monthly-reports.ts`** — CRUD for monthly_reports + generate snapshot function that captures current aggregated data as JSON.
 
-Rather than migrating all static content into DB blocks (which would break functional components like forms, cart logic, auth flows), the correct approach is:
+**`use-expense-categories.ts`** — fetch/manage dynamic categories (replaces hardcoded EXPENSE_CATEGORIES).
 
-1. **Wire up `useStaticSectionSettings` on every hybrid page** so each static section's visibility toggle actually works
-2. **Remove hardcoded fallback content** from Policies (use empty state instead of default policy text when no saved content exists — or keep defaults but make them editable-only, not hardcoded render)
-3. **Ensure no page renders static content that has been toggled off in the editor**
+**Enhance `use-monthly-declaration.ts`** — use dynamic categories from expense_categories table instead of hardcoded list.
 
-### Implementation Steps
+### 3. Admin UI — 4 Tabs
 
-#### Step 1: Wire visibility checks on all hybrid pages
+Refactor `AdminDeclaration.tsx` from 2 tabs to 4:
 
-For each page listed below, import `useStaticSectionSettings` and wrap static sections in `isVisible()` guards:
+**Tab 1: Overview** (existing DeclarationPreview, enhanced)
+- Summary cards (Income, Expenses, VAT In, VAT Out, Result)
+- YTD totals
+- Previous month comparison
+- Warnings panel
 
-- **Contact.tsx** — wrap contact form section in `isVisible("static_contact_form")`
-- **Gallery.tsx** — wrap gallery grid in `isVisible("static_gallery_grid")`  
-- **CreateYourOwn.tsx** — wrap hero in `isVisible("static_create_hero")`, tools tabs in `isVisible("static_create_tools")`
-- **Creations.tsx** — wrap showcase in `isVisible("static_creations_showcase")`
-- **SubmitDesign.tsx** — wrap form in `isVisible("static_submit_form")`
-- **Cart.tsx** — wrap cart view in `isVisible("static_cart_items")`
-- **Account.tsx** — wrap dashboard in `isVisible("static_account_dashboard")`
-- **OrderTracking.tsx** — wrap tracking in `isVisible("static_order_tracking")`
+**Tab 2: Expenses** (existing ExpenseManager, enhanced)
+- Add subcategory, payment_method, no_receipt_required fields to form
+- Category filter dropdown
+- Status badges (missing receipt, categorized)
+- Use dynamic categories from expense_categories
 
-#### Step 2: Migrate page-level block fetching to `usePageBlocks` hook
+**Tab 3: Recurring** (new component)
+- `RecurringExpenseManager.tsx`
+- List recurring expenses with activate/deactivate toggle
+- Add/edit/delete recurring entries
+- "Apply to [month]" button that copies recurring entries into business_expenses for selected month
+- Duplicate prevention indicator
 
-Several hybrid pages (Contact, Gallery, CreateYourOwn, Creations, SubmitDesign) manually fetch blocks with `useEffect` + `useState`. Refactor these to use the existing `usePageBlocks` hook for consistency, which already handles `is_active` filtering.
+**Tab 4: Reports** (new component)
+- `ReportsManager.tsx`
+- List of previously generated monthly reports
+- "Generate Report" button → saves snapshot_json to monthly_reports
+- Download PDF / CSV from saved report
+- Regenerate option
+- View snapshot summary inline
 
-#### Step 3: Policies fallback cleanup
+### 4. PDF Generator Enhancement
 
-Remove the `defaultPolicies` hardcoded object from `Policies.tsx`. If no saved content exists for a policy, show a clean empty state instead of rendering hardcoded placeholder text that can't be controlled from the editor.
+Update `generate-declaration-pdf.ts`:
+- Black/white professional print layout (remove dark theme for PDF)
+- Numbers right-aligned with DKK currency
+- Section C shows Net | VAT | Gross columns per category
+- Receipt Index shows vendor column + status checkmark/missing icon
+- Add source column to CSV (system/manual/recurring)
 
-#### Step 4: Ensure preview/live consistency
+### 5. Snapshot System
 
-The `DynamicPage` renderer already filters `is_active !== false`. The hybrid pages' static sections will now also respect the same visibility source. The Visual Editor's `StaticSectionPreview` component already renders previews correctly — no changes needed there.
+When "Generate Report" is clicked:
+- Aggregate all current month data
+- Store as `snapshot_json` in `monthly_reports`
+- Optionally store PDF/CSV file URLs if uploaded to storage
+- Historical reports remain stable even if underlying data changes
 
-#### Step 5: Duplicate rendering prevention
+### 6. Files to Create/Modify
 
-Audit `Index.tsx` specifically — it renders `DynamicPage` (which loads DB blocks for "home") AND then renders `SmartHomeSections` and `HomeSocialProof` statically below. If those same sections were also added as DB blocks, they'd render twice. Add deduplication: if a DB block with matching `block_type` exists for a static section ID, skip the static render.
+| File | Action |
+|------|--------|
+| Migration SQL | Create (alter business_expenses + 3 new tables + seed) |
+| `src/hooks/use-recurring-expenses.ts` | Create |
+| `src/hooks/use-monthly-reports.ts` | Create |
+| `src/hooks/use-expense-categories.ts` | Create |
+| `src/hooks/use-monthly-declaration.ts` | Modify (dynamic categories) |
+| `src/components/admin/declaration/RecurringExpenseManager.tsx` | Create |
+| `src/components/admin/declaration/ReportsManager.tsx` | Create |
+| `src/components/admin/declaration/ExpenseManager.tsx` | Modify (new fields + filters) |
+| `src/pages/admin/AdminDeclaration.tsx` | Modify (4 tabs) |
+| `src/lib/generate-declaration-pdf.ts` | Modify (B&W layout, 3-col expenses) |
 
-### Files to Modify
-
-1. `src/pages/Contact.tsx` — add `useStaticSectionSettings`, use `usePageBlocks`, wrap form
-2. `src/pages/Gallery.tsx` — add `useStaticSectionSettings`, use `usePageBlocks`, wrap grid
-3. `src/pages/CreateYourOwn.tsx` — add `useStaticSectionSettings`, use `usePageBlocks`, wrap hero + tools
-4. `src/pages/Creations.tsx` — add `useStaticSectionSettings`, use `usePageBlocks`, wrap showcase
-5. `src/pages/SubmitDesign.tsx` — add `useStaticSectionSettings`, use `usePageBlocks`, wrap form
-6. `src/pages/Cart.tsx` — add `useStaticSectionSettings`, wrap cart section
-7. `src/pages/Account.tsx` — add `useStaticSectionSettings`, wrap dashboard
-8. `src/pages/OrderTracking.tsx` — add `useStaticSectionSettings`, wrap tracking
-9. `src/pages/Policies.tsx` — remove hardcoded default policy content, use empty state
-10. `src/pages/Index.tsx` — add deduplication guard for static sections vs DB blocks
-
-### What stays unchanged
-
-- `DynamicPage.tsx` — already correct
-- `BlockRenderer` — already correct
-- `static-page-sections.ts` — definitions are correct, just unused by most pages
-- `StaticSectionPreview.tsx` — editor previews are correct
-- Header/Footer — these are layout components, not editor-managed content blocks (they use their own settings system which is already working)
-- `GlobalSectionRenderer` — already correct, filters by `is_active`
-
-### Backward Compatibility
-
-- All pages keep their existing layout and design
-- `isVisible()` defaults to `true` when no settings are saved, so nothing breaks for existing sites
-- Policies will show empty state only if admin explicitly clears content (existing saved content continues to work)
-- No database changes needed
+### 7. Validation Rules
+- gross = net + vat (auto-calculated in form)
+- Category required (enforced in form)
+- month_key auto-derived from expense_date
+- Warn if missing receipt (unless no_receipt_required)
+- Prevent duplicate recurring insert per month
 

@@ -5,7 +5,7 @@ import {
   Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
   Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone,
   BarChart3, Wallet, ImageIcon, Shield, Activity, Globe, MessageCircle,
-  Instagram, Brain, UserPlus, Crown,
+  Instagram, Brain, UserPlus, Crown, ClipboardList,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminPermissions } from "@/hooks/use-admin-permissions";
@@ -17,7 +17,7 @@ import { ROLE_LABELS, isOwnerEmail, type AdminRoleKey } from "@/lib/admin-permis
 const ICON_MAP: Record<string, typeof Package> = {
   LayoutDashboard, Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
   Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone, BarChart3,
-  Wallet, Tags, Layers, ImageIcon, Shield, Activity, Globe, MessageCircle, Instagram, Brain, UserPlus,
+  Wallet, Tags, Layers, ImageIcon, Shield, Activity, Globe, MessageCircle, Instagram, Brain, UserPlus, ClipboardList,
 };
 
 export interface SidebarItem {
@@ -77,6 +77,7 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
         { id: "campaigns", to: "/admin/campaigns", label: "Campaigns", icon: "Megaphone", visible: true, permission: "campaigns.manage" },
         { id: "revenue", to: "/admin/revenue", label: "Revenue Engine", icon: "Wallet", visible: true, permission: "revenue.view" },
         { id: "reports", to: "/admin/reports", label: "Reports", icon: "BarChart3", visible: true, permission: "reports.view" },
+        { id: "declaration", to: "/admin/declaration", label: "Monthly Declaration", icon: "ClipboardList", visible: true, permission: "reports.view" },
       ],
     },
     {

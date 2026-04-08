@@ -33,13 +33,13 @@ export function useRecurringExpenses() {
   useEffect(() => { load(); }, []);
 
   const add = async (entry: Omit<RecurringExpense, "id" | "created_at" | "updated_at">) => {
-    const { error } = await supabase.from("recurring_expenses").insert(entry as Record<string, unknown>);
+    const { error } = await supabase.from("recurring_expenses").insert(entry as never);
     if (!error) await load();
     return error;
   };
 
   const update = async (id: string, entry: Partial<RecurringExpense>) => {
-    const { error } = await supabase.from("recurring_expenses").update(entry as Record<string, unknown>).eq("id", id);
+    const { error } = await supabase.from("recurring_expenses").update(entry as never).eq("id", id);
     if (!error) await load();
     return error;
   };

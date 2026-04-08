@@ -58,7 +58,7 @@ export function useMonthlyReports() {
       year,
       month,
       snapshot_json: snapshot as unknown as Record<string, unknown>,
-    } as Record<string, unknown>);
+    } as never);
 
     if (!error) await load();
     return error;

@@ -62,7 +62,10 @@ const ProductDetail = () => {
 
   const heroImageRef = useRef<HTMLImageElement | null>(null);
   const addToCartSectionRef = useRef<HTMLDivElement | null>(null);
+  const thumbStripRef = useRef<HTMLDivElement | null>(null);
   const touchStartX = useRef<number>(0);
+  const touchStartY = useRef<number>(0);
+  const swipeOccurred = useRef<boolean>(false);
   const { recentProducts, trackProduct } = useRecentlyViewedProducts();
 
   const product = data?.product ?? null;
@@ -86,6 +89,14 @@ const ProductDetail = () => {
     }, AUTO_GALLERY_MS);
     return () => window.clearInterval(timer);
   }, [images.length, show3D, lightboxOpen]);
+
+  // Scroll active thumbnail into view when image index changes
+  useEffect(() => {
+    const strip = thumbStripRef.current;
+    if (!strip) return;
+    const active = strip.children[currentImage] as HTMLElement | undefined;
+    active?.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
+  }, [currentImage]);
 
   useEffect(() => {
     if (!justAdded) return;
@@ -203,15 +214,21 @@ const ProductDetail = () => {
               </motion.div>
             ) : (
               <div
-                className="glass-card relative aspect-[4/3] overflow-hidden rounded-xl md:rounded-[1.75rem] cursor-zoom-in"
-                onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+                className="glass-card relative aspect-square overflow-hidden rounded-xl md:rounded-[1.75rem] cursor-zoom-in"
+                onTouchStart={(e) => {
+                  touchStartX.current = e.touches[0].clientX;
+                  touchStartY.current = e.touches[0].clientY;
+                }}
                 onTouchEnd={(e) => {
-                  const diff = touchStartX.current - e.changedTouches[0].clientX;
-                  if (Math.abs(diff) > 50) {
-                    setCurrentImage((p) => diff > 0 ? (p + 1) % images.length : (p - 1 + images.length) % images.length);
+                  const diffX = touchStartX.current - e.changedTouches[0].clientX;
+                  const diffY = touchStartY.current - e.changedTouches[0].clientY;
+                  if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
+                    swipeOccurred.current = true;
+                    setCurrentImage((p) => diffX > 0 ? (p + 1) % images.length : (p - 1 + images.length) % images.length);
                   }
                 }}
                 onClick={() => {
+                  if (swipeOccurred.current) { swipeOccurred.current = false; return; }
                   setLightboxIndex(currentImage);
                   setLightboxOpen(true);
                 }}
@@ -275,7 +292,7 @@ const ProductDetail = () => {
               </div>
             )}
 
-            <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none md:gap-2">
+            <div ref={thumbStripRef} className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
               {images.map((img, i) => (
                 <motion.button
                   whileHover={isMobile ? undefined : { y: -2 }}
@@ -284,7 +301,7 @@ const ProductDetail = () => {
                     setCurrentImage(i);
                     setShow3D(false);
                   }}
-                  className={`h-14 w-14 shrink-0 overflow-hidden rounded-lg transition-all duration-200 md:h-16 md:w-16 md:rounded-xl ${
+                  className={`h-16 w-16 shrink-0 overflow-hidden rounded-xl transition-all duration-200 ${
                     !show3D && i === currentImage
                       ? "ring-2 ring-primary shadow-lg shadow-primary/20"
                       : "opacity-70 hover:opacity-100"

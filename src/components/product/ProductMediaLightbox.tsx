@@ -118,7 +118,7 @@ export default function ProductMediaLightbox({ images, startIndex, onClose }: Pr
       if (dx < 0) setCurrent((c) => (c + 1) % images.length);
       else setCurrent((c) => (c - 1 + images.length) % images.length);
     }
-  }, [scale, current, images.length]);
+  }, [scale, images.length]);
 
   return (
     <div

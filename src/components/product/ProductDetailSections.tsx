@@ -192,7 +192,7 @@ function ImageCarouselSection({ section }: { section: Section }) {
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        <div className="aspect-[4/3] md:aspect-[16/9]">
+        <div className="aspect-[4/3]">
           <AnimatePresence mode="wait">
             <motion.img
               key={current}

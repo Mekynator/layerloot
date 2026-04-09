@@ -182,11 +182,6 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
                 {discountPct > 0 ? `-${discountPct}%` : t("products.sale")}
               </Badge>
             )}
-            {product.is_featured && (
-              <Badge className="border-0 bg-accent/90 font-display text-[10px] uppercase tracking-wider text-accent-foreground shadow-lg shadow-accent/20 backdrop-blur-sm">
-                {t("products.popular")}
-              </Badge>
-            )}
             {isNew && (
               <Badge className="border-0 bg-secondary font-display text-[10px] uppercase tracking-wider text-secondary-foreground shadow-lg backdrop-blur-sm">
                 NEW

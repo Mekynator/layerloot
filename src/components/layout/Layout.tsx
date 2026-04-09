@@ -26,7 +26,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
 
   return (
     <div
-      className="relative isolate flex min-h-screen flex-col overflow-x-hidden"
+      className="relative isolate flex min-h-screen flex-col overflow-x-clip"
       data-editor-preview={isEditorPreview ? "true" : "false"}
     >
       {/* Ambient gradient blobs */}

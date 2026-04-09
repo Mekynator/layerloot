@@ -63,6 +63,7 @@ const ProductDetail = () => {
   const heroImageRef = useRef<HTMLImageElement | null>(null);
   const addToCartSectionRef = useRef<HTMLDivElement | null>(null);
   const thumbStripRef = useRef<HTMLDivElement | null>(null);
+  const pageEndRef = useRef<HTMLDivElement | null>(null);
   const touchStartX = useRef<number>(0);
   const touchStartY = useRef<number>(0);
   const swipeOccurred = useRef<boolean>(false);
@@ -90,12 +91,14 @@ const ProductDetail = () => {
     return () => window.clearInterval(timer);
   }, [images.length, show3D, lightboxOpen]);
 
-  // Scroll active thumbnail into view when image index changes
+  // Scroll active thumbnail into view (strip-only, no page scroll)
   useEffect(() => {
     const strip = thumbStripRef.current;
     if (!strip) return;
     const active = strip.children[currentImage] as HTMLElement | undefined;
-    active?.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
+    if (!active) return;
+    const scrollLeft = active.offsetLeft - (strip.clientWidth - active.offsetWidth) / 2;
+    strip.scrollTo({ left: scrollLeft, behavior: "smooth" });
   }, [currentImage]);
 
   useEffect(() => {
@@ -609,25 +612,29 @@ const ProductDetail = () => {
         )}
 
         {relatedProducts.length > 0 ? (
-          <section className="space-y-6">
-            <div className="space-y-2">
+          <section className="space-y-4">
+            <div className="space-y-1.5">
               <Badge
                 variant="outline"
                 className="rounded-full border-primary/20 bg-primary/5 uppercase tracking-[0.2em] text-primary"
               >
                 {t("products.youMayAlsoLike")}
               </Badge>
-              <h2 className="font-display text-2xl font-bold uppercase text-foreground">{t("products.keepBuilding")}</h2>
+              <h2 className="font-display text-xl font-bold uppercase text-foreground md:text-2xl">{t("products.keepBuilding")}</h2>
             </div>
-            <div className="grid gap-4 grid-cols-2 md:gap-6 xl:grid-cols-4">
+            {/* Mobile: horizontal snap scroller. Desktop: 2–4 col grid */}
+            <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 scrollbar-none -mx-4 px-4 scroll-pl-4 md:mx-0 md:px-0 md:grid md:grid-cols-2 md:gap-6 md:overflow-x-visible xl:grid-cols-4">
               {relatedProducts.map((related, index) => (
-                <ProductCard key={related.id} product={related} index={index} />
+                <div key={related.id} className="w-[44vw] max-w-[180px] shrink-0 snap-start md:w-auto md:max-w-none md:shrink">
+                  <ProductCard product={related} index={index} />
+                </div>
               ))}
             </div>
           </section>
         ) : null}
 
         {/* Recently Viewed */}
+        <div ref={pageEndRef} />
         <RecentlyViewedSection
           products={recentProducts.filter((p) => p.id !== product.id)}
           maxItems={6}
@@ -652,6 +659,7 @@ const ProductDetail = () => {
         onAddToCart={handleAddToCart}
         justAdded={justAdded}
         observeRef={addToCartSectionRef}
+        hideRef={pageEndRef}
         variantLabel={selectedVariant?.name}
       />
     </div>

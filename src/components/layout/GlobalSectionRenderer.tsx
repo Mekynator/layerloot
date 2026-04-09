@@ -8,8 +8,11 @@ type GlobalSectionRendererProps = {
   page: string;
 };
 
-const getBlockLabel = (blockType: string, title?: string | null) => {
-  if (title?.trim()) return title.trim();
+const getBlockLabel = (blockType: string, title?: string | Record<string, string> | null) => {
+  if (title) {
+    const str = typeof title === "string" ? title : (title.en || Object.values(title)[0] || "");
+    if (str.trim()) return str.trim();
+  }
   return blockType
     .replace(/_/g, " ")
     .replace(/-/g, " ")

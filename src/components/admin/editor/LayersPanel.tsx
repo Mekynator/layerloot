@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { tr } from "@/lib/translate";
 import {
   GripVertical, Eye, EyeOff, Trash2, Copy, Plus,
   LayoutGrid, ChevronUp, ChevronDown,
@@ -118,7 +119,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
     const block = draftBlocks.find(b => b.id === blockId);
     if (!block) return;
     const { error } = await supabase.from("reusable_blocks").insert({
-      name: block.title || block.block_type,
+      name: (typeof block.title === "string" ? block.title : tr(block.title, "")) || block.block_type,
       block_type: block.block_type,
       content: block.content as any,
       created_by: user?.id || null,
@@ -268,7 +269,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
                     <Icon className="mt-0.5 h-3 w-3 shrink-0 text-foreground/50" />
                     <div className="min-w-0 flex-1">
                       <span className="block truncate font-display text-[10px] font-semibold uppercase tracking-wider text-foreground">
-                        {block.title || block.block_type.replace(/_/g, " ")}
+                        {(typeof block.title === "string" ? block.title : tr(block.title, "")) || block.block_type.replace(/_/g, " ")}
                       </span>
                     </div>
 

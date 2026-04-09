@@ -12,6 +12,94 @@ import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+// Local fallback for saved items
+const LOCAL_SAVED_KEY = "layerloot-saved-items";
+  // Save for Later state
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  // Check if product is saved for user
+  useEffect(() => {
+    if (!product) return;
+    const checkSaved = async () => {
+      if (user) {
+        const { data, error } = await supabase
+          .from("saved_items")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("product_id", product.id)
+          .maybeSingle();
+        setSaved(!!data && !error);
+      } else {
+        // Local fallback
+        try {
+          const raw = window.localStorage.getItem(LOCAL_SAVED_KEY);
+          if (!raw) return setSaved(false);
+          const arr = JSON.parse(raw);
+          setSaved(Array.isArray(arr) && arr.includes(product.id));
+        } catch {
+          setSaved(false);
+        }
+      }
+    };
+    checkSaved();
+  }, [user, product?.id]);
+
+  // Save/Unsave handler
+  const handleToggleSave = async () => {
+    if (!product) return;
+    setSaving(true);
+    if (user) {
+      if (!saved) {
+        // Save to Supabase
+        const { error } = await supabase
+          .from("saved_items")
+          .insert({ user_id: user.id, product_id: product.id });
+        if (!error) {
+          setSaved(true);
+          toast({ title: "Saved!", description: product.name });
+        } else if (error.code === "23505") {
+          setSaved(true);
+          toast({ title: "Already saved", description: product.name });
+        } else {
+          toast({ title: "Error", description: error.message, variant: "destructive" });
+        }
+      } else {
+        // Remove from Supabase
+        const { error } = await supabase
+          .from("saved_items")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("product_id", product.id);
+        if (!error) {
+          setSaved(false);
+          toast({ title: "Removed from saved", description: product.name });
+        } else {
+          toast({ title: "Error", description: error.message, variant: "destructive" });
+        }
+      }
+    } else {
+      // Local fallback
+      try {
+        const raw = window.localStorage.getItem(LOCAL_SAVED_KEY);
+        let arr = Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : [];
+        if (!saved) {
+          if (!arr.includes(product.id)) arr.push(product.id);
+          window.localStorage.setItem(LOCAL_SAVED_KEY, JSON.stringify(arr));
+          setSaved(true);
+          toast({ title: "Saved!", description: product.name });
+        } else {
+          arr = arr.filter((id: string) => id !== product.id);
+          window.localStorage.setItem(LOCAL_SAVED_KEY, JSON.stringify(arr));
+          setSaved(false);
+          toast({ title: "Removed from saved", description: product.name });
+        }
+      } catch {
+        toast({ title: "Error", description: "Could not save item", variant: "destructive" });
+      }
+    }
+    setSaving(false);
+  };
 import { motion, AnimatePresence } from "framer-motion";
 import ModelViewer from "@/components/ModelViewer";
 import ProductConfigurator from "@/components/ProductConfigurator";
@@ -303,12 +391,7 @@ const ProductDetail = () => {
 
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-5 md:space-y-6 lg:sticky lg:top-24 lg:self-start">
             <div className="space-y-3">
-              <Badge
-                variant="outline"
-                className="rounded-full border-primary/20 bg-primary/5 uppercase tracking-[0.2em] text-primary"
-              >
-                {t("products.premiumPrint")}
-              </Badge>
+              {/* Removed PREMIUM PRINT badge */}
               <h1 className="font-display text-2xl font-bold uppercase text-foreground md:text-3xl lg:text-4xl">{product.name}</h1>
               <RatingStars rating={socialProof?.averageRating} count={socialProof?.reviewCount} />
               
@@ -396,32 +479,56 @@ const ProductDetail = () => {
             )}
 
             <div className="flex items-center gap-3 text-sm">
-              <span className="font-medium text-green-500">
-                {activeStock > 0 ? t("products.inStock", { count: activeStock }) : t("products.madeToOrder", "Made to order")}
-              </span>
+              {activeStock > 0 && (
+                <span className="font-medium text-green-500">
+                  {t("products.inStock", { count: activeStock })}
+                </span>
+              )}
+              {/* Removed Made to order text */}
             </div>
 
             <div className="relative" ref={addToCartSectionRef}>
-              <Button
-                size="lg"
-                className={`w-full font-display uppercase tracking-wider transition-all duration-300 shadow-[0_0_20px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_32px_hsl(var(--primary)/0.35)] ${justAdded ? "shadow-[0_0_28px_hsl(var(--primary)/0.45)]" : ""}`}
-                onClick={handleAddToCart}
-                disabled={(variants.length > 0 && !selectedVariant && !hasConfiguratorAttrs)}
-              >
-                {justAdded ? (
-                  <>
-                    <Check className="mr-2 h-5 w-5" />
-                    {t("products.addedToCart")}
-                  </>
-                ) : (
-                  <>
-                    <ShoppingCart className="mr-2 h-5 w-5" />
-                    {variants.length > 0 && !selectedVariant && !hasConfiguratorAttrs
-                      ? t("products.selectOption")
-                      : t("products.addToCart")}
-                  </>
-                )}
-              </Button>
+              <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+                <Button
+                  size="lg"
+                  className={`sm:w-auto w-full min-w-[140px] font-display uppercase tracking-wider transition-all duration-300 shadow-[0_0_20px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_32px_hsl(var(--primary)/0.35)] ${justAdded ? "shadow-[0_0_28px_hsl(var(--primary)/0.45)]" : ""}`}
+                  onClick={handleAddToCart}
+                  disabled={(variants.length > 0 && !selectedVariant && !hasConfiguratorAttrs)}
+                >
+                  {justAdded ? (
+                    <>
+                      <Check className="mr-2 h-5 w-5" />
+                      {t("products.addedToCart")}
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingCart className="mr-2 h-5 w-5" />
+                      {variants.length > 0 && !selectedVariant && !hasConfiguratorAttrs
+                        ? t("products.selectOption")
+                        : t("products.addToCart")}
+                    </>
+                  )}
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className={`sm:w-auto w-full min-w-[140px] font-display uppercase tracking-wider transition-all duration-300 rounded-xl border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary shadow-[0_0_20px_hsl(var(--primary)/0.12)] hover:shadow-[0_0_32px_hsl(var(--primary)/0.18)] ${saved ? "ring-2 ring-primary" : ""}`}
+                  onClick={handleToggleSave}
+                  disabled={saving}
+                >
+                  {saved ? (
+                    <>
+                      <Check className="mr-2 h-5 w-5" />
+                      Saved
+                    </>
+                  ) : (
+                    <>
+                      <Star className="mr-2 h-5 w-5" />
+                      Save for Later
+                    </>
+                  )}
+                </Button>
+              </div>
 
               <AnimatePresence>
                 {justAdded && (

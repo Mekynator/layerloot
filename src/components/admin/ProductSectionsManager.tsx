@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Eye, EyeOff, Box, ArrowUp, ArrowDown, GripVertical } from "lucide-react";
+import { Plus, Trash2, Eye, EyeOff, Box, ArrowUp, ArrowDown, ChevronDown, ChevronRight, Copy as CopyIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -27,13 +27,16 @@ interface ReusableBlockInfo {
 
 interface ProductSectionsManagerProps {
   productId: string;
+  /** Called when admin clicks "Copy sections from product" — parent should open copy modal */
+  onCopyFromProduct?: () => void;
 }
 
-const ProductSectionsManager = ({ productId }: ProductSectionsManagerProps) => {
+const ProductSectionsManager = ({ productId, onCopyFromProduct }: ProductSectionsManagerProps) => {
   const [sections, setSections] = useState<Section[]>([]);
   const [reusableNames, setReusableNames] = useState<Record<string, ReusableBlockInfo>>({});
   const [newType, setNewType] = useState("video");
   const [showReusablePicker, setShowReusablePicker] = useState(false);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   const isNewProduct = !productId || productId.startsWith("draft-");
@@ -165,6 +168,14 @@ const ProductSectionsManager = ({ productId }: ProductSectionsManagerProps) => {
     }
   };
 
+  const toggleCollapsed = (id: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
   if (isNewProduct) {
     return (
       <Card className="border-primary/10">
@@ -172,7 +183,12 @@ const ProductSectionsManager = ({ productId }: ProductSectionsManagerProps) => {
           <CardTitle className="text-sm font-display uppercase">Content Sections</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-xs text-muted-foreground">Save the product first to add video, carousel, and reusable block sections.</p>
+          <p className="text-sm text-muted-foreground">
+            Save the product first, then return here to add video, carousel, and reusable block sections.
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground/60">
+            Tip: use a template to pre-fill section structure — sections will be applied after the product is created.
+          </p>
         </CardContent>
       </Card>
     );
@@ -189,144 +205,186 @@ const ProductSectionsManager = ({ productId }: ProductSectionsManagerProps) => {
     <>
       <Card className="border-primary/10">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-display uppercase">Content Sections (Video / Carousel / Reusable)</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-display uppercase">
+              Content Sections
+              {sections.length > 0 && (
+                <span className="ml-2 font-mono text-xs font-normal text-muted-foreground">
+                  {sections.filter((s) => s.is_active).length}/{sections.length} active
+                </span>
+              )}
+            </CardTitle>
+            {onCopyFromProduct && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onCopyFromProduct}
+                className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <CopyIcon className="h-3.5 w-3.5" />
+                Copy from product
+              </Button>
+            )}
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {sections.map((section, idx) => (
-            <div key={section.id} className="rounded-lg border border-border/50 bg-muted/10 p-3 space-y-3">
-              <div className="flex items-center gap-2">
-                {/* Reorder controls */}
-                <div className="flex flex-col gap-0.5">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-5 w-5"
-                    disabled={idx === 0}
-                    onClick={() => moveSection(idx, "up")}
-                    title="Move up"
-                  >
-                    <ArrowUp className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-5 w-5"
-                    disabled={idx === sections.length - 1}
-                    onClick={() => moveSection(idx, "down")}
-                    title="Move down"
-                  >
-                    <ArrowDown className="h-3 w-3" />
-                  </Button>
-                </div>
-
-                <GripVertical className="h-4 w-4 text-muted-foreground/50" />
-
-                <Badge variant="secondary" className="text-[10px] font-bold uppercase">
-                  {section.section_type === "reusable_block" ? (
-                    <span className="flex items-center gap-1"><Box className="h-3 w-3" /> Block</span>
-                  ) : sectionTypeLabel(section.section_type)}
-                </Badge>
-                <Input
-                  value={section.title ?? ""}
-                  onChange={(e) => updateTitle(section.id, e.target.value)}
-                  className="h-7 flex-1 text-sm"
-                  placeholder="Section title"
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => toggleActive(section.id, !section.is_active)}
-                  title={section.is_active ? "Hide" : "Show"}
-                >
-                  {section.is_active ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />}
-                </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteSection(section.id)}>
-                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                </Button>
-              </div>
-
-              {/* Order indicator */}
-              <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                <span>Position: {idx + 1} of {sections.length}</span>
-              </div>
-
-              {/* Reusable block info */}
-              {section.section_type === "reusable_block" && section.reusable_block_id && (
-                <div className="flex items-center gap-2 rounded-md bg-primary/5 px-3 py-2">
-                  <Box className="h-4 w-4 text-primary" />
-                  <span className="text-xs font-medium text-foreground">
-                    {reusableNames[section.reusable_block_id]?.name || "Linked block"}
-                  </span>
-                  <Badge variant="outline" className="text-[9px] ml-auto">
-                    {reusableNames[section.reusable_block_id]?.block_type || "block"}
-                  </Badge>
-                </div>
-              )}
-
-              {/* Media list (video/carousel only) */}
-              {section.section_type !== "reusable_block" && section.media_urls.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {section.media_urls.map((url, i) => (
-                    <div key={i} className="group relative">
-                      {section.section_type === "video" ? (
-                        <div className="flex h-16 w-24 items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground">
-                          🎥 Video
-                        </div>
-                      ) : (
-                        <img src={url} alt="" className="h-16 w-16 rounded-lg object-cover" />
-                      )}
-                      <button
-                        onClick={() => removeMediaUrl(section.id, i)}
-                        className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Add media (video/carousel only) */}
-              {section.section_type !== "reusable_block" && (
+        <CardContent className="space-y-3">
+          {sections.map((section, idx) => {
+            const isCollapsed = collapsed.has(section.id);
+            return (
+              <div key={section.id} className={`rounded-lg border bg-muted/10 p-3 space-y-0 transition-colors ${section.is_active ? "border-border/50" : "border-border/20 opacity-60"}`}>
+                {/* Header row */}
                 <div className="flex items-center gap-2">
-                  {section.section_type === "video" ? (
-                    <>
-                      <Input
-                        placeholder="Paste video URL (YouTube, Vimeo, or direct)"
-                        className="h-8 text-xs"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            const val = (e.target as HTMLInputElement).value.trim();
-                            if (val) {
-                              addMediaUrl(section.id, val);
-                              (e.target as HTMLInputElement).value = "";
-                            }
-                          }
-                        }}
-                      />
-                      <Input
-                        type="file"
-                        accept="video/*"
-                        className="h-8 w-32 text-xs"
-                        onChange={(e) => e.target.files && handleFileUpload(section.id, e.target.files)}
-                      />
-                    </>
-                  ) : (
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="h-8 text-xs"
-                      onChange={(e) => e.target.files && handleFileUpload(section.id, e.target.files)}
-                    />
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+                  {/* Reorder controls */}
+                  <div className="flex flex-col gap-0.5 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5"
+                      disabled={idx === 0}
+                      onClick={() => moveSection(idx, "up")}
+                      title="Move up"
+                    >
+                      <ArrowUp className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5"
+                      disabled={idx === sections.length - 1}
+                      onClick={() => moveSection(idx, "down")}
+                      title="Move down"
+                    >
+                      <ArrowDown className="h-3 w-3" />
+                    </Button>
+                  </div>
 
-          <div className="flex items-center gap-2">
+                  {/* Collapse toggle */}
+                  <button
+                    type="button"
+                    className="shrink-0 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                    onClick={() => toggleCollapsed(section.id)}
+                    title={isCollapsed ? "Expand" : "Collapse"}
+                  >
+                    {isCollapsed
+                      ? <ChevronRight className="h-3.5 w-3.5" />
+                      : <ChevronDown className="h-3.5 w-3.5" />}
+                  </button>
+
+                  <Badge variant="secondary" className="text-[10px] font-bold uppercase shrink-0">
+                    {section.section_type === "reusable_block" ? (
+                      <span className="flex items-center gap-1"><Box className="h-3 w-3" /> Block</span>
+                    ) : sectionTypeLabel(section.section_type)}
+                  </Badge>
+
+                  <Input
+                    value={section.title ?? ""}
+                    onChange={(e) => updateTitle(section.id, e.target.value)}
+                    className="h-7 flex-1 text-sm min-w-0"
+                    placeholder="Section title"
+                  />
+
+                  {/* Active dot */}
+                  <span
+                    className={`h-2 w-2 rounded-full shrink-0 ${section.is_active ? "bg-emerald-500" : "bg-muted-foreground/30"}`}
+                    title={section.is_active ? "Visible on storefront" : "Hidden"}
+                  />
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0"
+                    onClick={() => toggleActive(section.id, !section.is_active)}
+                    title={section.is_active ? "Hide section" : "Show section"}
+                  >
+                    {section.is_active ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />}
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => deleteSection(section.id)} title="Delete section">
+                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                  </Button>
+                </div>
+
+                {/* Collapsible content */}
+                {!isCollapsed && (
+                  <div className="mt-3 space-y-3">
+                    {/* Reusable block info */}
+                    {section.section_type === "reusable_block" && section.reusable_block_id && (
+                      <div className="flex items-center gap-2 rounded-md bg-primary/5 px-3 py-2">
+                        <Box className="h-4 w-4 text-primary" />
+                        <span className="text-xs font-medium text-foreground">
+                          {reusableNames[section.reusable_block_id]?.name || "Linked block"}
+                        </span>
+                        <Badge variant="outline" className="text-[9px] ml-auto">
+                          {reusableNames[section.reusable_block_id]?.block_type || "block"}
+                        </Badge>
+                      </div>
+                    )}
+
+                    {/* Media list (video/carousel only) */}
+                    {section.section_type !== "reusable_block" && section.media_urls.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {section.media_urls.map((url, i) => (
+                          <div key={i} className="group relative">
+                            {section.section_type === "video" ? (
+                              <div className="flex h-16 w-24 items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground">
+                                🎥 Video
+                              </div>
+                            ) : (
+                              <img src={url} alt="" className="h-16 w-16 rounded-lg object-cover" />
+                            )}
+                            <button
+                              onClick={() => removeMediaUrl(section.id, i)}
+                              className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Add media (video/carousel only) */}
+                    {section.section_type !== "reusable_block" && (
+                      <div className="flex items-center gap-2">
+                        {section.section_type === "video" ? (
+                          <>
+                            <Input
+                              placeholder="Paste video URL (YouTube, Vimeo, or direct)"
+                              className="h-8 text-xs"
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  const val = (e.target as HTMLInputElement).value.trim();
+                                  if (val) {
+                                    addMediaUrl(section.id, val);
+                                    (e.target as HTMLInputElement).value = "";
+                                  }
+                                }
+                              }}
+                            />
+                            <Input
+                              type="file"
+                              accept="video/*"
+                              className="h-8 w-32 text-xs"
+                              onChange={(e) => e.target.files && handleFileUpload(section.id, e.target.files)}
+                            />
+                          </>
+                        ) : (
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="h-8 text-xs"
+                            onChange={(e) => e.target.files && handleFileUpload(section.id, e.target.files)}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          <div className="flex items-center gap-2 pt-1">
             <Select value={newType} onValueChange={setNewType}>
               <SelectTrigger className="w-44 h-8"><SelectValue /></SelectTrigger>
               <SelectContent>

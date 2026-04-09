@@ -14,6 +14,8 @@ interface CopyProductSettingsModalProps {
   onOpenChange: (open: boolean) => void;
   targetProductId: string | null;
   onApply: (data: Partial<Record<string, any>>) => void;
+  /** Pre-select these category keys when the modal opens */
+  defaultSelected?: string[];
 }
 
 const CATEGORIES = [
@@ -63,7 +65,7 @@ interface ProductOption {
   images: string[];
 }
 
-const CopyProductSettingsModal = ({ open, onOpenChange, targetProductId, onApply }: CopyProductSettingsModalProps) => {
+const CopyProductSettingsModal = ({ open, onOpenChange, targetProductId, onApply, defaultSelected }: CopyProductSettingsModalProps) => {
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [sourceId, setSourceId] = useState<string>("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -73,7 +75,7 @@ const CopyProductSettingsModal = ({ open, onOpenChange, targetProductId, onApply
   useEffect(() => {
     if (!open) return;
     setSourceId("");
-    setSelected(new Set());
+    setSelected(defaultSelected && defaultSelected.length > 0 ? new Set(defaultSelected) : new Set());
     supabase
       .from("products")
       .select("id, name, images")

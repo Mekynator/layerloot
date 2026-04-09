@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useProductSavedState } from "@/hooks/use-product-saved-state";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import ModelViewer from "@/components/ModelViewer";

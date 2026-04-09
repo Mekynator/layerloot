@@ -198,8 +198,8 @@ const ProductDetail = () => {
   }
 
   return (
-    <div className="py-6 pb-24 md:py-10 md:pb-10">
-      <div className="container space-y-8 md:space-y-12 px-4 md:px-6">
+    <div className="py-6 pb-20 md:py-10 md:pb-10">
+      <div className="container space-y-5 md:space-y-10 px-4 md:px-6">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           <Link
             to="/products"
@@ -330,7 +330,7 @@ const ProductDetail = () => {
             </div>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-5 md:space-y-6 lg:sticky lg:top-24 lg:self-start">
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4 md:space-y-6 lg:sticky lg:top-24 lg:self-start">
             <div className="space-y-3">
               {/* Removed PREMIUM PRINT badge */}
               <h1 className="font-display text-2xl font-bold uppercase text-foreground md:text-3xl lg:text-4xl">{product.name}</h1>
@@ -419,14 +419,13 @@ const ProductDetail = () => {
               </motion.div>
             )}
 
-            <div className="flex items-center gap-3 text-sm">
-              {activeStock > 0 && (
+            {activeStock > 0 && (
+              <div className="flex items-center gap-3 text-sm">
                 <span className="font-medium text-green-500">
                   {t("products.inStock", { count: activeStock })}
                 </span>
-              )}
-              {/* Removed Made to order text */}
-            </div>
+              </div>
+            )}
 
             <div className="relative" ref={addToCartSectionRef}>
               <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
@@ -490,7 +489,7 @@ const ProductDetail = () => {
         {/* Product Detail Sections (Video / Carousel) */}
         <ProductDetailSections productId={product.id} />
 
-        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 pt-4">
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="space-y-2">
               <Badge

@@ -108,37 +108,36 @@ const MiniCart = ({ cartButtonRef, cartPulse, cartGlow, totalItems }: MiniCartPr
               </div>
             ) : (
               <>
-                <div className="max-h-64 overflow-y-auto p-3 space-y-2">
+                <div className="max-h-72 overflow-y-auto p-3 space-y-1">
                   {items.map((item) => (
-                    <div key={item.id} className="flex items-center gap-3 rounded-lg p-2 hover:bg-muted/20 transition-colors">
+                    <div key={item.id} className="flex items-start gap-2 rounded-lg py-1.5 px-2 hover:bg-muted/20 transition-colors">
                       {item.image ? (
-                        <ProductImage src={item.image} alt={item.name} className="h-12 w-12 rounded-lg border border-border/10" fit="contain" />
+                        <ProductImage src={item.image} alt={item.name} className="h-9 w-9 shrink-0 rounded-md border border-border/10" fit="contain" />
                       ) : (
-                        <div className="h-12 w-12 rounded-lg bg-muted/30 flex items-center justify-center">
-                          <ShoppingBag className="h-5 w-5 text-muted-foreground/40" />
+                        <div className="h-9 w-9 shrink-0 rounded-md bg-muted/30 flex items-center justify-center">
+                          <ShoppingBag className="h-3.5 w-3.5 text-muted-foreground/40" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-foreground truncate">{item.name}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] text-muted-foreground">×{item.quantity}</span>
-                          <span className="text-xs font-semibold text-primary">{formatPrice(item.price * item.quantity)}</span>
-                        </div>
+                        <p className="text-xs font-medium text-foreground truncate leading-snug">{item.name}</p>
+                        <p className="text-[10px] text-muted-foreground leading-snug">×{item.quantity}</p>
                       </div>
-                      <div className="flex flex-col gap-1 items-end ml-2">
-                        <button
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleMoveToSaved(item); }}
-                          className="p-1 text-muted-foreground/60 hover:text-primary text-[10px] font-medium transition-colors"
-                          style={{ minWidth: 0 }}
-                        >
-                          {t("cart.moveToSaved", "Move to Saved")}
-                        </button>
-                        <button
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeItem(item.id); }}
-                          className="p-1 text-muted-foreground/50 hover:text-destructive transition-colors"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                      <div className="flex flex-col items-end gap-0.5 shrink-0">
+                        <span className="text-xs font-bold text-primary leading-snug">{formatPrice(item.price * item.quantity)}</span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleMoveToSaved(item); }}
+                            className="text-[10px] font-medium text-muted-foreground/60 hover:text-primary transition-colors leading-snug"
+                          >
+                            {t("cart.moveToSaved", "Save")}
+                          </button>
+                          <button
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeItem(item.id); }}
+                            className="text-muted-foreground/40 hover:text-destructive transition-colors"
+                          >
+                            <Trash2 className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}

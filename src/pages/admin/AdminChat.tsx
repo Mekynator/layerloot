@@ -3,14 +3,13 @@ import React, { useEffect, useState, useMemo, useRef, useCallback, useTransition
 const LazyPersonalization = React.lazy(() => import("./AdminPersonalization"));
 const LazyActivityLog = React.lazy(() => import("./AdminActivity"));
 import {
-  Save, Plus, Trash2, GripVertical, Eye, MessageCircle,
+  Save, Plus, Trash2, GripVertical, MessageCircle,
   BarChart3, Users, TrendingUp, Brain, FlaskConical,
-  Heart, AlertTriangle, Edit, Flag, ThumbsUp, ThumbsDown,
+  Heart, Edit, Flag, ThumbsUp, ThumbsDown,
   ChevronDown, ChevronRight, Search, RefreshCw, Send, Bot, User,
   Activity, Zap, Target, HelpCircle, BookOpen, X, Undo2,
   Settings2, Palette, Volume2, FileText, Sparkles, Megaphone,
-  Gauge, Wand2, LayoutTemplate, Check, Copy, ArrowRight,
-  ChevronsUpDown, ChevronsDownUp,
+  Gauge, Wand2, LayoutTemplate, Check,
 } from "lucide-react";
 import ChatLivePreview from "@/components/admin/ChatLivePreview";
 import ColorPickerField from "@/components/admin/editor/controls/ColorPickerField";
@@ -138,9 +137,9 @@ function OverviewTab({ config, setTab }: { config: ChatConfig; setTab: (t: strin
           { label: "Edit UI", tab: "appearance" },
           { label: "Edit Tone", tab: "tone" },
           { label: "Edit Prompts", tab: "training" },
-          { label: "View Analytics", tab: "analytics" },
-          { label: "Test Chat", tab: "sandbox" },
-          { label: "View Logs", tab: "logs" },
+          { label: "View Insights", tab: "insights" },
+          { label: "Test Chat", tab: "tools" },
+          { label: "Presets", tab: "presets" },
         ].map(a => (
           <Button key={a.tab} variant="outline" size="sm" onClick={() => setTab(a.tab)}>{a.label}</Button>
         ))}
@@ -733,10 +732,72 @@ function SandboxTab() {
 
 
 /* ═══════════════════════════════════════════════════════════════
-   MAIN PAGE
+   INSIGHTS TAB (Analytics + Conversation Logs)
    ═══════════════════════════════════════════════════════════════ */
+function InsightsTab() {
+  const [panel, setPanel] = useState<"analytics" | "logs">("analytics");
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Button variant={panel === "analytics" ? "default" : "outline"} size="sm" onClick={() => setPanel("analytics")}><BarChart3 className="mr-1.5 h-3.5 w-3.5" /> Analytics</Button>
+        <Button variant={panel === "logs" ? "default" : "outline"} size="sm" onClick={() => setPanel("logs")}><MessageCircle className="mr-1.5 h-3.5 w-3.5" /> Conversation Logs</Button>
+      </div>
+      {panel === "analytics" ? <AnalyticsTab /> : <ConversationsTab />}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLS TAB (Sandbox + Personalization + Activity Log)
+   ═══════════════════════════════════════════════════════════════ */
+function ToolsTab() {
+  const [sandboxOpen, setSandboxOpen] = useState(true);
+  const [personOpen, setPersonOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
+  return (
+    <div className="space-y-3">
+      <Collapsible open={sandboxOpen} onOpenChange={setSandboxOpen}>
+        <Card className="border-border/50">
+          <CollapsibleTrigger asChild>
+            <button className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-muted/20 transition-colors rounded-t-lg">
+              <span className="font-display text-sm font-semibold uppercase tracking-wide flex items-center gap-2"><FlaskConical className="h-4 w-4 text-primary" /> Testing Sandbox</span>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${sandboxOpen ? "rotate-180" : ""}`} />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent><CardContent className="pt-0"><SandboxTab /></CardContent></CollapsibleContent>
+        </Card>
+      </Collapsible>
+
+      <Collapsible open={personOpen} onOpenChange={setPersonOpen}>
+        <Card className="border-border/50">
+          <CollapsibleTrigger asChild>
+            <button className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-muted/20 transition-colors rounded-t-lg">
+              <span className="font-display text-sm font-semibold uppercase tracking-wide flex items-center gap-2"><Brain className="h-4 w-4 text-primary" /> AI Personalization</span>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${personOpen ? "rotate-180" : ""}`} />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent><CardContent className="pt-0"><React.Suspense fallback={<p className="py-6 text-center text-sm text-muted-foreground">Loading...</p>}><LazyPersonalization /></React.Suspense></CardContent></CollapsibleContent>
+        </Card>
+      </Collapsible>
+
+      <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
+        <Card className="border-border/50">
+          <CollapsibleTrigger asChild>
+            <button className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-muted/20 transition-colors rounded-t-lg">
+              <span className="font-display text-sm font-semibold uppercase tracking-wide flex items-center gap-2"><Activity className="h-4 w-4 text-primary" /> Activity Log</span>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${activityOpen ? "rotate-180" : ""}`} />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent><CardContent className="pt-0"><React.Suspense fallback={<p className="py-6 text-center text-sm text-muted-foreground">Loading...</p>}><LazyActivityLog /></React.Suspense></CardContent></CollapsibleContent>
+        </Card>
+      </Collapsible>
+    </div>
+  );
+}
+
+/* ─── MAIN PAGE ─── */
 /* ─── Collapsible Section wrapper ─── */
-function CollapsibleSection({ title, icon: Icon, defaultOpen = true, children }: { title: string; icon?: React.ElementType; defaultOpen?: boolean; children: React.ReactNode }) {
+function CollapsibleSection({ title, icon: Icon, defaultOpen = true, action, children }: { title: string; icon?: React.ElementType; defaultOpen?: boolean; action?: React.ReactNode; children: React.ReactNode }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
@@ -747,7 +808,10 @@ function CollapsibleSection({ title, icon: Icon, defaultOpen = true, children }:
               {Icon && <Icon className="h-4 w-4 text-primary" />}
               {title}
             </span>
-            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+            <div className="flex items-center gap-2">
+              {action && <span onClick={e => e.stopPropagation()}>{action}</span>}
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+            </div>
           </button>
         </CollapsibleTrigger>
         <CollapsibleContent>
@@ -836,15 +900,10 @@ export default function AdminChat() {
           <TabsTrigger value="appearance" className="gap-1.5"><Palette className="h-3.5 w-3.5" /> Appearance</TabsTrigger>
           <TabsTrigger value="tone" className="gap-1.5"><Volume2 className="h-3.5 w-3.5" /> Tone</TabsTrigger>
           <TabsTrigger value="context" className="gap-1.5"><FileText className="h-3.5 w-3.5" /> Context</TabsTrigger>
-          <TabsTrigger value="quickreplies" className="gap-1.5"><Zap className="h-3.5 w-3.5" /> Quick Replies</TabsTrigger>
           <TabsTrigger value="training" className="gap-1.5"><Brain className="h-3.5 w-3.5" /> Training</TabsTrigger>
           <TabsTrigger value="optimization" className="gap-1.5"><Gauge className="h-3.5 w-3.5" /> Optimization</TabsTrigger>
-          <TabsTrigger value="campaign" className="gap-1.5"><Megaphone className="h-3.5 w-3.5" /> Campaign</TabsTrigger>
-          <TabsTrigger value="analytics" className="gap-1.5"><BarChart3 className="h-3.5 w-3.5" /> Analytics</TabsTrigger>
-          <TabsTrigger value="logs" className="gap-1.5"><MessageCircle className="h-3.5 w-3.5" /> Logs</TabsTrigger>
-          <TabsTrigger value="personalization" className="gap-1.5"><Brain className="h-3.5 w-3.5" /> Personalization</TabsTrigger>
-          <TabsTrigger value="activity" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> Activity Log</TabsTrigger>
-          <TabsTrigger value="sandbox" className="gap-1.5"><FlaskConical className="h-3.5 w-3.5" /> Sandbox</TabsTrigger>
+          <TabsTrigger value="insights" className="gap-1.5"><BarChart3 className="h-3.5 w-3.5" /> Insights</TabsTrigger>
+          <TabsTrigger value="tools" className="gap-1.5"><FlaskConical className="h-3.5 w-3.5" /> Tools</TabsTrigger>
         </TabsList>
 
         {/* ─── OVERVIEW ─── */}
@@ -1019,104 +1078,82 @@ export default function AdminChat() {
           </div>
         </TabsContent>
 
-        {/* ─── CONTEXT RULES ─── */}
+        {/* ─── CONTEXT ─── */}
         <TabsContent value="context">
           <div className="flex gap-6">
-            <div className="flex-1 min-w-0 space-y-4">
-          <Card><CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="font-display text-sm uppercase">Page-based Context Rules</CardTitle>
-            <Button size="sm" variant="outline" onClick={addPageRule}><Plus className="mr-1 h-3 w-3" /> Add Rule</Button>
-          </CardHeader>
-            <CardContent className="space-y-3">
-              {config.pageRules.map((rule, idx) => (
-                <div key={idx} className="flex items-start gap-2 rounded-lg border border-border/30 bg-muted/30 p-3">
-                  <div className="flex-1 space-y-2">
-                    <div className="grid gap-2 sm:grid-cols-3">
-                      <div><Label className="text-xs">Page Pattern</Label><Input value={rule.page} onChange={e => updatePageRule(idx, "page", e.target.value)} /></div>
-                      <div><Label className="text-xs">Focus Area</Label>
-                        <Select value={rule.focusArea ?? "general"} onValueChange={v => updatePageRule(idx, "focusArea", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>
-                          <SelectItem value="general">General</SelectItem><SelectItem value="product_help">Product Help</SelectItem><SelectItem value="checkout_assist">Checkout Assist</SelectItem><SelectItem value="account_support">Account Support</SelectItem><SelectItem value="custom_order_help">Custom Order Help</SelectItem>
-                        </SelectContent></Select></div>
-                      <div className="flex items-end gap-2 pb-1"><Switch checked={rule.enabled} onCheckedChange={v => updatePageRule(idx, "enabled", v)} /><Label className="text-xs">Enabled</Label></div>
-                    </div>
-                    <div><Label className="text-xs">Custom Welcome Text</Label><Input value={getStr(rule.welcomeText)} onChange={e => updatePageRule(idx, "welcomeText", e.target.value)} placeholder="Optional override" /></div>
-                  </div>
-                  <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removePageRule(idx)}><Trash2 className="h-4 w-4" /></Button>
+            <div className="flex-1 min-w-0 space-y-3">
+
+              <CollapsibleSection title="Greetings & Prompts" icon={MessageCircle} defaultOpen={true}>
+                <div><Label className="text-xs">Default Greeting</Label><Textarea value={getStr(config.greetings.defaultGreeting)} onChange={e => setNested("greetings", "defaultGreeting", setStr(config.greetings.defaultGreeting, e.target.value))} rows={2} /></div>
+                <div><Label className="text-xs">Logged-in Greeting</Label><Textarea value={getStr(config.greetings.loggedInGreeting)} onChange={e => setNested("greetings", "loggedInGreeting", setStr(config.greetings.loggedInGreeting, e.target.value))} rows={2} /></div>
+                <div><Label className="text-xs">Returning Visitor Greeting</Label><Textarea value={getStr(config.greetings.returningVisitorGreeting)} onChange={e => setNested("greetings", "returningVisitorGreeting", setStr(config.greetings.returningVisitorGreeting, e.target.value))} rows={2} /></div>
+                <div><Label className="text-xs">First-time Visitor Greeting</Label><Textarea value={getStr(config.greetings.firstTimeVisitorGreeting)} onChange={e => setNested("greetings", "firstTimeVisitorGreeting", setStr(config.greetings.firstTimeVisitorGreeting, e.target.value))} rows={2} /></div>
+                <Separator />
+                <div><Label className="text-xs">Business Hours Greeting</Label><Input value={getStr(config.greetings.businessHoursGreeting)} onChange={e => setNested("greetings", "businessHoursGreeting", e.target.value)} /></div>
+                <div><Label className="text-xs">Off-hours Greeting</Label><Input value={getStr(config.greetings.offHoursGreeting)} onChange={e => setNested("greetings", "offHoursGreeting", e.target.value)} /></div>
+                <Separator />
+                <div><Label className="text-xs">Prompt Bubble Title</Label><Input value={getStr(config.greetings.promptBubbleTitle)} onChange={e => setNested("greetings", "promptBubbleTitle", setStr(config.greetings.promptBubbleTitle, e.target.value))} /></div>
+                <div><Label className="text-xs">Prompt Bubble Body</Label><Textarea value={getStr(config.greetings.promptBubbleBody)} onChange={e => setNested("greetings", "promptBubbleBody", setStr(config.greetings.promptBubbleBody, e.target.value))} rows={2} /></div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div><Label className="text-xs">Prompt Delay: {config.greetings.promptBubbleDelay / 1000}s</Label><Slider value={[config.greetings.promptBubbleDelay]} onValueChange={([v]) => setNested("greetings", "promptBubbleDelay", v)} min={2000} max={30000} step={1000} /></div>
+                  <div><Label className="text-xs">Reappear Delay: {config.greetings.promptBubbleReappear / 1000}s</Label><Slider value={[config.greetings.promptBubbleReappear]} onValueChange={([v]) => setNested("greetings", "promptBubbleReappear", v)} min={30000} max={600000} step={30000} /></div>
                 </div>
-              ))}
-              {config.pageRules.length === 0 && <p className="py-4 text-center text-sm text-muted-foreground">No page rules configured</p>}
-            </CardContent>
-          </Card>
+              </CollapsibleSection>
 
-          {/* Greetings */}
-          <Card><CardHeader><CardTitle className="font-display text-sm uppercase">Greetings & Prompts</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div><Label className="text-xs">Default Greeting</Label><Textarea value={getStr(config.greetings.defaultGreeting)} onChange={e => setNested("greetings", "defaultGreeting", setStr(config.greetings.defaultGreeting, e.target.value))} rows={2} /></div>
-              <div><Label className="text-xs">Logged-in Greeting</Label><Textarea value={getStr(config.greetings.loggedInGreeting)} onChange={e => setNested("greetings", "loggedInGreeting", setStr(config.greetings.loggedInGreeting, e.target.value))} rows={2} /></div>
-              <div><Label className="text-xs">Returning Visitor Greeting</Label><Textarea value={getStr(config.greetings.returningVisitorGreeting)} onChange={e => setNested("greetings", "returningVisitorGreeting", setStr(config.greetings.returningVisitorGreeting, e.target.value))} rows={2} /></div>
-              <div><Label className="text-xs">First-time Visitor Greeting</Label><Textarea value={getStr(config.greetings.firstTimeVisitorGreeting)} onChange={e => setNested("greetings", "firstTimeVisitorGreeting", setStr(config.greetings.firstTimeVisitorGreeting, e.target.value))} rows={2} /></div>
-              <Separator />
-              <div><Label className="text-xs">Business Hours Greeting</Label><Input value={getStr(config.greetings.businessHoursGreeting)} onChange={e => setNested("greetings", "businessHoursGreeting", e.target.value)} /></div>
-              <div><Label className="text-xs">Off-hours Greeting</Label><Input value={getStr(config.greetings.offHoursGreeting)} onChange={e => setNested("greetings", "offHoursGreeting", e.target.value)} /></div>
-              <Separator />
-              <div><Label className="text-xs">Prompt Bubble Title</Label><Input value={getStr(config.greetings.promptBubbleTitle)} onChange={e => setNested("greetings", "promptBubbleTitle", setStr(config.greetings.promptBubbleTitle, e.target.value))} /></div>
-              <div><Label className="text-xs">Prompt Bubble Body</Label><Textarea value={getStr(config.greetings.promptBubbleBody)} onChange={e => setNested("greetings", "promptBubbleBody", setStr(config.greetings.promptBubbleBody, e.target.value))} rows={2} /></div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div><Label className="text-xs">Prompt Delay: {config.greetings.promptBubbleDelay / 1000}s</Label><Slider value={[config.greetings.promptBubbleDelay]} onValueChange={([v]) => setNested("greetings", "promptBubbleDelay", v)} min={2000} max={30000} step={1000} /></div>
-                <div><Label className="text-xs">Reappear Delay: {config.greetings.promptBubbleReappear / 1000}s</Label><Slider value={[config.greetings.promptBubbleReappear]} onValueChange={([v]) => setNested("greetings", "promptBubbleReappear", v)} min={30000} max={600000} step={30000} /></div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Behavior */}
-          <Card><CardHeader><CardTitle className="font-display text-sm uppercase">Response Behavior</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div><Label className="text-xs">Prioritize</Label>
-                <Select value={config.behavior.prioritize} onValueChange={v => setNested("behavior", "prioritize", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="support">Support</SelectItem><SelectItem value="selling">Selling</SelectItem><SelectItem value="balanced">Balanced</SelectItem></SelectContent></Select></div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {(Object.keys(config.behavior) as (keyof typeof config.behavior)[]).filter(k => typeof config.behavior[k] === "boolean").map(key => (
-                  <div key={key} className="flex items-center gap-2">
-                    <Switch checked={config.behavior[key] as boolean} onCheckedChange={v => setNested("behavior", key, v)} />
-                    <Label className="text-xs">{String(key).replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase())}</Label>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-            </div>
-            <div className="hidden xl:block w-[400px] shrink-0">
-              <div className="sticky top-4">
-                <ChatLivePreview config={config} />
-              </div>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* ─── QUICK REPLIES ─── */}
-        <TabsContent value="quickreplies">
-          <div className="flex gap-6">
-            <div className="flex-1 min-w-0 space-y-4">
-          <Card><CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="font-display text-sm uppercase">Quick Replies</CardTitle>
-            <Button size="sm" variant="outline" onClick={addQuickReply}><Plus className="mr-1 h-3 w-3" /> Add</Button>
-          </CardHeader>
-            <CardContent className="space-y-3">
-              {config.quickReplies.map((qr) => (
-                <div key={qr.id} className="flex items-start gap-2 rounded-lg border border-border/30 bg-muted/30 p-3">
-                  <GripVertical className="mt-2 h-4 w-4 shrink-0 text-muted-foreground" />
-                  <div className="flex-1 space-y-2">
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <div><Label className="text-xs">Label</Label><Input value={getStr(qr.label)} onChange={e => updateQuickReply(qr.id, "label", e.target.value)} /></div>
-                      <div><Label className="text-xs">Message sent</Label><Input value={getStr(qr.message)} onChange={e => updateQuickReply(qr.id, "message", e.target.value)} /></div>
+              <CollapsibleSection title="Quick Replies" icon={Zap} defaultOpen={false} action={<Button size="sm" variant="outline" onClick={addQuickReply}><Plus className="mr-1 h-3 w-3" /> Add</Button>}>
+                <div className="space-y-3">
+                  {config.quickReplies.map((qr) => (
+                    <div key={qr.id} className="flex items-start gap-2 rounded-lg border border-border/30 bg-muted/30 p-3">
+                      <GripVertical className="mt-2 h-4 w-4 shrink-0 text-muted-foreground" />
+                      <div className="flex-1 space-y-2">
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <div><Label className="text-xs">Label</Label><Input value={getStr(qr.label)} onChange={e => updateQuickReply(qr.id, "label", e.target.value)} /></div>
+                          <div><Label className="text-xs">Message sent</Label><Input value={getStr(qr.message)} onChange={e => updateQuickReply(qr.id, "message", e.target.value)} /></div>
+                        </div>
+                        <div><Label className="text-xs">Pages (comma-separated, empty = all)</Label><Input value={qr.pages?.join(", ") ?? ""} onChange={e => updateQuickReply(qr.id, "pages", e.target.value.split(",").map(s => s.trim()).filter(Boolean))} placeholder="*, /products, /cart" /></div>
+                      </div>
+                      <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeQuickReply(qr.id)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
-                    <div><Label className="text-xs">Pages (comma-separated, empty = all)</Label><Input value={qr.pages?.join(", ") ?? ""} onChange={e => updateQuickReply(qr.id, "pages", e.target.value.split(",").map(s => s.trim()).filter(Boolean))} placeholder="*, /products, /cart" /></div>
-                  </div>
-                  <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeQuickReply(qr.id)}><Trash2 className="h-4 w-4" /></Button>
+                  ))}
+                  {config.quickReplies.length === 0 && <p className="py-4 text-center text-sm text-muted-foreground">No quick replies configured</p>}
                 </div>
-              ))}
-              {config.quickReplies.length === 0 && <p className="py-4 text-center text-sm text-muted-foreground">No quick replies configured</p>}
-            </CardContent>
-          </Card>
+              </CollapsibleSection>
+
+              <CollapsibleSection title="Page Rules" icon={FileText} defaultOpen={false} action={<Button size="sm" variant="outline" onClick={addPageRule}><Plus className="mr-1 h-3 w-3" /> Add Rule</Button>}>
+                <div className="space-y-3">
+                  {config.pageRules.map((rule, idx) => (
+                    <div key={idx} className="flex items-start gap-2 rounded-lg border border-border/30 bg-muted/30 p-3">
+                      <div className="flex-1 space-y-2">
+                        <div className="grid gap-2 sm:grid-cols-3">
+                          <div><Label className="text-xs">Page Pattern</Label><Input value={rule.page} onChange={e => updatePageRule(idx, "page", e.target.value)} /></div>
+                          <div><Label className="text-xs">Focus Area</Label>
+                            <Select value={rule.focusArea ?? "general"} onValueChange={v => updatePageRule(idx, "focusArea", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>
+                              <SelectItem value="general">General</SelectItem><SelectItem value="product_help">Product Help</SelectItem><SelectItem value="checkout_assist">Checkout Assist</SelectItem><SelectItem value="account_support">Account Support</SelectItem><SelectItem value="custom_order_help">Custom Order Help</SelectItem>
+                            </SelectContent></Select></div>
+                          <div className="flex items-end gap-2 pb-1"><Switch checked={rule.enabled} onCheckedChange={v => updatePageRule(idx, "enabled", v)} /><Label className="text-xs">Enabled</Label></div>
+                        </div>
+                        <div><Label className="text-xs">Custom Welcome Text</Label><Input value={getStr(rule.welcomeText)} onChange={e => updatePageRule(idx, "welcomeText", e.target.value)} placeholder="Optional override" /></div>
+                      </div>
+                      <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removePageRule(idx)}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  ))}
+                  {config.pageRules.length === 0 && <p className="py-4 text-center text-sm text-muted-foreground">No page rules configured</p>}
+                </div>
+              </CollapsibleSection>
+
+              <CollapsibleSection title="Response Behavior" icon={Settings2} defaultOpen={false}>
+                <div><Label className="text-xs">Prioritize</Label>
+                  <Select value={config.behavior.prioritize} onValueChange={v => setNested("behavior", "prioritize", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="support">Support</SelectItem><SelectItem value="selling">Selling</SelectItem><SelectItem value="balanced">Balanced</SelectItem></SelectContent></Select></div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {(Object.keys(config.behavior) as (keyof typeof config.behavior)[]).filter(k => typeof config.behavior[k] === "boolean").map(key => (
+                    <div key={key} className="flex items-center gap-2">
+                      <Switch checked={config.behavior[key] as boolean} onCheckedChange={v => setNested("behavior", key, v)} />
+                      <Label className="text-xs">{String(key).replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase())}</Label>
+                    </div>
+                  ))}
+                </div>
+              </CollapsibleSection>
+
             </div>
             <div className="hidden xl:block w-[400px] shrink-0">
               <div className="sticky top-4">
@@ -1127,58 +1164,50 @@ export default function AdminChat() {
         </TabsContent>
 
         {/* ─── TRAINING ─── */}
-        <TabsContent value="training" className="space-y-6">
-          <Card><CardHeader><CardTitle className="font-display text-sm uppercase">Training & Prompt Setup</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div><Label className="text-xs">Brand Description</Label><Textarea value={config.prompts.brandDescription} onChange={e => setNested("prompts", "brandDescription", e.target.value)} rows={2} /></div>
-              <div><Label className="text-xs">Assistant Role</Label><Textarea value={config.prompts.assistantRole} onChange={e => setNested("prompts", "assistantRole", e.target.value)} rows={2} /></div>
-              <div><Label className="text-xs">Tone Instructions</Label><Textarea value={config.prompts.toneInstructions} onChange={e => setNested("prompts", "toneInstructions", e.target.value)} rows={2} /></div>
-              <div><Label className="text-xs">Product Guidance</Label><Textarea value={config.prompts.productGuidance} onChange={e => setNested("prompts", "productGuidance", e.target.value)} rows={2} /></div>
-              <div><Label className="text-xs">Support Instructions</Label><Textarea value={config.prompts.supportInstructions} onChange={e => setNested("prompts", "supportInstructions", e.target.value)} rows={2} /></div>
-              <div><Label className="text-xs">Things to Avoid</Label><Textarea value={config.prompts.thingsToAvoid} onChange={e => setNested("prompts", "thingsToAvoid", e.target.value)} rows={2} /></div>
-              <div><Label className="text-xs">Campaign Instructions</Label><Textarea value={config.prompts.campaignInstructions} onChange={e => setNested("prompts", "campaignInstructions", e.target.value)} rows={2} /></div>
-              <div><Label className="text-xs">Escalation Rules</Label><Textarea value={config.prompts.escalationRules} onChange={e => setNested("prompts", "escalationRules", e.target.value)} rows={2} /></div>
-              <div><Label className="text-xs">Fallback Response</Label><Input value={getStr(config.prompts.fallbackResponse)} onChange={e => setNested("prompts", "fallbackResponse", setStr(config.prompts.fallbackResponse, e.target.value))} /></div>
-              <div><Label className="text-xs">Custom System Prompt Suffix</Label><Textarea value={config.prompts.customSystemPromptSuffix} onChange={e => setNested("prompts", "customSystemPromptSuffix", e.target.value)} rows={3} /></div>
-            </CardContent>
-          </Card>
-          <KnowledgeBaseTab />
-        </TabsContent>
+        <TabsContent value="training">
+          <div className="flex gap-6">
+            <div className="flex-1 min-w-0 space-y-3">
 
-        {/* ─── CAMPAIGN SYNC ─── */}
-        <TabsContent value="campaign" className="space-y-4">
-          <Card><CardHeader><CardTitle className="font-display text-sm uppercase">Campaign & Theme Sync</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">When a campaign is active, chat UI and behavior can adapt automatically. Configure campaign-specific overrides in the Campaigns page, and use the Campaign Instructions prompt field in the Training tab for response guidance.</p>
-              <Separator />
-              <div><Label className="text-xs">Campaign Instructions (synced from Training tab)</Label>
-                <Textarea value={config.prompts.campaignInstructions} onChange={e => setNested("prompts", "campaignInstructions", e.target.value)} rows={3} placeholder="How should the assistant reference campaigns?" /></div>
-              <div className="flex items-center gap-2"><Switch checked={(config.behavior as any).campaignAware ?? false} onCheckedChange={v => setNested("behavior", "campaignAware", v)} /><Label className="text-xs">Campaign-aware responses</Label></div>
-            </CardContent>
-          </Card>
+              <CollapsibleSection title="System Prompts" icon={Brain} defaultOpen={true}>
+                <div><Label className="text-xs">Brand Description</Label><Textarea value={config.prompts.brandDescription} onChange={e => setNested("prompts", "brandDescription", e.target.value)} rows={2} /></div>
+                <div><Label className="text-xs">Assistant Role</Label><Textarea value={config.prompts.assistantRole} onChange={e => setNested("prompts", "assistantRole", e.target.value)} rows={2} /></div>
+                <div><Label className="text-xs">Tone Instructions</Label><Textarea value={config.prompts.toneInstructions} onChange={e => setNested("prompts", "toneInstructions", e.target.value)} rows={2} /></div>
+                <div><Label className="text-xs">Product Guidance</Label><Textarea value={config.prompts.productGuidance} onChange={e => setNested("prompts", "productGuidance", e.target.value)} rows={2} /></div>
+                <div><Label className="text-xs">Support Instructions</Label><Textarea value={config.prompts.supportInstructions} onChange={e => setNested("prompts", "supportInstructions", e.target.value)} rows={2} /></div>
+                <div><Label className="text-xs">Things to Avoid</Label><Textarea value={config.prompts.thingsToAvoid} onChange={e => setNested("prompts", "thingsToAvoid", e.target.value)} rows={2} /></div>
+                <div><Label className="text-xs">Escalation Rules</Label><Textarea value={config.prompts.escalationRules} onChange={e => setNested("prompts", "escalationRules", e.target.value)} rows={2} /></div>
+                <div><Label className="text-xs">Fallback Response</Label><Input value={getStr(config.prompts.fallbackResponse)} onChange={e => setNested("prompts", "fallbackResponse", setStr(config.prompts.fallbackResponse, e.target.value))} /></div>
+                <div><Label className="text-xs">Custom System Prompt Suffix</Label><Textarea value={config.prompts.customSystemPromptSuffix} onChange={e => setNested("prompts", "customSystemPromptSuffix", e.target.value)} rows={3} /></div>
+              </CollapsibleSection>
+
+              <CollapsibleSection title="Knowledge Base" icon={BookOpen} defaultOpen={false}>
+                <KnowledgeBaseTab />
+              </CollapsibleSection>
+
+              <CollapsibleSection title="Campaign Instructions" icon={Megaphone} defaultOpen={false}>
+                <p className="text-xs text-muted-foreground">When a campaign is active, chat UI and behavior adapt automatically. Configure campaign-specific appearance overrides in the Campaigns page.</p>
+                <div><Label className="text-xs">Campaign Instructions</Label>
+                  <Textarea value={config.prompts.campaignInstructions} onChange={e => setNested("prompts", "campaignInstructions", e.target.value)} rows={3} placeholder="How should the assistant reference campaigns?" /></div>
+                <div className="flex items-center gap-2"><Switch checked={(config.behavior as any).campaignAware ?? false} onCheckedChange={v => setNested("behavior", "campaignAware", v)} /><Label className="text-xs">Campaign-aware responses</Label></div>
+              </CollapsibleSection>
+
+            </div>
+            <div className="hidden xl:block w-[400px] shrink-0">
+              <div className="sticky top-4">
+                <ChatLivePreview config={config} />
+              </div>
+            </div>
+          </div>
         </TabsContent>
 
         {/* ─── OPTIMIZATION ─── */}
         <TabsContent value="optimization"><OptimizationTab config={config} setConfig={setConfig} /></TabsContent>
 
-        {/* ─── ANALYTICS ─── */}
-        <TabsContent value="analytics"><AnalyticsTab /></TabsContent>
+        {/* ─── INSIGHTS ─── */}
+        <TabsContent value="insights"><InsightsTab /></TabsContent>
 
-        {/* ─── CONVERSATION LOGS ─── */}
-        <TabsContent value="logs"><ConversationsTab /></TabsContent>
-
-        {/* ─── PERSONALIZATION (AI Personalization) ─── */}
-        <TabsContent value="personalization">
-          <LazyPersonalization />
-        </TabsContent>
-
-        {/* ─── ACTIVITY LOG ─── */}
-        <TabsContent value="activity">
-          <LazyActivityLog />
-        </TabsContent>
-
-        {/* ─── SANDBOX ─── */}
-        <TabsContent value="sandbox"><SandboxTab /></TabsContent>
+        {/* ─── TOOLS (Sandbox + Personalization + Activity) ─── */}
+        <TabsContent value="tools"><ToolsTab /></TabsContent>
       </Tabs>
     </AdminLayout>
   );

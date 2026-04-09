@@ -67,6 +67,16 @@ function safeJsonParse<T>(value: string | null, fallback: T): T {
   }
 }
 
+function getLocalizedStr(val: unknown): string {
+  if (!val) return "";
+  if (typeof val === "string") return val;
+  if (typeof val === "object") {
+    const rec = val as Record<string, string>;
+    return rec.en ?? rec.da ?? Object.values(rec)[0] ?? "";
+  }
+  return "";
+}
+
 function getCartSnapshot() {
   const raw = localStorage.getItem("layerloot-cart");
   const items = safeJsonParse<any[]>(raw, []);
@@ -308,7 +318,7 @@ const ChatWidget = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const promptBubbleTimerRef = useRef<number | null>(null);
   const { campaign } = useCampaign();
-  const { settings: chatSettings } = useChatSettings();
+  const { settings: chatSettings, loading: chatSettingsLoading } = useChatSettings();
 
   const posClass = chatSettings.launcher.position === "bottom-left" ? "left-4 sm:left-6" : "right-4 sm:right-6";
   const headerBg = campaign?.chat_overrides?.headerColor
@@ -339,10 +349,31 @@ const ChatWidget = () => {
     ];
   });
 
-  const starterSuggestions = useMemo(
-    () => getPageSuggestions(location.pathname, !!userId),
-    [location.pathname, userId],
-  );
+  const starterSuggestions = useMemo(() => {
+    const adminReplies = chatSettings.quickReplies ?? [];
+    if (adminReplies.length > 0) {
+      // Check if a page rule specifies which quick replies to show
+      const matchedRule = (chatSettings.pageRules ?? []).find((r) => {
+        if (!r.enabled) return false;
+        const pattern = r.page.replace(/\*/g, ".*");
+        return new RegExp(`^${pattern}$`).test(location.pathname);
+      });
+      if (matchedRule?.quickReplyIds?.length) {
+        const pinned = adminReplies
+          .filter((r) => matchedRule.quickReplyIds!.includes(r.id))
+          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+          .map((r) => getLocalizedStr(r.label));
+        if (pinned.length > 0) return pinned;
+      }
+      // Show global quick replies (no page restriction)
+      const global = adminReplies
+        .filter((r) => !r.pages?.length)
+        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+        .map((r) => getLocalizedStr(r.label));
+      if (global.length > 0) return global;
+    }
+    return getPageSuggestions(location.pathname, !!userId);
+  }, [location.pathname, userId, chatSettings.quickReplies, chatSettings.pageRules]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
@@ -370,6 +401,19 @@ const ChatWidget = () => {
     };
   }, []);
 
+  // Once settings load from DB, update the initial greeting if the chat is in pristine state
+  const settingsAppliedRef = useRef(false);
+  useEffect(() => {
+    if (chatSettingsLoading || settingsAppliedRef.current) return;
+    settingsAppliedRef.current = true;
+    const adminGreeting = getLocalizedStr(chatSettings.greetings.defaultGreeting);
+    if (!adminGreeting) return;
+    setMessages((prev) => {
+      if (prev.length !== 1 || prev[0].role !== "assistant") return prev;
+      return [{ ...prev[0], content: adminGreeting }];
+    });
+  }, [chatSettingsLoading, chatSettings.greetings.defaultGreeting]);
+
   useEffect(() => {
     if (promptBubbleTimerRef.current) {
       window.clearTimeout(promptBubbleTimerRef.current);
@@ -381,7 +425,9 @@ const ChatWidget = () => {
       return;
     }
 
-    const delay = promptBubbleDismissed ? PROMPT_BUBBLE_REAPPEAR_MS : PROMPT_BUBBLE_DELAY_MS;
+    const bubbleDelay = chatSettings.greetings.promptBubbleDelay ?? PROMPT_BUBBLE_DELAY_MS;
+    const bubbleReappear = chatSettings.greetings.promptBubbleReappear ?? PROMPT_BUBBLE_REAPPEAR_MS;
+    const delay = promptBubbleDismissed ? bubbleReappear : bubbleDelay;
 
     promptBubbleTimerRef.current = window.setTimeout(() => {
       setShowPromptBubble(true);
@@ -394,7 +440,7 @@ const ChatWidget = () => {
         promptBubbleTimerRef.current = null;
       }
     };
-  }, [open, location.pathname, promptBubbleDismissed]);
+  }, [open, location.pathname, promptBubbleDismissed, chatSettings.greetings.promptBubbleDelay, chatSettings.greetings.promptBubbleReappear]);
 
   const dismissPromptBubble = () => {
     setShowPromptBubble(false);
@@ -473,16 +519,12 @@ const ChatWidget = () => {
   };
 
   const clearChat = () => {
-    const reset: Msg[] = [
-      {
-        id: uid(),
-        role: "assistant",
-        content: userId
-          ? "Welcome back! I can help with your orders, points, cart progress, products, and custom prints."
-          : "Hi! I'm LayerLoot's assistant. I can help you find products, explain shipping, and guide custom print requests.",
-      },
-    ];
-
+    const loggedInGreeting = getLocalizedStr(chatSettings.greetings.loggedInGreeting);
+    const defaultGreeting = getLocalizedStr(chatSettings.greetings.defaultGreeting);
+    const content = userId
+      ? loggedInGreeting || "Welcome back! I can help with your orders, points, cart progress, products, and custom prints."
+      : defaultGreeting || "Hi! I'm LayerLoot's assistant. I can help you find products, explain shipping, and guide custom print requests.";
+    const reset: Msg[] = [{ id: uid(), role: "assistant", content }];
     setMessages(reset);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(reset));
   };
@@ -511,10 +553,10 @@ const ChatWidget = () => {
             <button type="button" onClick={openChat} className="block w-full text-left">
               <div className="mb-1 flex items-center gap-2 pr-6 text-sm font-medium text-foreground">
                 <Wand2 className="h-4 w-4 text-primary" />
-                Need help choosing?
+                {getLocalizedStr(chatSettings.greetings.promptBubbleTitle) || "Need help choosing?"}
               </div>
               <div className="text-xs text-muted-foreground">
-                Ask about your points, latest order, free shipping, custom prints, or gift ideas.
+                {getLocalizedStr(chatSettings.greetings.promptBubbleBody) || "Ask about your points, latest order, free shipping, custom prints, or gift ideas."}
               </div>
             </button>
           </motion.div>

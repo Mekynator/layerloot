@@ -767,6 +767,8 @@ export default function AdminChat() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [, startTransition] = useTransition();
+  const handleTabChange = useCallback((v: string) => startTransition(() => setActiveTab(v)), []);
 
   const isDirty = useMemo(() => JSON.stringify(config) !== JSON.stringify(savedConfig), [config, savedConfig]);
 

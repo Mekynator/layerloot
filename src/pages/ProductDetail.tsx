@@ -57,6 +57,7 @@ const ProductDetail = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const isMobile = useIsMobile();
+  const { saved, loading: saving, toggleSave: handleToggleSave } = useProductSavedState(product?.id ?? "");
 
   const heroImageRef = useRef<HTMLImageElement | null>(null);
   const addToCartSectionRef = useRef<HTMLDivElement | null>(null);

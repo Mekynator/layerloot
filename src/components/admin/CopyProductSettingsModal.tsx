@@ -127,21 +127,22 @@ const CopyProductSettingsModal = ({ open, onOpenChange, targetProductId, onApply
 
       // Copy colors (swatches) if selected
       if (selected.has("colors") && targetProductId && !targetProductId.startsWith("draft-")) {
-        const { data: srcColors } = await (supabase as any)
-          .from("product_colors")
+        const { data: srcColors } = await supabase
+          .from("product_color_options")
           .select("*")
           .eq("product_id", sourceId)
           .order("sort_order");
 
         if (srcColors && srcColors.length > 0) {
-          await (supabase as any).from("product_colors").delete().eq("product_id", targetProductId);
+          await supabase.from("product_color_options").delete().eq("product_id", targetProductId);
           const newColors = srcColors.map((c: any) => ({
             product_id: targetProductId,
             color_name: c.color_name,
             hex_value: c.hex_value,
+            group_label: c.group_label,
             sort_order: c.sort_order,
           }));
-          await (supabase as any).from("product_colors").insert(newColors);
+          await supabase.from("product_color_options").insert(newColors);
         }
       }
 
@@ -169,18 +170,21 @@ const CopyProductSettingsModal = ({ open, onOpenChange, targetProductId, onApply
       }
 
       // Copy gift finder tags if details selected
-      if (selected.has("details") && targetProductId && !targetProductId.startsWith("draft-")) {
+      if (selected.has("details")) {
         const { data: srcTags } = await supabase
           .from("product_gift_finder_tags")
           .select("gift_finder_tag_id")
           .eq("product_id", sourceId);
 
         if (srcTags && srcTags.length > 0) {
-          await supabase.from("product_gift_finder_tags").delete().eq("product_id", targetProductId);
-          await supabase.from("product_gift_finder_tags").insert(
-            srcTags.map((t: any) => ({ product_id: targetProductId, gift_finder_tag_id: t.gift_finder_tag_id }))
-          );
-          // Also update form state with copied tag IDs
+          // Sync to DB only when target product already exists
+          if (targetProductId && !targetProductId.startsWith("draft-")) {
+            await supabase.from("product_gift_finder_tags").delete().eq("product_id", targetProductId);
+            await supabase.from("product_gift_finder_tags").insert(
+              srcTags.map((t: any) => ({ product_id: targetProductId, gift_finder_tag_id: t.gift_finder_tag_id }))
+            );
+          }
+          // Always populate form state with copied tag IDs
           result.gift_finder_tag_ids = srcTags.map((t: any) => t.gift_finder_tag_id);
         }
       }

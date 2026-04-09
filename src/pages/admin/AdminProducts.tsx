@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Archive, Calculator, Calendar, CheckCircle, Copy, Eye, History, Layers,
+  Archive, Bookmark, Calculator, Calendar, CheckCircle, Copy, Eye, History, Layers,
   Pencil, Plus, Tag, Trash2, X, XCircle, Search, Repeat,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -92,6 +92,21 @@ const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secon
   scheduled: { label: "Scheduled", variant: "default" },
 };
 
+const TEMPLATES_KEY = "layerloot-product-templates";
+
+interface ProductTemplate {
+  id: string;
+  name: string;
+  savedAt: string;
+  data: typeof emptyProduct;
+}
+
+function loadStoredTemplates(): ProductTemplate[] {
+  try { return JSON.parse(localStorage.getItem(TEMPLATES_KEY) ?? "[]"); } catch { return []; }
+}
+
+function tplUid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
 function StockBadge({ stock }: { stock: number }) {
   const badge = getStockTypeBadge(stock);
   return (
@@ -122,16 +137,19 @@ const AdminProducts = () => {
   const [giftTagPickerValue, setGiftTagPickerValue] = useState<string>("none");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [stockFilter, setStockFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [historyProductId, setHistoryProductId] = useState<string | null>(null);
   const [scheduleProductId, setScheduleProductId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ type: string; productId: string; name: string } | null>(null);
   const [copyModalOpen, setCopyModalOpen] = useState(false);
+  const [templates, setTemplates] = useState<ProductTemplate[]>(() => loadStoredTemplates());
   const { toast } = useToast();
   const { user } = useAuth();
   const productAdmin = useProductAdmin();
 
   const giftFinderTagMap = useMemo(() => new Map(giftFinderTags.map((tag) => [tag.id, tag])), [giftFinderTags]);
+  const categoryMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
 
   const filteredProducts = useMemo(() => {
     let result = products;
@@ -145,14 +163,27 @@ const AdminProducts = () => {
     else if (stockFilter === "tracked") result = result.filter((p) => p.stock > 0);
     else if (stockFilter === "low") result = result.filter((p) => p.stock > 0 && p.stock <= 5);
 
+    // Category filter
+    if (categoryFilter !== "all") {
+      result = categoryFilter === "none"
+        ? result.filter((p) => !p.category_id)
+        : result.filter((p) => p.category_id === categoryFilter);
+    }
+
     // Search
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter((p) => p.name.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q));
     }
 
-    return result;
-  }, [products, statusFilter, stockFilter, searchQuery]);
+    // Sort by category name then product name
+    return [...result].sort((a, b) => {
+      const ca = a.category_id ? (categoryMap.get(a.category_id)?.name ?? "zzz") : "zzz";
+      const cb = b.category_id ? (categoryMap.get(b.category_id)?.name ?? "zzz") : "zzz";
+      if (ca !== cb) return ca.localeCompare(cb);
+      return a.name.localeCompare(b.name);
+    });
+  }, [products, statusFilter, stockFilter, categoryFilter, searchQuery, categoryMap]);
 
   // Stats
   const stats = useMemo(() => {
@@ -354,6 +385,21 @@ const AdminProducts = () => {
     }
   };
 
+  const saveAsTemplate = () => {
+    if (!form.name.trim()) { toast({ title: "Add a product name first" }); return; }
+    const template: ProductTemplate = { id: tplUid(), name: form.name.trim(), savedAt: new Date().toISOString(), data: { ...form } };
+    const updated = [template, ...loadStoredTemplates().filter((t) => t.name !== template.name)].slice(0, 12);
+    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(updated));
+    setTemplates(updated);
+    toast({ title: "Template saved", description: `"${template.name}" saved as a reusable template.` });
+  };
+
+  const applyTemplate = (templateId: string) => {
+    const tpl = templates.find((t) => t.id === templateId);
+    if (!tpl) return;
+    setForm({ ...tpl.data, name: "", slug: "" });
+  };
+
   return (
     <AdminLayout>
       {/* Header */}
@@ -385,6 +431,19 @@ const AdminProducts = () => {
               </div>
             </DialogHeader>
             <Tabs defaultValue="basic" className="space-y-4">
+              {/* Template chooser — only when adding a new product */}
+              {!editingId && templates.length > 0 && (
+                <div className="flex items-center gap-2 rounded-md border border-dashed border-border bg-muted/40 px-3 py-2 text-sm">
+                  <Bookmark className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="text-muted-foreground">Start from template:</span>
+                  <Select onValueChange={applyTemplate}>
+                    <SelectTrigger className="h-7 flex-1 text-xs"><SelectValue placeholder="Choose template…" /></SelectTrigger>
+                    <SelectContent>
+                      {templates.map((t) => (<SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="sticky top-0 z-10 -mx-6 bg-card/95 px-6 pb-3 pt-1 backdrop-blur-sm">
                 <TabsList className="w-full grid grid-cols-6">
                   <TabsTrigger value="basic"><span className="mr-0.5 text-[10px] opacity-50">1·</span>Basic</TabsTrigger>
@@ -584,6 +643,15 @@ const AdminProducts = () => {
                   <Copy className="h-3.5 w-3.5" />
                   Copy from product
                 </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={saveAsTemplate}
+                  className="gap-1 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <Bookmark className="h-3.5 w-3.5" />
+                  Save as template
+                </Button>
                 <div className="flex-1" />
                 {canPublish && (
                   <Button
@@ -637,6 +705,14 @@ const AdminProducts = () => {
             <SelectItem value="low">Low Stock (≤5)</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="w-40"><SelectValue placeholder="Category" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            <SelectItem value="none">Uncategorized</SelectItem>
+            {categories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+          </SelectContent>
+        </Select>
         <span className="text-xs text-muted-foreground">{filteredProducts.length} products</span>
       </div>
 
@@ -665,6 +741,9 @@ const AdminProducts = () => {
                         <div>
                           <p className="font-display text-sm font-semibold uppercase">{product.name}</p>
                           <p className="text-xs text-muted-foreground">{product.slug}</p>
+                          {product.category_id && (
+                            <p className="text-xs text-muted-foreground/60">{categoryMap.get(product.category_id)?.name ?? ""}</p>
+                          )}
                         </div>
                       </div>
                     </TableCell>

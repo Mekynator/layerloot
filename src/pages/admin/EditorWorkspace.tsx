@@ -1,7 +1,7 @@
-import React, { Suspense, lazy } from "react";
+import React, { Suspense, lazy, useState, useTransition, useCallback } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { FileText, LayoutGrid, Shield, Settings, Layers } from "lucide-react";
+import { FileText, Shield, Settings, Layers } from "lucide-react";
 
 const PageEditor = lazy(() => import("@/pages/admin/PageEditor"));
 const AdminPolicies = lazy(() => import("@/pages/admin/AdminPolicies"));
@@ -16,7 +16,10 @@ const tabConfig = [
 ];
 
 export default function EditorWorkspace() {
-  const [activeTab, setActiveTab] = React.useState("pages");
+  const [activeTab, setActiveTab] = useState("pages");
+  const [, startTransition] = useTransition();
+  const handleTabChange = useCallback((v: string) => startTransition(() => setActiveTab(v)), []);
+
   return (
     <AdminLayout>
       <div className="mb-6 flex items-center justify-between gap-4">
@@ -27,7 +30,7 @@ export default function EditorWorkspace() {
           <p className="text-xs text-muted-foreground">Unified workspace for editing pages, blocks, policies, and site content</p>
         </div>
       </div>
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="flex flex-wrap h-auto gap-1">
           {tabConfig.map(({ value, label, icon: Icon }) => (
             <TabsTrigger key={value} value={value} className="gap-1.5">

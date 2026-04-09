@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ShoppingBag, ArrowRight } from "lucide-react";
+import { Check, ShoppingBag, ArrowRight, Heart } from "lucide-react";
+import { useProductSavedState } from "@/hooks/use-product-saved-state";
 import { useTranslation } from "react-i18next";
 import { useCart } from "@/contexts/CartContext";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -103,6 +104,8 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
     }
   };
 
+  const { saved, loading: saving, toggleSave } = useProductSavedState(product.id);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
@@ -125,6 +128,20 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
       >
         {/* Image area */}
         <div className="relative aspect-[4/5] overflow-hidden">
+                    {/* Save/Heart icon button */}
+                    <button
+                      type="button"
+                      aria-label={saved ? t("products.unsave") : t("products.saveForLater")}
+                      onClick={e => { e.preventDefault(); e.stopPropagation(); toggleSave(); }}
+                      disabled={saving}
+                      className={`absolute right-3 top-3 z-10 flex items-center justify-center rounded-full border border-primary/20 bg-background/80 p-1.5 shadow-md transition-all duration-200 hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary/40 ${saved ? "bg-primary/90" : ""}`}
+                      style={{ boxShadow: saved ? "0 0 0 2px hsl(var(--primary)/0.18), 0 2px 8px hsl(var(--primary)/0.10)" : undefined }}
+                    >
+                      <Heart
+                        className={`h-5 w-5 transition-colors duration-200 ${saved ? "fill-primary text-primary-foreground drop-shadow-[0_0_6px_hsl(var(--primary)/0.25)]" : "text-primary/70 group-hover:text-primary"}`}
+                        strokeWidth={1.7}
+                      />
+                    </button>
           {isMobile ? (
             <img
               ref={imageRef}

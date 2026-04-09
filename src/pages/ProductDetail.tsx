@@ -41,12 +41,14 @@ useEffect(() => {
 const handleToggleSave = async () => {
   if (!product) return;
   setSaving(true);
+  let changed = false;
   if (user) {
     if (!saved) {
       const { error } = await saveProduct(product.id, user.id);
       if (!error) {
         setSaved(true);
         toast({ title: "Saved!", description: product.name });
+        changed = true;
       } else {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       }
@@ -55,6 +57,7 @@ const handleToggleSave = async () => {
       if (!error) {
         setSaved(false);
         toast({ title: "Removed from saved", description: product.name });
+        changed = true;
       } else {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       }
@@ -68,15 +71,20 @@ const handleToggleSave = async () => {
         window.localStorage.setItem(LOCAL_SAVED_KEY, JSON.stringify(arr));
         setSaved(true);
         toast({ title: "Saved!", description: product.name });
+        changed = true;
       } else {
         arr = arr.filter((id: string) => id !== product.id);
         window.localStorage.setItem(LOCAL_SAVED_KEY, JSON.stringify(arr));
         setSaved(false);
         toast({ title: "Removed from saved", description: product.name });
+        changed = true;
       }
     } catch {
       toast({ title: "Error", description: "Could not save item", variant: "destructive" });
     }
+  }
+  if (changed) {
+    window.dispatchEvent(new Event("layerloot:saved-items-updated"));
   }
   setSaving(false);
 };

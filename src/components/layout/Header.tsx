@@ -4,6 +4,8 @@ import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import MiniCart from "@/components/layout/MiniCart";
 import AccountDropdown from "@/components/layout/AccountDropdown";
+import { CountBadge } from "@/components/ui/count-badge";
+import { useSavedItemsCount } from "@/hooks/use-saved-items-count";
 import logoImg from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
@@ -262,6 +264,7 @@ const Header = () => {
 
   const cartDestinationRect = cartButtonRef.current?.getBoundingClientRect();
 
+  const savedCount = useSavedItemsCount();
   return (
     <>
       <GlobalSectionRenderer page="global_header_top" />
@@ -374,7 +377,12 @@ const Header = () => {
             <LanguageSwitcher />
 
             {headerSettings.show_account_icon && (
-              <AccountDropdown hasNotifications={hasAccountNotifications} />
+              <div className="relative">
+                <AccountDropdown hasNotifications={hasAccountNotifications} />
+                {savedCount > 0 && (
+                  <CountBadge count={savedCount} className="right-0.5 top-0.5" />
+                )}
+              </div>
             )}
 
             {headerSettings.show_mobile_menu && (

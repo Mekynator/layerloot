@@ -26,6 +26,8 @@ import { computeLoyaltyProgress } from "@/hooks/use-loyalty-progress";
 import { formatPrice } from "@/lib/currency";
 import { useReferrals } from "@/hooks/use-referrals";
 import { useRecentlyViewedProducts } from "@/hooks/use-recently-viewed";
+import SavedItemsSection from "@/components/account/SavedItemsSection";
+import RecentlySavedSection from "@/components/account/RecentlySavedSection";
 import { motion } from "framer-motion";
 
 const VALID_SECTIONS: AccountSection[] = ["orders", "custom-requests", "invoices", "rewards", "vouchers", "referrals", "preferences", "settings"];
@@ -283,6 +285,11 @@ const Account = () => {
             </SummaryCard>
           </div>
         </div>
+
+        {/* Recently Saved Section (compact, above Saved for Later) */}
+        <RecentlySavedSection />
+        {/* Saved for Later Section */}
+        <SavedItemsSection />
 
         {/* Recently Viewed — minimal */}
         {recentProducts.length >= 2 && (

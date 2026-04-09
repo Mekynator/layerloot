@@ -1,4 +1,7 @@
 import { useState, useRef, useCallback } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { saveProduct } from "@/lib/savedItems";
+import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { ShoppingCart, Trash2, ShoppingBag, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -20,6 +23,23 @@ interface MiniCartProps {
 const MiniCart = ({ cartButtonRef, cartPulse, cartGlow, totalItems }: MiniCartProps) => {
   const { t } = useTranslation();
   const { items, removeItem, updateQuantity, totalPrice } = useCart();
+  const { user } = useAuth();
+  const { toast } = useToast();
+    // Move to Saved handler (shared logic)
+    const handleMoveToSaved = async (item: any) => {
+      if (!user) {
+        toast({ title: t("cart.loginToSave", "Please log in to save items") });
+        return;
+      }
+      const { error } = await saveProduct(item.id, user.id);
+      removeItem(item.id);
+      window.dispatchEvent(new CustomEvent("layerloot:saved-items-updated"));
+      if (!error) {
+        toast({ title: t("cart.movedToSaved", "Moved to Saved for Later"), description: item.name });
+      } else {
+        toast({ title: t("cart.saveFailed", "Could not save item"), description: error.message, variant: "destructive" });
+      }
+    };
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -104,12 +124,21 @@ const MiniCart = ({ cartButtonRef, cartPulse, cartGlow, totalItems }: MiniCartPr
                           <span className="text-xs font-semibold text-primary">{formatPrice(item.price * item.quantity)}</span>
                         </div>
                       </div>
-                      <button
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeItem(item.id); }}
-                        className="p-1 text-muted-foreground/50 hover:text-destructive transition-colors"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      <div className="flex flex-col gap-1 items-end ml-2">
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleMoveToSaved(item); }}
+                          className="p-1 text-muted-foreground/60 hover:text-primary text-[10px] font-medium transition-colors"
+                          style={{ minWidth: 0 }}
+                        >
+                          {t("cart.moveToSaved", "Move to Saved")}
+                        </button>
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeItem(item.id); }}
+                          className="p-1 text-muted-foreground/50 hover:text-destructive transition-colors"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

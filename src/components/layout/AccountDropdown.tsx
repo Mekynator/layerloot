@@ -1,4 +1,6 @@
 import { useRef, useCallback, useEffect, useState } from "react";
+import { CountBadge } from "@/components/ui/count-badge";
+import { useSavedItemsCount } from "@/hooks/use-saved-items-count";
 import { Link, useNavigate } from "react-router-dom";
 import { User, Package, Gift, Settings, LogOut, Star, Bell, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,6 +23,7 @@ function safeT(t: ReturnType<typeof useTranslation>["t"], key: string, fallback:
 
 const AccountDropdown = ({ hasNotifications }: AccountDropdownProps) => {
   const { t } = useTranslation();
+  const savedCount = useSavedItemsCount();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -108,6 +111,7 @@ const AccountDropdown = ({ hasNotifications }: AccountDropdownProps) => {
         onClick={handleIconClick}
       >
         <User className="h-5 w-5" />
+        {savedCount > 0 && <CountBadge count={savedCount} className="right-0.5 top-0.5" />}
         {hasNotifications && <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-primary animate-pulse" />}
       </Button>
 

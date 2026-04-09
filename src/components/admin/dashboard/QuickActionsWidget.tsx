@@ -11,23 +11,15 @@ interface Shortcut {
 }
 
 const ALL_SHORTCUTS: Shortcut[] = [
-  { id: "products", label: "Products", icon: Package, to: "/admin/products", permissions: ["products.manage"] },
-  { id: "orders", label: "Orders", icon: ShoppingCart, to: "/admin/orders", permissions: ["orders.manage"] },
-  { id: "custom-orders", label: "Custom Orders", icon: Box, to: "/admin/custom-orders", permissions: ["custom_orders.manage"] },
   { id: "editor", label: "Page Editor", icon: FileText, to: "/admin/editor", permissions: ["content.manage"] },
   { id: "translations", label: "Translations", icon: Globe, to: "/admin/translations", permissions: ["translations.manage"] },
   { id: "media", label: "Media", icon: ImageIcon, to: "/admin/media", permissions: ["content.manage"] },
-  { id: "showcases", label: "Showcases", icon: Palette, to: "/admin/showcases" },
   { id: "discounts", label: "Discounts", icon: TicketPercent, to: "/admin/discounts", permissions: ["products.manage"] },
   { id: "categories", label: "Categories", icon: Tags, to: "/admin/categories", permissions: ["products.manage"] },
   { id: "shipping", label: "Shipping", icon: Truck, to: "/admin/shipping" },
   { id: "reviews", label: "Reviews", icon: Star, to: "/admin/reviews" },
-  { id: "clients", label: "Users", icon: Users, to: "/admin/clients" },
-  { id: "reports", label: "Reports", icon: BarChart3, to: "/admin/reports" },
-  { id: "settings", label: "Settings", icon: Settings, to: "/admin/settings" },
   { id: "pricing", label: "Pricing", icon: Calculator, to: "/admin/pricing" },
   { id: "campaigns", label: "Campaigns", icon: Megaphone, to: "/admin/campaigns" },
-  { id: "revenue", label: "Revenue", icon: Wallet, to: "/admin/revenue" },
   { id: "backgrounds", label: "Backgrounds", icon: ImageIcon, to: "/admin/backgrounds" },
 ];
 

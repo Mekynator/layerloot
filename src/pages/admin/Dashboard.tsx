@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   DollarSign, Package, ShoppingCart, Users, Download, Calendar,
-  Box, TrendingUp, Activity, BarChart3,
+  Box, TrendingUp, Activity, BarChart3, MessageCircle, Mail, Star, Shield, FolderOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,16 +17,10 @@ import {
   LineChart, Line, CartesianGrid, PieChart, Pie, Cell, BarChart, Bar,
 } from "recharts";
 import { Link } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 
 // Widgets
-import ActionCenterWidget from "@/components/admin/dashboard/ActionCenterWidget";
-import ContentStatusWidget from "@/components/admin/dashboard/ContentStatusWidget";
-import OperationsWidget from "@/components/admin/dashboard/OperationsWidget";
-import TranslationWidget from "@/components/admin/dashboard/TranslationWidget";
-import ProductAttentionWidget from "@/components/admin/dashboard/ProductAttentionWidget";
 import QuickActionsWidget from "@/components/admin/dashboard/QuickActionsWidget";
-import RecentActivityWidget from "@/components/admin/dashboard/RecentActivityWidget";
-import ReferralStatsWidget from "@/components/admin/dashboard/ReferralStatsWidget";
 
 const CHART_COLORS = [
   "hsl(var(--primary))", "hsl(160,60%,45%)", "hsl(45,90%,55%)",
@@ -50,9 +44,16 @@ const ROLE_WIDGETS: Record<string, WidgetKey[]> = {
   custom: ["action", "activity", "shortcuts"],
 };
 
-const KpiCard = ({ label, value, icon: Icon, sub, to, accent = "primary" }: {
-  label: string; value: string | number; icon: typeof DollarSign; sub?: string;
-  to?: string; accent?: "primary" | "green" | "amber" | "purple";
+
+// Dashboard tile with count and notification dot
+const DashboardTile = ({ label, icon: Icon, to, count, showDot, accent, sub }: {
+  label: string;
+  icon: typeof DollarSign;
+  to: string;
+  count?: number;
+  showDot?: boolean;
+  accent?: "primary" | "green" | "amber" | "purple";
+  sub?: string;
 }) => {
   const accentMap = {
     primary: "text-primary bg-primary/10",
@@ -60,20 +61,19 @@ const KpiCard = ({ label, value, icon: Icon, sub, to, accent = "primary" }: {
     amber: "text-amber-400 bg-amber-500/10",
     purple: "text-purple-400 bg-purple-500/10",
   };
-  const content = (
-    <div className={`${TILE_CLASS} bg-card/40 p-4`}>
+  return (
+    <Link to={to} className={`${TILE_CLASS} bg-card/40 p-4 relative flex flex-col gap-1`}>
       <div className="flex items-center gap-2 mb-2">
-        <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${accentMap[accent]}`}>
-          <Icon className="h-4 w-4" />
-        </div>
+        <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${accentMap[accent ?? "primary"]}`}> <Icon className="h-4 w-4" /> </div>
         <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+        {showDot && <span className="ml-1 h-2 w-2 rounded-full bg-red-500 animate-pulse" />}
       </div>
-      <p className="font-display text-2xl font-bold text-foreground">{value}</p>
-      {sub && <p className="mt-1 text-[11px] text-muted-foreground">{sub}</p>}
-    </div>
+      <div className="flex items-center gap-2">
+        {typeof count === "number" && <span className="font-display text-2xl font-bold text-foreground">{count}</span>}
+        {sub && <span className="text-xs text-muted-foreground">{sub}</span>}
+      </div>
+    </Link>
   );
-  if (to) return <Link to={to}>{content}</Link>;
-  return content;
 };
 
 const MiniChart = ({ title, icon: Icon, children }: { title: string; icon: typeof TrendingUp; children: React.ReactNode }) => (
@@ -156,85 +156,21 @@ const Dashboard = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Action Center */}
-          {show("action") && <ActionCenterWidget data={data} />}
+          {/* Main Dashboard Tiles */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <DashboardTile label="Orders" icon={ShoppingCart} to="/admin/orders" count={data.ordersCount} showDot={data.pendingOrders > 0} sub={data.pendingOrders > 0 ? `${data.pendingOrders} pending` : undefined} />
+            <DashboardTile label="Custom Orders" icon={Box} to="/admin/custom-orders" count={data.customOrdersActive} showDot={data.quotesAwaiting > 0 || data.unansweredCustomMessages > 0} sub={data.quotesAwaiting > 0 ? `${data.quotesAwaiting} awaiting reply` : undefined} accent="purple" />
+            <DashboardTile label="Users" icon={Users} to="/admin/clients" count={data.clientsCount} />
+            <DashboardTile label="Products" icon={Package} to="/admin/products" count={data.productsCount} sub={data.draftProductsCount > 0 ? `${data.draftProductsCount} drafts` : undefined} />
+            <DashboardTile label="Fulfillment" icon={Package} to="/admin/orders" count={data.ordersAwaitingShipment} sub={data.ordersAwaitingShipment > 0 ? "Awaiting shipment" : undefined} accent="amber" />
+            <DashboardTile label="AI Chat" icon={MessageCircle} to="/admin/chat" />
+            <DashboardTile label="Showcases" icon={FolderOpen} to="/admin/showcases" showDot={data.pendingShowcases > 0} count={data.pendingShowcases} />
+            <DashboardTile label="Email Logs" icon={Mail} to="/admin/email-logs" />
+            <DashboardTile label="Adjustments / Financial" icon={DollarSign} to="/admin/financial" />
+          </div>
 
-          {/* KPI Grid */}
-          {show("kpi") && (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <KpiCard label="Revenue" value={`${data.revenue.toFixed(0)} kr`} icon={DollarSign} sub={`Avg: ${data.avgOrderValue.toFixed(0)} kr`} accent="green" />
-              <KpiCard label="Orders" value={data.ordersCount} icon={ShoppingCart} sub={`${data.pendingOrders} pending`} to="/admin/orders" />
-              <KpiCard label="Custom Orders" value={data.customOrdersActive} icon={Box} sub={`${data.quotesAwaiting} awaiting reply`} to="/admin/custom-orders" accent="purple" />
-              <KpiCard label="Customers" value={data.clientsCount} icon={Users} sub="Registered" to="/admin/clients" />
-              <KpiCard label="Products" value={data.productsCount} icon={Package} sub={`${data.draftProductsCount} drafts`} to="/admin/products" />
-              <KpiCard label="Fulfillment" value={data.ordersAwaitingShipment} icon={Package} sub="Awaiting shipment" to="/admin/orders" accent="amber" />
-            </div>
-          )}
-
-          {/* Content + Operations side by side */}
-          {(show("content") || show("operations")) && (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {show("content") && <ContentStatusWidget data={data} />}
-              {show("operations") && <OperationsWidget data={data} />}
-            </div>
-          )}
-
-          {/* Product + Translation side by side */}
-          {(show("product") || show("translation")) && (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {show("product") && <ProductAttentionWidget data={data} />}
-              {show("translation") && <TranslationWidget data={data} />}
-            </div>
-          )}
-
-          {/* Referral Program */}
-          {show("referrals") && <ReferralStatsWidget />}
-
-          {/* Charts */}
-          {show("charts") && (
-            <div className="grid gap-4 lg:grid-cols-2">
-              <MiniChart title="Revenue Trend" icon={TrendingUp}>
-                {data.revenueByDay.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={200}>
-                    <AreaChart data={data.revenueByDay}>
-                      <defs>
-                        <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.25} />
-                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                      <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                      <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "none", borderRadius: 8, fontSize: 12 }} formatter={(v: number) => `${v.toFixed(2)} kr`} />
-                      <Area type="monotone" dataKey="revenue" fill="url(#revGrad)" stroke="hsl(var(--primary))" strokeWidth={2} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                ) : <p className="py-12 text-center text-xs text-muted-foreground">No revenue data yet.</p>}
-              </MiniChart>
-
-              <MiniChart title="Orders by Status" icon={BarChart3}>
-                {data.ordersByStatus.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={200}>
-                    <PieChart>
-                      <Pie data={data.ordersByStatus} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} innerRadius={40}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        labelLine={{ stroke: "hsl(var(--muted-foreground))" }}>
-                        {data.ordersByStatus.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                      </Pie>
-                      <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "none", borderRadius: 8 }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : <p className="py-12 text-center text-xs text-muted-foreground">No data.</p>}
-              </MiniChart>
-            </div>
-          )}
-
-          {/* Recent Activity */}
-          {show("activity") && <RecentActivityWidget />}
-
-          {/* Quick Actions */}
-          {show("shortcuts") && <QuickActionsWidget hasPermission={hasPermission} />}
+          {/* Quick Actions (secondary shortcuts) */}
+          <QuickActionsWidget hasPermission={hasPermission} />
         </div>
       )}
     </AdminLayout>

@@ -1169,12 +1169,16 @@ export default function AdminChat() {
 
         {/* ─── PERSONALIZATION (AI Personalization) ─── */}
         <TabsContent value="personalization">
-          <LazyPersonalization />
+          <React.Suspense fallback={<div className="flex items-center justify-center py-12 text-muted-foreground">Loading personalization...</div>}>
+            <LazyPersonalization />
+          </React.Suspense>
         </TabsContent>
 
         {/* ─── ACTIVITY LOG ─── */}
         <TabsContent value="activity">
-          <LazyActivityLog />
+          <React.Suspense fallback={<div className="flex items-center justify-center py-12 text-muted-foreground">Loading activity log...</div>}>
+            <LazyActivityLog />
+          </React.Suspense>
         </TabsContent>
 
         {/* ─── SANDBOX ─── */}

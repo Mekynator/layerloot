@@ -1,4 +1,7 @@
-import { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
+
+const LazyPersonalization = React.lazy(() => import("./AdminPersonalization"));
+const LazyActivityLog = React.lazy(() => import("./AdminActivity"));
 import {
   Save, Plus, Trash2, GripVertical, Eye, MessageCircle,
   BarChart3, Users, TrendingUp, Brain, FlaskConical,

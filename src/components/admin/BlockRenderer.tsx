@@ -976,21 +976,27 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
         <div
           className={`max-w-2xl ${align === "center" ? "mx-auto" : align === "right" ? "ml-auto" : ""} ${alignmentClass(align)}`}
         >
-          <motion.div
-            initial={{ opacity: 0, y: 14 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className={`mb-4 flex items-center gap-2 ${justifyClass(align)}`}
-          >
-            {(() => {
-              const Icon = iconForName(c.icon || "Printer", Printer);
-              const iconSizePx = c.iconSize || 20;
-              return <Icon style={{ width: iconSizePx, height: iconSizePx, color: c.iconColor || undefined }} className="text-primary" />;
-            })()}
-            <span className="font-display text-sm uppercase tracking-widest text-primary">
-              {getLocalizedValue(c.eyebrow || c.badge, tr("blocks.hero.eyebrow", "3D Printing Essentials"))}
-            </span>
-          </motion.div>
+          {(() => {
+            const eyebrowText = getLocalizedValue(c.eyebrow || c.badge, "");
+            if (!eyebrowText || !eyebrowText.trim()) return null;
+            return (
+              <motion.div
+                initial={{ opacity: 0, y: 14 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className={`mb-4 flex items-center gap-2 ${justifyClass(align)}`}
+              >
+                {(() => {
+                  const Icon = iconForName(c.icon || "Printer", Printer);
+                  const iconSizePx = c.iconSize || 20;
+                  return <Icon style={{ width: iconSizePx, height: iconSizePx, color: c.iconColor || undefined }} className="text-primary" />;
+                })()}
+                <span className="font-display text-sm uppercase tracking-widest text-primary">
+                  {eyebrowText}
+                </span>
+              </motion.div>
+            );
+          })()}
 
           <motion.h1
             initial={{ opacity: 0, y: 18 }}

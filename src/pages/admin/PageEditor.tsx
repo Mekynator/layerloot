@@ -55,6 +55,7 @@ import BlockEditorPanel from "@/components/admin/BlockEditorPanel";
 import NavLinkEditor from "@/components/admin/NavLinkEditor";
 import PageBackgroundEditor from "@/components/admin/PageBackgroundEditor";
 import EditorPreviewFrame from "@/components/admin/EditorPreviewFrame";
+import { tr } from "@/lib/translate";
 
 type SitePage = Tables<"site_pages">;
 
@@ -165,7 +166,7 @@ const pageToRealPath = (page?: Pick<SitePage, "slug" | "full_path" | "is_home" |
 
 const pageDisplayTitle = (page?: Pick<SitePage, "name" | "title" | "slug" | "full_path" | "is_home"> | null) => {
   if (!page) return "";
-  return page.title || page.name || prettyLabel(page.is_home ? "home" : page.full_path || page.slug);
+  return tr(page.title, page.name || prettyLabel(page.is_home ? "home" : page.full_path || page.slug));
 };
 
 const placementLabel = (pageKey: string, placement?: string) => {
@@ -899,8 +900,8 @@ const PageEditor = () => {
                           <span className="block truncate font-display text-[11px] font-semibold uppercase tracking-wider text-foreground">
                             {bt?.label ?? block.block_type}
                           </span>
-                          {block.title && block.title !== bt?.label && (
-                            <span className="block truncate text-[10px] text-muted-foreground">{block.title}</span>
+                          {Boolean(tr(block.title, "")) && tr(block.title, "") !== bt?.label && (
+                            <span className="block truncate text-[10px] text-muted-foreground">{tr(block.title, "")}</span>
                           )}
                           <div className="mt-1 flex flex-wrap gap-1">
                             <span className="rounded bg-background/70 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-muted-foreground">

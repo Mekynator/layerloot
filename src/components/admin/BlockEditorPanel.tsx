@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { SiteBlock } from "./BlockRenderer";
 import type { Json } from "@/integrations/supabase/types";
 import BlockFieldGroups from "./editor/BlockFieldGroups";
+import { tr } from "@/lib/translate";
 
 interface BlockEditorPanelProps {
   block: SiteBlock | null;
@@ -105,7 +106,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
 
   useEffect(() => {
     if (!block) return;
-    setTitle(block.title || "");
+    setTitle(typeof block.title === "string" ? block.title : tr(block.title, ""));
     setIsActive(block.is_active ?? true);
     setContent(normalizeContent(block));
   }, [block]);

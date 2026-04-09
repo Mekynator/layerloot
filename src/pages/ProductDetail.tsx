@@ -221,7 +221,8 @@ const ProductDetail = () => {
                     key={currentImage}
                     src={images[currentImage]}
                     alt={product.name}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-contain bg-muted"
+                    style={{ objectFit: 'contain', background: 'var(--background-muted, #f3f4f6)' }}
                     initial={{ opacity: 0, scale: 1.02 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0 }}

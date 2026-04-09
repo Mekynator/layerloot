@@ -11,83 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { saveProduct, unsaveProduct, isProductSaved } from "@/lib/savedItems";
-
-const LOCAL_SAVED_KEY = "layerloot-saved-items";
-
-const [saving, setSaving] = useState(false);
-const [saved, setSaved] = useState(false);
-
-useEffect(() => {
-  if (!product) return;
-  const checkSaved = async () => {
-    if (user) {
-      const { saved: isSaved } = await isProductSaved(product.id, user.id);
-      setSaved(isSaved);
-    } else {
-      try {
-        const raw = window.localStorage.getItem(LOCAL_SAVED_KEY);
-        if (!raw) return setSaved(false);
-        const arr = JSON.parse(raw);
-        setSaved(Array.isArray(arr) && arr.includes(product.id));
-      } catch {
-        setSaved(false);
-      }
-    }
-  };
-  checkSaved();
-}, [user, product?.id]);
-
-const handleToggleSave = async () => {
-  if (!product) return;
-  setSaving(true);
-  let changed = false;
-  if (user) {
-    if (!saved) {
-      const { error } = await saveProduct(product.id, user.id);
-      if (!error) {
-        setSaved(true);
-        toast({ title: "Saved!", description: product.name });
-        changed = true;
-      } else {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-      }
-    } else {
-      const { error } = await unsaveProduct(product.id, user.id);
-      if (!error) {
-        setSaved(false);
-        toast({ title: "Removed from saved", description: product.name });
-        changed = true;
-      } else {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-      }
-    }
-  } else {
-    try {
-      const raw = window.localStorage.getItem(LOCAL_SAVED_KEY);
-      let arr = Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : [];
-      if (!saved) {
-        if (!arr.includes(product.id)) arr.push(product.id);
-        window.localStorage.setItem(LOCAL_SAVED_KEY, JSON.stringify(arr));
-        setSaved(true);
-        toast({ title: "Saved!", description: product.name });
-        changed = true;
-      } else {
-        arr = arr.filter((id: string) => id !== product.id);
-        window.localStorage.setItem(LOCAL_SAVED_KEY, JSON.stringify(arr));
-        setSaved(false);
-        toast({ title: "Removed from saved", description: product.name });
-        changed = true;
-      }
-    } catch {
-      toast({ title: "Error", description: "Could not save item", variant: "destructive" });
-    }
-  }
-  if (changed) {
-    window.dispatchEvent(new Event("layerloot:saved-items-updated"));
-  }
-  setSaving(false);
-};
+import { useProductSavedState } from "@/hooks/use-product-saved-state";
+import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import ModelViewer from "@/components/ModelViewer";
 import ProductConfigurator from "@/components/ProductConfigurator";
@@ -132,6 +57,7 @@ const ProductDetail = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const isMobile = useIsMobile();
+  
 
   const heroImageRef = useRef<HTMLImageElement | null>(null);
   const addToCartSectionRef = useRef<HTMLDivElement | null>(null);
@@ -139,6 +65,7 @@ const ProductDetail = () => {
   const { recentProducts, trackProduct } = useRecentlyViewedProducts();
 
   const product = data?.product ?? null;
+  const { saved, loading: saving, toggleSave: handleToggleSave } = useProductSavedState(data?.product?.id ?? "");
   const variants = data?.variants ?? [];
   const reviews = data?.reviews ?? [];
   const relatedProducts = data?.relatedProducts ?? [];

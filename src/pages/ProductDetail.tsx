@@ -65,6 +65,7 @@ const ProductDetail = () => {
   const { recentProducts, trackProduct } = useRecentlyViewedProducts();
 
   const product = data?.product ?? null;
+  const { saved, loading: saving, toggleSave: handleToggleSave } = useProductSavedState(data?.product?.id ?? "");
   const variants = data?.variants ?? [];
   const reviews = data?.reviews ?? [];
   const relatedProducts = data?.relatedProducts ?? [];

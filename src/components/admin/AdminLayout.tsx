@@ -39,11 +39,16 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
       name: "Content",
       items: [
         { id: "dashboard", to: "/admin", label: "Dashboard", icon: "LayoutDashboard", visible: true },
-        { id: "editor", to: "/admin/editor", label: "Page Editor", icon: "FileText", visible: true, permission: "content.edit" },
+        { id: "editor-workspace", to: "/admin/editor", label: "Content & Layout", icon: "LayoutGrid", visible: true, permission: "content.edit" },
         { id: "media", to: "/admin/media", label: "Media Library", icon: "ImageIcon", visible: true, permission: "media.manage" },
         { id: "reusable", to: "/admin/reusable-blocks", label: "Reusable Blocks", icon: "Box", visible: true, permission: "content.edit" },
         { id: "translations", to: "/admin/translations", label: "Translations", icon: "Globe", visible: true, permission: "translations.manage" },
         { id: "backgrounds", to: "/admin/backgrounds", label: "Backgrounds", icon: "ImageIcon", visible: true, permission: "backgrounds.manage" },
+        // Hide old editor/content/policies/settings links
+        { id: "editor", to: "/admin/page-editor", label: "Page Editor", icon: "FileText", visible: false, permission: "content.edit" },
+        { id: "content", to: "/admin/content", label: "Blocks & Content", icon: "Layers", visible: false, permission: "content.edit" },
+        { id: "policies", to: "/admin/policies", label: "Policies", icon: "Shield", visible: false, permission: "settings.view" },
+        { id: "settings", to: "/admin/settings", label: "Site Settings", icon: "Settings", visible: false, permission: "settings.view" },
       ],
     },
     {

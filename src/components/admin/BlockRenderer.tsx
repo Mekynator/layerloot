@@ -1349,6 +1349,22 @@ const FeaturedProductsBlock = ({
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (layoutMode !== "carousel" || products.length <= 1) return;
+    const AUTO_CYCLE_MS = 4500;
+    const timer = window.setInterval(() => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const isAtEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 24;
+      if (isAtEnd) {
+        el.scrollTo({ left: 0, behavior: "smooth" });
+      } else {
+        el.scrollBy({ left: el.clientWidth * 0.7, behavior: "smooth" });
+      }
+    }, AUTO_CYCLE_MS);
+    return () => window.clearInterval(timer);
+  }, [layoutMode, products.length]);
+
   if (!isLoading && products.length === 0) {
     return withSection(
       block,

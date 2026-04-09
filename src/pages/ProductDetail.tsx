@@ -203,7 +203,7 @@ const ProductDetail = () => {
               </motion.div>
             ) : (
               <div
-                className="glass-card relative aspect-[4/3] md:aspect-square overflow-hidden rounded-xl md:rounded-[1.75rem] cursor-zoom-in"
+                className="glass-card relative aspect-[4/3] overflow-hidden rounded-xl md:rounded-[1.75rem] cursor-zoom-in"
                 onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
                 onTouchEnd={(e) => {
                   const diff = touchStartX.current - e.changedTouches[0].clientX;
@@ -236,25 +236,25 @@ const ProductDetail = () => {
                 </AnimatePresence>
 
                 {images.length > 1 && (
-                  <>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background h-8 w-8 md:h-10 md:w-10 md:left-3"
-                      onClick={() => setCurrentImage((p) => (p - 1 + images.length) % images.length)}
-                    >
-                      <ChevronLeft className="h-4 w-4 md:h-5 md:w-5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background h-8 w-8 md:h-10 md:w-10 md:right-3"
-                      onClick={() => setCurrentImage((p) => (p + 1) % images.length)}
-                    >
-                      <ChevronRight className="h-4 w-4 md:h-5 md:w-5" />
-                    </Button>
-                  </>
-                )}
+                   <>
+                     <Button
+                       variant="ghost"
+                       size="icon"
+                       className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background h-8 w-8 md:h-10 md:w-10 md:left-3"
+                       onClick={(e) => { e.stopPropagation(); setCurrentImage((p) => (p - 1 + images.length) % images.length); }}
+                     >
+                       <ChevronLeft className="h-4 w-4 md:h-5 md:w-5" />
+                     </Button>
+                     <Button
+                       variant="ghost"
+                       size="icon"
+                       className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background h-8 w-8 md:h-10 md:w-10 md:right-3"
+                       onClick={(e) => { e.stopPropagation(); setCurrentImage((p) => (p + 1) % images.length); }}
+                     >
+                       <ChevronRight className="h-4 w-4 md:h-5 md:w-5" />
+                     </Button>
+                   </>
+                 )}
 
                 {product.compare_at_price && (
                   <Badge className="absolute left-4 top-4 bg-primary font-display uppercase">{t("products.sale")}</Badge>
@@ -265,7 +265,7 @@ const ProductDetail = () => {
                     {images.map((_, idx) => (
                       <button
                         key={`detail-dot-${idx}`}
-                        onClick={() => setCurrentImage(idx)}
+                        onClick={(e) => { e.stopPropagation(); setCurrentImage(idx); }}
                         className={`h-1.5 rounded-full transition-all ${idx === currentImage ? "w-5 bg-white" : "w-1.5 bg-white/45"}`}
                         aria-label={`Show image ${idx + 1}`}
                       />

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ProductMediaLightboxProps {
@@ -36,12 +36,16 @@ export default function ProductMediaLightbox({ images, startIndex, onClose }: Pr
     setTranslate({ x: 0, y: 0 });
   }, [current]);
 
-  // Close on Escape
+  // Close on Escape, navigate on arrow keys
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") setCurrent((c) => (c - 1 + images.length) % images.length);
+      if (e.key === "ArrowRight") setCurrent((c) => (c + 1) % images.length);
+    };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
+  }, [onClose, images.length]);
 
   const getTouchDist = (touches: React.TouchList) => {
     if (touches.length < 2) return 0;
@@ -111,8 +115,8 @@ export default function ProductMediaLightbox({ images, startIndex, onClose }: Pr
     touchStart.current = null;
 
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > SWIPE_THRESHOLD) {
-      if (dx < 0 && current < images.length - 1) setCurrent(c => c + 1);
-      else if (dx > 0 && current > 0) setCurrent(c => c - 1);
+      if (dx < 0) setCurrent((c) => (c + 1) % images.length);
+      else setCurrent((c) => (c - 1 + images.length) % images.length);
     }
   }, [scale, current, images.length]);
 
@@ -124,6 +128,30 @@ export default function ProductMediaLightbox({ images, startIndex, onClose }: Pr
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
+      {/* Prev / Next arrows */}
+      {images.length > 1 && (
+        <>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute left-3 top-1/2 z-10 -translate-y-1/2 h-10 w-10 rounded-full bg-white/10 text-white hover:bg-white/20"
+            onClick={() => setCurrent((c) => (c - 1 + images.length) % images.length)}
+            aria-label="Previous image"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-3 top-1/2 z-10 -translate-y-1/2 h-10 w-10 rounded-full bg-white/10 text-white hover:bg-white/20"
+            onClick={() => setCurrent((c) => (c + 1) % images.length)}
+            aria-label="Next image"
+          >
+            <ChevronRight className="h-6 w-6" />
+          </Button>
+        </>
+      )}
+
       {/* Close button */}
       <div className="absolute right-3 top-3 z-10">
         <Button

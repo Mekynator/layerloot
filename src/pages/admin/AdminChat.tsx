@@ -1206,8 +1206,18 @@ export default function AdminChat() {
         {/* ─── INSIGHTS ─── */}
         <TabsContent value="insights"><InsightsTab /></TabsContent>
 
-        {/* ─── TOOLS (Sandbox + Personalization + Activity) ─── */}
-        <TabsContent value="tools"><ToolsTab /></TabsContent>
+        {/* ─── PERSONALIZATION (AI Personalization) ─── */}
+        <TabsContent value="personalization">
+          <LazyPersonalization />
+        </TabsContent>
+
+        {/* ─── ACTIVITY LOG ─── */}
+        <TabsContent value="activity">
+          <LazyActivityLog />
+        </TabsContent>
+
+        {/* ─── SANDBOX ─── */}
+        <TabsContent value="sandbox"><SandboxTab /></TabsContent>
       </Tabs>
     </AdminLayout>
   );

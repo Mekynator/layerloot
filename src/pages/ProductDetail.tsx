@@ -11,16 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { saveProduct, unsaveProduct, isProductSaved } from "@/lib/savedItems";
-
-const LOCAL_SAVED_KEY = "layerloot-saved-items";
-
-const [saving, setSaving] = useState(false);
-const [saved, setSaved] = useState(false);
-
-useEffect(() => {
-  if (!product) return;
-  const checkSaved = async () => {
+import { supabase } from "@/integrations/supabase/client";
     if (user) {
       const { saved: isSaved } = await isProductSaved(product.id, user.id);
       setSaved(isSaved);

@@ -8,7 +8,7 @@ import {
   Heart, Edit, Flag, ThumbsUp, ThumbsDown,
   ChevronDown, ChevronRight, Search, RefreshCw, Send, Bot, User,
   Activity, Zap, Target, HelpCircle, BookOpen, X, Undo2,
-  Settings2, Palette, Volume2, FileText, Sparkles, Megaphone,
+  Settings2, Palette, Volume2, FileText, Sparkles, Megaphone, Eye,
   Gauge, Wand2, LayoutTemplate, Check,
 } from "lucide-react";
 import ChatLivePreview from "@/components/admin/ChatLivePreview";

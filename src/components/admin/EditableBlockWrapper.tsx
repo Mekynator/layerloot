@@ -1,6 +1,7 @@
 import { GripVertical, Pencil, Trash2, Eye, EyeOff, ArrowUp, ArrowDown, Copy, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { SiteBlock } from "./BlockRenderer";
+import { tr } from "@/lib/translate";
 
 interface EditableBlockWrapperProps {
   block: SiteBlock;
@@ -28,6 +29,8 @@ const EditableBlockWrapper = ({
   onMoveUp, onMoveDown, onDragStart, onDragOver, onDragEnd,
   onInsertBefore, children,
 }: EditableBlockWrapperProps) => {
+  const blockTitle = typeof block.title === "string" ? block.title : tr(block.title, "");
+
   return (
     <>
       {/* Insert zone before block */}
@@ -60,7 +63,7 @@ const EditableBlockWrapper = ({
         }`}>
           <GripVertical className="h-3.5 w-3.5 cursor-grab text-muted-foreground" />
           <Badge className="border-none bg-primary/15 font-display text-[10px] uppercase text-primary">{block.block_type}</Badge>
-          <span className="max-w-[100px] truncate text-[10px] text-muted-foreground">{block.title || ""}</span>
+          <span className="max-w-[100px] truncate text-[10px] text-muted-foreground">{blockTitle}</span>
           <div className="ml-1 flex gap-0.5">
             <ToolBtn onClick={onMoveUp} disabled={index === 0}><ArrowUp className="h-3 w-3" /></ToolBtn>
             <ToolBtn onClick={onMoveDown} disabled={index === total - 1}><ArrowDown className="h-3 w-3" /></ToolBtn>

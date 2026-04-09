@@ -21,6 +21,7 @@ import VisualEffectsControls from "./controls/VisualEffectsControls";
 import { getBlockSchema } from "./editable-schema";
 import BlockFieldGroups from "./BlockFieldGroups";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { tr } from "@/lib/translate";
 
 const getRepeaterKey = (blockType?: string) => {
   switch (blockType) {
@@ -78,12 +79,12 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
   }, [block]);
 
   const [localContent, setLocalContent] = useState<Record<string, unknown>>(content);
-  const [title, setTitle] = useState(block.title || "");
+  const [title, setTitle] = useState(typeof block.title === "string" ? block.title : tr(block.title, ""));
   const [isActive, setIsActive] = useState(block.is_active ?? true);
 
   useEffect(() => {
     setLocalContent(content);
-    setTitle(block.title || "");
+    setTitle(typeof block.title === "string" ? block.title : tr(block.title, ""));
     setIsActive(block.is_active ?? true);
   }, [block.id]);
 

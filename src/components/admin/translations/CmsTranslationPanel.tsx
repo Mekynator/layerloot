@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Save, Globe } from "lucide-react";
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, type SupportedLanguage } from "@/lib/i18n";
 import { toast } from "sonner";
+import { tr } from "@/lib/translate";
 
 interface BlockRow {
   id: string;
@@ -168,7 +169,7 @@ export default function CmsTranslationPanel() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Badge variant="outline" className="text-[10px]">{block.block_type}</Badge>
-                {block.title || block.block_type}
+                {tr(block.title, block.block_type)}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">

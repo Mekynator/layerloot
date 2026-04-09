@@ -10,6 +10,7 @@ import {
   type DraftStatus,
 } from "@/hooks/use-draft-publish";
 import { useAuth } from "@/contexts/AuthContext";
+import { tr } from "@/lib/translate";
 
 type SitePage = Tables<"site_pages">;
 
@@ -132,7 +133,7 @@ export const pageToRealPath = (page?: Pick<SitePage, "slug" | "full_path" | "is_
 
 export const pageDisplayTitle = (page?: Pick<SitePage, "name" | "title" | "slug" | "full_path" | "is_home"> | null) => {
   if (!page) return "";
-  return page.title || page.name || (page.is_home ? "Home" : page.full_path || page.slug);
+  return tr(page.title, page.name || (page.is_home ? "Home" : page.full_path || page.slug));
 };
 
 const BLOCK_TYPES = [

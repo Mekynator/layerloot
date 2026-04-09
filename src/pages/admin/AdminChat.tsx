@@ -1174,18 +1174,6 @@ export default function AdminChat() {
 
         {/* ─── SANDBOX ─── */}
         <TabsContent value="sandbox"><SandboxTab /></TabsContent>
-      // Lazy-load AI Personalization and Activity Log components to avoid code duplication and preserve all features
-      import React from "react";
-      const LazyPersonalization = React.lazy(() => import("./AdminPersonalization"));
-      const LazyActivityLog = React.lazy(() => import("./AdminActivity"));
-
-      // Wrap in Suspense for fallback loading UI
-      function SuspenseWrapper({ children }: { children: React.ReactNode }) {
-        return <React.Suspense fallback={<div className="flex items-center justify-center py-12 text-muted-foreground">Loading...</div>}>{children}</React.Suspense>;
-      }
-
-      // Replace direct usage with Suspense-wrapped lazy components
-      // (This is handled above in TabsContent)
       </Tabs>
     </AdminLayout>
   );

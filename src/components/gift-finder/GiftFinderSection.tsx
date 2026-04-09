@@ -159,16 +159,10 @@ export default function GiftFinderSection() {
   return (
     <div className="mx-auto max-w-5xl space-y-10 px-4 py-8">
       {/* Header */}
-      <div className="text-center space-y-3">
-        <p className="text-[11px] font-display uppercase tracking-[0.3em] text-primary">
-          {t("create.giftFinderEyebrow", "Gift Finder")}
-        </p>
+      <div className="text-center">
         <h2 className="font-display text-3xl font-bold uppercase tracking-wide text-foreground sm:text-4xl">
           {t("create.giftFinderTitle", "Find the Best Match")}
         </h2>
-        <p className="mx-auto max-w-md text-sm text-muted-foreground/70">
-          ✨ {t("create.giftFinderAiHint", "AI will recommend the best products for you")}
-        </p>
       </div>
 
       {/* Selection counter */}

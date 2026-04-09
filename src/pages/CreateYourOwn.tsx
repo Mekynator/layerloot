@@ -397,19 +397,19 @@ const ToolShell = ({
   description,
   children,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
-  description: string;
+  description?: string;
   children: ReactNode;
 }) => (
   <Card className="overflow-hidden shadow-[0_8px_40px_-8px_hsl(225_44%_4%/0.5)]">
-    <CardHeader className="bg-muted/10">
+    <CardHeader className="bg-muted/10 px-6 py-4">
       <div className="space-y-2">
-        <p className="text-[11px] font-display uppercase tracking-[0.24em] text-primary">{eyebrow}</p>
+        {eyebrow && <p className="text-[11px] font-display uppercase tracking-[0.24em] text-primary">{eyebrow}</p>}
         <CardTitle className="font-display text-lg uppercase tracking-wide text-foreground sm:text-xl">
           {title}
         </CardTitle>
-        <CardDescription className="max-w-3xl text-sm text-muted-foreground">{description}</CardDescription>
+        {description && <CardDescription className="max-w-3xl text-sm text-muted-foreground">{description}</CardDescription>}
       </div>
     </CardHeader>
     <CardContent className="p-4 sm:p-6">{children}</CardContent>
@@ -737,15 +737,6 @@ const LithophaneOrderSection = () => {
           <Trans i18nKey="create.signInToOrderLithophane">
             Please <Link to="/auth" className="text-primary hover:underline">sign in</Link> to submit a lithophane order.
           </Trans>
-        </div>
-      )}
-
-      {user && (
-        <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-          <Trans i18nKey="create.orderingAs" values={{ name: userName || "Account User" }}>
-            Ordering as <span className="font-medium text-foreground">{{ name: userName || "Account User" } as any}</span>
-          </Trans>
-          {userEmail ? <> · {userEmail}</> : null}
         </div>
       )}
 
@@ -1199,15 +1190,6 @@ const CustomPrintOrder = () => {
         </div>
       )}
 
-      {user && (
-        <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-          <Trans i18nKey="create.orderingAs" values={{ name: userName || "Account User" }}>
-            Ordering as <span className="font-medium text-foreground">{{ name: userName || "Account User" } as any}</span>
-          </Trans>
-          {userEmail ? <> · {userEmail}</> : null}
-        </div>
-      )}
-
       {showcaseSource && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
@@ -1486,14 +1468,14 @@ const CreateYourOwn = () => {
       {!blocksLoading && topBlocks.map((block) => <div key={block.id}>{renderBlock(block)}</div>)}
 
       {showTools && (
-      <section className="py-8 lg:py-12">
+      <section className="py-5 lg:py-8">
         <div className="container max-w-6xl">
           <Tabs
             value={activeTab}
             onValueChange={(value) => setActiveTab(value as CreateTabValue)}
-            className="space-y-6"
+            className="space-y-4"
           >
-            <TabsList className="grid h-auto w-full grid-cols-1 gap-2 rounded-2xl bg-muted/50 p-2 sm:grid-cols-3">
+            <TabsList className="grid h-auto w-full grid-cols-1 gap-1.5 rounded-2xl bg-muted/50 p-1.5 sm:grid-cols-3">
               <TabsTrigger
                 value="custom-print"
                 className="gap-1.5 rounded-xl font-display text-xs uppercase tracking-wider"
@@ -1526,9 +1508,7 @@ const CreateYourOwn = () => {
               >
                 {activeTab === "custom-print" && (
                   <ToolShell
-                    eyebrow={t("create.customPrintEyebrow")}
                     title={t("create.customPrintTitle")}
-                    description={t("create.customPrintDesc")}
                   >
                     <CustomPrintOrder />
                   </ToolShell>
@@ -1536,9 +1516,7 @@ const CreateYourOwn = () => {
 
                 {activeTab === "lithophane" && (
                   <ToolShell
-                    eyebrow={t("create.lithophaneEyebrow")}
                     title={t("create.lithophaneTitle")}
-                    description={t("create.lithophaneDesc")}
                   >
                     <LithophaneOrderSection />
                   </ToolShell>

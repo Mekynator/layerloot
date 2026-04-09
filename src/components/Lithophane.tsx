@@ -509,7 +509,7 @@ export default function Lithophane({
 
         <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-950 to-slate-900">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(245,158,11,0.12),transparent_34%)]" />
-          <div className="h-[360px] w-full sm:h-[440px] lg:h-[560px] xl:h-[640px]">
+          <div className="h-[260px] w-full sm:h-[360px] lg:h-[560px] xl:h-[640px]">
             <Lithophane3DViewer
               key={viewerRevision}
               imageUrl={croppedImageDataUrl}
@@ -562,7 +562,7 @@ export default function Lithophane({
               >
                 <label
                   className={[
-                    "flex min-h-[240px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-4 py-8 text-center transition-all",
+                    "flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-4 py-4 text-center transition-all sm:min-h-[200px] sm:py-6",
                     dragActive
                       ? "border-amber-500 bg-amber-50 shadow-[0_0_28px_rgba(245,158,11,0.14)]"
                       : "border-slate-300 bg-slate-50 hover:bg-slate-100",

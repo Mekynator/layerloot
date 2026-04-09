@@ -371,7 +371,7 @@ const UploadDropzone = ({
 }) => (
   <motion.div
     whileHover={{ y: -2 }}
-    className={`relative mt-2 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-all ${
+    className={`relative mt-2 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-4 sm:p-8 text-center transition-all ${
       dragActive
         ? "border-primary bg-primary/10 shadow-[0_0_30px_rgba(249,115,22,0.12)]"
         : "border-border hover:border-primary/70 hover:bg-primary/5"
@@ -403,7 +403,7 @@ const ToolShell = ({
   children: ReactNode;
 }) => (
   <Card className="overflow-hidden shadow-[0_8px_40px_-8px_hsl(225_44%_4%/0.5)]">
-    <CardHeader className="bg-muted/10 px-6 py-4">
+    <CardHeader className="bg-muted/10 px-4 sm:px-6 py-4">
       <div className="space-y-2">
         {eyebrow && <p className="text-[11px] font-display uppercase tracking-[0.24em] text-primary">{eyebrow}</p>}
         <CardTitle className="font-display text-lg uppercase tracking-wide text-foreground sm:text-xl">
@@ -1208,7 +1208,7 @@ const CustomPrintOrder = () => {
         </motion.div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           <div>
             <Label>{t("create.upload3DModel")}</Label>

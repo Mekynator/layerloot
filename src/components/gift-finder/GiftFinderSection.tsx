@@ -157,7 +157,7 @@ export default function GiftFinderSection() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-10 px-4 py-8">
+    <div className="mx-auto max-w-5xl space-y-6 sm:space-y-10 px-4 py-4 sm:py-8">
       {/* Header */}
       <div className="text-center">
         <h2 className="font-display text-3xl font-bold uppercase tracking-wide text-foreground sm:text-4xl">
@@ -200,7 +200,7 @@ export default function GiftFinderSection() {
               transition={{ delay: index * 0.04, duration: 0.35 }}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
-              className={`group relative flex flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border-2 p-6 text-center transition-all duration-300 aspect-[4/3] ${
+              className={`group relative flex flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border-2 p-4 sm:p-6 text-center transition-all duration-300 aspect-[4/3] ${
                 isSelected
                   ? "border-primary bg-primary/10 shadow-[0_0_30px_-4px_hsl(var(--primary)/0.35)]"
                   : "border-border/40 bg-card/60 hover:border-primary/50 hover:shadow-[0_0_20px_-4px_hsl(var(--primary)/0.15)]"

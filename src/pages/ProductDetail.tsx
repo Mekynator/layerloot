@@ -11,95 +11,75 @@ import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-// Local fallback for saved items
+import { saveProduct, unsaveProduct, isProductSaved } from "@/lib/savedItems";
+
 const LOCAL_SAVED_KEY = "layerloot-saved-items";
-  // Save for Later state
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
 
-  // Check if product is saved for user
-  useEffect(() => {
-    if (!product) return;
-    const checkSaved = async () => {
-      if (user) {
-        const { data, error } = await supabase
-          .from("saved_items")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("product_id", product.id)
-          .maybeSingle();
-        setSaved(!!data && !error);
-      } else {
-        // Local fallback
-        try {
-          const raw = window.localStorage.getItem(LOCAL_SAVED_KEY);
-          if (!raw) return setSaved(false);
-          const arr = JSON.parse(raw);
-          setSaved(Array.isArray(arr) && arr.includes(product.id));
-        } catch {
-          setSaved(false);
-        }
-      }
-    };
-    checkSaved();
-  }, [user, product?.id]);
+const [saving, setSaving] = useState(false);
+const [saved, setSaved] = useState(false);
 
-  // Save/Unsave handler
-  const handleToggleSave = async () => {
-    if (!product) return;
-    setSaving(true);
+useEffect(() => {
+  if (!product) return;
+  const checkSaved = async () => {
     if (user) {
-      if (!saved) {
-        // Save to Supabase
-        const { error } = await supabase
-          .from("saved_items")
-          .insert({ user_id: user.id, product_id: product.id });
-        if (!error) {
-          setSaved(true);
-          toast({ title: "Saved!", description: product.name });
-        } else if (error.code === "23505") {
-          setSaved(true);
-          toast({ title: "Already saved", description: product.name });
-        } else {
-          toast({ title: "Error", description: error.message, variant: "destructive" });
-        }
-      } else {
-        // Remove from Supabase
-        const { error } = await supabase
-          .from("saved_items")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("product_id", product.id);
-        if (!error) {
-          setSaved(false);
-          toast({ title: "Removed from saved", description: product.name });
-        } else {
-          toast({ title: "Error", description: error.message, variant: "destructive" });
-        }
-      }
+      const { saved: isSaved } = await isProductSaved(product.id, user.id);
+      setSaved(isSaved);
     } else {
-      // Local fallback
       try {
         const raw = window.localStorage.getItem(LOCAL_SAVED_KEY);
-        let arr = Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : [];
-        if (!saved) {
-          if (!arr.includes(product.id)) arr.push(product.id);
-          window.localStorage.setItem(LOCAL_SAVED_KEY, JSON.stringify(arr));
-          setSaved(true);
-          toast({ title: "Saved!", description: product.name });
-        } else {
-          arr = arr.filter((id: string) => id !== product.id);
-          window.localStorage.setItem(LOCAL_SAVED_KEY, JSON.stringify(arr));
-          setSaved(false);
-          toast({ title: "Removed from saved", description: product.name });
-        }
+        if (!raw) return setSaved(false);
+        const arr = JSON.parse(raw);
+        setSaved(Array.isArray(arr) && arr.includes(product.id));
       } catch {
-        toast({ title: "Error", description: "Could not save item", variant: "destructive" });
+        setSaved(false);
       }
     }
-    setSaving(false);
   };
+  checkSaved();
+}, [user, product?.id]);
+
+const handleToggleSave = async () => {
+  if (!product) return;
+  setSaving(true);
+  if (user) {
+    if (!saved) {
+      const { error } = await saveProduct(product.id, user.id);
+      if (!error) {
+        setSaved(true);
+        toast({ title: "Saved!", description: product.name });
+      } else {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      }
+    } else {
+      const { error } = await unsaveProduct(product.id, user.id);
+      if (!error) {
+        setSaved(false);
+        toast({ title: "Removed from saved", description: product.name });
+      } else {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      }
+    }
+  } else {
+    try {
+      const raw = window.localStorage.getItem(LOCAL_SAVED_KEY);
+      let arr = Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : [];
+      if (!saved) {
+        if (!arr.includes(product.id)) arr.push(product.id);
+        window.localStorage.setItem(LOCAL_SAVED_KEY, JSON.stringify(arr));
+        setSaved(true);
+        toast({ title: "Saved!", description: product.name });
+      } else {
+        arr = arr.filter((id: string) => id !== product.id);
+        window.localStorage.setItem(LOCAL_SAVED_KEY, JSON.stringify(arr));
+        setSaved(false);
+        toast({ title: "Removed from saved", description: product.name });
+      }
+    } catch {
+      toast({ title: "Error", description: "Could not save item", variant: "destructive" });
+    }
+  }
+  setSaving(false);
+};
 import { motion, AnimatePresence } from "framer-motion";
 import ModelViewer from "@/components/ModelViewer";
 import ProductConfigurator from "@/components/ProductConfigurator";

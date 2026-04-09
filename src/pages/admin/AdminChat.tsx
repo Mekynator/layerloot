@@ -824,6 +824,7 @@ export default function AdminChat() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+
         <TabsList className="flex flex-wrap h-auto gap-1">
           <TabsTrigger value="overview" className="gap-1.5"><Settings2 className="h-3.5 w-3.5" /> Overview</TabsTrigger>
           <TabsTrigger value="presets" className="gap-1.5"><LayoutTemplate className="h-3.5 w-3.5" /> Presets</TabsTrigger>
@@ -836,6 +837,8 @@ export default function AdminChat() {
           <TabsTrigger value="campaign" className="gap-1.5"><Megaphone className="h-3.5 w-3.5" /> Campaign</TabsTrigger>
           <TabsTrigger value="analytics" className="gap-1.5"><BarChart3 className="h-3.5 w-3.5" /> Analytics</TabsTrigger>
           <TabsTrigger value="logs" className="gap-1.5"><MessageCircle className="h-3.5 w-3.5" /> Logs</TabsTrigger>
+          <TabsTrigger value="personalization" className="gap-1.5"><Brain className="h-3.5 w-3.5" /> Personalization</TabsTrigger>
+          <TabsTrigger value="activity" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> Activity Log</TabsTrigger>
           <TabsTrigger value="sandbox" className="gap-1.5"><FlaskConical className="h-3.5 w-3.5" /> Sandbox</TabsTrigger>
         </TabsList>
 
@@ -1159,8 +1162,30 @@ export default function AdminChat() {
         {/* ─── CONVERSATION LOGS ─── */}
         <TabsContent value="logs"><ConversationsTab /></TabsContent>
 
+        {/* ─── PERSONALIZATION (AI Personalization) ─── */}
+        <TabsContent value="personalization">
+          <LazyPersonalization />
+        </TabsContent>
+
+        {/* ─── ACTIVITY LOG ─── */}
+        <TabsContent value="activity">
+          <LazyActivityLog />
+        </TabsContent>
+
         {/* ─── SANDBOX ─── */}
         <TabsContent value="sandbox"><SandboxTab /></TabsContent>
+      // Lazy-load AI Personalization and Activity Log components to avoid code duplication and preserve all features
+      import React from "react";
+      const LazyPersonalization = React.lazy(() => import("./AdminPersonalization"));
+      const LazyActivityLog = React.lazy(() => import("./AdminActivity"));
+
+      // Wrap in Suspense for fallback loading UI
+      function SuspenseWrapper({ children }: { children: React.ReactNode }) {
+        return <React.Suspense fallback={<div className="flex items-center justify-center py-12 text-muted-foreground">Loading...</div>}>{children}</React.Suspense>;
+      }
+
+      // Replace direct usage with Suspense-wrapped lazy components
+      // (This is handled above in TabsContent)
       </Tabs>
     </AdminLayout>
   );

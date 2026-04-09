@@ -20,7 +20,7 @@ export default function SavedForLater({ items, onMoveToCart, onRemove }: SavedFo
             <div className="flex gap-4">
               <div className="h-24 w-24 overflow-hidden rounded-xl bg-muted">
                 {item.image_url ? (
-                  <img src={item.image_url} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
+                  <ProductImage src={item.image_url} alt={item.title} className="h-full w-full" fit="contain" />
                 ) : null}
               </div>
               <div className="min-w-0 flex-1">

@@ -111,7 +111,7 @@ const MiniCart = ({ cartButtonRef, cartPulse, cartGlow, totalItems }: MiniCartPr
                   {items.map((item) => (
                     <div key={item.id} className="flex items-center gap-3 rounded-lg p-2 hover:bg-muted/20 transition-colors">
                       {item.image ? (
-                        <img src={item.image} alt={item.name} className="h-12 w-12 rounded-lg object-cover border border-border/10" />
+                        <ProductImage src={item.image} alt={item.name} className="h-12 w-12 rounded-lg border border-border/10" fit="contain" />
                       ) : (
                         <div className="h-12 w-12 rounded-lg bg-muted/30 flex items-center justify-center">
                           <ShoppingBag className="h-5 w-5 text-muted-foreground/40" />

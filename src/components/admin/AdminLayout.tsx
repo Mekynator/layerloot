@@ -44,8 +44,7 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
         { id: "reusable", to: "/admin/reusable-blocks", label: "Reusable Blocks", icon: "Box", visible: true, permission: "content.edit" },
         { id: "translations", to: "/admin/translations", label: "Translations", icon: "Globe", visible: true, permission: "translations.manage" },
         { id: "backgrounds", to: "/admin/backgrounds", label: "Backgrounds", icon: "ImageIcon", visible: true, permission: "backgrounds.manage" },
-        { id: "policies", to: "/admin/policies", label: "Policies", icon: "FileText", visible: true, permission: "content.edit" },
-        { id: "settings", to: "/admin/settings", label: "Settings", icon: "Settings", visible: true, permission: "settings.view" },
+        // Policies and Settings removed from sidebar (still accessible via direct route)
       ],
     },
     {
@@ -63,7 +62,9 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
       items: [
         { id: "orders", to: "/admin/orders", label: "Orders", icon: "ShoppingCart", visible: true, permission: "orders.manage" },
         { id: "custom-orders", to: "/admin/custom-orders", label: "Custom Orders", icon: "Package", visible: true, permission: "custom_orders.manage" },
-        { id: "clients", to: "/admin/clients", label: "Clients", icon: "Users", visible: true, permission: "customers.view" },
+        // Rename Clients to Users, move Referrals under Users
+        { id: "users", to: "/admin/clients", label: "Users", icon: "Users", visible: true, permission: "customers.view" },
+        { id: "referrals", to: "/admin/referrals", label: "Referrals", icon: "UserPlus", visible: true, permission: "campaigns.manage" },
       ],
     },
     {
@@ -72,22 +73,19 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
         { id: "shipping", to: "/admin/shipping", label: "Shipping", icon: "Truck", visible: true, permission: "shipping.manage" },
         { id: "chat", to: "/admin/chat", label: "AI Chat", icon: "MessageCircle", visible: true, permission: "settings.view" },
         { id: "instagram", to: "/admin/instagram", label: "Instagram", icon: "Instagram", visible: true, permission: "settings.view" },
-        { id: "growth", to: "/admin/growth", label: "Growth", icon: "TrendingUp", visible: true, permission: "campaigns.manage" },
-        { id: "referrals", to: "/admin/referrals", label: "Referrals", icon: "UserPlus", visible: true, permission: "campaigns.manage" },
         { id: "campaigns", to: "/admin/campaigns", label: "Campaigns", icon: "Megaphone", visible: true, permission: "campaigns.manage" },
-        { id: "revenue", to: "/admin/revenue", label: "Revenue Engine", icon: "Wallet", visible: true, permission: "revenue.view" },
-        { id: "reports", to: "/admin/reports", label: "Reports", icon: "BarChart3", visible: true, permission: "reports.view" },
-        { id: "declaration", to: "/admin/declaration", label: "Monthly Declaration", icon: "ClipboardList", visible: true, permission: "reports.view" },
+        // Growth, Revenue, Reports, Monthly Declaration removed from sidebar (still accessible via direct route)
       ],
     },
     {
       name: "System",
       items: [
-        { id: "personalization", to: "/admin/personalization", label: "AI Personalization", icon: "Brain", visible: true, permission: "settings.view" },
-        { id: "activity", to: "/admin/activity", label: "Activity Log", icon: "Activity", visible: true, permission: "reports.view" },
-        { id: "chat-analytics", to: "/admin/chat-analytics", label: "AI Analytics", icon: "BarChart3", visible: true, permission: "reports.view" },
-        { id: "email-logs", to: "/admin/email-logs", label: "Email Logs", icon: "MessageCircle", visible: true, permission: "reports.view" },
-        { id: "users", to: "/admin/users", label: "Admin Users", icon: "Shield", visible: true, permission: "*" },
+        // Only show AI Chat as the main AI entry
+        { id: "chat", to: "/admin/chat", label: "AI Chat", icon: "MessageCircle", visible: true, permission: "settings.view" },
+        // Hide Personalization, Analytics, and Activity Log from sidebar (routes preserved, visible: false)
+        { id: "personalization", to: "/admin/personalization", label: "AI Personalization", icon: "Brain", visible: false, permission: "settings.view" },
+        { id: "activity", to: "/admin/activity", label: "Activity Log", icon: "Activity", visible: false, permission: "reports.view" },
+        { id: "chat-analytics", to: "/admin/chat-analytics", label: "AI Analytics", icon: "BarChart3", visible: false, permission: "reports.view" },
       ],
     },
   ],

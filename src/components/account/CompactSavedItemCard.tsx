@@ -14,7 +14,7 @@ export function CompactSavedItemCard({ product, onMoveToCart, onRemove, showDate
   return (
     <Card className="flex items-center gap-3 p-3 shadow-none border border-border/20 bg-card/60">
       <Link to={`/products/${product.slug}`} className="block w-12 h-12 overflow-hidden rounded-lg bg-muted">
-        <img src={product.images?.[0] || "/placeholder.svg"} alt={product.name} className="h-full w-full object-cover" />
+        <ProductImage src={product.images?.[0] || "/placeholder.svg"} alt={product.name} className="h-full w-full" fit="contain" />
       </Link>
       <div className="flex-1 min-w-0">
         <Link to={`/products/${product.slug}`} className="block font-medium text-xs uppercase truncate hover:text-primary">

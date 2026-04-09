@@ -82,7 +82,7 @@ export default function SavedItemsSection() {
         {items.map((product) => (
           <Card key={product.id as string} className="flex flex-col md:flex-row items-center gap-4 p-4">
             <Link to={`/products/${product.slug}`} className="block w-24 h-24 overflow-hidden rounded-xl bg-muted">
-              <img src={((product.images as string[]) ?? [])[0] || "/placeholder.svg"} alt={product.name as string} className="h-full w-full object-cover" />
+              <ProductImage src={((product.images as string[]) ?? [])[0] || "/placeholder.svg"} alt={product.name as string} className="h-full w-full" fit="contain" />
             </Link>
             <div className="flex-1 min-w-0">
               <Link to={`/products/${product.slug}`} className="font-semibold uppercase tracking-wide hover:text-primary">

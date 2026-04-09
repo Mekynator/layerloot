@@ -35,6 +35,7 @@ import ProductColorPicker, { type SelectedColor } from "@/components/product/Pro
 import ProductDetailSections from "@/components/product/ProductDetailSections";
 import ProductColorSummary from "@/components/product/ProductColorSummary";
 import ProductMediaLightbox from "@/components/product/ProductMediaLightbox";
+import { ProductImage } from "@/components/product/ProductImage";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const AUTO_GALLERY_MS = 6500;
@@ -216,18 +217,22 @@ const ProductDetail = () => {
                 }}
               >
                 <AnimatePresence mode="wait">
-                  <motion.img
-                    ref={heroImageRef}
+                  <motion.div
                     key={currentImage}
-                    src={images[currentImage]}
-                    alt={product.name}
-                    className="h-full w-full object-contain bg-muted"
-                    style={{ objectFit: 'contain', background: 'var(--background-muted, #f3f4f6)' }}
+                    className="h-full w-full"
                     initial={{ opacity: 0, scale: 1.02 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3 }}
-                  />
+                  >
+                    <ProductImage
+                      ref={heroImageRef}
+                      src={images[currentImage]}
+                      alt={product.name}
+                      className="h-full w-full bg-muted"
+                      fit="contain"
+                    />
+                  </motion.div>
                 </AnimatePresence>
 
                 {images.length > 1 && (
@@ -285,7 +290,7 @@ const ProductDetail = () => {
                       : "opacity-70 hover:opacity-100"
                   }`}
                 >
-                  <img src={img} alt="" className="h-full w-full object-cover" />
+                  <ProductImage src={img} alt="" className="h-full w-full" fit="contain" />
                 </motion.button>
               ))}
               {product.model_url && (

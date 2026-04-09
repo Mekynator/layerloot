@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ProductImage } from "./product/ProductImage";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -143,27 +144,31 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
                       />
                     </button>
           {isMobile ? (
-            <img
+            <ProductImage
               ref={imageRef}
               src={currentImage}
               alt={product.name}
-              className="absolute inset-0 h-full w-full object-cover"
-              loading="lazy"
+              className="absolute inset-0 h-full w-full"
+              fit="contain"
             />
           ) : (
             <AnimatePresence mode="wait">
-              <motion.img
+              <motion.div
                 key={currentImage}
-                ref={imageRef}
-                src={currentImage}
-                alt={product.name}
-                className="absolute inset-0 h-full w-full object-cover"
-                loading="lazy"
+                className="absolute inset-0 h-full w-full"
                 initial={{ opacity: 0, scale: 1.06 }}
                 animate={{ opacity: 1, scale: isHovered ? 1.1 : 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-              />
+              >
+                <ProductImage
+                  ref={imageRef}
+                  src={currentImage}
+                  alt={product.name}
+                  className="h-full w-full"
+                  fit="contain"
+                />
+              </motion.div>
             </AnimatePresence>
           )}
 

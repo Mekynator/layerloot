@@ -43,7 +43,7 @@ export default function CartItemCard({
       <div className="flex flex-col gap-4 md:flex-row md:items-center">
         <div className="h-28 w-28 shrink-0 overflow-hidden rounded-xl bg-muted">
           {item.image_url ? (
-            <img src={item.image_url} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
+            <ProductImage src={item.image_url} alt={item.title} className="h-full w-full" fit="contain" />
           ) : (
             <div className="flex h-full items-center justify-center text-xs text-muted-foreground">{t("cart.noPreview")}</div>
           )}

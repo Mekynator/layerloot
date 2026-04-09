@@ -661,7 +661,7 @@ const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNo
         style={{ ...props.style, ...sectionStyleOverrides }}
         onClick={clickable.onClick}
         data-editor-block-id={block.id}
-        data-editor-block-type={block.title || block.block_type}
+        data-editor-block-type={getLocalizedValue(block.title, "") || block.block_type}
       >
         {/* Background image layer */}
         {hasBgImage && (
@@ -864,7 +864,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
       return (
         <div
           data-editor-block-id={block.id}
-          data-editor-block-type={block.title || block.block_type}
+          data-editor-block-type={getLocalizedValue(block.title, "") || block.block_type}
           style={{ height: `${c.height || 40}px` }}
         />
       );
@@ -922,7 +922,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
       return (
         <div
           data-editor-block-id={block.id}
-          data-editor-block-type={block.title || block.block_type}
+          data-editor-block-type={getLocalizedValue(block.title, "") || block.block_type}
           className="py-8 text-center text-muted-foreground"
         >
           {tr("blocks.unknown", "Unknown block")}: {block.block_type}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bot, MapPin, MessageCircle, Send, Trash2, User, X, Wand2 } from "lucide-react";
+import { ArrowRight, Bot, MapPin, MessageCircle, Send, Sparkles, Trash2, User, X, Wand2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,20 @@ type Msg = {
   id: string;
   role: "user" | "assistant";
   content: string;
+};
+
+type ChatQuickItem = {
+  label: string;
+  message: string;
+  icon?: string;
+};
+
+type ParsedChatProduct = {
+  name: string;
+  benefit?: string;
+  price?: string;
+  imageUrl?: string;
+  productUrl?: string;
 };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
@@ -77,8 +91,26 @@ function getLocalizedStr(val: unknown): string {
   return "";
 }
 
-function getCartSnapshot() {
-  const raw = localStorage.getItem("layerloot-cart");
+function ChatLauncherIcon({ icon, customUrl, iconSize }: { icon: string; customUrl?: string; iconSize: number }) {
+  if (icon === "custom" && customUrl) return <img src={customUrl} alt="" className="rounded-full object-cover" style={{ width: iconSize, height: iconSize }} />;
+  if (icon === "bot") return <Bot style={{ width: iconSize, height: iconSize }} />;
+  if (icon === "sparkle") return <Sparkles style={{ width: iconSize, height: iconSize }} />;
+  return <MessageCircle style={{ width: iconSize, height: iconSize }} />;
+}
+
+function ChatTypingIndicator({ style }: { style?: string }) {
+  if (style === "pulse") return (
+    <span className="flex gap-1"><span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" /></span>
+  );
+  if (style === "wave") return (
+    <span className="flex gap-1">{[0, 1, 2].map(i => <span key={i} className="inline-block h-2 w-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />)}</span>
+  );
+  return (
+    <span className="flex gap-1">{[0, 1, 2].map(i => <span key={i} className="inline-block h-2 w-2 rounded-full bg-muted-foreground animate-pulse" style={{ animationDelay: `${i * 200}ms` }} />)}</span>
+  );
+}
+
+function getCartSnapshot() {  const raw = localStorage.getItem("layerloot-cart");
   const items = safeJsonParse<any[]>(raw, []);
   const normalized = items.map((item) => ({
     id: item.id ?? item.product_id ?? "",
@@ -94,7 +126,86 @@ function getCartSnapshot() {
   };
 }
 
-function HorizontalSuggestions({ items, onPick }: { items: string[]; onPick: (value: string) => void }) {
+function parseChatProducts(content: string): ParsedChatProduct[] {
+  const products: ParsedChatProduct[] = [];
+  // Match the mandatory AI product format: • **name** \n  - bullet lines
+  const re = /•\s+\*\*([^*\n]+)\*\*[ \t]*\n((?:[ \t]*-[ \t]+[^\n]*\n?)*)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(content)) !== null) {
+    const name = m[1].trim();
+    const body = m[2];
+    const imgMatch = body.match(/!\[[^\]]*\]\(([^)]+)\)/);
+    const linkMatch = body.match(/→\s*\[[^\]]*\]\(([^)]+)\)/);
+    const priceMatch = body.match(/-[ \t]+([^\n]*\b\d[\d.,]*\s*kr[^\n]*)/i);
+    const bodyLines = body
+      .split("\n")
+      .map((l) => l.replace(/^[ \t]*-[ \t]+/, "").trim())
+      .filter(Boolean);
+    const benefit = bodyLines.find(
+      (l) => !l.startsWith("!") && !l.startsWith("→") && !/\b\d[\d.,]*\s*kr\b/i.test(l),
+    );
+    products.push({
+      name,
+      imageUrl: imgMatch?.[1],
+      productUrl: linkMatch?.[1],
+      price: priceMatch?.[1]?.trim(),
+      benefit,
+    });
+  }
+  return products;
+}
+
+function stripProductBlocks(content: string): string {
+  return content
+    .replace(/•\s+\*\*[^*\n]+\*\*[ \t]*\n(?:[ \t]*-[ \t]+[^\n]*\n?)*/g, "")
+    .trim();
+}
+
+function ChatProductCard({ product }: { product: ParsedChatProduct }) {
+  const isInternal = product.productUrl?.startsWith("/") ?? false;
+  const ctaClass =
+    "mt-1.5 inline-flex items-center gap-1 self-start rounded-full bg-primary px-3 py-1 text-[11px] font-semibold text-primary-foreground transition hover:bg-primary/90 active:scale-95";
+  const ctaContent = (
+    <>
+      View <ArrowRight className="h-3 w-3" />
+    </>
+  );
+  return (
+    <div className="flex gap-3 rounded-xl border border-border/30 bg-background/70 p-2.5 backdrop-blur-sm">
+      {product.imageUrl && (
+        <div className="h-[62px] w-[62px] shrink-0 overflow-hidden rounded-lg bg-muted">
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+        </div>
+      )}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <p className="truncate text-xs font-semibold leading-snug text-foreground">{product.name}</p>
+        {product.benefit && (
+          <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">{product.benefit}</p>
+        )}
+        {product.price && (
+          <p className="mt-0.5 text-[11px] font-medium text-primary">{product.price}</p>
+        )}
+        {product.productUrl &&
+          (isInternal ? (
+            <Link to={product.productUrl} className={ctaClass}>
+              {ctaContent}
+            </Link>
+          ) : (
+            <a href={product.productUrl} target="_blank" rel="noopener noreferrer" className={ctaClass}>
+              {ctaContent}
+            </a>
+          ))}
+      </div>
+    </div>
+  );
+}
+
+function HorizontalSuggestions({ items, onPick }: { items: ChatQuickItem[]; onPick: (message: string) => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const isDown = useRef(false);
   const startX = useRef(0);
@@ -139,14 +250,14 @@ function HorizontalSuggestions({ items, onPick }: { items: string[]; onPick: (va
       <div className="flex w-max gap-2 pr-4">
         {items.map((item) => (
           <button
-            key={item}
+            key={item.label}
             type="button"
             onClick={() => {
-              if (!moved.current) onPick(item);
+              if (!moved.current) onPick(item.message);
             }}
             className="whitespace-nowrap rounded-full border bg-background px-3 py-1.5 text-xs text-foreground transition hover:-translate-y-0.5 hover:bg-muted"
           >
-            {item}
+            {item.label}
           </button>
         ))}
       </div>
@@ -155,28 +266,41 @@ function HorizontalSuggestions({ items, onPick }: { items: string[]; onPick: (va
 }
 
 function MarkdownMessage({ content }: { content: string }) {
+  const products = useMemo(() => parseChatProducts(content), [content]);
+  const textContent = products.length > 0 ? stripProductBlocks(content) : content;
   return (
-    <div className="prose prose-sm prose-invert max-w-none text-sm leading-relaxed [&_a]:text-primary [&_a]:underline [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_code]:text-xs [&_pre]:text-xs">
-      <ReactMarkdown
-        components={{
-          a: ({ href, children }) => {
-            if (href?.startsWith("/")) {
-              return (
-                <Link to={href} className="text-primary underline">
-                  {children}
-                </Link>
-              );
-            }
-            return (
-              <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                {children}
-              </a>
-            );
-          },
-        }}
-      >
-        {content}
-      </ReactMarkdown>
+    <div className="space-y-2.5">
+      {textContent && (
+        <div className="prose prose-sm prose-invert max-w-none text-sm leading-relaxed [&_a]:text-primary [&_a]:underline [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_code]:text-xs [&_pre]:text-xs">
+          <ReactMarkdown
+            components={{
+              a: ({ href, children }) => {
+                if (href?.startsWith("/")) {
+                  return (
+                    <Link to={href} className="text-primary underline">
+                      {children}
+                    </Link>
+                  );
+                }
+                return (
+                  <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                    {children}
+                  </a>
+                );
+              },
+            }}
+          >
+            {textContent}
+          </ReactMarkdown>
+        </div>
+      )}
+      {products.length > 0 && (
+        <div className="space-y-2">
+          {products.map((p, i) => (
+            <ChatProductCard key={i} product={p} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -323,9 +447,7 @@ const ChatWidget = () => {
   const posClass = chatSettings.launcher.position === "bottom-left" ? "left-4 sm:left-6" : "right-4 sm:right-6";
   const headerBg = campaign?.chat_overrides?.headerColor
     ? `hsl(${campaign.chat_overrides.headerColor})`
-    : chatSettings.window.headerBgColor
-    ? `hsl(${chatSettings.window.headerBgColor})`
-    : undefined;
+    : chatSettings.window.headerBgColor || undefined;
 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -349,7 +471,7 @@ const ChatWidget = () => {
     ];
   });
 
-  const starterSuggestions = useMemo(() => {
+  const starterSuggestions = useMemo((): ChatQuickItem[] => {
     const adminReplies = chatSettings.quickReplies ?? [];
     if (adminReplies.length > 0) {
       // Check if a page rule specifies which quick replies to show
@@ -362,17 +484,25 @@ const ChatWidget = () => {
         const pinned = adminReplies
           .filter((r) => matchedRule.quickReplyIds!.includes(r.id))
           .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-          .map((r) => getLocalizedStr(r.label));
+          .map((r) => ({
+            label: getLocalizedStr(r.label),
+            message: getLocalizedStr(r.message) || getLocalizedStr(r.label),
+            icon: r.icon,
+          }));
         if (pinned.length > 0) return pinned;
       }
       // Show global quick replies (no page restriction)
       const global = adminReplies
         .filter((r) => !r.pages?.length)
         .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-        .map((r) => getLocalizedStr(r.label));
+        .map((r) => ({
+          label: getLocalizedStr(r.label),
+          message: getLocalizedStr(r.message) || getLocalizedStr(r.label),
+          icon: r.icon,
+        }));
       if (global.length > 0) return global;
     }
-    return getPageSuggestions(location.pathname, !!userId);
+    return getPageSuggestions(location.pathname, !!userId).map((s) => ({ label: s, message: s }));
   }, [location.pathname, userId, chatSettings.quickReplies, chatSettings.pageRules]);
 
   useEffect(() => {
@@ -529,6 +659,32 @@ const ChatWidget = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(reset));
   };
 
+  // Respect admin enable/disable toggle — only after settings have loaded
+  if (!chatSettingsLoading && !chatSettings.enabled) return null;
+
+  const launcherSize = chatSettings.launcher.size ?? 56;
+  const launcherIconSize = Math.round(launcherSize * 0.42);
+  const launcherShadow = chatSettings.launcher.shadow
+    ? chatSettings.launcher.glowColor
+      ? `0 8px 30px ${chatSettings.launcher.glowColor}40`
+      : "0 12px 40px hsl(var(--primary) / 0.35)"
+    : "0 4px 20px hsl(0 0% 0% / 0.2)";
+
+  const aiBubbleStyle: React.CSSProperties = {
+    borderRadius: chatSettings.bubbles.ai.borderRadius ?? 16,
+    backgroundColor: chatSettings.bubbles.ai.bgColor || undefined,
+    color: chatSettings.bubbles.ai.textColor || undefined,
+    ...(chatSettings.bubbles.ai.borderColor ? { borderColor: chatSettings.bubbles.ai.borderColor, borderWidth: 1 } : {}),
+    ...(chatSettings.bubbles.ai.shadow ? { boxShadow: "0 2px 8px hsl(0 0% 0% / 0.1)" } : {}),
+  };
+  const userBubbleStyle: React.CSSProperties = {
+    borderRadius: chatSettings.bubbles.user.borderRadius ?? 16,
+    backgroundColor: chatSettings.bubbles.user.bgColor || undefined,
+    color: chatSettings.bubbles.user.textColor || undefined,
+    ...(chatSettings.bubbles.user.borderColor ? { borderColor: chatSettings.bubbles.user.borderColor, borderWidth: 1 } : {}),
+    ...(chatSettings.bubbles.user.shadow ? { boxShadow: "0 2px 8px hsl(0 0% 0% / 0.1)" } : {}),
+  };
+
   return (
     <>
       <style>{`.no-scrollbar::-webkit-scrollbar{display:none;}`}</style>
@@ -572,12 +728,36 @@ const ChatWidget = () => {
             whileHover={{ y: -4, scale: 1.04 }}
             className={`fixed bottom-6 ${posClass} z-50`}
           >
-            <Button onClick={openChat} size="lg" className="relative h-14 w-14 rounded-full shadow-2xl">
-              <MessageCircle className="h-6 w-6" />
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-background text-[9px] font-bold text-primary shadow">
-                ✦
-              </span>
-            </Button>
+            <button
+              type="button"
+              onClick={openChat}
+              aria-label="Open chat"
+              className="relative bg-primary text-primary-foreground transition-all"
+              style={{
+                width: launcherSize,
+                height: launcherSize,
+                borderRadius: "50%",
+                backgroundColor: chatSettings.launcher.bgColor || undefined,
+                color: chatSettings.launcher.iconColor || undefined,
+                boxShadow: launcherShadow,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              <ChatLauncherIcon
+                icon={chatSettings.launcher.icon ?? "message"}
+                customUrl={chatSettings.launcher.customIconUrl}
+                iconSize={launcherIconSize}
+              />
+              {chatSettings.launcher.showUnreadBadge !== false && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-background text-[9px] font-bold text-primary shadow">
+                  ✦
+                </span>
+              )}
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -588,7 +768,13 @@ const ChatWidget = () => {
             initial={{ opacity: 0, y: 18, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 18, scale: 0.97 }}
-            className={`fixed bottom-4 ${posClass} z-50 flex h-[46vh] min-h-[380px] w-[calc(100vw-2rem)] max-w-[430px] flex-col overflow-hidden rounded-3xl border border-border/30 bg-card/70 shadow-[0_24px_80px_hsl(217_91%_60%/0.15)] backdrop-blur-2xl sm:h-[52vh]`}
+            className={`fixed bottom-4 ${posClass} z-50 flex h-[46vh] min-h-[380px] w-[calc(100vw-2rem)] max-w-[430px] flex-col overflow-hidden border border-border/30 ${chatSettings.window.glassEffect !== false ? "bg-card/70 backdrop-blur-2xl" : "bg-card"} sm:h-[52vh]`}
+            style={{
+              borderRadius: chatSettings.window.borderRadius ?? 24,
+              ...(chatSettings.window.bgColor ? { backgroundColor: chatSettings.window.bgColor } : {}),
+              boxShadow: chatSettings.window.shadow ?? "0 24px 80px hsl(217 91% 60% / 0.15)",
+              ...(chatSettings.window.borderColor ? { borderColor: chatSettings.window.borderColor } : {}),
+            }}
           >
             <div
               className="flex items-center justify-between border-b border-border/20 px-4 py-2.5"
@@ -603,8 +789,11 @@ const ChatWidget = () => {
                 ) : (
                   <Bot className="h-5 w-5 text-primary-foreground" />
                 )}
-                <div className="font-display text-sm font-bold uppercase tracking-wider text-primary-foreground">
-                  {(typeof chatSettings.window.brandName === "string" ? chatSettings.window.brandName : chatSettings.window.brandName?.en) || "LayerLoot Assistant"}
+                <div
+                  className="font-display text-sm font-bold uppercase tracking-wider text-primary-foreground"
+                  style={chatSettings.window.headerTextColor ? { color: chatSettings.window.headerTextColor } : undefined}
+                >
+                  {getLocalizedStr(chatSettings.window.brandName) || "LayerLoot Assistant"}
                 </div>
               </div>
 
@@ -643,31 +832,34 @@ const ChatWidget = () => {
               </div>
             </div>
 
-            <div className="border-b border-border/20 bg-muted/30 backdrop-blur-sm px-3 py-2.5">
-              <HorizontalSuggestions items={starterSuggestions} onPick={send} />
-            </div>
+            {starterSuggestions.length > 0 && (
+              <div className="border-b border-border/20 bg-muted/30 backdrop-blur-sm px-3 py-2.5">
+                <HorizontalSuggestions items={starterSuggestions} onPick={send} />
+              </div>
+            )}
 
             <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
-                  <div
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs ${
-                      msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {msg.role === "user" ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
-                  </div>
+                  {((msg.role === "user" && chatSettings.bubbles.user.showAvatar !== false) ||
+                    (msg.role === "assistant" && chatSettings.bubbles.ai.showAvatar !== false)) && (
+                    <div
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs ${
+                        msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {msg.role === "user" ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
+                    </div>
+                  )}
 
                   <div
-                    className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                    className={`max-w-[85%] px-4 py-2.5 text-sm leading-relaxed ${
                       msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
                     }`}
+                    style={msg.role === "user" ? userBubbleStyle : aiBubbleStyle}
                   >
                     {msg.role === "assistant" && !msg.content && loading ? (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
-                        Thinking...
-                      </div>
+                      <ChatTypingIndicator style={chatSettings.bubbles.typingIndicator} />
                     ) : msg.role === "assistant" ? (
                       <MarkdownMessage content={msg.content} />
                     ) : (
@@ -688,7 +880,7 @@ const ChatWidget = () => {
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask me anything..."
+                placeholder={getLocalizedStr(chatSettings.window.inputPlaceholder) || "Ask me anything..."}
                 className="flex-1 rounded-full border-border bg-muted text-sm"
                 disabled={loading}
               />
@@ -696,6 +888,7 @@ const ChatWidget = () => {
                 type="submit"
                 size="icon"
                 className="h-9 w-9 shrink-0 rounded-full transition-transform hover:scale-105"
+                style={chatSettings.window.sendButtonColor ? { backgroundColor: chatSettings.window.sendButtonColor } : undefined}
                 disabled={loading || !input.trim()}
               >
                 <Send className="h-4 w-4" />

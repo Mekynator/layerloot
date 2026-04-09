@@ -1029,7 +1029,7 @@ export default function AdminChat() {
 
             </div>
             <div className="hidden xl:block w-[400px] shrink-0">
-              <div className="sticky top-4">
+              <div className="sticky top-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
                 <ChatLivePreview config={config} />
               </div>
             </div>
@@ -1071,7 +1071,7 @@ export default function AdminChat() {
           </Card>
             </div>
             <div className="hidden xl:block w-[400px] shrink-0">
-              <div className="sticky top-4">
+              <div className="sticky top-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
                 <ChatLivePreview config={config} />
               </div>
             </div>
@@ -1156,7 +1156,7 @@ export default function AdminChat() {
 
             </div>
             <div className="hidden xl:block w-[400px] shrink-0">
-              <div className="sticky top-4">
+              <div className="sticky top-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
                 <ChatLivePreview config={config} />
               </div>
             </div>
@@ -1193,7 +1193,7 @@ export default function AdminChat() {
 
             </div>
             <div className="hidden xl:block w-[400px] shrink-0">
-              <div className="sticky top-4">
+              <div className="sticky top-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
                 <ChatLivePreview config={config} />
               </div>
             </div>

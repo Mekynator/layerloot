@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Archive, Calculator, Calendar, CheckCircle, Copy, Eye, History, Layers,
-  Pencil, Plus, Tag, Trash2, X, XCircle, Search, Package, Repeat,
+  Pencil, Plus, Tag, Trash2, X, XCircle, Search, Repeat,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -334,6 +334,26 @@ const AdminProducts = () => {
   };
   const removeGiftFinderTagFromForm = (tagId: string) => { setForm((prev) => ({ ...prev, gift_finder_tag_ids: prev.gift_finder_tag_ids.filter((id) => id !== tagId) })); };
 
+  const editingProduct = useMemo(
+    () => (editingId ? products.find((p) => p.id === editingId) : null),
+    [editingId, products],
+  );
+  const canPublish =
+    !!editingId &&
+    (editingProduct?.status === "draft" ||
+      editingProduct?.status === "unpublished" ||
+      !!editingProduct?.has_draft);
+
+  const handlePublishFromModal = async () => {
+    if (!editingId || !user?.id) return;
+    const ok = await productAdmin.publishProduct(editingId, user.id);
+    if (ok) {
+      setOpen(false);
+      resetFormState();
+      await fetchProducts();
+    }
+  };
+
   return (
     <AdminLayout>
       {/* Header */}
@@ -348,24 +368,33 @@ const AdminProducts = () => {
           <DialogTrigger asChild>
             <Button className="font-display uppercase tracking-wider"><Plus className="mr-1 h-4 w-4" /> Add Product</Button>
           </DialogTrigger>
-          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
             <DialogHeader>
-              <div className="flex items-center justify-between">
-                <DialogTitle className="font-display uppercase">{editingId ? "Edit" : "Add"} Product</DialogTitle>
-                <Button variant="outline" size="sm" onClick={() => setCopyModalOpen(true)} className="text-xs">
-                  <Copy className="mr-1 h-3.5 w-3.5" /> Copy from product
-                </Button>
+              <div className="flex items-center gap-3 pr-8">
+                <DialogTitle className="font-display uppercase flex-1">
+                  {editingId ? "Edit Product" : "Add Product"}
+                </DialogTitle>
+                {editingId && form.name && (
+                  <span className="truncate max-w-[200px] text-sm font-normal text-muted-foreground">
+                    {form.name}
+                  </span>
+                )}
+                {canPublish && (
+                  <Badge variant="secondary" className="shrink-0 text-[10px]">Draft pending</Badge>
+                )}
               </div>
             </DialogHeader>
             <Tabs defaultValue="basic" className="space-y-4">
-              <TabsList className="w-full grid grid-cols-6">
-                <TabsTrigger value="basic">Basic</TabsTrigger>
-                <TabsTrigger value="media">Media</TabsTrigger>
-                <TabsTrigger value="inventory">Inventory</TabsTrigger>
-                <TabsTrigger value="colors">Colors</TabsTrigger>
-                <TabsTrigger value="sections">Sections</TabsTrigger>
-                <TabsTrigger value="details">Details</TabsTrigger>
-              </TabsList>
+              <div className="sticky top-0 z-10 -mx-6 bg-card/95 px-6 pb-3 pt-1 backdrop-blur-sm">
+                <TabsList className="w-full grid grid-cols-6">
+                  <TabsTrigger value="basic"><span className="mr-0.5 text-[10px] opacity-50">1·</span>Basic</TabsTrigger>
+                  <TabsTrigger value="media"><span className="mr-0.5 text-[10px] opacity-50">2·</span>Media</TabsTrigger>
+                  <TabsTrigger value="inventory"><span className="mr-0.5 text-[10px] opacity-50">3·</span>Inventory</TabsTrigger>
+                  <TabsTrigger value="colors"><span className="mr-0.5 text-[10px] opacity-50">4·</span>Colors</TabsTrigger>
+                  <TabsTrigger value="sections"><span className="mr-0.5 text-[10px] opacity-50">5·</span>Sections</TabsTrigger>
+                  <TabsTrigger value="details"><span className="mr-0.5 text-[10px] opacity-50">6·</span>Details</TabsTrigger>
+                </TabsList>
+              </div>
 
               {/* A. Basic Info */}
               <TabsContent value="basic" className="space-y-4">
@@ -544,9 +573,34 @@ const AdminProducts = () => {
               </TabsContent>
             </Tabs>
 
-            <Button onClick={handleSubmit} className="w-full font-display uppercase tracking-wider mt-2">
-              {editingId ? "Save Draft" : "Create Product"}
-            </Button>
+            <div className="sticky bottom-0 -mx-6 border-t border-border/20 bg-card/95 px-6 py-3 backdrop-blur-sm">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCopyModalOpen(true)}
+                  className="gap-1 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  Copy from product
+                </Button>
+                <div className="flex-1" />
+                {canPublish && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePublishFromModal}
+                    className="gap-1.5 border-primary/40 text-primary hover:bg-primary/10"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    Publish
+                  </Button>
+                )}
+                <Button onClick={handleSubmit} className="font-display uppercase tracking-wider">
+                  {editingId ? "Save Draft" : "Create Product"}
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

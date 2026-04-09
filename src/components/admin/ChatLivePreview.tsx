@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
-import { Bot, MessageCircle, Send, Sparkles, User, X, Monitor, Smartphone, Wand2 } from "lucide-react";
+import { Bot, MessageCircle, RotateCcw, Send, Sparkles, User, X, Monitor, Smartphone, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -68,23 +67,48 @@ export default function ChatLivePreview({ config }: ChatLivePreviewProps) {
 
   const isMobile = device === "mobile";
   const launcherSize = isMobile ? config.responsive.mobile.size : config.responsive.desktop.size;
-  const windowHeight = isMobile ? 320 : 420;
+
+  const windowHeight = useMemo(() => {
+    const h = config.window.height;
+    if (h) {
+      if (h.endsWith("vh")) {
+        // approximate against a ~700px desktop / ~550px mobile viewport in the preview panel
+        const pct = parseFloat(h) / 100;
+        const base = isMobile ? 540 : 700;
+        return Math.round(Math.max(isMobile ? 280 : 340, Math.min(isMobile ? 400 : 500, base * pct)));
+      }
+      if (h.endsWith("px")) {
+        const px = parseInt(h, 10);
+        return Math.round(Math.max(280, Math.min(500, isMobile ? px * 0.7 : px * 0.85)));
+      }
+    }
+    return isMobile ? 320 : 420;
+  }, [config.window.height, isMobile]);
+
   const windowWidth = isMobile ? 280 : Math.min(config.window.width, 380);
 
   const greeting = useMemo(() => {
-    const ctx = PAGE_CONTEXTS[pageContext];
-    if (ctx?.greeting) return ctx.greeting;
-    if (simUserLoggedIn) return getStr(config.greetings.loggedInGreeting);
-    return getStr(config.greetings.defaultGreeting);
+    // Prefer admin-configured greetings; fall back to page context hints if empty
+    const adminGreeting = simUserLoggedIn
+      ? getStr(config.greetings.loggedInGreeting) || getStr(config.greetings.defaultGreeting)
+      : getStr(config.greetings.defaultGreeting);
+    if (adminGreeting) return adminGreeting;
+    return PAGE_CONTEXTS[pageContext]?.greeting ?? "";
   }, [config.greetings, pageContext, simUserLoggedIn]);
 
   const quickReplies = useMemo(() => {
-    const ctx = PAGE_CONTEXTS[pageContext];
-    if (ctx) return ctx.quickReplies;
-    return config.quickReplies.map(q => getStr(q.label));
+    // Prefer admin-configured quick replies if any are defined
+    if (config.quickReplies.length > 0) {
+      return config.quickReplies.slice(0, 4).map(q => getStr(q.label)).filter(Boolean);
+    }
+    // Fall back to hardcoded page context hints
+    return PAGE_CONTEXTS[pageContext]?.quickReplies ?? [];
   }, [config.quickReplies, pageContext]);
 
-  const toneSample = TONE_SAMPLES[config.tone.personality] || TONE_SAMPLES.friendly;
+  // Show admin's custom tone instructions when available, otherwise show sample copy
+  const toneDisplay = config.prompts.toneInstructions
+    || TONE_SAMPLES[config.tone.personality]
+    || TONE_SAMPLES.friendly;
 
   const headerBg = config.window.headerBgColor || undefined;
 
@@ -96,7 +120,7 @@ export default function ChatLivePreview({ config }: ChatLivePreviewProps) {
     setShowTyping(true);
     setTimeout(() => {
       setShowTyping(false);
-      setSimMessages(prev => [...prev, { role: "assistant", content: toneSample }]);
+      setSimMessages(prev => [...prev, { role: "assistant", content: toneDisplay }]);
     }, 1500);
   };
 
@@ -137,6 +161,18 @@ export default function ChatLivePreview({ config }: ChatLivePreviewProps) {
           <Switch checked={simUserLoggedIn} onCheckedChange={v => { setSimUserLoggedIn(v); setSimMessages([]); }} className="scale-75" />
           <Label className="text-[10px] text-muted-foreground">Logged in</Label>
         </div>
+        {simMessages.length > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs gap-1 text-muted-foreground"
+            onClick={() => setSimMessages([])}
+            title="Reset conversation"
+          >
+            <RotateCcw className="h-3 w-3" />
+            Reset
+          </Button>
+        )}
       </div>
 
       {/* Preview area */}
@@ -325,8 +361,10 @@ export default function ChatLivePreview({ config }: ChatLivePreviewProps) {
 
       {/* Tone preview */}
       <div className="rounded-lg border border-border/30 bg-muted/20 p-2.5">
-        <p className="text-[10px] font-medium text-muted-foreground uppercase mb-1">Tone Preview — {config.tone.personality}</p>
-        <p className="text-[11px] text-foreground leading-relaxed">{toneSample}</p>
+        <p className="text-[10px] font-medium text-muted-foreground uppercase mb-1">
+          {config.prompts.toneInstructions ? `Tone Instructions — ${config.tone.personality}` : `Tone Sample — ${config.tone.personality}`}
+        </p>
+        <p className="text-[11px] text-foreground leading-relaxed line-clamp-4">{toneDisplay}</p>
       </div>
 
       {/* Status badges */}
@@ -335,6 +373,7 @@ export default function ChatLivePreview({ config }: ChatLivePreviewProps) {
         <Badge variant="outline" className="text-[9px]">{simUserLoggedIn ? "Logged in" : "Guest"}</Badge>
         <Badge variant="outline" className="text-[9px]">{device}</Badge>
         <Badge variant="outline" className="text-[9px]">{config.tone.personality}</Badge>
+        {config.activePreset && <Badge variant="outline" className="text-[9px]">{config.activePreset}</Badge>}
         {!config.enabled && <Badge variant="destructive" className="text-[9px]">Disabled</Badge>}
       </div>
     </div>

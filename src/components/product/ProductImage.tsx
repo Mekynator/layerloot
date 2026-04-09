@@ -7,27 +7,20 @@ export interface ProductImageProps extends React.ImgHTMLAttributes<HTMLImageElem
   fit?: "contain" | "cover";
 }
 
-/**
- * ProductImage - A shared image component for product/commerce images.
- * - Defaults to object-contain for safer fit, but allows cover for banners/hero.
- * - Handles aspect ratio, centering, and background for consistent rendering.
- * - Use for product cards, thumbnails, cart, saved items, account, etc.
- */
-export const ProductImage: React.FC<ProductImageProps> = ({
-  src,
-  alt,
-  className = "",
-  fit = "contain",
-  ...props
-}) => {
-  return (
-    <img
-      src={src}
-      alt={alt}
-      className={`h-full w-full ${fit === "contain" ? "object-contain bg-white" : "object-cover"} ${className}`}
-      loading="lazy"
-      draggable={false}
-      {...props}
-    />
-  );
-};
+export const ProductImage = React.forwardRef<HTMLImageElement, ProductImageProps>(
+  ({ src, alt, className = "", fit = "contain", ...props }, ref) => {
+    return (
+      <img
+        ref={ref}
+        src={src}
+        alt={alt}
+        className={`h-full w-full ${fit === "contain" ? "object-contain bg-white" : "object-cover"} ${className}`}
+        loading="lazy"
+        draggable={false}
+        {...props}
+      />
+    );
+  }
+);
+
+ProductImage.displayName = "ProductImage";

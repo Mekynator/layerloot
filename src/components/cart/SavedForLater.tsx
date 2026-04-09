@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import type { SavedItem } from "@/types/cart";
+import { ProductImage } from "@/components/product/ProductImage";
 
 interface SavedForLaterProps {
   items: SavedItem[];

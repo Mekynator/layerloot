@@ -106,7 +106,7 @@ const Dashboard = () => {
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    import FinancialWorkspace from "./FinancialWorkspace";
+    
     a.download = "orders-report.csv";
     a.click();
   };

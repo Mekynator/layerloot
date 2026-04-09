@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/currency";
 import type { CartItem } from "@/types/cart";
+import { ProductImage } from "@/components/product/ProductImage";
 
 interface CartItemCardProps {
   item: CartItem;

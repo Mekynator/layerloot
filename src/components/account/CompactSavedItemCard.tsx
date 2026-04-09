@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { ProductImage } from "@/components/product/ProductImage";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatPrice } from "@/lib/currency";

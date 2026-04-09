@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react";
+import { ProductImage } from "@/components/product/ProductImage";
 import { useAuth } from "@/contexts/AuthContext";
 import { saveProduct } from "@/lib/savedItems";
 import { useToast } from "@/hooks/use-toast";

@@ -670,7 +670,7 @@ const PageEditor = () => {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
-      <div className="sticky top-16 z-40 border-b border-border/30 bg-card/95 backdrop-blur-xl text-foreground">
+      <div className="sticky top-0 z-40 border-b border-border/30 bg-card/95 backdrop-blur-xl text-foreground">
         <div className="flex h-12 items-center justify-between gap-3 px-4">
           <div className="flex items-center gap-3">
             <Button

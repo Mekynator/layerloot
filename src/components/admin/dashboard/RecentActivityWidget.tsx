@@ -30,7 +30,7 @@ const ENTITY_LINKS: Record<string, string> = {
   product: "/admin/products",
   block: "/admin/editor",
   translation: "/admin/translations",
-  user: "/admin/clients",
+  user: "/admin/users?section=customers",
   review: "/admin/reviews",
 };
 

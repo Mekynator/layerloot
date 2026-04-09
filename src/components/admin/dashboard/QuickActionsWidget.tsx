@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Eye, Package, ShoppingCart, Box, FileText, Star, Users, Settings, Truck, BarChart3, Calculator, Megaphone, Wallet, Tags, TicketPercent, Palette, ImageIcon, Globe, LucideIcon } from "lucide-react";
+import { Eye, FileText, Star, Truck, Calculator, Megaphone, Tags, TicketPercent, ImageIcon, Globe, LucideIcon } from "lucide-react";
 import DashboardWidget from "./DashboardWidget";
 
 interface Shortcut {
@@ -11,9 +11,9 @@ interface Shortcut {
 }
 
 const ALL_SHORTCUTS: Shortcut[] = [
-  { id: "editor", label: "Page Editor", icon: FileText, to: "/admin/editor", permissions: ["content.manage"] },
+  { id: "editor", label: "Content & Layout", icon: FileText, to: "/admin/editor", permissions: ["content.edit"] },
   { id: "translations", label: "Translations", icon: Globe, to: "/admin/translations", permissions: ["translations.manage"] },
-  { id: "media", label: "Media", icon: ImageIcon, to: "/admin/media", permissions: ["content.manage"] },
+  { id: "media", label: "Media", icon: ImageIcon, to: "/admin/media", permissions: ["media.manage"] },
   { id: "discounts", label: "Discounts", icon: TicketPercent, to: "/admin/discounts", permissions: ["products.manage"] },
   { id: "categories", label: "Categories", icon: Tags, to: "/admin/categories", permissions: ["products.manage"] },
   { id: "shipping", label: "Shipping", icon: Truck, to: "/admin/shipping" },

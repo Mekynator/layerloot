@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard, Tags, ArrowLeft, Layers, Menu, X,
+  LayoutDashboard, LayoutGrid, Tags, ArrowLeft, Layers, Menu, X,
   Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
   Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone,
   BarChart3, Wallet, ImageIcon, Shield, Activity, Globe, MessageCircle,
   Instagram, Brain, UserPlus, Crown, ClipboardList,
+  DollarSign, Calendar,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminPermissions } from "@/hooks/use-admin-permissions";
@@ -15,10 +16,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { ROLE_LABELS, isOwnerEmail, type AdminRoleKey } from "@/lib/admin-permissions-map";
 
 const ICON_MAP: Record<string, typeof Package> = {
-  LayoutDashboard, Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
+  LayoutDashboard, LayoutGrid, Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
   Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone, BarChart3,
   Wallet, Tags, Layers, ImageIcon, Shield, Activity, Globe, MessageCircle, Instagram, Brain, UserPlus, ClipboardList,
+  DollarSign, Calendar,
 };
+
+const AdminLayoutDepthContext = createContext(0);
 
 export interface SidebarItem {
   id: string;
@@ -45,8 +49,8 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
         { id: "translations", to: "/admin/translations", label: "Translations", icon: "Globe", visible: true, permission: "translations.manage" },
         { id: "backgrounds", to: "/admin/backgrounds", label: "Backgrounds", icon: "ImageIcon", visible: true, permission: "backgrounds.manage" },
         // Hide old editor/content/policies/settings links
-        { id: "editor", to: "/admin/page-editor", label: "Page Editor", icon: "FileText", visible: false, permission: "content.edit" },
-        { id: "content", to: "/admin/content", label: "Blocks & Content", icon: "Layers", visible: false, permission: "content.edit" },
+        { id: "editor", to: "/admin/editor?section=pages", label: "Page Editor", icon: "FileText", visible: false, permission: "content.edit" },
+        { id: "content", to: "/admin/editor?section=blocks", label: "Blocks & Content", icon: "Layers", visible: false, permission: "content.edit" },
         { id: "policies", to: "/admin/policies", label: "Policies", icon: "Shield", visible: false, permission: "settings.view" },
         { id: "settings", to: "/admin/settings", label: "Site Settings", icon: "Settings", visible: false, permission: "settings.view" },
       ],
@@ -66,8 +70,7 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
       items: [
         { id: "orders", to: "/admin/orders", label: "Orders", icon: "ShoppingCart", visible: true, permission: "orders.manage" },
         { id: "custom-orders", to: "/admin/custom-orders", label: "Custom Orders", icon: "Package", visible: true, permission: "custom_orders.manage" },
-        { id: "users", to: "/admin/clients", label: "Users", icon: "Users", visible: true, permission: "customers.view" },
-        { id: "referrals", to: "/admin/referrals", label: "Referrals", icon: "UserPlus", visible: true, permission: "campaigns.manage" },
+        { id: "users", to: "/admin/users", label: "Users", icon: "Users", visible: true, permission: "*" },
       ],
     },
     {
@@ -90,7 +93,7 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
     {
       name: "System",
       items: [
-        { id: "chat", to: "/admin/chat", label: "AI Chat", icon: "MessageCircle", visible: true, permission: "settings.view" },
+        { id: "chat", to: "/admin/chat", label: "AI Chat", icon: "MessageCircle", visible: false, permission: "settings.view" },
         { id: "personalization", to: "/admin/personalization", label: "AI Personalization", icon: "Brain", visible: false, permission: "settings.view" },
         { id: "activity", to: "/admin/activity", label: "Activity Log", icon: "Activity", visible: false, permission: "reports.view" },
         { id: "chat-analytics", to: "/admin/chat-analytics", label: "AI Analytics", icon: "BarChart3", visible: false, permission: "reports.view" },
@@ -100,6 +103,7 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
 };
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
+  const depth = useContext(AdminLayoutDepthContext);
   const { isAdmin, loading, user } = useAuth();
   const { hasPermission, adminRole, isOwner } = useAdminPermissions();
   const location = useLocation();
@@ -122,15 +126,29 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
       });
   }, []);
 
+  if (depth > 0) {
+    return <>{children}</>;
+  }
+
   if (loading || !isAdmin) return null;
 
   const isActive = (to: string) =>
     location.pathname === to || (to !== "/admin" && location.pathname.startsWith(`${to}/`));
 
-  const allItems = sidebarConfig.groups.flatMap(g => g.items);
+  const visibleGroups = useMemo(
+    () => sidebarConfig.groups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => item.visible && (!item.permission || hasPermission(item.permission))),
+      }))
+      .filter((group) => group.items.length > 0),
+    [sidebarConfig, hasPermission],
+  );
+
+  const allItems = visibleGroups.flatMap(g => g.items);
 
   const renderLinks = (items: SidebarItem[]) =>
-    items.filter(i => i.visible && (!i.permission || hasPermission(i.permission))).map((item) => {
+    items.map((item) => {
       const active = isActive(item.to);
       const Icon = ICON_MAP[item.icon] || Package;
       return (
@@ -164,7 +182,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
-        {sidebarConfig.groups.map((group, gi) => (
+        {visibleGroups.map((group, gi) => (
           <div key={group.name}>
             {gi > 0 && <div className="my-3 border-t border-sidebar-border/50" />}
             <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
@@ -193,34 +211,36 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   );
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)]">
-      <div className="fixed left-0 right-0 top-16 z-40 flex h-12 items-center bg-sidebar/95 backdrop-blur-md px-4 lg:hidden">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="text-sidebar-foreground hover:text-primary"
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
-        <span className="ml-2 font-display text-sm font-bold uppercase tracking-wider text-sidebar-foreground">
-          {allItems.find((l) => isActive(l.to))?.label || "Admin"}
-        </span>
-      </div>
-
-      {mobileOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="relative z-10 flex h-full w-60 flex-col bg-sidebar">{navContent}</aside>
+    <AdminLayoutDepthContext.Provider value={depth + 1}>
+      <div className="flex min-h-screen">
+        <div className="fixed left-0 right-0 top-0 z-40 flex h-12 items-center bg-sidebar/95 backdrop-blur-md px-4 lg:hidden">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="text-sidebar-foreground hover:text-primary"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          <span className="ml-2 font-display text-sm font-bold uppercase tracking-wider text-sidebar-foreground">
+            {allItems.find((l) => isActive(l.to))?.label || "Admin"}
+          </span>
         </div>
-      )}
 
-      <aside className="hidden w-56 shrink-0 flex-col bg-sidebar lg:flex">
-        {navContent}
-      </aside>
+        {mobileOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+            <aside className="relative z-10 flex h-full w-60 flex-col bg-sidebar">{navContent}</aside>
+          </div>
+        )}
 
-      <main className="mt-12 flex-1 overflow-auto bg-background p-6 lg:mt-0">{children}</main>
-    </div>
+        <aside className="hidden w-56 shrink-0 flex-col bg-sidebar lg:flex">
+          {navContent}
+        </aside>
+
+        <main className="mt-12 flex-1 overflow-auto bg-background p-6 lg:mt-0">{children}</main>
+      </div>
+    </AdminLayoutDepthContext.Provider>
   );
 };
 

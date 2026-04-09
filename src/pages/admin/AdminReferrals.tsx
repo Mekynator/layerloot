@@ -117,7 +117,7 @@ const AdminReferrals = () => {
   return (
     <AdminLayout>
       <div className="mb-6">
-        <h1 className="font-display text-3xl font-bold uppercase text-foreground">Referral Management</h1>
+        <h1 className="font-display text-3xl font-bold uppercase text-foreground">Referrals</h1>
         <p className="text-sm text-muted-foreground">Track all invites, conversions, and reward payouts.</p>
       </div>
 

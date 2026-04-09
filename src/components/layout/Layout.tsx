@@ -12,12 +12,17 @@ const Layout = ({ children }: { children: ReactNode }) => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const isEditorPreview = searchParams.get("editorPreview") === "1";
+  const isAdminRoute = location.pathname.startsWith("/admin");
   const isCartPage = location.pathname === "/cart";
   const { currentAchievement, dismiss } = useAchievements();
 
   useEffect(() => {
     document.documentElement.classList.add("dark");
   }, []);
+
+  if (isAdminRoute) {
+    return <div className="min-h-screen bg-background">{children}</div>;
+  }
 
   return (
     <div

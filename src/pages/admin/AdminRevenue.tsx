@@ -238,10 +238,10 @@ const AdminRevenue = () => {
           {/* Quick Nav */}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { to: "/admin/growth", label: "Growth & Marketing", icon: TrendingUp },
+              { to: "/admin/financial?section=growth", label: "Growth & Marketing", icon: TrendingUp },
               { to: "/admin/campaigns", label: "Campaigns", icon: Target },
-              { to: "/admin/clients", label: "Customer CRM", icon: Users },
-              { to: "/admin/reports", label: "Reports & Export", icon: DollarSign },
+              { to: "/admin/users?section=customers", label: "Customer CRM", icon: Users },
+              { to: "/admin/financial?section=reports", label: "Reports & Export", icon: DollarSign },
             ].map(({ to, label, icon: Icon }) => (
               <Link key={to} to={to}
                 className="glass-card flex items-center gap-3 rounded-xl border border-white/[0.06] p-4 transition-all hover:border-primary/30 hover:shadow-[0_0_20px_-5px_hsl(var(--primary)/0.2)]">

@@ -351,7 +351,10 @@ const AdminContent = () => {
   return (
     <AdminLayout>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-3xl font-bold uppercase text-foreground">Page Editor</h1>
+        <div>
+          <h1 className="font-display text-3xl font-bold uppercase text-foreground">Blocks & Content</h1>
+          <p className="text-sm text-muted-foreground">Manage page blocks, visibility, and ordering in one place.</p>
+        </div>
       </div>
 
       {/* Page Tabs */}

@@ -187,7 +187,7 @@ export default function AdminUsers() {
           <div className="flex items-center gap-3">
             <Shield className="h-6 w-6 text-primary" />
             <div>
-              <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Admin Users</h1>
+              <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Admins</h1>
               <p className="text-xs text-muted-foreground">Manage admin accounts, roles, and permissions</p>
             </div>
           </div>

@@ -1,6 +1,6 @@
 import React, { Suspense } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import AdminLayout from "@/components/admin/AdminLayout";
 import { TrendingUp, DollarSign, FileText, Calendar, Settings, Shield } from "lucide-react";
 
 const Growth = React.lazy(() => import("./AdminGrowth"));
@@ -20,18 +20,25 @@ const tabConfig = [
 ];
 
 const FinancialWorkspace: React.FC = () => {
-  const [activeTab, setActiveTab] = React.useState("growth");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get("section");
+  const activeTab = tabConfig.some((tab) => tab.value === requestedTab) ? requestedTab! : "growth";
+
+  const handleTabChange = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value === "growth") next.delete("section");
+    else next.set("section", value);
+    setSearchParams(next, { replace: true });
+  };
+
   return (
-    <AdminLayout>
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl font-bold uppercase text-foreground flex items-center gap-2">
-            Adjustments / Financial
-          </h1>
-          <p className="text-xs text-muted-foreground">Centralized workspace for growth, revenue, reporting, policies, and settings</p>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="font-display text-2xl font-bold uppercase tracking-tight text-foreground">Adjustments / Financial</h1>
+        <p className="text-xs text-muted-foreground">Growth, revenue, reporting, declaration, policies, and settings in one workspace.</p>
       </div>
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="flex flex-wrap h-auto gap-1">
           {tabConfig.map(({ value, label, icon: Icon }) => (
             <TabsTrigger key={value} value={value} className="gap-1.5">
@@ -47,7 +54,7 @@ const FinancialWorkspace: React.FC = () => {
           </TabsContent>
         ))}
       </Tabs>
-    </AdminLayout>
+    </div>
   );
 };
 

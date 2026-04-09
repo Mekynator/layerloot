@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Archive, Bookmark, Calculator, Calendar, CheckCircle, Copy, Eye, History, Layers,
-  Pencil, Plus, Tag, Trash2, X, XCircle, Search, Repeat,
+  Archive, Bookmark, Calculator, Calendar, CheckCircle, ChevronLeft, ChevronRight,
+  Copy, Eye, History, ImageIcon, Layers, Pencil, Plus, Sliders, Tag, Trash2,
+  X, XCircle, Search, Repeat,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -99,6 +99,16 @@ interface ProductTemplate {
   name: string;
   savedAt: string;
   data: typeof emptyProduct;
+  sections?: SectionTemplate[];
+}
+
+interface SectionTemplate {
+  section_type: string;
+  title: string | null;
+  media_urls: string[];
+  sort_order: number;
+  is_active: boolean;
+  reusable_block_id: string | null;
 }
 
 function loadStoredTemplates(): ProductTemplate[] {
@@ -106,6 +116,26 @@ function loadStoredTemplates(): ProductTemplate[] {
 }
 
 function tplUid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+const DETAILS_PRESETS_KEY = "layerloot-details-presets";
+
+interface DetailsPreset {
+  id: string;
+  name: string;
+  savedAt: string;
+  data: {
+    material_type: string | null;
+    finish_type: string | null;
+    print_time_hours: number | null;
+    weight_grams: number | null;
+    dimensions_cm: any;
+    gift_finder_tag_ids: string[];
+  };
+}
+
+function loadStoredDetailsPresets(): DetailsPreset[] {
+  try { return JSON.parse(localStorage.getItem(DETAILS_PRESETS_KEY) ?? "[]"); } catch { return []; }
+}
 
 function StockBadge({ stock }: { stock: number }) {
   const badge = getStockTypeBadge(stock);
@@ -131,6 +161,7 @@ const AdminProducts = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [stagedPreviews, setStagedPreviews] = useState<string[]>([]);
   const [modelFile, setModelFile] = useState<File | null>(null);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [pricingProductId, setPricingProductId] = useState<string | null>(null);
@@ -143,7 +174,10 @@ const AdminProducts = () => {
   const [scheduleProductId, setScheduleProductId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ type: string; productId: string; name: string } | null>(null);
   const [copyModalOpen, setCopyModalOpen] = useState(false);
+  const [copyModalDefaultSelected, setCopyModalDefaultSelected] = useState<string[]>([]);
   const [templates, setTemplates] = useState<ProductTemplate[]>(() => loadStoredTemplates());
+  const [detailsPresets, setDetailsPresets] = useState<DetailsPreset[]>(() => loadStoredDetailsPresets());
+  const [pendingTemplateSections, setPendingTemplateSections] = useState<SectionTemplate[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
   const productAdmin = useProductAdmin();
@@ -229,8 +263,15 @@ const AdminProducts = () => {
   useEffect(() => { void fetchCategories(); void fetchGiftFinderTags(); }, []);
   useEffect(() => { if (giftFinderTags.length > 0) void fetchProducts(); }, [giftFinderTags.length]);
 
+  // Keep staged preview URLs in sync with selected files; revoke old URLs to free memory
+  useEffect(() => {
+    const urls = imageFiles.map((f) => URL.createObjectURL(f));
+    setStagedPreviews(urls);
+    return () => { urls.forEach((u) => URL.revokeObjectURL(u)); };
+  }, [imageFiles]);
+
   const generateSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-  const resetFormState = () => { setForm(emptyProduct); setEditingId(null); setImageFiles([]); setModelFile(null); setGiftTagPickerValue("none"); };
+  const resetFormState = () => { setForm(emptyProduct); setEditingId(null); setImageFiles([]); setStagedPreviews([]); setModelFile(null); setGiftTagPickerValue("none"); setPendingTemplateSections([]); };
 
   const uploadImages = async (): Promise<string[]> => {
     if (imageFiles.length === 0) return [];
@@ -302,7 +343,22 @@ const AdminProducts = () => {
         if (ok) await syncProductGiftTags(editingId, form.gift_finder_tag_ids);
       } else {
         const newId = await productAdmin.createDraftProduct(draftData, user?.id ?? "");
-        if (newId) await syncProductGiftTags(newId, form.gift_finder_tag_ids);
+        if (newId) {
+          await syncProductGiftTags(newId, form.gift_finder_tag_ids);
+          if (pendingTemplateSections.length > 0) {
+            await supabase.from("product_detail_sections").insert(
+              pendingTemplateSections.map((s, i) => ({
+                product_id: newId,
+                section_type: s.section_type,
+                title: s.title,
+                media_urls: s.media_urls,
+                sort_order: i,
+                is_active: s.is_active,
+                reusable_block_id: s.reusable_block_id,
+              }))
+            );
+          }
+        }
       }
 
       setOpen(false);
@@ -356,6 +412,15 @@ const AdminProducts = () => {
     }
     setConfirmAction(null);
     if (ok) await fetchProducts();
+
+  };
+
+  const moveImage = (index: number, direction: "left" | "right") => {
+    const swapIndex = direction === "left" ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= form.images.length) return;
+    const imgs = [...form.images];
+    [imgs[index], imgs[swapIndex]] = [imgs[swapIndex], imgs[index]];
+    setForm((prev) => ({ ...prev, images: imgs }));
   };
 
   const addGiftFinderTagToForm = (tagId: string) => {
@@ -385,19 +450,69 @@ const AdminProducts = () => {
     }
   };
 
-  const saveAsTemplate = () => {
+  const saveAsTemplate = async () => {
     if (!form.name.trim()) { toast({ title: "Add a product name first" }); return; }
-    const template: ProductTemplate = { id: tplUid(), name: form.name.trim(), savedAt: new Date().toISOString(), data: { ...form } };
+    let sections: SectionTemplate[] = [];
+    if (editingId) {
+      const { data } = await supabase
+        .from("product_detail_sections")
+        .select("section_type, title, media_urls, sort_order, is_active, reusable_block_id")
+        .eq("product_id", editingId)
+        .order("sort_order");
+      if (data) sections = data as SectionTemplate[];
+    }
+    const template: ProductTemplate = { id: tplUid(), name: form.name.trim(), savedAt: new Date().toISOString(), data: { ...form }, sections };
     const updated = [template, ...loadStoredTemplates().filter((t) => t.name !== template.name)].slice(0, 12);
     localStorage.setItem(TEMPLATES_KEY, JSON.stringify(updated));
     setTemplates(updated);
-    toast({ title: "Template saved", description: `"${template.name}" saved as a reusable template.` });
+    const sectionNote = sections.length > 0 ? ` (includes ${sections.length} section${sections.length > 1 ? "s" : ""})` : "";
+    toast({ title: "Template saved", description: `"${template.name}" saved as a reusable template${sectionNote}.` });
   };
 
   const applyTemplate = (templateId: string) => {
     const tpl = templates.find((t) => t.id === templateId);
     if (!tpl) return;
     setForm({ ...tpl.data, name: "", slug: "" });
+    if (tpl.sections && tpl.sections.length > 0) {
+      setPendingTemplateSections(tpl.sections);
+      toast({ title: "Template applied", description: `${tpl.sections.length} section${tpl.sections.length > 1 ? "s" : ""} will be added after saving.` });
+    }
+  };
+
+  const saveDetailsPreset = () => {
+    if (!form.name.trim()) { toast({ title: "Add a product name first" }); return; }
+    const preset: DetailsPreset = {
+      id: tplUid(),
+      name: form.name.trim(),
+      savedAt: new Date().toISOString(),
+      data: {
+        material_type: form.material_type,
+        finish_type: form.finish_type,
+        print_time_hours: form.print_time_hours,
+        weight_grams: form.weight_grams,
+        dimensions_cm: form.dimensions_cm,
+        gift_finder_tag_ids: [...form.gift_finder_tag_ids],
+      },
+    };
+    const updated = [preset, ...loadStoredDetailsPresets().filter((p) => p.name !== preset.name)].slice(0, 12);
+    localStorage.setItem(DETAILS_PRESETS_KEY, JSON.stringify(updated));
+    setDetailsPresets(updated);
+    toast({ title: "Details preset saved", description: `"${preset.name}" specs saved as a preset.` });
+  };
+
+  const applyDetailsPreset = (presetId: string) => {
+    const preset = detailsPresets.find((p) => p.id === presetId);
+    if (!preset) return;
+    setForm((prev) => ({
+      ...prev,
+      material_type: preset.data.material_type,
+      finish_type: preset.data.finish_type,
+      print_time_hours: preset.data.print_time_hours,
+      weight_grams: preset.data.weight_grams,
+      dimensions_cm: preset.data.dimensions_cm,
+      gift_finder_tag_ids: preset.data.gift_finder_tag_ids.filter((id) => giftFinderTagMap.has(id)),
+    }));
+    toast({ title: "Details preset applied", description: `"${preset.name}" specs applied.` });
   };
 
   return (
@@ -431,17 +546,37 @@ const AdminProducts = () => {
               </div>
             </DialogHeader>
             <Tabs defaultValue="basic" className="space-y-4">
-              {/* Template chooser — only when adding a new product */}
-              {!editingId && templates.length > 0 && (
-                <div className="flex items-center gap-2 rounded-md border border-dashed border-border bg-muted/40 px-3 py-2 text-sm">
-                  <Bookmark className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="text-muted-foreground">Start from template:</span>
-                  <Select onValueChange={applyTemplate}>
-                    <SelectTrigger className="h-7 flex-1 text-xs"><SelectValue placeholder="Choose template…" /></SelectTrigger>
-                    <SelectContent>
-                      {templates.map((t) => (<SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
+              {/* Quick-start bar — always shown when adding a new product */}
+              {!editingId && (
+                <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed border-border bg-muted/40 px-3 py-2">
+                  <span className="text-xs font-medium text-muted-foreground">Start from:</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 gap-1 rounded-full border border-border bg-background text-xs text-foreground hover:border-primary/40"
+                    onClick={() => { setForm(emptyProduct); setPendingTemplateSections([]); }}
+                  >
+                    Blank product
+                  </Button>
+                  {templates.length > 0 && (
+                    <Select onValueChange={applyTemplate}>
+                      <SelectTrigger className="h-7 w-auto min-w-[130px] rounded-full border-border text-xs">
+                        <SelectValue placeholder="From template…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {templates.map((t) => (<SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 gap-1 rounded-full border border-border bg-background text-xs text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                    onClick={() => setCopyModalOpen(true)}
+                  >
+                    <Copy className="h-3 w-3" />
+                    Copy from product
+                  </Button>
                 </div>
               )}
               <div className="sticky top-0 z-10 -mx-6 bg-card/95 px-6 pb-3 pt-1 backdrop-blur-sm">
@@ -457,45 +592,248 @@ const AdminProducts = () => {
 
               {/* A. Basic Info */}
               <TabsContent value="basic" className="space-y-4">
-                <div><Label>Product Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: generateSlug(e.target.value) })} placeholder="Enter product name" /></div>
-                <div><Label>Slug</Label><Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} className="text-muted-foreground" /></div>
-                <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={4} placeholder="Product description..." /></div>
-                <div>
-                  <Label>Category</Label>
-                  <Select value={form.category_id ?? "none"} onValueChange={(value) => setForm({ ...form, category_id: value === "none" ? null : value })}>
-                    <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No category</SelectItem>
-                      {categories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
+                {/* Identity */}
+                <Card className="border-primary/10">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-display uppercase">Product Identity</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <Label>
+                        Product Name <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        value={form.name}
+                        onChange={(e) => setForm({ ...form, name: e.target.value, slug: generateSlug(e.target.value) })}
+                        placeholder="e.g. Dragon Figurine – Premium Edition"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Slug</Label>
+                      <Input
+                        value={form.slug}
+                        onChange={(e) => setForm({ ...form, slug: e.target.value })}
+                        className="mt-1 font-mono text-xs text-muted-foreground"
+                        placeholder="auto-generated from name"
+                      />
+                    </div>
+                    <div>
+                      <Label>Description</Label>
+                      <Textarea
+                        value={form.description}
+                        onChange={(e) => setForm({ ...form, description: e.target.value })}
+                        rows={3}
+                        placeholder="Short product description shown on the product page…"
+                        className="mt-1"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Classification + pricing basics */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Category</Label>
+                    <Select value={form.category_id ?? "none"} onValueChange={(value) => setForm({ ...form, category_id: value === "none" ? null : value })}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder="Select category" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No category</SelectItem>
+                        {categories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                    {form.category_id && (
+                      <p className="mt-1 truncate text-xs text-primary/70">
+                        {categoryMap.get(form.category_id)?.name}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <Label>
+                      Price (DKK) <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={form.price || ""}
+                      onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) || 0 })}
+                      placeholder="0.00"
+                      className="mt-1"
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">Also editable in the Inventory tab.</p>
+                  </div>
                 </div>
-                <div className="flex gap-6">
-                  <label className="flex items-center gap-2 text-sm"><Switch checked={form.is_featured} onCheckedChange={(value) => setForm({ ...form, is_featured: value })} /> Featured Product</label>
+
+                {/* Flags */}
+                <div className="flex items-center gap-6 rounded-md border border-border/40 bg-muted/20 px-3 py-2.5">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <Switch checked={form.is_featured} onCheckedChange={(value) => setForm({ ...form, is_featured: value })} />
+                    <span>Featured Product</span>
+                  </label>
+                  <span className="text-xs text-muted-foreground">Featured products appear in highlights and home sections.</span>
                 </div>
               </TabsContent>
 
               {/* B. Media */}
               <TabsContent value="media" className="space-y-4">
-                <div>
-                  <Label>Product Images (max 20 MB each)</Label>
-                  <Input type="file" accept="image/*" multiple onChange={(e) => setImageFiles(Array.from(e.target.files ?? []))} className="mt-1" />
-                  {form.images.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {form.images.map((url, index) => (
-                        <div key={index} className="group relative">
-                          <img src={url} alt="" className="h-20 w-20 rounded-lg border border-border object-cover" />
-                          <button type="button" onClick={() => setForm({ ...form, images: form.images.filter((_, idx) => idx !== index) })} className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100">×</button>
-                        </div>
-                      ))}
+                {/* Gallery Images */}
+                <Card className="border-primary/10">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm font-display uppercase">
+                        Gallery Images
+                        {form.images.length > 0 && (
+                          <span className="ml-2 font-mono text-xs font-normal text-muted-foreground">
+                            {form.images.length} saved · {stagedPreviews.length > 0 ? `${stagedPreviews.length} pending` : "none pending"}
+                          </span>
+                        )}
+                      </CardTitle>
+                      <span className="text-xs text-muted-foreground">First image = cover</span>
                     </div>
-                  )}
-                </div>
-                <Separator />
-                <div>
-                  <Label>3D Model (STL, OBJ, 3MF — max 500 MB)</Label>
-                  <Input type="file" accept=".stl,.obj,.3mf" onChange={(e) => setModelFile(e.target.files?.[0] ?? null)} className="mt-1" />
-                  {form.model_url && <p className="mt-1 text-xs text-muted-foreground">Current model uploaded ✓</p>}
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Saved images */}
+                    {form.images.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {form.images.map((url, index) => (
+                          <div key={url + index} className="group relative">
+                            <img src={url} alt="" className="h-20 w-20 rounded-lg border border-border object-cover" />
+                            {/* Cover badge */}
+                            {index === 0 && (
+                              <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 py-0.5 text-[9px] font-medium text-white">Cover</span>
+                            )}
+                            {/* Actions on hover */}
+                            <div className="absolute inset-0 flex items-center justify-center gap-0.5 rounded-lg bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                              <button
+                                type="button"
+                                title="Move left"
+                                disabled={index === 0}
+                                onClick={() => moveImage(index, "left")}
+                                className="flex h-6 w-6 items-center justify-center rounded bg-black/60 text-white disabled:opacity-30"
+                              >
+                                <ChevronLeft className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                title="Remove"
+                                onClick={() => setForm((prev) => ({ ...prev, images: prev.images.filter((_, idx) => idx !== index) }))}
+                                className="flex h-6 w-6 items-center justify-center rounded bg-destructive text-xs text-destructive-foreground"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                title="Move right"
+                                disabled={index === form.images.length - 1}
+                                onClick={() => moveImage(index, "right")}
+                                className="flex h-6 w-6 items-center justify-center rounded bg-black/60 text-white disabled:opacity-30"
+                              >
+                                <ChevronRight className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Staged (pending upload) previews */}
+                    {stagedPreviews.length > 0 && (
+                      <div>
+                        <p className="mb-2 text-xs font-medium text-muted-foreground">Pending upload on save:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {stagedPreviews.map((url, i) => (
+                            <div key={i} className="group relative">
+                              <img src={url} alt="" className="h-20 w-20 rounded-lg border border-primary/40 object-cover opacity-80" />
+                              <span className="absolute bottom-1 left-1 rounded bg-primary/80 px-1 py-0.5 text-[9px] font-medium text-white">New</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const next = imageFiles.filter((_, idx) => idx !== i);
+                                  setImageFiles(next);
+                                }}
+                                className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Upload area */}
+                    <label className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed border-border/60 bg-muted/20 px-4 py-6 text-center transition-colors hover:border-primary/40 hover:bg-muted/40">
+                      <ImageIcon className="h-7 w-7 text-muted-foreground/60" />
+                      <span className="text-sm text-muted-foreground">Click to add images</span>
+                      <span className="text-xs text-muted-foreground/60">Multiple files supported · max 20 MB each</span>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          const newFiles = Array.from(e.target.files ?? []);
+                          setImageFiles((prev) => [...prev, ...newFiles]);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                    {form.images.length === 0 && stagedPreviews.length === 0 && (
+                      <p className="text-xs text-muted-foreground/60">No images yet. Add images above — the first one will be used as the product cover.</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* 3D Model */}
+                <Card className="border-primary/10">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-display uppercase">3D Model</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {form.model_url ? (
+                      <div className="flex items-center gap-3 rounded-md border border-border/50 bg-muted/20 px-3 py-2.5">
+                        <span className="flex-1 truncate text-xs text-muted-foreground">Model saved ✓</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 gap-1 text-xs text-destructive hover:bg-destructive/10"
+                          onClick={() => setForm((prev) => ({ ...prev, model_url: null }))}
+                        >
+                          <X className="h-3.5 w-3.5" /> Remove
+                        </Button>
+                      </div>
+                    ) : modelFile ? (
+                      <div className="flex items-center gap-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-2.5">
+                        <span className="flex-1 truncate text-xs">{modelFile.name}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground"
+                          onClick={() => setModelFile(null)}
+                        >
+                          <X className="h-3.5 w-3.5" /> Clear
+                        </Button>
+                      </div>
+                    ) : null}
+                    <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-border/60 bg-muted/20 px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:bg-muted/40">
+                      <Plus className="h-4 w-4 shrink-0" />
+                      <span>{form.model_url || modelFile ? "Replace 3D model" : "Add 3D model (STL, OBJ, 3MF)"}</span>
+                      <span className="ml-auto text-xs text-muted-foreground/60">max 500 MB</span>
+                      <Input
+                        type="file"
+                        accept=".stl,.obj,.3mf"
+                        className="hidden"
+                        onChange={(e) => setModelFile(e.target.files?.[0] ?? null)}
+                      />
+                    </label>
+                    <p className="text-xs text-muted-foreground/60">Enables the 3D viewer on the product detail page.</p>
+                  </CardContent>
+                </Card>
+
+                {/* Video hint */}
+                <div className="rounded-md border border-border/30 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                  <strong>Videos</strong> are managed in the <strong>Sections</strong> tab — add a Video Section to embed YouTube, Vimeo, or a direct video file.
                 </div>
               </TabsContent>
 
@@ -548,44 +886,78 @@ const AdminProducts = () => {
 
               {/* Sections Tab */}
               <TabsContent value="sections" className="space-y-4">
-                <ProductSectionsManager productId={editingId ?? "draft-new"} />
+                {!editingId && pendingTemplateSections.length > 0 && (
+                  <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-400">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                    {pendingTemplateSections.length} section{pendingTemplateSections.length > 1 ? "s" : ""} from template will be added when you save this product.
+                  </div>
+                )}
+                <ProductSectionsManager
+                  productId={editingId ?? "draft-new"}
+                  onCopyFromProduct={() => { setCopyModalDefaultSelected(["sections"]); setCopyModalOpen(true); }}
+                />
               </TabsContent>
 
               {/* D. Details */}
               <TabsContent value="details" className="space-y-4">
+                {/* Details preset bar */}
+                <div className="flex items-center gap-2 rounded-md border border-dashed border-border bg-muted/40 px-3 py-2">
+                  <Sliders className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  {detailsPresets.length > 0 ? (
+                    <Select onValueChange={applyDetailsPreset}>
+                      <SelectTrigger className="h-7 flex-1 text-xs"><SelectValue placeholder="Apply spec preset…" /></SelectTrigger>
+                      <SelectContent>
+                        {detailsPresets.map((p) => (<SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <span className="flex-1 text-xs text-muted-foreground">Save specs as a reusable preset for faster setup.</span>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={saveDetailsPreset}
+                    className="h-7 shrink-0 gap-1 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Save as preset
+                  </Button>
+                </div>
+
                 <Card className="border-primary/10">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-display uppercase">Print / Production Info</CardTitle>
+                    <CardTitle className="text-sm font-display uppercase">Production Specs</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div><Label>Print Time (hours)</Label><Input type="number" step="0.5" value={form.print_time_hours ?? ""} onChange={(e) => setForm({ ...form, print_time_hours: parseFloat(e.target.value) || null })} /></div>
                       <div><Label>Weight (grams)</Label><Input type="number" step="1" value={form.weight_grams ?? ""} onChange={(e) => setForm({ ...form, weight_grams: parseFloat(e.target.value) || null })} /></div>
                     </div>
-                    <div>
-                      <Label>Material Type</Label>
-                      <Select value={form.material_type ?? "none"} onValueChange={(value) => setForm({ ...form, material_type: value === "none" ? null : value })}>
-                        <SelectTrigger><SelectValue placeholder="Select material" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Not specified</SelectItem>
-                          <SelectItem value="PLA">PLA</SelectItem>
-                          <SelectItem value="PLA Silk">PLA Silk</SelectItem>
-                          <SelectItem value="PETG">PETG</SelectItem>
-                          <SelectItem value="Resin">Resin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Finish Type</Label>
-                      <Select value={form.finish_type ?? "none"} onValueChange={(value) => setForm({ ...form, finish_type: value === "none" ? null : value })}>
-                        <SelectTrigger><SelectValue placeholder="Select finish" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Not specified</SelectItem>
-                          <SelectItem value="raw">Raw</SelectItem>
-                          <SelectItem value="cleaned">Cleaned</SelectItem>
-                          <SelectItem value="painted">Painted</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Material</Label>
+                        <Select value={form.material_type ?? "none"} onValueChange={(value) => setForm({ ...form, material_type: value === "none" ? null : value })}>
+                          <SelectTrigger><SelectValue placeholder="Select material" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Not specified</SelectItem>
+                            <SelectItem value="PLA">PLA</SelectItem>
+                            <SelectItem value="PLA Silk">PLA Silk</SelectItem>
+                            <SelectItem value="PETG">PETG</SelectItem>
+                            <SelectItem value="Resin">Resin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Finish</Label>
+                        <Select value={form.finish_type ?? "none"} onValueChange={(value) => setForm({ ...form, finish_type: value === "none" ? null : value })}>
+                          <SelectTrigger><SelectValue placeholder="Select finish" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Not specified</SelectItem>
+                            <SelectItem value="raw">Raw</SelectItem>
+                            <SelectItem value="cleaned">Cleaned</SelectItem>
+                            <SelectItem value="painted">Painted</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <div>
                       <Label>Dimensions (cm)</Label>
@@ -626,7 +998,7 @@ const AdminProducts = () => {
                           );
                         })}
                       </div>
-                    ) : (<p className="text-xs text-muted-foreground">Used by Gift Finder on Create Your Own page.</p>)}
+                    ) : (<p className="text-xs text-muted-foreground">Used by Gift Finder on the Create Your Own page.</p>)}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -871,8 +1243,9 @@ const AdminProducts = () => {
       {/* Copy Product Settings Modal */}
       <CopyProductSettingsModal
         open={copyModalOpen}
-        onOpenChange={setCopyModalOpen}
+        onOpenChange={(v) => { setCopyModalOpen(v); if (!v) setCopyModalDefaultSelected([]); }}
         targetProductId={editingId}
+        defaultSelected={copyModalDefaultSelected}
         onApply={(data) => {
           setForm((prev) => ({ ...prev, ...data }));
         }}

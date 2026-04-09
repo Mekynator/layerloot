@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getSavedProducts, unsaveProduct } from "@/lib/savedItems";
 import { fetchProductsByIds } from "@/api/products";
+import { ProductImage } from "@/components/product/ProductImage";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";

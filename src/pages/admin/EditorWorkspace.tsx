@@ -1,12 +1,12 @@
-import { Suspense, lazy } from "react";
+import React, { Suspense, lazy } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { FileText, LayoutGrid, Shield, Settings, Layers } from "lucide-react";
 
-const PageEditor = lazy(() => import("../PageEditor"));
-const AdminPolicies = lazy(() => import("../AdminPolicies"));
-const AdminContent = lazy(() => import("../AdminContent"));
-const AdminSettings = lazy(() => import("../AdminSettings"));
+const PageEditor = lazy(() => import("@/pages/admin/PageEditor"));
+const AdminPolicies = lazy(() => import("@/pages/admin/AdminPolicies"));
+const AdminContent = lazy(() => import("@/pages/admin/AdminContent"));
+const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
 
 const tabConfig = [
   { value: "pages", label: "Pages", icon: FileText, component: PageEditor },

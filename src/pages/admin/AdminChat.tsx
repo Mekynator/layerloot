@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback, useTransition } from "react";
 
 const LazyPersonalization = React.lazy(() => import("./AdminPersonalization"));
 const LazyActivityLog = React.lazy(() => import("./AdminActivity"));
@@ -767,6 +767,8 @@ export default function AdminChat() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [, startTransition] = useTransition();
+  const handleTabChange = useCallback((v: string) => startTransition(() => setActiveTab(v)), []);
 
   const isDirty = useMemo(() => JSON.stringify(config) !== JSON.stringify(savedConfig), [config, savedConfig]);
 
@@ -826,7 +828,7 @@ export default function AdminChat() {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
 
         <TabsList className="flex flex-wrap h-auto gap-1">
           <TabsTrigger value="overview" className="gap-1.5"><Settings2 className="h-3.5 w-3.5" /> Overview</TabsTrigger>
@@ -846,7 +848,7 @@ export default function AdminChat() {
         </TabsList>
 
         {/* ─── OVERVIEW ─── */}
-        <TabsContent value="overview"><OverviewTab config={config} setTab={setActiveTab} /></TabsContent>
+        <TabsContent value="overview"><OverviewTab config={config} setTab={handleTabChange} /></TabsContent>
 
         {/* ─── PRESETS ─── */}
         <TabsContent value="presets"><PresetsTab config={config} setConfig={setConfig} /></TabsContent>

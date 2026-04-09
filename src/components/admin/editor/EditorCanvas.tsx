@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { tr } from "@/lib/translate";
 import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 import { useVisualEditor } from "@/contexts/VisualEditorContext";
 import { Plus, Eye, EyeOff, Copy, Trash2, ChevronUp, ChevronDown, GripVertical, Settings2 } from "lucide-react";
@@ -418,7 +419,7 @@ function CanvasBlockWrapper({
             {block.block_type.replace(/_/g, " ")}
           </span>
           {block.title && block.title !== block.block_type && (
-            <span className="max-w-[80px] truncate text-[9px] text-muted-foreground">· {block.title}</span>
+            <span className="max-w-[80px] truncate text-[9px] text-muted-foreground">· {typeof block.title === "string" ? block.title : tr(block.title, "")}</span>
           )}
         </div>
       )}

@@ -250,6 +250,7 @@ const resolveItemAction = (item: any, fallbackLink?: string): Required<BlockActi
   return {
     actionType: isExternal ? "external_link" : "internal_link",
     actionTarget: fallbackLink,
+    anchorId: "",
     openInNewTab: false,
   };
 };

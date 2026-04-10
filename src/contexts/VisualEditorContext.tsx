@@ -437,7 +437,10 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     if (!activePage) return;
     if (autosaveTimer.current) window.clearTimeout(autosaveTimer.current as unknown as number);
     autosaveTimer.current = window.setTimeout(async () => {
-      if (isDirty) {
+      const hasUnsavedChanges =
+        draftBlocks.length !== savedBlocks.length ||
+        JSON.stringify(draftBlocks) !== JSON.stringify(savedBlocks);
+      if (hasUnsavedChanges) {
         await save();
       }
       // persist session snapshot
@@ -445,7 +448,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     }, 1500) as unknown as number;
     return () => { if (autosaveTimer.current) window.clearTimeout(autosaveTimer.current as unknown as number); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draftBlocks, activePage, isDirty]);
+  }, [draftBlocks, savedBlocks, activePage]);
 
   // Persist session snapshot on unload
   useEffect(() => {

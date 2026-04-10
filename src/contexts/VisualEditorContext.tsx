@@ -114,6 +114,11 @@ export function useVisualEditor() {
   return ctx;
 }
 
+/** Safe version that returns null when outside the provider (e.g. storefront) */
+export function useVisualEditorSafe() {
+  return useContext(EditorContext);
+}
+
 const sortBlocks = (list: SiteBlock[]) => [...list].sort((a, b) => a.sort_order - b.sort_order);
 
 const isGlobalPage = (page?: Pick<SitePage, "page_type" | "slug"> | null) =>

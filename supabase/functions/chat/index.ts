@@ -403,7 +403,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: aiMessages,
-        stream: true,
+        stream: false,
       }),
     });
 
@@ -420,7 +420,84 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "AI service unavailable" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    return new Response(response.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+    // Read full assistant response (non-stream) and sanitize any product blocks / route text
+    const json = await response.json().catch(() => null);
+    let assistantText = "";
+    try {
+      assistantText = (json?.choices?.[0]?.message?.content) ?? (json?.choices?.[0]?.text) ?? "";
+    } catch {
+      assistantText = "";
+    }
+
+    // Helper: parse product blocks written by model
+    const productBlockRe = /•\s+\*\*([^*\n]+)\*\*[ \t]*\n((?:[ \t]*-[ \t]+[^\n]*\n?)*)/g;
+
+    const ctxProducts: any[] = ctx.products ?? [];
+
+    const sanitizeProductBlock = (matchName: string, body: string) => {
+      // Strict matching: only accept exact id, exact slug, or exact name (case-insensitive)
+      const name = matchName.trim();
+      let found = null;
+
+      // exact id
+      found = ctxProducts.find((p) => p.id && p.id === name);
+      if (!found) {
+        // exact slug e.g. '/products/slug' or 'slug'
+        const slug = name.startsWith("/products/") ? name.replace(/^\/products\//, "") : name;
+        found = ctxProducts.find((p) => p.slug && p.slug === slug);
+      }
+      if (!found) {
+        // exact name (case-insensitive)
+        found = ctxProducts.find((p) => p.name && p.name.toLowerCase() === name.toLowerCase());
+      }
+
+      if (!found) return null;
+      const img = (found.images && found.images[0]) || "";
+      const price = found.price != null ? `${Number(found.price)} kr` : "";
+      const benefitLine = ""; // avoid inventing benefits here
+      const productUrl = `/products/${found.slug}`;
+      return `• **${getStr(found.name)}**\n  - ${benefitLine}\n  - ${price}\n  - ![${getStr(found.name)}](${img})\n  - → [View product](${productUrl})\n`;
+    };
+
+    // Replace product blocks with sanitized versions; collect replacements
+    let sanitized = assistantText;
+    let anyProductReplaced = false;
+    sanitized = sanitized.replace(productBlockRe, (full, name, body) => {
+      const repl = sanitizeProductBlock(name, body);
+      if (repl) { anyProductReplaced = true; return repl; }
+      // if not found, remove the block
+      return "";
+    });
+
+    // Replace raw route mentions with friendly buttons for known routes
+    const routeMap: Record<string, string> = {
+      '/create': '[Create Your Own](/create)',
+      '/products': '[Browse Products](/products)',
+      '/cart': '[View Cart](/cart)',
+      '/contact': '[Contact Us](/contact)',
+      '/account': '[Account](/account)',
+      '/shipping': '[Shipping Info](/shipping)',
+      '/gallery': '[Gallery](/gallery)',
+      '/order-tracking': '[Order Tracking](/order-tracking)',
+      '/reviews': '[Reviews](/reviews)',
+      '/help': '[Help](/help)',
+      '/faq': '[FAQ](/faq)'
+    };
+    Object.keys(routeMap).forEach((r) => {
+      // replace bare mentions like 'Go to /create' or ' /create ' (avoid replacing inside markdown links)
+      const rx = new RegExp(`(?<!\])\\b${r}\\b(?!\()`, 'g');
+      sanitized = sanitized.replace(rx, routeMap[r]);
+    });
+
+    // If assistant referenced products but we removed all product blocks, add a safe fallback
+    const hadProductIntent = /\b(product|best seller|best sellers|recommend|gift|suggest)\b/i.test(assistantText);
+    if (hadProductIntent && !anyProductReplaced) {
+      sanitized += "\nI couldn't find exact active products matching that right now. → [Browse Products](/products)";
+    }
+
+    // Return as a single SSE data chunk so frontend can consume similarly
+    const ssePayload = `data: ${JSON.stringify({ choices: [{ delta: { content: sanitized } }] })}\n\ndata: [DONE]\n\n`;
+    return new Response(ssePayload, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
   } catch (error) {
     console.error("chat error:", error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });

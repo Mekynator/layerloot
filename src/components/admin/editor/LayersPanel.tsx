@@ -178,7 +178,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
               <Layers className="mb-2 h-8 w-8 text-muted-foreground/30" />
               <p className="text-xs text-muted-foreground">No blocks yet</p>
               <Button size="sm" className="mt-3" onClick={onAddBlock}>
-                <Plus className="mr-1 h-3 w-3" /> Add Block
+                <Plus className="mr-1 h-3 w-3" /> Add Section
               </Button>
             </div>
           ) : filteredItems.length === 0 ? (

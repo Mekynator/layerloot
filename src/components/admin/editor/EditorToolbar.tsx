@@ -243,7 +243,7 @@ export default function EditorToolbar({ onAddBlock, onPageSettings, onDeletePage
           <div className="h-5 w-px bg-border/30" />
 
           <Button variant="outline" size="sm" onClick={onAddBlock} className="h-8 gap-1.5 text-xs">
-            <Plus className="h-3.5 w-3.5" /> Add Block
+            <Plus className="h-3.5 w-3.5" /> Add Section
           </Button>
 
           <Tooltip>

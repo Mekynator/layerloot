@@ -21,6 +21,7 @@ interface EditorPreviewOverlayProps {
   onEditBlock: (id: string) => void;
   onToggleActive?: (id: string) => void;
   onAddBefore?: (id: string) => void;
+  onAddAtIndex?: (index: number) => void;
   onStartDrag?: (id: string) => void;
   onDragOverBlock?: (id: string) => void;
   onDropBlock?: (targetId: string) => void;
@@ -63,17 +64,52 @@ export default function EditorPreviewOverlay({
   const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null);
 
   const orderedBlocks = useMemo(
-    () =>
-      [...blocks].sort((a, b) => {
+    () => {
+      // Deduplicate blocks by id to avoid React duplicate key warnings
+      const uniqueById = Array.from(new Map(blocks.map((b) => [b.id, b])).values());
+      return uniqueById.sort((a, b) => {
         if (a.top !== b.top) return a.top - b.top;
         return a.left - b.left;
-      }),
+      });
+    },
     [blocks],
   );
 
+  // Debug: log ordered block ids to help trace duplicate-key warnings
+  // (left as debug during investigation; remove once resolved)
+  if (typeof window !== "undefined") {
+    // eslint-disable-next-line no-console
+    console.log("EditorPreviewOverlay orderedBlockIds:", orderedBlocks.map((b) => b.id));
+  }
+
   return (
     <div className="pointer-events-none absolute inset-0 z-20">
+      {/* Inline add controls between sections */}
+      {orderedBlocks.length === 0 ? (
+        <div className="pointer-events-auto absolute inset-0 flex items-center justify-center">
+          <button
+            type="button"
+            onClick={() => onAddAtIndex?.(0)}
+            className="rounded-md bg-primary/95 px-3 py-2 text-xs font-semibold text-white shadow-md"
+          >
+            + Add Section
+          </button>
+        </div>
+      ) : (
+        // top insertion
+        orderedBlocks.map((b, i) => null)
+      )}
+
+      {
+        const keyCounts = new Map<string, number>();
+        // ensure unique keys even if duplicate ids slip through
+      }
+
       {orderedBlocks.map((block) => {
+        const prev = keyCounts.get(block.id) ?? 0;
+        const count = prev + 1;
+        keyCounts.set(block.id, count);
+        const renderKey = count === 1 ? block.id : `${block.id}-${count}`;
         const selected = selectedBlockId === block.id;
         const hidden = hiddenBlockIds.includes(block.id);
         const dragging = draggingBlockId === block.id;
@@ -101,7 +137,7 @@ export default function EditorPreviewOverlay({
 
         return (
           <div
-            key={block.id}
+            key={renderKey}
             className={`absolute rounded-md border-2 transition-all duration-150 ${containerClass} ${dragging ? "opacity-50" : ""}`}
             style={{
               top: block.top,
@@ -199,6 +235,35 @@ export default function EditorPreviewOverlay({
           </div>
         );
       })}
+
+        {/* Render inline add buttons between blocks and after last */}
+        {orderedBlocks.map((block, idx) => {
+          const nextTop = block.top + block.height + 8;
+          const centerX = block.left + block.width / 2 - 80;
+          return (
+            <div key={`add-${block.id}`} style={{ top: nextTop, left: centerX }} className="pointer-events-auto absolute z-30">
+              <button
+                type="button"
+                onClick={() => onAddAtIndex?.(idx + 1)}
+                className="rounded-full bg-card/95 px-3 py-1 text-[12px] font-medium shadow-md border border-border/30"
+              >
+                + Add Section
+              </button>
+            </div>
+          );
+        })}
+
+        {orderedBlocks.length > 0 && (
+          <div style={{ top: orderedBlocks[orderedBlocks.length - 1].top + orderedBlocks[orderedBlocks.length - 1].height + 28, left: orderedBlocks[orderedBlocks.length - 1].left }} className="pointer-events-auto absolute z-30">
+            <button
+              type="button"
+              onClick={() => onAddAtIndex?.(orderedBlocks.length)}
+              className="rounded-md bg-card/95 px-3 py-1 text-sm font-medium shadow-md border border-border/30"
+            >
+              + Add Section
+            </button>
+          </div>
+        )}
     </div>
   );
 }

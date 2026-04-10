@@ -358,6 +358,14 @@ const PageEditor = () => {
   const pageBlocks = useMemo(() => sortBlocks(blocks.filter((b) => b.page === activePage)), [activePage, blocks]);
   const selectedBlock = pageBlocks.find((b) => b.id === selectedBlockId) || null;
 
+  // Auto-open editor panel when a section is selected to provide immediate editing flow.
+  useEffect(() => {
+    if (selectedBlockId) {
+      // open editor panel when a block is selected
+      setEditPanelOpen(true);
+    }
+  }, [selectedBlockId]);
+
   const replacePageBlocks = (nextPageBlocks: SiteBlock[]) => {
     setBlocks((prev) => {
       const otherPages = prev.filter((b) => b.page !== activePage);
@@ -802,7 +810,7 @@ const PageEditor = () => {
               }}
               className="font-display text-xs uppercase tracking-wider"
             >
-              <Plus className="mr-1 h-3.5 w-3.5" /> Add Block
+              <Plus className="mr-1 h-3.5 w-3.5" /> Add Section
             </Button>
 
             <Button
@@ -824,15 +832,19 @@ const PageEditor = () => {
           }`}
         >
           <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/30 bg-card/95 px-4 py-3 backdrop-blur-xl">
-            <div className="flex items-center gap-2">
-              <LayoutGrid className="h-4 w-4 text-primary" />
-              <span className="font-display text-xs font-bold uppercase tracking-widest text-foreground">
-                Structure
-              </span>
+            <div className="flex items-center gap-3">
+              <LayoutGrid className="h-5 w-5 text-primary" />
+              <div>
+                <div className="font-display text-[11px] font-bold uppercase tracking-wider text-foreground">Sections</div>
+                <div className="text-[10px] text-muted-foreground">Page sections & ordering</div>
+              </div>
             </div>
-            <Badge variant="secondary" className="font-mono text-[10px]">
-              {pageBlocks.length} blocks
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="font-mono text-[10px]">{pageBlocks.length}</Badge>
+              <Button variant="ghost" size="sm" onClick={() => { setInsertAtIndex(null); setAddBlockOpen(true); }} className="text-xs">
+                <Plus className="mr-1 h-3.5 w-3.5" /> Add Section
+              </Button>
+            </div>
           </div>
 
           <div className="border-b border-border/30 bg-background-secondary/50 px-4 py-3">
@@ -861,7 +873,7 @@ const PageEditor = () => {
                   setAddBlockOpen(true);
                 }}
               >
-                <Plus className="mr-1 h-3.5 w-3.5" /> Add Block
+                <Plus className="mr-1 h-3.5 w-3.5" /> Add Section
               </Button>
             </div>
           ) : (
@@ -872,55 +884,55 @@ const PageEditor = () => {
                 const colorClass = BLOCK_COLORS[block.block_type] ?? "border-l-muted-foreground bg-muted/30";
                 const isSelected = selectedBlockId === block.id;
                 const placement = (block.content as Record<string, any> | null)?.placement as string | undefined;
+                  return (
+                    <div key={block.id}>
+                      {sDragOverIndex === index && sDragIndex !== index && (
+                        <div className="mx-2 h-0.5 rounded bg-primary" />
+                      )}
 
-                return (
-                  <div key={block.id}>
-                    {sDragOverIndex === index && sDragIndex !== index && (
-                      <div className="mx-2 h-0.5 rounded bg-primary" />
-                    )}
-
-                    <div
-                      draggable
-                      onDragStart={() => setSDragIndex(index)}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        setSDragOverIndex(index);
-                      }}
-                      onDragEnd={handleStructureDragEnd}
-                      onClick={() => setSelectedBlockId(isSelected ? null : block.id)}
-                      className={`group cursor-pointer rounded-lg border-l-[3px] px-2 py-2 text-sm transition-all duration-200 ${colorClass} ${
-                        isSelected ? "ring-2 ring-primary/60 ring-offset-1 ring-offset-card shadow-[0_0_16px_hsl(217_91%_60%/0.1)]" : "hover:bg-accent/30 hover:shadow-[0_2px_12px_-2px_hsl(228_33%_2%/0.3)]"
-                      } ${!block.is_active ? "opacity-50" : ""}`}
-                    >
-                      <div className="flex items-start gap-2">
-                        <GripVertical className="mt-0.5 h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground" />
-                        <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-foreground/60" />
+                      <div
+                        draggable
+                        onDragStart={() => setSDragIndex(index)}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setSDragOverIndex(index);
+                        }}
+                        onDragEnd={handleStructureDragEnd}
+                        onClick={() => setSelectedBlockId(isSelected ? null : block.id)}
+                        className={`group relative flex cursor-pointer items-center gap-3 rounded-lg border-l-[4px] px-3 py-3 text-sm transition-all duration-200 ${colorClass} ${
+                          isSelected ? "bg-background/60 ring-2 ring-primary/60 ring-offset-1 ring-offset-card shadow-[0_6px_24px_-8px_hsl(217_91%_60%/0.08)]" : "hover:bg-accent/30"
+                        } ${!block.is_active ? "opacity-50" : ""}`}
+                      >
+                        <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <Icon className="h-4 w-4 shrink-0 text-foreground/70" />
 
                         <div className="min-w-0 flex-1">
-                          <span className="block truncate font-display text-[11px] font-semibold uppercase tracking-wider text-foreground">
-                            {bt?.label ?? block.block_type}
-                          </span>
-                          {Boolean(tr(block.title, "")) && tr(block.title, "") !== bt?.label && (
-                            <span className="block truncate text-[10px] text-muted-foreground">{tr(block.title, "")}</span>
-                          )}
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            <span className="rounded bg-background/70 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <span className="truncate font-display text-[12px] font-semibold uppercase tracking-wider text-foreground">
+                              {bt?.label ?? block.block_type}
+                            </span>
+                            {Boolean(tr(block.title, "")) && tr(block.title, "") !== bt?.label && (
+                              <span className="text-[11px] text-muted-foreground">{tr(block.title, "")}</span>
+                            )}
+                          </div>
+                          <div className="mt-1 flex items-center gap-2">
+                            <span className="rounded bg-background/70 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
                               {placementLabel(activePage, placement)}
                             </span>
+                            {!block.is_active && <span className="text-[10px] text-amber-600">Hidden</span>}
                           </div>
                         </div>
 
-                        {!block.is_active && <EyeOff className="h-3 w-3 shrink-0 text-muted-foreground" />}
-
-                        <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                        <div className="flex shrink-0 items-center gap-1">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               void toggleActive(block.id, !(block.is_active ?? true));
                             }}
                             className="rounded p-1 text-muted-foreground hover:text-foreground"
+                            aria-label="Toggle visibility"
                           >
-                            {block.is_active ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                            {block.is_active ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                           </button>
 
                           <button
@@ -930,8 +942,9 @@ const PageEditor = () => {
                               setEditPanelOpen(true);
                             }}
                             className="rounded p-1 text-muted-foreground hover:text-foreground"
+                            aria-label="Edit section"
                           >
-                            <PanelLeft className="h-3 w-3" />
+                            <PanelLeft className="h-4 w-4" />
                           </button>
 
                           <button
@@ -940,14 +953,14 @@ const PageEditor = () => {
                               void deleteBlock(block.id);
                             }}
                             className="rounded p-1 text-muted-foreground hover:text-destructive"
+                            aria-label="Delete section"
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
+                  );
               })}
 
               {sDragOverIndex === pageBlocks.length && <div className="mx-2 h-0.5 rounded bg-primary" />}
@@ -1019,6 +1032,7 @@ const PageEditor = () => {
               setInsertAtIndex(blockIndex);
               setAddBlockOpen(true);
             }}
+            onAddAtIndex={(index) => { setInsertAtIndex(index); setAddBlockOpen(true); }}
             onMoveBlock={handleMoveBlock}
           />
         </main>

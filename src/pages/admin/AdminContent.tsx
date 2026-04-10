@@ -370,7 +370,7 @@ const AdminContent = () => {
 
       {/* Quick Add Toolbar */}
       <div className="mb-6 rounded-lg border border-border bg-card p-3">
-        <p className="mb-2 font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">Add Block</p>
+        <p className="mb-2 font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">Add Section</p>
         <div className="flex flex-wrap gap-2">
           {blockTypes.map(({ value, label, icon: Icon }) => (
             <Button key={value} variant="outline" size="sm" onClick={() => quickAddBlock(value)}

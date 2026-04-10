@@ -3,6 +3,7 @@ import { ExternalLink, MonitorSmartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
 import EditorPreviewOverlay, { type PreviewBlockRect } from "@/components/admin/EditorPreviewOverlay";
+import { useVisualEditor } from "@/contexts/VisualEditorContext";
 
 type Props = {
   page: string;
@@ -13,6 +14,7 @@ type Props = {
   onEditBlock: (id: string) => void;
   onToggleActive: (id: string) => void;
   onAddBefore: (id: string) => void;
+  onAddAtIndex?: (index: number) => void;
   onMoveBlock: (draggedId: string, targetId: string) => void;
 };
 
@@ -39,6 +41,15 @@ export default function EditorPreviewFrame({
   const [overlayBlocks, setOverlayBlocks] = useState<PreviewBlockRect[]>([]);
   const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
   const [dragOverBlockId, setDragOverBlockId] = useState<string | null>(null);
+  const [inlineEdit, setInlineEdit] = useState<{
+    blockId: string;
+    field: string;
+    text: string;
+    rect: { top: number; left: number; width: number; height: number } | null;
+    original?: string;
+  } | null>(null);
+
+  const editor = useVisualEditor();
 
   const iframeSrc = useMemo(() => {
     const url = new URL(window.location.origin + pagePath);
@@ -118,6 +129,66 @@ export default function EditorPreviewFrame({
         });
 
         pollId = window.setInterval(requestSync, 600);
+        // Inject editor-only hooks into the preview iframe to make it builder-safe.
+        try {
+          const injectId = "layerloot-editor-inject";
+          if (!frameDocument.getElementById(injectId)) {
+            const script = frameDocument.createElement("script");
+            script.id = injectId;
+            script.type = "text/javascript";
+            script.textContent = `(() => {
+              if (window.__layerlootEditorInjected) return; window.__layerlootEditorInjected = true;
+              const findBlock = (el) => el && (el.dataset && el.dataset.editorBlockId ? el : el.closest && el.closest('[data-editor-block-id]'));
+
+              const detectField = (el) => {
+                if (!el) return null;
+                const tag = (el.tagName || '').toLowerCase();
+                if (tag.startsWith('h1') || tag === 'h1' || tag === 'h2' || tag === 'h3') return 'heading';
+                if (tag === 'p' || tag === 'div' || tag === 'span') return 'body';
+                if (tag === 'button' || el.getAttribute && el.getAttribute('role') === 'button') return 'button';
+                return null;
+              };
+
+              // Prevent navigation and store actions while in editor preview
+              document.addEventListener('click', function(e){
+                try {
+                  const targetBlock = findBlock(e.target);
+                  const anchor = e.target.closest && e.target.closest('a');
+                  if (anchor) { e.preventDefault(); e.stopPropagation(); }
+                  if (targetBlock) {
+                    e.preventDefault(); e.stopPropagation();
+                    const id = targetBlock.dataset.editorBlockId;
+                    window.parent.postMessage({ source: 'layerloot-editor-preview', type: 'select-block', blockId: id }, window.location.origin);
+                  }
+                } catch (err) {}
+              }, true);
+
+              document.addEventListener('dblclick', function(e){
+                try {
+                  const targetBlock = findBlock(e.target);
+                  if (targetBlock) {
+                    e.preventDefault(); e.stopPropagation();
+                    const id = targetBlock.dataset.editorBlockId;
+                    const field = detectField(e.target) || 'heading';
+                    const rect = e.target.getBoundingClientRect();
+                    const payload = { top: rect.top + (window.scrollY || 0), left: rect.left, width: rect.width, height: rect.height };
+                    const text = (e.target.innerText || '').trim();
+                    window.parent.postMessage({ source: 'layerloot-editor-preview', type: 'inline-edit-start', blockId: id, field, text, rect: payload }, window.location.origin);
+                  }
+                } catch (err) {}
+              }, true);
+
+              document.addEventListener('submit', function(e){ try { e.preventDefault(); e.stopPropagation(); } catch (err) {} }, true);
+
+              // Disable any inline anchors/forms default behavior proactively
+              Array.from(document.querySelectorAll('a')).forEach(a => { a.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); }, true); });
+            })();`;
+
+            try {
+              (frameDocument.head || frameDocument.body || frameDocument.documentElement).appendChild(script);
+            } catch (e) {}
+          }
+        } catch {}
       } catch {
         setOverlayBlocks([]);
       }
@@ -205,6 +276,13 @@ export default function EditorPreviewFrame({
         onSelectBlock(data.blockId);
         onEditBlock(data.blockId);
       }
+      if (data.type === "inline-edit-start" && typeof data.blockId === "string") {
+        try {
+          const rect = data.rect && typeof data.rect.top === 'number' ? data.rect : null;
+          setInlineEdit({ blockId: data.blockId, field: data.field || 'heading', text: data.text || '', rect, original: data.text || '' });
+          onSelectBlock(data.blockId);
+        } catch {}
+      }
     };
 
     window.addEventListener("message", handleMessage);
@@ -258,6 +336,26 @@ export default function EditorPreviewFrame({
           referrerPolicy="no-referrer-when-downgrade"
         />
 
+        {blocks.length === 0 && (
+          <div className="pointer-events-auto absolute inset-0 z-30 flex items-center justify-center">
+            <div className="w-[520px] max-w-[90%] rounded-lg border border-border/30 bg-card/95 p-6 text-center shadow-[0_8px_40px_-12px_rgba(2,6,23,0.6)] backdrop-blur-xl">
+              <p className="mb-3 text-sm font-semibold text-foreground">Your canvas is empty</p>
+              <p className="mb-4 text-sm text-muted-foreground">Add a section to get started building your page. Sections are the main building blocks of the storefront and can be reordered, edited, or hidden.</p>
+              <div className="flex justify-center">
+                <Button
+                  variant="default"
+                  onClick={() => {
+                    // Attempt to add before first block, or call with empty string if none exist.
+                    onAddBefore(blocks[0]?.id ?? "");
+                  }}
+                >
+                  Add first section
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <EditorPreviewOverlay
           blocks={overlayBlocks}
           selectedBlockId={selectedBlockId}
@@ -268,6 +366,7 @@ export default function EditorPreviewFrame({
           onEditBlock={onEditBlock}
           onToggleActive={onToggleActive}
           onAddBefore={onAddBefore}
+          onAddAtIndex={onAddAtIndex}
           onStartDrag={(id) => setDraggingBlockId(id)}
           onDragOverBlock={(id) => setDragOverBlockId(id)}
           onDropBlock={handleDropBlock}
@@ -276,6 +375,41 @@ export default function EditorPreviewFrame({
             setDragOverBlockId(null);
           }}
         />
+
+        {inlineEdit && inlineEdit.rect && (
+          <div className="absolute z-40" style={{ top: inlineEdit.rect.top, left: inlineEdit.rect.left, width: inlineEdit.rect.width }}>
+            <InlineEditor
+              initialValue={inlineEdit.text}
+              field={inlineEdit.field}
+              onCancel={() => setInlineEdit(null)}
+              onSave={async (value) => {
+                const bid = inlineEdit.blockId;
+                const block = blocks.find((b) => b.id === bid);
+                if (!block) return setInlineEdit(null);
+                const current = typeof block.content === 'object' && block.content ? { ...(block.content as Record<string, unknown>) } : {};
+
+                let next = { ...current };
+                if (inlineEdit.field === 'heading' || inlineEdit.field === 'body' || inlineEdit.field === 'subheading') {
+                  next[inlineEdit.field] = value;
+                } else if (inlineEdit.field === 'button') {
+                  if (Array.isArray(next.buttons) && next.buttons.length > 0) {
+                    const buttons = [...(next.buttons as any[])];
+                    buttons[0] = { ...buttons[0], text: value };
+                    next.buttons = buttons;
+                  } else {
+                    next.buttons = [{ text: value }];
+                  }
+                }
+
+                try {
+                  editor.updateBlockContent(bid, next);
+                  await editor.save();
+                } catch {}
+                setInlineEdit(null);
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

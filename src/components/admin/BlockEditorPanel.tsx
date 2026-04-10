@@ -11,6 +11,8 @@ import type { SiteBlock } from "./BlockRenderer";
 import type { Json } from "@/integrations/supabase/types";
 import BlockFieldGroups from "./editor/BlockFieldGroups";
 import { tr } from "@/lib/translate";
+import { useVisualEditor } from "@/contexts/VisualEditorContext";
+import { Copy, Trash2, X } from "lucide-react";
 
 interface BlockEditorPanelProps {
   block: SiteBlock | null;
@@ -99,6 +101,7 @@ const normalizeContent = (block: SiteBlock | null) => {
 
 const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPanelProps) => {
   const { toast } = useToast();
+  const editor = useVisualEditor();
   const [title, setTitle] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [content, setContent] = useState<Record<string, unknown>>({});
@@ -192,19 +195,61 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
 
   if (!block) return null;
 
+  const handleDelete = () => {
+    try {
+      editor.deleteBlock(block.id);
+      onClose();
+    } catch (err) {
+      toast({ title: "Delete failed", description: "Could not delete section", variant: "destructive" });
+    }
+  };
+
+  const handleDuplicate = () => {
+    try {
+      editor.duplicateBlock(block.id);
+      toast({ title: "Section duplicated" });
+    } catch (err) {
+      toast({ title: "Duplicate failed", description: "Could not duplicate section", variant: "destructive" });
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={(value) => !value && onClose()}>
       <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-2xl">
         <SheetHeader>
-          <SheetTitle className="font-display uppercase tracking-wider">
-            Edit Block
-          </SheetTitle>
+          <div className="flex items-start gap-3 w-full">
+            <div className="flex-1">
+              <SheetTitle className="font-display tracking-wider flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-foreground">{tr(block.title, block.block_type.replace(/_/g, " "))}</span>
+                    <span className="text-[11px] text-muted-foreground">{block.block_type.replace(/_/g, " ")}</span>
+                  </div>
+                </div>
+              </SheetTitle>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => { setIsActive((v) => { const n = !v; void editor.toggleBlockActive(block.id); return n; }); }} className="text-sm">
+                {isActive ? "Hide" : "Show"}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleDuplicate} title="Duplicate">
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button variant="destructive" size="sm" onClick={handleDelete} title="Delete">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={onClose} title="Close">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </SheetHeader>
 
-        <div className="mt-4 space-y-4">
-          {/* ─── Block Header ─────────────────────────────────── */}
-          <div className="rounded-lg border border-border/40 bg-muted/30 p-4 space-y-3">
-            <div className="flex items-center gap-2">
+        <div className="mt-4 space-y-5 px-4">
+          {/* Section group */}
+          <div className="rounded-lg border border-border/40 bg-muted/30 p-4">
+            <div className="flex items-center gap-3">
               <Badge variant="secondary" className="text-[10px] uppercase tracking-wider">
                 {block.block_type.replace(/_/g, " ")}
               </Badge>
@@ -212,29 +257,79 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
                 <span className={`text-xs ${isActive ? "text-green-500" : "text-muted-foreground"}`}>
                   {isActive ? "Active" : "Inactive"}
                 </span>
-                <Switch checked={isActive} onCheckedChange={setIsActive} />
+                <Switch checked={isActive} onCheckedChange={(v) => { setIsActive(!!v); }} />
               </div>
             </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Block name</Label>
+
+            <div className="mt-3">
+              <Label className="text-xs text-muted-foreground">Section title</Label>
               <Input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1" />
             </div>
           </div>
 
-          {/* ─── Grouped Field Editor ─────────────────────────── */}
-          <BlockFieldGroups
-            blockType={block.block_type}
-            content={content}
-            patchContent={patchContent}
-            repeaterItems={repeaterItems}
-            patchItem={patchItem}
-            addItem={addItem}
-            removeItem={removeItem}
-            moveItem={moveItem}
-            pages={pages}
-          />
+          {/* Content group - reuse existing BlockFieldGroups which is content-aware */}
+          <div className="rounded-lg border border-border/40 bg-muted/20 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h4 className="text-sm font-semibold">Content</h4>
+              <p className="text-xs text-muted-foreground">Edit content and media</p>
+            </div>
 
-          {/* ─── Save / Cancel ────────────────────────────────── */}
+            <BlockFieldGroups
+              blockType={block.block_type}
+              content={content}
+              patchContent={patchContent}
+              repeaterItems={repeaterItems}
+              patchItem={patchItem}
+              addItem={addItem}
+              removeItem={removeItem}
+              moveItem={moveItem}
+              pages={pages}
+            />
+          </div>
+
+          {/* Conditional small groups: Buttons/Actions, Layout, Style */}
+          {content.buttons || block.block_type === "hero" || block.block_type === "cta" ? (
+            <div className="rounded-lg border border-border/40 bg-muted/20 p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h4 className="text-sm font-semibold">Buttons / Actions</h4>
+                <p className="text-xs text-muted-foreground">Manage CTAs</p>
+              </div>
+              {/* Buttons editor reuses BlockFieldGroups if available; otherwise provide minimal controls */}
+              {/* Existing BlockFieldGroups will render button controls when appropriate */}
+            </div>
+          ) : null}
+
+          {block.block_type === "spacer" || block.block_type === "divider" ? (
+            <div className="rounded-lg border border-border/40 bg-muted/20 p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h4 className="text-sm font-semibold">Layout / Spacing</h4>
+                <p className="text-xs text-muted-foreground">Adjust spacing and dividers</p>
+              </div>
+
+              {/* Minimal controls for spacer/divider */}
+              {block.block_type === "spacer" && (
+                <div>
+                  <Label className="text-xs text-muted-foreground">Height (px)</Label>
+                  <Input value={(content.height as number) ?? 40} onChange={(e) => patchContent("height", Number(e.target.value) || 0)} className="mt-1 w-32" />
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          {/* Visibility / Advanced */}
+          <div className="rounded-lg border border-border/40 bg-muted/20 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h4 className="text-sm font-semibold">Visibility</h4>
+              <p className="text-xs text-muted-foreground">Who can see this section</p>
+            </div>
+            {/* Keep minimal for now; existing visibility toggles are in the header/group */}
+            <div className="flex items-center gap-3">
+              <Switch checked={!!content.visibility ?? isActive} onCheckedChange={(v) => patchContent("visibility", !!v)} />
+              <Label className="text-xs text-muted-foreground">Visible on storefront</Label>
+            </div>
+          </div>
+
+          {/* Save / Cancel */}
           <div className="flex gap-2 pt-2 sticky bottom-0 bg-background pb-2">
             <Button variant="outline" onClick={onClose} className="flex-1" disabled={saving}>
               Cancel

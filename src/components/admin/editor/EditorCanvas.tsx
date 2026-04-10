@@ -142,7 +142,7 @@ export default function EditorCanvas() {
                 <div className="mb-4 rounded-2xl bg-card/60 p-6 backdrop-blur-xl" style={{ boxShadow: '0 8px 40px -8px hsl(228 33% 2% / 0.5)' }}>
                   <Plus className="mx-auto mb-3 h-10 w-10 text-muted-foreground/30" />
                   <p className="text-sm text-muted-foreground">Empty page</p>
-                  <p className="mt-1 text-xs text-muted-foreground/70">Add blocks to start building</p>
+                  <p className="mt-1 text-xs text-muted-foreground/70">Add sections to start building</p>
                 </div>
               </div>
             ) : (

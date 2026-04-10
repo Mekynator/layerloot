@@ -7,6 +7,8 @@ export interface CartItem {
   image?: string;
   slug?: string;
   quantity: number;
+  isGift?: boolean;
+  giftMessage?: string | null;
 }
 
 type AddItemOptions = {

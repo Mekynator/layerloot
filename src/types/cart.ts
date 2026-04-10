@@ -37,6 +37,8 @@ export interface CartItem {
   free_shipping_eligible?: boolean | null;
   variant_data?: Record<string, unknown> | null;
   custom_data?: Record<string, unknown> | null;
+  isGift?: boolean;
+  giftMessage?: string | null;
 }
 
 export interface SavedItem extends Omit<CartItem, "quantity"> {

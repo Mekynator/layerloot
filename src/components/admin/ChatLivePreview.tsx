@@ -20,7 +20,7 @@ const TONE_SAMPLES: Record<string, string> = {
   playful: "Ooh great question! 🎉 People are LOVING the Galaxy Lamp right now — it's basically magic in a lamp! And the Custom Lithophane? Chef's kiss 👨‍🍳💋 Want the deets?",
   premium: "Excellent taste. Our curated best sellers — the Galaxy Lamp and bespoke Lithophane — represent the pinnacle of 3D craftsmanship. Shall I walk you through the collection?",
   warm: "I'm so glad you asked! Our customers really love the Galaxy Lamp — it creates such a cozy atmosphere. The Custom Lithophane is another favorite, perfect for meaningful gifts. What catches your eye?",
-  concise: "Best sellers: Galaxy Lamp, Custom Lithophane, Dragon Figurine. Want details on any?",
+  concise: "Best sellers: Galaxy Lamp, Custom Lithophane. Want details on any?",
 };
 
 const PAGE_CONTEXTS: Record<string, { greeting: string; quickReplies: string[] }> = {

@@ -605,7 +605,7 @@ const AdminProducts = () => {
                       <Input
                         value={form.name}
                         onChange={(e) => setForm({ ...form, name: e.target.value, slug: generateSlug(e.target.value) })}
-                        placeholder="e.g. Dragon Figurine – Premium Edition"
+                        placeholder="e.g. Figurine – Premium Edition"
                         className="mt-1"
                       />
                     </div>

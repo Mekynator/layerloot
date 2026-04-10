@@ -12,9 +12,9 @@ import type { CartItem, SavedItem, UserDiscountCode } from "@/types/cart";
 const DEMO_CART: CartItem[] = [
   {
     id: "1",
-    product_id: "spawn-1",
-    title: "SPAWN",
-    slug: "spawn",
+    product_id: "sample-model-1",
+    title: "Sample Model",
+    slug: "sample-model",
     image_url: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop",
     price: 1500,
     quantity: 1,
@@ -45,7 +45,7 @@ const DEMO_SAVED: SavedItem[] = [
 const DEMO_CODES: UserDiscountCode[] = [
   {
     id: "d1",
-    user_id: "demo",
+    user_id: "sample",
     code: "WELCOME10",
     title: "WELCOME10",
     discount_type: "percent",
@@ -54,7 +54,7 @@ const DEMO_CODES: UserDiscountCode[] = [
   },
   {
     id: "d2",
-    user_id: "demo",
+    user_id: "sample",
     code: "SAVE50",
     title: "SAVE50",
     discount_type: "fixed",
@@ -70,7 +70,7 @@ const DEMO_RECOMMENDED: RecommendedProductCard[] = [
     slug: "led-display-base",
     image_url: "https://images.unsplash.com/photo-1519710164239-da123dc03ef4?q=80&w=600&auto=format&fit=crop",
     price: 229,
-    reason: "SPAWN",
+    reason: "Sample Model",
   },
   {
     id: "r2",

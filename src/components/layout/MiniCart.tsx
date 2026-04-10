@@ -1,3 +1,5 @@
+// Disable rule in this file: some third-party hooks return loosely-typed values
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useCallback } from "react";
 import type { CartItem } from "@/types/cart";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,8 +24,20 @@ interface MiniCartProps {
 }
 
 const MiniCart = ({ cartButtonRef, cartPulse, cartGlow, totalItems }: MiniCartProps) => {
-  const { t } = useTranslation();
-  const { items, removeItem, updateQuantity, totalPrice } = useCart();
+  type TFunction = (key: string, options?: Record<string, unknown> | string | number | undefined) => string;
+  const { t } = useTranslation() as { t: TFunction };
+  type LocalCartCtx = {
+    items: CartItem[];
+    removeItem: (id: string) => void;
+    updateQuantity: (id: string, qty: number) => void;
+    totalPrice: number;
+  };
+
+  const cartCtx = useCart() as LocalCartCtx;
+  const items = cartCtx.items;
+  const removeItem = cartCtx.removeItem;
+  const updateQuantity = cartCtx.updateQuantity;
+  const totalPrice = cartCtx.totalPrice;
   const { user } = useAuth();
   const { toast } = useToast();
     // Move to Saved handler (shared logic)
@@ -32,13 +46,14 @@ const MiniCart = ({ cartButtonRef, cartPulse, cartGlow, totalItems }: MiniCartPr
         toast({ title: t("cart.loginToSave", "Please log in to save items") });
         return;
       }
-      const { error } = await saveProduct(item.id, user.id);
+      const result = await saveProduct(item.id, user.id);
       removeItem(item.id);
       window.dispatchEvent(new CustomEvent("layerloot:saved-items-updated"));
-      if (!error) {
+      const errMsg = (result as { error?: { message?: string } } | null)?.error?.message;
+      if (!errMsg) {
         toast({ title: t("cart.movedToSaved", "Moved to Saved for Later"), description: item.name });
       } else {
-        toast({ title: t("cart.saveFailed", "Could not save item"), description: error.message, variant: "destructive" });
+        toast({ title: t("cart.saveFailed", "Could not save item"), description: errMsg, variant: "destructive" });
       }
     };
   const isMobile = useIsMobile();
@@ -111,6 +126,18 @@ const MiniCart = ({ cartButtonRef, cartPulse, cartGlow, totalItems }: MiniCartPr
                 <div className="max-h-72 overflow-y-auto p-3 space-y-1">
                   {items.map((item) => (
                     <div key={item.id} className="flex items-center gap-3 rounded-md py-2 px-3 hover:bg-muted/20 transition-colors">
+                      {/* Thumbnail (very small) - use real product image, keep tight sizing */}
+                      <div className="flex-shrink-0">
+                        {item.image ? (
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="h-8 w-8 rounded-md object-cover"
+                            loading="lazy"
+                          />
+                        ) : null}
+                      </div>
+
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">{item.title || item.name}</p>
                         <p className="text-[11px] text-muted-foreground">{`Qty ×${item.quantity}`}</p>
@@ -168,11 +195,14 @@ const MiniCart = ({ cartButtonRef, cartPulse, cartGlow, totalItems }: MiniCartPr
                       {t("cart.viewCart", "View Cart")}
                     </Button>
                   </Link>
-                  <Link to="/cart" className="flex-1">
-                    <Button size="sm" className="w-full font-display text-xs uppercase tracking-wider">
-                      {t("cart.checkout", "Checkout")} <ArrowRight className="ml-1 h-3 w-3" />
-                    </Button>
-                  </Link>
+
+                  <div className="flex items-center">
+                    <Link to="/cart">
+                      <Button size="sm" className="min-w-[10rem] font-display text-xs uppercase tracking-wider">
+                        {t("cart.continueToCheckout", "Continue to Checkout")} <ArrowRight className="ml-1 h-3 w-3" />
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               </>
             )}

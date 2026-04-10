@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useState, useTransition, useCallback } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
+import { VisualEditorProvider } from "@/contexts/VisualEditorContext";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { FileText, Shield, Settings, Layers } from "lucide-react";
 
@@ -41,7 +42,13 @@ export default function EditorWorkspace() {
         {tabConfig.map(({ value, component: Comp }) => (
           <TabsContent key={value} value={value}>
             <Suspense fallback={<div className="flex items-center justify-center py-12 text-muted-foreground">Loading...</div>}>
-              <Comp />
+              {value === "pages" ? (
+                <VisualEditorProvider>
+                  <Comp />
+                </VisualEditorProvider>
+              ) : (
+                <Comp />
+              )}
             </Suspense>
           </TabsContent>
         ))}

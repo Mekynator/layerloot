@@ -284,6 +284,12 @@ When showing a product, ALWAYS use this exact format:
   - → [View product]({product_url})
 ${aiConfig.enable_visual_extended ? `
 If available, also show: color variants, extra angle image, or 3D preview link.` : ""}
+\n## HARD GROUNDING RULES (ENFORCED)
+- ALWAYS use only products listed in the "Products (live data)" section above. Do NOT invent product names, ids, prices, images, slugs, or stock statuses.
+- If you list a product, include its exact id as shown in the Products list (e.g. id:123) so the frontend can validate it.
+- Only recommend categories that appear in the "Product Categories" list above and that have active products (do not recommend empty categories).
+- Never output raw internal routes or query strings; use the UI action labels provided in "Site Navigation" or render links that match the routes in Site Navigation.
+- If you cannot find any real products to recommend, respond honestly and offer only the safe fallback actions: Browse Products, Create Your Own, Contact Us.
 
 Rules:
 - Max ${aiConfig.max_products} products per response
@@ -434,6 +440,23 @@ serve(async (req) => {
 
     const ctxProducts: any[] = ctx.products ?? [];
 
+    // Helper: record hallucination events to analytics for monitoring (fire-and-forget)
+    function recordHallucination(kind: string, details: Record<string, any>) {
+      try {
+        const payload = {
+          event_type: "ai_hallucination",
+          event_data: { kind, details },
+          page: page || "/",
+          user_id: user?.id ?? null,
+        } as any;
+        // Fire-and-forget insert to analytics table; do not block the response
+        serviceSupabase.from("chat_analytics_events").insert(payload as any).then(() => {}).catch(() => {});
+      } catch (e) {
+        // swallow errors to avoid breaking chat
+        console.warn("hallucination logging failed", e);
+      }
+    }
+
     const sanitizeProductBlock = (matchName: string, body: string) => {
       // Strict matching: only accept exact id, exact slug, or exact name (case-insensitive)
       const name = matchName.trim();
@@ -451,7 +474,13 @@ serve(async (req) => {
         found = ctxProducts.find((p) => p.name && p.name.toLowerCase() === name.toLowerCase());
       }
 
-      if (!found) return null;
+      if (!found) {
+        // record when model referenced a product not present in live context
+        try {
+          recordHallucination("unknown_product", { mention: matchName, excerpt: (body || "").slice(0, 200) });
+        } catch {}
+        return null;
+      }
       const img = (found.images && found.images[0]) || "";
       const price = found.price != null ? `${Number(found.price)} kr` : "";
       const benefitLine = ""; // avoid inventing benefits here
@@ -483,6 +512,27 @@ serve(async (req) => {
       '/help': '[Help](/help)',
       '/faq': '[FAQ](/faq)'
     };
+    // First, handle category query routes like /products?category=slug — only replace if category exists and has active products
+    sanitized = sanitized.replace(/\/products\?category=([^\s)]+)/g, (full, slug) => {
+      try {
+        const decoded = decodeURIComponent(slug);
+        const cat = (ctx.categories || []).find((c: any) => c.slug === decoded);
+        if (!cat) {
+          recordHallucination("unknown_category", { slug: decoded, reason: "not_found" });
+          return 'Browse Products';
+        }
+        // check if products include this category slug
+        const has = (ctx.products || []).some((p: any) => (p.category_id === cat.id) || (p.url && p.url.includes(`/products?category=${decoded}`)) || (p.category_slugs && String(p.category_slugs).toLowerCase().includes(decoded.toLowerCase())));
+        if (!has) {
+          recordHallucination("unknown_category", { slug: decoded, reason: "empty" });
+          return 'Browse Products';
+        }
+        return `[${getStr(cat.name)}](/products?category=${decoded})`;
+      } catch {
+        return 'Browse Products';
+      }
+    });
+
     Object.keys(routeMap).forEach((r) => {
       // replace bare mentions like 'Go to /create' or ' /create ' (avoid replacing inside markdown links)
       const rx = new RegExp(`(?<!\])\\b${r}\\b(?!\()`, 'g');

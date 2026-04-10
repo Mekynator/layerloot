@@ -32,6 +32,8 @@ import { formatPrice } from "@/lib/currency";
 import { useNavigate } from "react-router-dom";
 import { parseChatProducts, stripProductBlocks, sanitizeContent, ParsedChatProduct } from "@/lib/chatPostprocess";
 import { useCart } from "@/contexts/CartContext";
+import { useRecentlyViewedProducts } from "@/hooks/use-recently-viewed";
+import { getSavedProducts } from "@/lib/savedItems";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 const STORAGE_KEY = "layerloot-chat-history";
@@ -133,7 +135,7 @@ function getCartSnapshot() {  const raw = localStorage.getItem("layerloot-cart")
 
 // parseChatProducts, stripProductBlocks and sanitizeContent are implemented in src/lib/chatPostprocess.ts
 
-function ChatProductCard({ product }: { product: ParsedChatProduct }) {
+export function ChatProductCard({ product }: { product: ParsedChatProduct }) {
   const { addItem } = useCart();
   const isInternal = product.productUrl?.startsWith("/") ?? false;
   const ctaClass =
@@ -276,13 +278,6 @@ function MarkdownMessage({ content }: { content: string }) {
           >
             {textContent}
           </ReactMarkdown>
-        </div>
-      )}
-      {products.length > 0 && (
-        <div className="space-y-2">
-          {products.map((p, i) => (
-            <ChatProductCard key={i} product={p} />
-          ))}
         </div>
       )}
     </div>
@@ -460,6 +455,7 @@ const ChatWidget = () => {
   const [assistantProductMap, setAssistantProductMap] = useState<Record<string, ParsedChatProduct[]>>({});
   // Map assistant message id => action buttons (label + route or handler)
   const [assistantActionMap, setAssistantActionMap] = useState<Record<string, { label: string; to?: string; action?: () => void }[]>>({});
+  const { recentProducts } = useRecentlyViewedProducts();
 
   const starterSuggestions = useMemo((): ChatQuickItem[] => {
     const adminReplies = chatSettings.quickReplies ?? [];
@@ -660,14 +656,46 @@ const ChatWidget = () => {
     // 2) Parse any explicit product blocks present in original content
     const parsed = parseChatProducts(content);
     if (parsed.length > 0) {
-      // Convert parsed to sanitized ParsedChatProduct (prices may be present already)
-      setAssistantProductMap((s) => ({ ...s, [messageId]: parsed.map((p) => ({
-        name: p.name,
-        benefit: p.benefit,
-        price: p.price || undefined,
-        imageUrl: p.imageUrl || undefined,
-        productUrl: p.productUrl || undefined,
-      })) }));
+      // Validate parsed products against the real product catalog if possible
+      const validated: ParsedChatProduct[] = [];
+      for (const p of parsed) {
+        try {
+          // If productUrl contains a product slug, prefer resolving that to a live product
+          let resolved: any = null;
+          if (p.productUrl && p.productUrl.startsWith("/products/")) {
+            const slug = p.productUrl.replace(/^\/products\//, "");
+            const { data } = await supabase.from("products").select("id,slug,name,price,images,short_description,is_active,published").eq("slug", slug).maybeSingle();
+            if (data && data.is_active && data.published) resolved = data;
+          }
+
+          if (!resolved && p.name) {
+            // try to match by name as a last resort (case-insensitive)
+            const { data } = await supabase.from("products").select("id,slug,name,price,images,short_description,is_active,published").ilike("name", `%${p.name}%`).limit(1);
+            if (data && data[0] && data[0].is_active && data[0].published) resolved = data[0];
+          }
+
+          if (resolved) {
+            validated.push({
+              id: resolved.id,
+              slug: resolved.slug,
+              name: resolved.name,
+              benefit: resolved.short_description ?? p.benefit,
+              price: formatPrice(Number(resolved.price ?? 0)),
+              priceValue: Number(resolved.price ?? 0),
+              imageUrl: (resolved.images && resolved.images[0]) || p.imageUrl,
+              productUrl: `/products/${resolved.slug}`,
+            });
+          }
+        } catch (e) {
+          // ignore and skip invalid entries
+        }
+      }
+
+      if (validated.length > 0) {
+        setAssistantProductMap((s) => ({ ...s, [messageId]: validated }));
+      } else {
+        // no valid resolved products; fall through to other handlers (do not show fictional items)
+      }
       return;
     }
 
@@ -686,21 +714,110 @@ const ChatWidget = () => {
     const intentKeywords = /(recommend|best sellers|best-selling|show (?:products|items)|suggest|looking for|find|gifts|paint by numbers|figurine|figure|miniature)/i;
     const hasProductIntent = intentKeywords.test(content);
 
-    if (!hasProductIntent && !categorySlug) {
+    const viewedIntent = /recently viewed|based on what you viewed|based on what you saw|based on your views/i.test(content);
+    const savedIntent = /saved items|saved for later|from your saved|your saved items/i.test(content);
+
+    if (!hasProductIntent && !categorySlug && !viewedIntent && !savedIntent) {
       // no product intent detected — but still offer navigation buttons if routes exist
       if (foundRoutes.size > 0) {
-        const actions = Array.from(foundRoutes).map((r) => mapRouteToAction(r));
-        setAssistantActionMap((s) => ({ ...s, [messageId]: actions.filter(Boolean) as any }));
+        const actions: { label: string; to?: string; action?: () => void }[] = [];
+        for (const r of Array.from(foundRoutes)) {
+          try {
+            const cat = /category=([^&]+)/.exec(r);
+            if (cat) {
+              // verify category has active products
+              const slug = decodeURIComponent(cat[1]);
+              const { data: catCount } = await supabase.from("products").select("id").ilike("category_slugs", `%${slug}%` as any).eq("is_active", true).eq("published", true).limit(1);
+              if (catCount && catCount.length > 0) {
+                actions.push({ label: `View all ${titleCase(slug)}`, to: `/products?category=${cat[1]}` });
+              }
+              continue;
+            }
+
+            if (r.startsWith("/create")) {
+              actions.push({ label: "Create Your Own", to: "/create" });
+              continue;
+            }
+
+            if (r.startsWith("/products")) {
+              actions.push({ label: "Browse Products", to: "/products" });
+              continue;
+            }
+          } catch {
+            // ignore invalid routes
+          }
+        }
+
+        if (actions.length > 0) setAssistantActionMap((s) => ({ ...s, [messageId]: actions }));
       }
       return;
     }
 
     // Build query
     try {
+      // If user asked for viewed/saved based recommendations, prefer those sources
+      if (viewedIntent && recentProducts && recentProducts.length > 0) {
+        const ids = recentProducts.map((r) => r.id).slice(0, 3);
+        const { data } = await supabase.from("products").select("id,name,slug,images,price,short_description").in("id", ids).eq("is_active", true).eq("published", true).limit(3);
+        if (data && data.length > 0) {
+          const items: ParsedChatProduct[] = data.map((p: any) => ({
+            id: p.id,
+            slug: p.slug,
+            name: p.name,
+            benefit: p.short_description ?? undefined,
+            price: formatPrice(Number(p.price ?? 0)),
+            priceValue: Number(p.price ?? 0),
+            imageUrl: (p.images && p.images[0]) || undefined,
+            productUrl: `/products/${p.slug}`,
+          }));
+          setAssistantProductMap((s) => ({ ...s, [messageId]: items }));
+          setAssistantActionMap((s) => ({ ...s, [messageId]: [{ label: "Browse Products", to: "/products" }] }));
+          return;
+        }
+      }
+
+      if (savedIntent && userId) {
+        try {
+          const savedResp = await getSavedProducts(userId);
+          const savedIds = (savedResp.data ?? []).map((r: any) => r.product_id).slice(0, 6);
+          if (savedIds.length > 0) {
+            const { data } = await supabase.from("products").select("id,name,slug,images,price,short_description").in("id", savedIds).eq("is_active", true).eq("published", true).limit(3);
+            if (data && data.length > 0) {
+              const items: ParsedChatProduct[] = data.map((p: any) => ({
+                id: p.id,
+                slug: p.slug,
+                name: p.name,
+                benefit: p.short_description ?? undefined,
+                price: formatPrice(Number(p.price ?? 0)),
+                priceValue: Number(p.price ?? 0),
+                imageUrl: (p.images && p.images[0]) || undefined,
+                productUrl: `/products/${p.slug}`,
+              }));
+              setAssistantProductMap((s) => ({ ...s, [messageId]: items }));
+              setAssistantActionMap((s) => ({ ...s, [messageId]: [{ label: "Browse Saved", to: "/account/saved" }, { label: "Browse Products", to: "/products" }] }));
+              return;
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+
       let query = supabase.from("products").select("id,name,slug,images,price,short_description").eq("is_active", true).eq("published", true).limit(3);
       if (categorySlug) {
         // try filter by category slug if a relation exists
-        // safe fallback: filter by category slug column if present
+        // only recommend the category if it contains active products
+        try {
+          const { data: catCount } = await supabase.from("products").select("id").ilike("category_slugs", `%${categorySlug}%` as any).eq("is_active", true).eq("published", true).limit(1);
+          if (!catCount || catCount.length === 0) {
+            // empty category — do not recommend
+            setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, content: (m.content ? m.content + "\n\n" : "") + `We don't have active products in that category right now.` } : m)));
+            setAssistantActionMap((s) => ({ ...s, [messageId]: [{ label: "Browse Products", to: "/products" }, { label: "Create Your Own", to: "/create" }] }));
+            return;
+          }
+        } catch (e) {
+          // ignore and continue
+        }
         query = query.ilike("category_slugs", `%${categorySlug}%` as any).limit(3 as any);
       }
       const { data } = await query;

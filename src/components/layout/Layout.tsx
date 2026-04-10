@@ -52,7 +52,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
         <GlobalSectionRenderer page="global_after_main" />
         <Footer />
       </div>
-      {!isCartPage && !isEditorPreview && <FloatingCartSummary />}
+      {!isCartPage && !isEditorPreview && null}
       <AchievementToast achievement={currentAchievement} onDismiss={dismiss} />
       {!isEditorPreview && <ScrollProgress />}
     </div>

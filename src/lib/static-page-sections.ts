@@ -1,3 +1,5 @@
+import { tr } from "@/lib/translate";
+
 /**
  * Static page section definitions + unified layout ordering.
  * Static sections represent hardcoded React content on pages.
@@ -36,6 +38,22 @@ export interface PreviewItem {
   block?: any;
   staticSection?: StaticSection;
 }
+
+type LocalizedLabel = string | Record<string, string> | null | undefined;
+
+const getBlockPreviewLabel = (blockType: string, title?: LocalizedLabel) => {
+  const fallback = blockType.replace(/_/g, " ");
+
+  if (typeof title === "string") {
+    return tr(title, fallback);
+  }
+
+  if (title && typeof title === "object" && !Array.isArray(title)) {
+    return tr(title, fallback);
+  }
+
+  return fallback;
+};
 
 /** Ordered layout entry stored in site_settings */
 export interface LayoutEntry {
@@ -252,7 +270,7 @@ export function getStaticSections(pageKey: string): StaticSection[] {
  */
 export function buildPreviewList(
   pageKey: string,
-  dynamicBlocks: Array<{ id: string; block_type: string; title?: string | null; sort_order: number; [k: string]: any }>,
+  dynamicBlocks: Array<{ id: string; block_type: string; title?: string | Record<string, string> | null; sort_order: number; [k: string]: unknown }>,
   layoutOrder?: LayoutEntry[] | null,
 ): PreviewItem[] {
   const statics = getStaticSections(pageKey);
@@ -273,7 +291,7 @@ export function buildPreviewList(
       } else {
         const block = dynamicMap.get(entry.id);
         if (block) {
-          items.push({ id: block.id, source: "dynamic", editable: true, blockType: block.block_type, label: block.title || block.block_type.replace(/_/g, " "), sortKey: sortKey++, block });
+          items.push({ id: block.id, source: "dynamic", editable: true, blockType: block.block_type, label: getBlockPreviewLabel(block.block_type, block.title), sortKey: sortKey++, block });
           dynamicMap.delete(entry.id);
         }
       }
@@ -284,7 +302,7 @@ export function buildPreviewList(
       items.push({ id: section.id, source: "static", editable: true, blockType: section.icon, label: section.label, sortKey: sortKey++, staticSection: section });
     }
     for (const [, block] of dynamicMap) {
-      items.push({ id: block.id, source: "dynamic", editable: true, blockType: block.block_type, label: block.title || block.block_type.replace(/_/g, " "), sortKey: sortKey++, block });
+      items.push({ id: block.id, source: "dynamic", editable: true, blockType: block.block_type, label: getBlockPreviewLabel(block.block_type, block.title), sortKey: sortKey++, block });
     }
     return items;
   }
@@ -296,7 +314,7 @@ export function buildPreviewList(
     items.push({ id: section.id, source: "static", editable: true, blockType: section.icon, label: section.label, sortKey: sortKey++, staticSection: section });
   }
   for (const block of dynamicBlocks) {
-    items.push({ id: block.id, source: "dynamic", editable: true, blockType: block.block_type, label: block.title || block.block_type.replace(/_/g, " "), sortKey: sortKey++, block });
+    items.push({ id: block.id, source: "dynamic", editable: true, blockType: block.block_type, label: getBlockPreviewLabel(block.block_type, block.title), sortKey: sortKey++, block });
   }
   return items;
 }

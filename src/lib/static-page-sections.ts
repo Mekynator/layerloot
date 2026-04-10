@@ -268,9 +268,9 @@ export function getStaticSections(pageKey: string): StaticSection[] {
  * Build unified preview list using a saved layout order.
  * If no layout exists, statics come first then dynamics.
  */
-export function buildPreviewList(
+export function buildPreviewList<T extends { id: string; block_type: string; title?: string | Record<string, string> | null; sort_order: number }>(
   pageKey: string,
-  dynamicBlocks: Array<{ id: string; block_type: string; title?: string | Record<string, string> | null; sort_order: number; [k: string]: unknown }>,
+  dynamicBlocks: T[],
   layoutOrder?: LayoutEntry[] | null,
 ): PreviewItem[] {
   const statics = getStaticSections(pageKey);

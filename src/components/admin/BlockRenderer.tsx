@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, FormEvent, type CSSProperties, type MouseEvent, type ReactNode } from "react";
-import { useVisualEditor } from "@/contexts/VisualEditorContext";
+import { useVisualEditorSafe } from "@/contexts/VisualEditorContext";
 import { Link } from "react-router-dom";
 import {
   ArrowRight, Truck, Shield, Star, Printer, ChevronLeft, ChevronRight,
@@ -698,9 +698,10 @@ const sectionWidthClass = (width?: string) => {
 };
 
 const Section = ({ block, defaultClasses, children }: { block: SiteBlock; defaultClasses: string; children: ReactNode }) => {
-  const { viewport } = useVisualEditor();
+  const editorCtx = useVisualEditorSafe();
+  const viewport = editorCtx?.viewport ?? "desktop";
   const c = block.content || {};
-  const vp = viewport || "desktop";
+  const vp = viewport;
   const props = sectionProps(block, defaultClasses, vp);
   const action = resolveSectionAction(c);
   const clickable = applySectionAction(action);

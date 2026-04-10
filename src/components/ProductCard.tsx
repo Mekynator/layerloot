@@ -236,7 +236,7 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
                 type="button"
                 size="sm"
                 onClick={handleAddToCart}
-                className="min-h-[40px] rounded-full border border-primary/20 bg-primary/10 px-3 text-xs font-medium uppercase tracking-[0.12em] text-primary transition-all duration-300 hover:bg-primary hover:text-primary-foreground hover:shadow-lg hover:shadow-primary/25 md:px-4"
+                className="min-h-[40px] rounded-full bg-primary px-3 text-xs font-medium uppercase tracking-[0.12em] text-primary-foreground transition-all duration-300 md:px-4"
               >
                 {justAdded ? (
                   <>

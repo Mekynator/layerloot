@@ -41,7 +41,7 @@ export default function CartItemGiftControls({
             <Gift className="h-4 w-4 text-primary" />
           </div>
           <div className="text-left">
-            <p className="font-display text-xs font-semibold uppercase tracking-wider text-card-foreground">{t("cart.thisIsAGift", "This is a gift")}</p>
+            <p className="font-display text-xs font-semibold uppercase tracking-wider text-card-foreground whitespace-nowrap">{t("cart.thisIsAGift", "This is a gift")}</p>
           </div>
         </div>
         <Switch checked={Boolean(item.isGift)} onCheckedChange={(v) => onChange({ isGift: v })} />

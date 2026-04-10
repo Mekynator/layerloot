@@ -87,32 +87,32 @@ export default function CartItemCard({
           </div>
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <motion.div
-              animate={pulse ? { scale: [1, 1.08, 1] } : { scale: 1 }}
-              className="flex items-center gap-2 rounded-xl border p-1"
-            >
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10"
-                onClick={() => onDecrease(item.id)}
-                disabled={isUpdating || item.quantity <= 1}
+            <div className="flex flex-col items-start gap-2">
+              <motion.div
+                animate={pulse ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+                className="flex items-center gap-2 rounded-xl border p-1"
               >
-                <Minus className="h-4 w-4" />
-              </Button>
-              <div className="min-w-8 text-center text-sm font-semibold">{item.quantity}</div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10"
-                onClick={() => onIncrease(item.id)}
-                disabled={isUpdating}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </motion.div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10"
+                  onClick={() => onDecrease(item.id)}
+                  disabled={isUpdating || item.quantity <= 1}
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
+                <div className="min-w-8 text-center text-sm font-semibold">{item.quantity}</div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10"
+                  onClick={() => onIncrease(item.id)}
+                  disabled={isUpdating}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </motion.div>
 
-            <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 className="text-sm text-muted-foreground"
@@ -121,6 +121,9 @@ export default function CartItemCard({
               >
                 {t("cart.saveForLater")}
               </Button>
+            </div>
+
+            <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="icon"

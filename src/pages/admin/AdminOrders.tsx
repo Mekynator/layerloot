@@ -66,7 +66,7 @@ const AdminOrders = () => {
 
     // Fetch profile names for orders with user_id
     const userIds = [...new Set(orders.map(o => o.user_id).filter(Boolean))];
-    let profileMap: Record<string, string> = {};
+    const profileMap: Record<string, string> = {};
     if (userIds.length > 0) {
       const { data: profiles } = await supabase
         .from("profiles")

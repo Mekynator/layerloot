@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
+import { tr } from "@/lib/translate";
 
 interface SiteBlock {
   id: string;
@@ -198,9 +199,9 @@ const AdminContent = () => {
           <div className="relative flex min-h-[200px] items-center justify-center overflow-hidden rounded-lg bg-secondary text-secondary-foreground"
             style={c.bg_image ? { backgroundImage: `url(${c.bg_image})`, backgroundSize: "cover", backgroundPosition: "center" } : {}}>
             <div className="relative z-10 p-8 text-center">
-              <h2 className="font-display text-3xl font-bold uppercase">{c.heading || "Hero Heading"}</h2>
-              {c.subheading && <p className="mt-2 text-lg opacity-80">{c.subheading}</p>}
-              {c.button_text && <button className="mt-4 rounded bg-primary px-6 py-2 font-display text-sm font-bold uppercase text-primary-foreground">{c.button_text}</button>}
+              <h2 className="font-display text-3xl font-bold uppercase">{tr(c.heading, "Hero Heading")}</h2>
+              {c.subheading && <p className="mt-2 text-lg opacity-80">{tr(c.subheading, "")}</p>}
+              {c.button_text && <button className="mt-4 rounded bg-primary px-6 py-2 font-display text-sm font-bold uppercase text-primary-foreground">{tr(c.button_text, "")}</button>}
             </div>
             {c.bg_image && <div className="absolute inset-0 bg-black/40" />}
           </div>
@@ -208,8 +209,8 @@ const AdminContent = () => {
       case "text":
         return (
           <div className="rounded-lg bg-card p-6">
-            {c.heading && <h3 className="mb-2 font-display text-xl font-bold uppercase text-card-foreground">{c.heading}</h3>}
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{c.body || "Text content goes here..."}</p>
+            {c.heading && <h3 className="mb-2 font-display text-xl font-bold uppercase text-card-foreground">{tr(c.heading, "")}</h3>}
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{tr(c.body, "Text content goes here...")}</p>
           </div>
         );
       case "image":
@@ -230,23 +231,23 @@ const AdminContent = () => {
         return (
           <div className="flex h-40 items-center justify-center rounded-lg bg-secondary">
             <PlayCircle className="h-12 w-12 text-secondary-foreground opacity-50" />
-            {c.caption && <p className="ml-3 text-sm text-secondary-foreground">{c.caption}</p>}
+            {c.caption && <p className="ml-3 text-sm text-secondary-foreground">{tr(c.caption, "")}</p>}
           </div>
         );
       case "banner":
       case "cta":
         return (
           <div className="rounded-lg bg-primary/10 p-6 text-center">
-            <h3 className="font-display text-xl font-bold uppercase text-foreground">{c.heading || "Banner Heading"}</h3>
-            {c.subheading && <p className="mt-1 text-sm text-muted-foreground">{c.subheading}</p>}
-            {c.button_text && <button className="mt-3 rounded bg-primary px-5 py-2 font-display text-xs font-bold uppercase text-primary-foreground">{c.button_text}</button>}
+            <h3 className="font-display text-xl font-bold uppercase text-foreground">{tr(c.heading, "Banner Heading")}</h3>
+            {c.subheading && <p className="mt-1 text-sm text-muted-foreground">{tr(c.subheading, "")}</p>}
+            {c.button_text && <button className="mt-3 rounded bg-primary px-5 py-2 font-display text-xs font-bold uppercase text-primary-foreground">{tr(c.button_text, "")}</button>}
           </div>
         );
       case "button":
         return (
           <div className="flex justify-center rounded-lg bg-card p-6">
             <button className="rounded bg-primary px-6 py-3 font-display text-sm font-bold uppercase text-primary-foreground">
-              {c.button_text || "Click Me"} {c.button_link && <span className="ml-1 text-xs opacity-70">→ {c.button_link}</span>}
+              {tr(c.button_text, "Click Me")} {c.button_link && <span className="ml-1 text-xs opacity-70">→ {c.button_link}</span>}
             </button>
           </div>
         );
@@ -257,7 +258,7 @@ const AdminContent = () => {
       case "html":
         return (
           <div className="rounded-lg border border-border bg-card p-4">
-            <pre className="overflow-auto text-xs text-muted-foreground">{c.html || "<div>Custom HTML</div>"}</pre>
+            <pre className="overflow-auto text-xs text-muted-foreground">{tr(c.html, "<div>Custom HTML</div>")}</pre>
           </div>
         );
       default:
@@ -271,10 +272,10 @@ const AdminContent = () => {
       <div className="space-y-3">
         {(t === "hero" || t === "banner" || t === "cta") && (
           <>
-            <div><Label>Heading</Label><Input value={form.content.heading ?? ""} onChange={(e) => setForm({ ...form, content: { ...form.content, heading: e.target.value } })} /></div>
-            <div><Label>Subheading</Label><Input value={form.content.subheading ?? ""} onChange={(e) => setForm({ ...form, content: { ...form.content, subheading: e.target.value } })} /></div>
-            <div><Label>Button Text</Label><Input value={form.content.button_text ?? ""} onChange={(e) => setForm({ ...form, content: { ...form.content, button_text: e.target.value } })} /></div>
-            <div><Label>Button Link</Label><Input value={form.content.button_link ?? ""} onChange={(e) => setForm({ ...form, content: { ...form.content, button_link: e.target.value } })} /></div>
+            <div><Label>Heading</Label><Input value={tr(form.content.heading, "")} onChange={(e) => setForm({ ...form, content: { ...form.content, heading: e.target.value } })} /></div>
+            <div><Label>Subheading</Label><Input value={tr(form.content.subheading, "")} onChange={(e) => setForm({ ...form, content: { ...form.content, subheading: e.target.value } })} /></div>
+            <div><Label>Button Text</Label><Input value={tr(form.content.button_text, "")} onChange={(e) => setForm({ ...form, content: { ...form.content, button_text: e.target.value } })} /></div>
+            <div><Label>Button Link</Label><Input value={tr(form.content.button_link, "")} onChange={(e) => setForm({ ...form, content: { ...form.content, button_link: e.target.value } })} /></div>
             {t === "hero" && <div><Label>Background Image</Label><Input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, "bg_image")} />
               {form.content.bg_image && <img src={form.content.bg_image} alt="" className="mt-2 h-20 rounded object-cover" />}
             </div>}
@@ -282,8 +283,8 @@ const AdminContent = () => {
         )}
         {t === "text" && (
           <>
-            <div><Label>Heading</Label><Input value={form.content.heading ?? ""} onChange={(e) => setForm({ ...form, content: { ...form.content, heading: e.target.value } })} /></div>
-            <div><Label>Body</Label><Textarea value={form.content.body ?? ""} onChange={(e) => setForm({ ...form, content: { ...form.content, body: e.target.value } })} rows={4} /></div>
+            <div><Label>Heading</Label><Input value={tr(form.content.heading, "")} onChange={(e) => setForm({ ...form, content: { ...form.content, heading: e.target.value } })} /></div>
+            <div><Label>Body</Label><Textarea value={tr(form.content.body, "")} onChange={(e) => setForm({ ...form, content: { ...form.content, body: e.target.value } })} rows={4} /></div>
           </>
         )}
         {t === "image" && (
@@ -291,7 +292,7 @@ const AdminContent = () => {
             <div><Label>Image</Label><Input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, "image_url")} />
               {form.content.image_url && <img src={form.content.image_url} alt="" className="mt-2 h-32 rounded object-cover" />}
             </div>
-            <div><Label>Alt Text</Label><Input value={form.content.alt ?? ""} onChange={(e) => setForm({ ...form, content: { ...form.content, alt: e.target.value } })} /></div>
+            <div><Label>Alt Text</Label><Input value={tr(form.content.alt, "")} onChange={(e) => setForm({ ...form, content: { ...form.content, alt: e.target.value } })} /></div>
           </>
         )}
         {t === "carousel" && (
@@ -313,19 +314,19 @@ const AdminContent = () => {
         )}
         {t === "video" && (
           <>
-            <div><Label>Video URL (YouTube/Vimeo or MP4)</Label><Input value={form.content.video_url ?? ""} onChange={(e) => setForm({ ...form, content: { ...form.content, video_url: e.target.value } })} /></div>
+            <div><Label>Video URL (YouTube/Vimeo or MP4)</Label><Input value={tr(form.content.video_url, "")} onChange={(e) => setForm({ ...form, content: { ...form.content, video_url: e.target.value } })} /></div>
             <div><Label>Or Upload Video</Label><Input type="file" accept="video/*" onChange={async (e) => {
               const file = e.target.files?.[0]; if (!file) return;
               const url = await uploadFile(file);
               if (url) setForm({ ...form, content: { ...form.content, video_url: url, video_type: "upload" } });
             }} /></div>
-            <div><Label>Caption</Label><Input value={form.content.caption ?? ""} onChange={(e) => setForm({ ...form, content: { ...form.content, caption: e.target.value } })} /></div>
+            <div><Label>Caption</Label><Input value={tr(form.content.caption, "")} onChange={(e) => setForm({ ...form, content: { ...form.content, caption: e.target.value } })} /></div>
           </>
         )}
         {t === "button" && (
           <>
-            <div><Label>Button Text</Label><Input value={form.content.button_text ?? ""} onChange={(e) => setForm({ ...form, content: { ...form.content, button_text: e.target.value } })} /></div>
-            <div><Label>Button Link</Label><Input value={form.content.button_link ?? ""} onChange={(e) => setForm({ ...form, content: { ...form.content, button_link: e.target.value } })} /></div>
+            <div><Label>Button Text</Label><Input value={tr(form.content.button_text, "")} onChange={(e) => setForm({ ...form, content: { ...form.content, button_text: e.target.value } })} /></div>
+            <div><Label>Button Link</Label><Input value={tr(form.content.button_link, "")} onChange={(e) => setForm({ ...form, content: { ...form.content, button_link: e.target.value } })} /></div>
             <div><Label>Style</Label>
               <Select value={form.content.style ?? "primary"} onValueChange={(v) => setForm({ ...form, content: { ...form.content, style: v } })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -342,7 +343,7 @@ const AdminContent = () => {
           <div><Label>Height (px)</Label><Input type="number" value={form.content.height ?? 40} onChange={(e) => setForm({ ...form, content: { ...form.content, height: parseInt(e.target.value) || 40 } })} /></div>
         )}
         {t === "html" && (
-          <div><Label>HTML Code</Label><Textarea value={form.content.html ?? ""} onChange={(e) => setForm({ ...form, content: { ...form.content, html: e.target.value } })} rows={6} className="font-mono text-xs" /></div>
+          <div><Label>HTML Code</Label><Textarea value={tr(form.content.html, "")} onChange={(e) => setForm({ ...form, content: { ...form.content, html: e.target.value } })} rows={6} className="font-mono text-xs" /></div>
         )}
       </div>
     );

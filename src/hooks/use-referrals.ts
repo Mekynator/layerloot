@@ -47,7 +47,7 @@ async function fetchReferralData(userId: string): Promise<ReferralStats> {
     .reduce((sum, i) => sum + ((i as unknown as { inviter_points_amount?: number }).inviter_points_amount ?? 25), 0);
 
   // Find or generate a reusable invite code (the latest one without an invited user)
-  let reusableInvite = allInvites.find((i) => !i.invited_email && !i.invited_user_id);
+  const reusableInvite = allInvites.find((i) => !i.invited_email && !i.invited_user_id);
   let inviteCode = reusableInvite?.invite_code ?? "";
 
   if (!inviteCode) {

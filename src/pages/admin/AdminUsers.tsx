@@ -72,7 +72,7 @@ export default function AdminUsers() {
     const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p]));
 
     // Get emails via edge function
-    let emailMap = new Map<string, { email: string; last_sign_in_at: string | null }>();
+    const emailMap = new Map<string, { email: string; last_sign_in_at: string | null }>();
     try {
       const { data } = await supabase.functions.invoke("admin-users", { body: { action: "list_users" } });
       if (data?.users) {

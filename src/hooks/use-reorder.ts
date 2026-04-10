@@ -24,7 +24,7 @@ export function useReorder() {
 
       // Fetch current product info for images/slugs
       const productIds = orderItems.map((i) => i.product_id).filter(Boolean) as string[];
-      let productMap: Record<string, { slug: string; images: string[] | null; price: number; is_active: boolean }> = {};
+      const productMap: Record<string, { slug: string; images: string[] | null; price: number; is_active: boolean }> = {};
 
       if (productIds.length > 0) {
         const { data: products } = await supabase

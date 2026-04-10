@@ -423,24 +423,54 @@ export default function CartPage() {
                               </div>
                             )}
 
-                            <div className="mt-3 flex flex-wrap items-center gap-3">
+                            <div className="mt-3">
                               <CartItemGiftControls
                                 item={item}
                                 onChange={(patch) => updateItem(item.id, patch)}
                               />
-
-                              <button
-                                onClick={() => handleSaveForLater(item)}
-                                className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                              >
-                                <Bookmark className="h-4 w-4" />
-                                {t("cart.saveForLater")}
-                              </button>
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between gap-4 md:ml-auto md:min-w-[250px]">
+                        {/* Right-side gift details (compact) */}
+                        <div className="flex flex-col items-end gap-3 md:ml-4 md:min-w-[260px]">
+                          {item.isGift && (
+                            <div className="w-full md:w-72">
+                              <Label className="font-display text-xs uppercase tracking-wider">{t("cart.personalMessage", "Personal Message")}</Label>
+                              <Textarea
+                                placeholder={t("cart.personalMessagePlaceholder", "Write a heartfelt message for the recipient...")}
+                                value={item.giftMessage || ""}
+                                onChange={(e) => updateItem(item.id, { giftMessage: e.target.value })}
+                                rows={2}
+                                maxLength={500}
+                                className="resize-none"
+                              />
+                              <p className="mt-1 text-right text-[11px] text-muted-foreground">{(item.giftMessage || "").length}/500</p>
+
+                              <div className="mt-2 flex items-center justify-between rounded-xl border border-border bg-background/50 p-3">
+                                <div className="flex items-center gap-2">
+                                  <Sparkles className="h-4 w-4 text-primary" />
+                                  <div>
+                                    <p className="text-sm font-medium text-foreground">{t("cart.giftWrapping", "Gift Wrapping")}</p>
+                                    <p className="text-xs text-muted-foreground">+{formatPrice(25)}</p>
+                                  </div>
+                                </div>
+                                <Switch checked={Boolean(item.giftWrap)} onCheckedChange={(v) => updateItem(item.id, { giftWrap: v })} />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Bottom-center compact action row */}
+                        <div className="mt-3 flex w-full items-center justify-center gap-4">
+                          <button
+                            onClick={() => handleSaveForLater(item)}
+                            className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                          >
+                            <Bookmark className="h-4 w-4" />
+                            {t("cart.saveForLater")}
+                          </button>
+
                           <motion.div
                             animate={changedState ? { scale: [1, 1.08, 1] } : { scale: 1 }}
                             transition={{ duration: 0.3 }}

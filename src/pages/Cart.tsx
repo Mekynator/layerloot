@@ -5,6 +5,7 @@ import {
   Plus,
   Minus,
   ShoppingBag,
+  Gift,
   Truck,
   ShieldCheck,
   Clock3,
@@ -12,6 +13,8 @@ import {
   Bookmark,
   ArrowRight,
   Star,
+  Sparkles,
+  MessageSquare,
   CheckCircle2,
   Loader2,
 } from "lucide-react";
@@ -99,6 +102,27 @@ export default function CartPage() {
   const GIFT_FEE_PER_ITEM = 10;
   const GIFT_WRAP_FEE = 25;
   const totalItemCount = cartItems.reduce((sum, i) => sum + i.quantity, 0);
+  const hasItemLevelGiftSelections = cartItems.some((item) => Boolean(item.isGift));
+  const legacyGiftMessage = giftSettings.personalMessage.trim();
+  const shouldUseLegacyGiftMode = giftSettings.enabled && hasItemLevelGiftSelections === false;
+  const getGiftState = (item: CartItemExt) => {
+    const isGift = Boolean(item.isGift) || shouldUseLegacyGiftMode;
+    const itemGiftMessage = typeof item.giftMessage === "string" ? item.giftMessage.trim() : "";
+    const message = itemGiftMessage || (shouldUseLegacyGiftMode ? legacyGiftMessage : "");
+
+    return {
+      isGift,
+      hasMessage: isGift && message.length > 0,
+    };
+  };
+  const giftMarkedItemCount = cartItems.reduce((sum, item) => {
+    const { isGift } = getGiftState(item);
+    return isGift ? sum + item.quantity : sum;
+  }, 0);
+  const giftMessageItemCount = cartItems.reduce((sum, item) => {
+    const { hasMessage } = getGiftState(item);
+    return hasMessage ? sum + item.quantity : sum;
+  }, 0);
   const giftFee = giftSettings.enabled ? GIFT_FEE_PER_ITEM * totalItemCount : 0;
   const giftWrapFee = giftSettings.enabled && giftSettings.giftWrap ? GIFT_WRAP_FEE : 0;
 
@@ -333,6 +357,7 @@ export default function CartPage() {
                   const lineTotal = item.price * item.quantity;
                   const changedState = recentlyChanged[item.id];
                   const isRemoving = removingIds.includes(item.id);
+                  const { isGift, hasMessage } = getGiftState(item);
 
                   return (
                     <motion.div
@@ -348,7 +373,7 @@ export default function CartPage() {
                       transition={{ duration: 0.25 }}
                       className={`glass-card p-4 transition-shadow hover:shadow-lg ${
                         changedState === "added" ? "ring-1 ring-primary/30" : ""
-                      }`}
+                      } ${isGift ? "border-primary/20 bg-primary/[0.03]" : ""}`}
                     >
                       <div className="flex flex-col gap-4 md:flex-row md:items-center">
                         <div className="flex gap-4">
@@ -371,12 +396,27 @@ export default function CartPage() {
                                   {t("cart.addedBack")}
                                 </span>
                               )}
+                              {isGift && (
+                                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
+                                  <Gift className="h-3.5 w-3.5" />
+                                  {t("cart.giftItemLabel", "Gift")}
+                                </span>
+                              )}
                             </div>
 
                             {(item.material || item.color || item.size) && (
                               <p className="text-sm text-muted-foreground">
                                 {[item.material, item.color, item.size].filter(Boolean).join(" • ")}
                               </p>
+                            )}
+
+                            {hasMessage && (
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                                <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                  <MessageSquare className="h-3.5 w-3.5" />
+                                  {t("cart.messageAdded", "Message added")}
+                                </span>
+                              </div>
                             )}
 
                             {(item.printTime || item.materialGrams || item.dispatchEstimate) && (
@@ -606,16 +646,46 @@ export default function CartPage() {
                   </span>
                 </div>
 
+                {giftMarkedItemCount > 0 && (
+                  <div className="rounded-xl border border-primary/15 bg-primary/[0.04] p-3">
+                    <div className="flex items-start gap-2">
+                      <Gift className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground">
+                          {giftMarkedItemCount === 1
+                            ? t("cart.giftItemsSelectedSingle", "1 gift item selected")
+                            : t("cart.giftItemsSelected", { defaultValue: "{{count}} gift items selected", count: giftMarkedItemCount })}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {giftMessageItemCount > 0
+                            ? giftMessageItemCount === 1
+                              ? t("cart.messageAddedSummarySingle", "Message added to 1 item")
+                              : t("cart.messageAddedSummary", { defaultValue: "Message added to {{count}} items", count: giftMessageItemCount })
+                            : t("cart.giftItemsSummaryHint", "Gift details stay attached to the selected items")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {giftFee > 0 && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">🎁 Gift packaging ({totalItemCount} {totalItemCount === 1 ? "item" : "items"})</span>
+                    <span className="flex items-center gap-2 text-muted-foreground">
+                      <Gift className="h-4 w-4 text-primary" />
+                      <span>
+                        {t("cart.giftWrappingService", "Gift wrapping service")} ({giftMarkedItemCount} {giftMarkedItemCount === 1 ? "item" : "items"})
+                      </span>
+                    </span>
                     <span className="font-display font-bold text-foreground">{formatPrice(giftFee)}</span>
                   </div>
                 )}
 
                 {giftWrapFee > 0 && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">✨ Gift wrapping</span>
+                    <span className="flex items-center gap-2 text-muted-foreground">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                      <span>{t("cart.premiumGiftWrap", "Premium gift wrap")}</span>
+                    </span>
                     <span className="font-display font-bold text-foreground">{formatPrice(giftWrapFee)}</span>
                   </div>
                 )}

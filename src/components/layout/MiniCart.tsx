@@ -74,7 +74,7 @@ const MiniCart = ({ cartButtonRef, cartPulse, cartGlow, totalItems }: MiniCartPr
   }, [isMobile]);
 
   const { remaining, progress, unlocked } = useFreeShippingProgress(totalPrice);
->>>>>>> 896325d827b50a65665acd90f283090cf5252b3b
+
   return (
     <div className="relative">
       <Link to="/cart">

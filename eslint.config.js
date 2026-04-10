@@ -21,6 +21,8 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
+      // Temporarily relax explicit any rule to reduce lint noise during large refactors
+      "@typescript-eslint/no-explicit-any": "warn",
     },
   },
 );

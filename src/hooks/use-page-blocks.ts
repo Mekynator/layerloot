@@ -47,11 +47,12 @@ async function fetchPageMeta(page: string) {
 async function fetchPageBlocks(page: string, includeUnpublished = false) {
   const normalizedPage = normalizePageSlug(page);
 
+  // When previewing unpublished content, include draft fields and do not pre-filter by is_active
+  const baseSelect = "id, page, block_type, title, content, draft_content, has_draft, sort_order, is_active, created_at, updated_at, published_at";
   const query = supabase
     .from("site_blocks")
-    .select("id, page, block_type, title, content, sort_order, is_active, created_at, updated_at, published_at")
+    .select(baseSelect)
     .eq("page", normalizedPage)
-    .eq("is_active", true)
     .order("sort_order");
 
   if (!includeUnpublished) {
@@ -63,7 +64,41 @@ async function fetchPageBlocks(page: string, includeUnpublished = false) {
 
   const { data, error } = await query;
   if (error) throw error;
-  return (data as SiteBlock[]) ?? [];
+
+  const rows = (data ?? []) as any[];
+
+  if (!includeUnpublished) {
+    // Filter published & active blocks for frontend
+    const published = rows.filter(r => r.is_active === true).map(r => ({
+      id: r.id,
+      page: r.page,
+      block_type: r.block_type,
+      title: r.title,
+      content: r.content,
+      sort_order: r.sort_order,
+      is_active: r.is_active,
+    } as SiteBlock));
+    return published;
+  }
+
+  // Include draft_content when available, respect draft deletion marker
+  const mapped = rows
+    .filter(r => !(r.has_draft && r.draft_content && r.draft_content.__deleted === true))
+    .map(r => {
+      const content = (r.has_draft && r.draft_content) ? r.draft_content : r.content;
+      const isActive = (r.has_draft && r.draft_content && typeof r.draft_content.is_active !== "undefined") ? r.draft_content.is_active : r.is_active;
+      return {
+        id: r.id,
+        page: r.page,
+        block_type: r.block_type,
+        title: r.title,
+        content,
+        sort_order: r.sort_order,
+        is_active: isActive,
+      } as SiteBlock;
+    });
+
+  return mapped;
 }
 
 export function usePageBlocks(page: string, enabled = true, includeUnpublished = false) {

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, FormEvent, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import { useVisualEditor } from "@/contexts/VisualEditorContext";
 import { Link } from "react-router-dom";
 import {
   ArrowRight, Truck, Shield, Star, Printer, ChevronLeft, ChevronRight,
@@ -166,8 +167,10 @@ export interface SiteBlock {
 }
 
 export type BlockAction = {
-  actionType?: "none" | "internal_link" | "external_link";
-  actionTarget?: string;
+  // legacy: "internal_link" | "external_link"
+  actionType?: "none" | "internal_link" | "external_link" | "anchor" | "page_anchor" | "product" | "product_anchor";
+  actionTarget?: string; // generic target (page path, url, or slug)
+  anchorId?: string; // explicit anchor id (without #)
   openInNewTab?: boolean;
 };
 
@@ -177,8 +180,10 @@ export type BlockButton = {
   iconPosition?: "left" | "right" | "top";
   variant?: "default" | "outline" | "ghost" | "secondary" | "link";
   visible?: boolean;
-  actionType?: "none" | "internal_link" | "external_link";
+  // allow extended action types; preserve legacy fields
+  actionType?: BlockAction["actionType"];
   actionTarget?: string;
+  anchorId?: string;
   openInNewTab?: boolean;
 };
 
@@ -202,15 +207,25 @@ const isEditorPreviewMode = () => {
 };
 
 const normalizeAction = (source: any): Required<BlockAction> => {
-  const actionType = source?.actionType || source?.type || "none";
-  const actionTarget = source?.actionTarget || source?.target || "";
+  const rawType = source?.actionType || source?.type || "none";
+  const actionTarget = source?.actionTarget || source?.target || source?.link || "";
+  const anchorId = source?.anchorId || source?.actionAnchor || "";
   const openInNewTab = Boolean(source?.openInNewTab);
 
-  if (!["none", "internal_link", "external_link"].includes(actionType)) {
-    return { actionType: "none", actionTarget: "", openInNewTab: false };
+  // map legacy types
+  let actionType: string = rawType;
+  if (rawType === "internal_link") actionType = "page_anchor"; // treat legacy internal as page/path
+  if (rawType === "external_link") actionType = "external_link";
+
+  // allow anchors expressed via target containing '#'
+  if (!actionType || actionType === "none") {
+    if (typeof actionTarget === "string" && actionTarget.includes("#")) actionType = "page_anchor";
   }
 
-  return { actionType, actionTarget, openInNewTab };
+  const allowed = ["none", "internal_link", "external_link", "anchor", "page_anchor", "product", "product_anchor"];
+  if (!allowed.includes(actionType)) actionType = "none";
+
+  return { actionType: actionType as any, actionTarget: String(actionTarget || ""), anchorId: String(anchorId || ""), openInNewTab };
 };
 
 const normalizeFaqItem = (item: any) => ({
@@ -299,29 +314,41 @@ const verticalClass = (vertical?: string) => {
   }
 };
 
-const sectionStyle = (content: any): CSSProperties => {
+const sectionStyle = (content: any, viewport: string): CSSProperties => {
   const style: CSSProperties = {};
+  // apply responsive overrides if present
+  const resp = content?.responsive || {};
+  const overrides = (resp && resp[viewport]) || {};
 
   // Colors
   if (content?.backgroundColor || content?.bg_color) style.backgroundColor = content.backgroundColor || content.bg_color;
   if (content?.textColor || content?.text_color) style.color = content.textColor || content.text_color;
 
-  // Spacing
-  if (content?.paddingTop !== undefined) style.paddingTop = `${Number(content.paddingTop) || 0}px`;
-  if (content?.paddingBottom !== undefined) style.paddingBottom = `${Number(content.paddingBottom) || 0}px`;
-  if (content?.paddingLeft !== undefined) style.paddingLeft = `${Number(content.paddingLeft) || 0}px`;
-  if (content?.paddingRight !== undefined) style.paddingRight = `${Number(content.paddingRight) || 0}px`;
-  if (content?.marginTop !== undefined) style.marginTop = `${Number(content.marginTop) || 0}px`;
-  if (content?.marginBottom !== undefined) style.marginBottom = `${Number(content.marginBottom) || 0}px`;
+  // Spacing (apply responsive overrides)
+  const paddingTop = overrides?.paddingTop ?? content?.paddingTop;
+  const paddingBottom = overrides?.paddingBottom ?? content?.paddingBottom;
+  const paddingLeft = overrides?.paddingLeft ?? content?.paddingLeft;
+  const paddingRight = overrides?.paddingRight ?? content?.paddingRight;
+  const marginTop = overrides?.marginTop ?? content?.marginTop;
+  const marginBottom = overrides?.marginBottom ?? content?.marginBottom;
+  if (paddingTop !== undefined) style.paddingTop = `${Number(paddingTop) || 0}px`;
+  if (paddingBottom !== undefined) style.paddingBottom = `${Number(paddingBottom) || 0}px`;
+  if (paddingLeft !== undefined) style.paddingLeft = `${Number(paddingLeft) || 0}px`;
+  if (paddingRight !== undefined) style.paddingRight = `${Number(paddingRight) || 0}px`;
+  if (marginTop !== undefined) style.marginTop = `${Number(marginTop) || 0}px`;
+  if (marginBottom !== undefined) style.marginBottom = `${Number(marginBottom) || 0}px`;
 
-  // Min height
-  if (content?.minHeight) style.minHeight = `${Number(content.minHeight)}px`;
+  // Min height (responsive aware)
+  const minH = overrides?.minHeight ?? content?.minHeight;
+  if (minH) style.minHeight = `${Number(minH)}px`;
 
   // Opacity
-  if (content?.opacity !== undefined && content.opacity !== 100) style.opacity = Number(content.opacity) / 100;
+  const opacityVal = overrides?.opacity ?? content?.opacity;
+  if (opacityVal !== undefined && opacityVal !== 100) style.opacity = Number(opacityVal) / 100;
 
   // Gap
-  if (content?.gap) style.gap = `${Number(content.gap)}px`;
+  const gapVal = overrides?.gap ?? content?.gap;
+  if (gapVal) style.gap = `${Number(gapVal)}px`;
 
   // Border (uniform)
   if (content?.borderWidth && content.borderWidth > 0 && content?.borderStyle && content.borderStyle !== "none") {
@@ -347,7 +374,8 @@ const sectionStyle = (content: any): CSSProperties => {
   }
 
   // Border radius
-  if (content?.borderRadius) style.borderRadius = `${content.borderRadius}px`;
+  const borderRadius = overrides?.borderRadius ?? content?.borderRadius;
+  if (borderRadius) style.borderRadius = `${borderRadius}px`;
 
   // Glassmorphism
   if (content?.glassEnabled) {
@@ -414,33 +442,73 @@ const sectionStyle = (content: any): CSSProperties => {
   return style;
 };
 
-const sectionProps = (block: SiteBlock, defaults: string) => {
+const sectionProps = (block: SiteBlock, defaults: string, viewport: string) => {
   const c = block.content || {};
   return {
     className: `${defaults} ${c?.customClassName || c?.className || ""}`.trim(),
-    style: sectionStyle(c),
+    style: sectionStyle(c, viewport),
   };
 };
 
 const navigateWithAction = (action: Required<BlockAction>) => {
   if (isEditorPreviewMode()) return;
-  if (action.actionType === "none" || !action.actionTarget) return;
+  if (action.actionType === "none") return;
 
+  const smoothScrollTo = (id: string) => {
+    try {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        history.replaceState(null, "", `#${id}`);
+        return true;
+      }
+    } catch (err) {
+      // ignore
+    }
+    return false;
+  };
+
+  // External URL
   if (action.actionType === "external_link") {
-    window.open(
-      action.actionTarget,
-      action.openInNewTab ? "_blank" : "_self",
-      action.openInNewTab ? "noopener,noreferrer" : undefined,
-    );
+    window.open(action.actionTarget, action.openInNewTab ? "_blank" : "_self", action.openInNewTab ? "noopener,noreferrer" : undefined);
     return;
   }
 
-  const target = action.actionTarget.startsWith("/") ? action.actionTarget : `/${action.actionTarget}`;
-  window.open(
-    target,
-    action.openInNewTab ? "_blank" : "_self",
-    action.openInNewTab ? "noopener,noreferrer" : undefined,
-  );
+  // Same-page anchor
+  if (action.actionType === "anchor") {
+    const anchor = (action.anchorId || action.actionTarget || "").replace(/^#/, "");
+    if (!anchor) return;
+    if (smoothScrollTo(anchor)) return;
+    // if element not found, still update hash
+    window.location.hash = `#${anchor}`;
+    return;
+  }
+
+  // Page (possibly with anchor) or legacy internal
+  if (action.actionType === "page_anchor" || action.actionType === "internal_link") {
+    const target = String(action.actionTarget || "");
+    if (!target) return;
+    // if target already contains hash, navigate directly
+    if (target.includes("#")) {
+      window.location.href = target;
+      return;
+    }
+    const anchor = (action.anchorId || "").replace(/^#/, "");
+    const url = anchor ? `${target.replace(/\/$/, "")}#${anchor}` : target;
+    window.location.href = url;
+    return;
+  }
+
+  // Product links
+  if (action.actionType === "product" || action.actionType === "product_anchor") {
+    const slug = String(action.actionTarget || "");
+    if (!slug) return;
+    const base = slug.startsWith("/") ? slug : `/products/${slug}`;
+    const anchor = (action.anchorId || "").replace(/^#/, "");
+    const url = anchor ? `${base}#${anchor}` : base;
+    window.location.href = url;
+    return;
+  }
 };
 
 const applySectionAction = (action: Required<BlockAction>) => ({
@@ -487,7 +555,7 @@ const ActionButton = ({
   );
 
   if (isEditorPreviewMode()) return <span className="inline-flex">{buttonNode}</span>;
-  if (action.actionType === "none" || !action.actionTarget || typeof action.actionTarget !== "string") return buttonNode;
+  if (action.actionType === "none" || (!action.actionTarget && !action.anchorId) || (action.actionTarget && typeof action.actionTarget !== "string")) return buttonNode;
 
   if (action.actionType === "external_link") {
     return (
@@ -500,13 +568,54 @@ const ActionButton = ({
       </a>
     );
   }
+  const smoothScrollTo = (id: string) => {
+    try {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        history.replaceState(null, "", `#${id}`);
+        return true;
+      }
+    } catch (err) {}
+    return false;
+  };
 
-  const internalTarget = action.actionTarget.startsWith("/") ? action.actionTarget : `/${action.actionTarget}`;
-  return (
-    <Link to={internalTarget} target={action.openInNewTab ? "_blank" : "_self"}>
-      {buttonNode}
-    </Link>
-  );
+  // Anchor on same page
+  if (action.actionType === "anchor") {
+    const anchor = (action.anchorId || action.actionTarget || "").replace(/^#/, "");
+    if (!anchor) return buttonNode;
+    return (
+      <a href={`#${anchor}`} onClick={(e) => { e.preventDefault(); smoothScrollTo(anchor); }}>
+        {buttonNode}
+      </a>
+    );
+  }
+
+  // Page / internal link (may include hash)
+  if (action.actionType === "page_anchor" || action.actionType === "internal_link") {
+    const target = String(action.actionTarget || "");
+    if (!target) return buttonNode;
+    const internalTarget = target.startsWith("/") ? target : `/${target}`;
+    return (
+      <Link to={internalTarget} target={action.openInNewTab ? "_blank" : "_self"}>
+        {buttonNode}
+      </Link>
+    );
+  }
+
+  // Product link
+  if (action.actionType === "product" || action.actionType === "product_anchor") {
+    const slug = String(action.actionTarget || "");
+    if (!slug) return buttonNode;
+    const productPath = slug.startsWith("/") ? slug : `/products/${slug}`;
+    return (
+      <Link to={productPath} target={action.openInNewTab ? "_blank" : "_self"}>
+        {buttonNode}
+      </Link>
+    );
+  }
+
+  return buttonNode;
 };
 
 const getEntranceAnimation = (c: any) => {
@@ -587,9 +696,11 @@ const sectionWidthClass = (width?: string) => {
   }
 };
 
-const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNode) => {
+const Section = ({ block, defaultClasses, children }: { block: SiteBlock; defaultClasses: string; children: ReactNode }) => {
+  const { viewport } = useVisualEditor();
   const c = block.content || {};
-  const props = sectionProps(block, defaultClasses);
+  const vp = viewport || "desktop";
+  const props = sectionProps(block, defaultClasses, vp);
   const action = resolveSectionAction(c);
   const clickable = applySectionAction(action);
   const hasSlideshow = c._slideshow?.enabled && c._slideshow?.images?.length > 0;
@@ -647,11 +758,15 @@ const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNo
     sectionStyleOverrides.animation = continuousAnim;
   }
 
+  const anchorAttr = c.anchorId || c.anchor || `section-${(block.page || "page").replace(/[^a-z0-9-_]/gi, "-")}-${block.id}`;
+
   return (
     <>
       {dynamicCSS && <style>{dynamicCSS}</style>}
       <motion.section
         {...props}
+        id={anchorAttr}
+        data-editor-anchor={anchorAttr}
         initial={entranceAnim.initial}
         whileInView={entranceAnim.animate || entranceAnim.initial}
         viewport={{ once: true, amount: 0.12 }}
@@ -748,6 +863,11 @@ const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNo
     </>
   );
 };
+
+// compatibility wrapper: keep calling sites working
+const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNode) => (
+  <Section block={block} defaultClasses={defaultClasses}>{children}</Section>
+);
 
 export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
   const c = block.content || {};

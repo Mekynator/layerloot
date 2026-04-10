@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { tr } from "@/lib/translate";
 import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
+import EditorErrorBoundary from "@/components/admin/EditorErrorBoundary";
 import { useVisualEditor } from "@/contexts/VisualEditorContext";
 import { Plus, Eye, EyeOff, Copy, Trash2, ChevronUp, ChevronDown, GripVertical, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -464,8 +465,8 @@ function CanvasBlockWrapper({
             content={content}
           />
         ) : (
-          renderBlock(block)
-        )}
+          <EditorErrorBoundary>{renderBlock(block)}</EditorErrorBoundary>
+        )
       </div>
     </div>
   );

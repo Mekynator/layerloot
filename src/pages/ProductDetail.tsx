@@ -37,6 +37,9 @@ import ProductColorSummary from "@/components/product/ProductColorSummary";
 import ProductMediaLightbox from "@/components/product/ProductMediaLightbox";
 import { ProductImage } from "@/components/product/ProductImage";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { renderBlock } from "@/components/admin/BlockRenderer";
+import { usePageBlocks } from "@/hooks/use-page-blocks";
+import { useSearchParams } from "react-router-dom";
 
 const AUTO_GALLERY_MS = 6500;
 
@@ -58,6 +61,14 @@ const ProductDetail = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const isMobile = useIsMobile();
+
+  // Load product-detail template blocks (editable in visual editor)
+  const [searchParams] = useSearchParams();
+  const isEditorQuery = searchParams.get("editorPreview") === "1";
+  const sessionFlag = typeof window !== "undefined" && sessionStorage.getItem("layerloot.editorPreview") === "1";
+  const isEditorPreview = isEditorQuery || sessionFlag || window.location.pathname.startsWith("/admin/visual-editor") || window.location.pathname.startsWith("/admin/editor");
+  const blocksQuery = usePageBlocks("product_detail", true, isEditorPreview);
+  const pageBlocks: any[] = blocksQuery.data ?? [];
   
 
   const heroImageRef = useRef<HTMLImageElement | null>(null);
@@ -199,6 +210,11 @@ const ProductDetail = () => {
 
   return (
     <div className="py-6 pb-20 md:py-10 md:pb-10">
+      {/* Template/page blocks (editable in visual editor) */}
+      {pageBlocks.length > 0 && pageBlocks.map((block) => (
+        <EditorBlockWrapper key={block.id} block={block} />
+      ))}
+
       <div className="container space-y-5 md:space-y-10 px-4 md:px-6">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           <Link
@@ -666,3 +682,32 @@ const ProductDetail = () => {
 };
 
 export default ProductDetail;
+
+function EditorBlockWrapper({ block }: { block: any }) {
+  const [searchParams] = useSearchParams();
+  const isEditorQuery = searchParams.get("editorPreview") === "1";
+  const sessionFlag = typeof window !== "undefined" && sessionStorage.getItem("layerloot.editorPreview") === "1";
+  const isEditorPreview = isEditorQuery || sessionFlag || window.location.pathname.startsWith("/admin/visual-editor") || window.location.pathname.startsWith("/admin/editor");
+
+  const label = block?.title && typeof block.title === "string" ? block.title : block?.block_type || "Block";
+
+  const notifyParent = (payload: Record<string, unknown>) => {
+    if (!isEditorPreview || typeof window === "undefined" || window.parent === window) return;
+    window.parent.postMessage({ source: "layerloot-editor-preview", ...payload }, window.location.origin);
+  };
+
+  if (!isEditorPreview) return <div>{renderBlock(block)}</div>;
+
+  return (
+    <div
+      data-editor-block-id={block.id}
+      data-editor-block-type={label}
+      data-editor-block-active={block.is_active === false ? "false" : "true"}
+      className="relative"
+      onClick={() => notifyParent({ type: "select-block", blockId: block.id })}
+      onDoubleClick={() => notifyParent({ type: "edit-block", blockId: block.id })}
+    >
+      {renderBlock(block)}
+    </div>
+  );
+}

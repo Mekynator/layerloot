@@ -77,6 +77,7 @@ interface EditorState {
   // Save (draft)
   save: () => Promise<void>;
   saving: boolean;
+  lastSavedAt: string | null;
   discardChanges: () => void;
 
   // Publish
@@ -261,6 +262,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   const [selectedBlockId, setSelectedBlockIdRaw] = useState<string | null>(null);
   const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
   const [inlineEditingKey, setInlineEditingKey] = useState<string | null>(null);
@@ -327,6 +329,9 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   const undoStack = useRef<UndoEntry[]>([]);
   const redoStack = useRef<UndoEntry[]>([]);
   const [undoVersion, setUndoVersion] = useState(0);
+  const changeBatchTimer = useRef<number | null>(null);
+  const autosaveTimer = useRef<number | null>(null);
+  const sessionKey = useMemo(() => `editor_session_${user?.id ?? "anon"}_${activePage}`, [user, activePage]);
 
   const pushUndo = useCallback((label: string, blocks?: SiteBlock[]) => {
     const snapshot = blocks ?? draftBlocks;
@@ -407,6 +412,54 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   useEffect(() => { void loadPages(); }, [loadPages]);
   useEffect(() => { if (activePage) { void fetchBlocks(activePage); void loadLayoutOrder(activePage); void loadStaticSettings(activePage); } }, [activePage, fetchBlocks]);
 
+  // Session recovery: if we have a session snapshot for this page, restore it
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(sessionKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as SiteBlock[];
+      if (!Array.isArray(parsed)) return;
+      // if parsed differs from current savedBlocks, restore
+      const savedSorted = sortBlocks(savedBlocks.filter(b => b.page === activePage));
+      if (JSON.stringify(parsed) !== JSON.stringify(savedSorted)) {
+        setDraftBlocks(parsed);
+        setDraftStatus("draft");
+        toast.info("Recovered unsaved session changes");
+      }
+    } catch (e) {
+      // ignore parse errors
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePage]);
+
+  // Autosave: debounce saves to server and persist session snapshot
+  useEffect(() => {
+    if (!activePage) return;
+    if (autosaveTimer.current) window.clearTimeout(autosaveTimer.current as unknown as number);
+    autosaveTimer.current = window.setTimeout(async () => {
+      if (isDirty) {
+        await save();
+      }
+      // persist session snapshot
+      try { sessionStorage.setItem(sessionKey, JSON.stringify(draftBlocks)); } catch (e) {}
+    }, 1500) as unknown as number;
+    return () => { if (autosaveTimer.current) window.clearTimeout(autosaveTimer.current as unknown as number); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftBlocks, activePage, isDirty]);
+
+  // Persist session snapshot on unload
+  useEffect(() => {
+    const handler = () => {
+      try { sessionStorage.setItem(sessionKey, JSON.stringify(draftBlocks)); } catch (e) {}
+    };
+    window.addEventListener("beforeunload", handler);
+    document.addEventListener("visibilitychange", handler);
+    return () => {
+      window.removeEventListener("beforeunload", handler);
+      document.removeEventListener("visibilitychange", handler);
+    };
+  }, [draftBlocks, sessionKey]);
+
   // Layout order persistence
   const loadLayoutOrder = useCallback(async (page: string) => {
     const key = `layout_order_${page}`;
@@ -460,7 +513,15 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
       next[idx] = { ...next[idx], content };
       return next;
     });
-  }, []);
+    // Batch edits into a single undo entry to avoid flooding history on rapid edits
+    if (!changeBatchTimer.current) {
+      changeBatchTimer.current = window.setTimeout(() => {
+        try { pushUndo("Edit"); } catch (e) {}
+        if (changeBatchTimer.current) window.clearTimeout(changeBatchTimer.current as unknown as number);
+        changeBatchTimer.current = null;
+      }, 900) as unknown as number;
+    }
+  }, [pushUndo]);
 
   const updateBlockMeta = useCallback((id: string, patch: Partial<Pick<SiteBlock, "title" | "is_active">>) => {
     pushUndo("Update block");
@@ -548,6 +609,8 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
       const ok = await saveDraftBlocks(activePage, currentPageBlocks, user?.id);
       if (!ok) throw new Error("Failed to save draft");
       setDraftStatus("draft");
+      setLastSavedAt(new Date().toISOString());
+      try { sessionStorage.removeItem(sessionKey); } catch (e) {}
       toast.success("Draft saved!");
     } catch (err: any) {
       toast.error(`Save failed: ${err.message}`);
@@ -570,6 +633,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
       // Refresh from DB to get real IDs
       await fetchBlocks(activePage);
       setDraftStatus("published");
+      try { sessionStorage.removeItem(sessionKey); } catch (e) {}
       toast.success("Published successfully!");
     } catch (err: any) {
       toast.error(`Publish failed: ${err.message}`);
@@ -582,8 +646,9 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   const discardDraft = useCallback(async () => {
     await discardDraftBlocks(activePage);
     await fetchBlocks(activePage);
+    try { sessionStorage.removeItem(sessionKey); } catch (e) {}
     toast.info("Draft discarded — reverted to published version");
-  }, [activePage, fetchBlocks]);
+  }, [activePage, fetchBlocks, sessionKey]);
 
   // Schedule publish
   const schedulePublishFn = useCallback(async (date: Date) => {
@@ -678,8 +743,50 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     setViewport,
     frontendPages,
     globalPages,
+    lastSavedAt,
+    // reusable sections API
+    saveReusableSection: async (name: string, blockId?: string) => {
+      const id = blockId ?? selectedBlockId ?? null;
+      if (!id) { toast.error("No block selected to save"); return; }
+      const block = draftBlocks.find(b => b.id === id);
+      if (!block) { toast.error("Block not found"); return; }
+      const key = `reusable_section_${name}`;
+      const payload = { block_type: block.block_type, content: block.content, meta: { title: block.title } } as any;
+      const { data: existing } = await supabase.from("site_settings").select("id").eq("key", key).maybeSingle();
+      if (existing) {
+        await supabase.from("site_settings").update({ value: payload }).eq("key", key);
+      } else {
+        await supabase.from("site_settings").insert({ key, value: payload });
+      }
+      toast.success("Reusable section saved");
+    },
+    insertReusableSection: async (name: string, atIndex?: number) => {
+      const key = `reusable_section_${name}`;
+      const { data } = await supabase.from("site_settings").select("value").eq("key", key).maybeSingle();
+      if (!data?.value) { toast.error("Reusable section not found"); return; }
+      const payload = data.value as any;
+      const newBlock: SiteBlock = {
+        id: `draft-${crypto.randomUUID()}`,
+        page: activePage,
+        block_type: payload.block_type || payload.block_type,
+        title: payload.meta?.title || payload.block_type,
+        content: payload.content || {},
+        sort_order: atIndex ?? pageBlocks.length,
+        is_active: true,
+      };
+      pushUndo("Insert reusable section");
+      setDraftBlocks(prev => {
+        const others = prev.filter(b => b.page !== activePage);
+        const current = sortBlocks(prev.filter(b => b.page === activePage));
+        const insertIdx = atIndex ?? current.length;
+        current.splice(insertIdx, 0, newBlock);
+        return [...others, ...current.map((b, i) => ({ ...b, sort_order: i }))];
+      });
+      setSelectedBlockId(newBlock.id);
+      toast.success("Reusable section inserted");
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [pages, activePage, selectedPage, pageBlocks, savedBlocks, isDirty, selectedBlockId, selectedBlock, hoveredBlockId, saving, publishing, draftStatus, scheduledAt, viewport, frontendPages, globalPages, undoVersion, selectedElement, inlineEditingKey, layoutOrder, selectedStaticId, selectedStatic, staticSettings]);
+  }), [pages, activePage, selectedPage, pageBlocks, savedBlocks, isDirty, selectedBlockId, selectedBlock, hoveredBlockId, saving, publishing, draftStatus, scheduledAt, viewport, frontendPages, globalPages, lastSavedAt, undoVersion, selectedElement, inlineEditingKey, layoutOrder, selectedStaticId, selectedStatic, staticSettings]);
 
   return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;
 }

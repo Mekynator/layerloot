@@ -1,5 +1,6 @@
 import { ReactNode, useEffect } from "react";
-import { useSearchParams, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { useEditorPreview } from "@/contexts/EditorPreviewContext";
 import Header from "./Header";
 import Footer from "./Footer";
 import GlobalSectionRenderer from "./GlobalSectionRenderer";
@@ -11,7 +12,7 @@ import ScrollProgress from "@/components/ui/scroll-progress";
 const Layout = ({ children }: { children: ReactNode }) => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
-  const isEditorPreview = searchParams.get("editorPreview") === "1";
+  const { isEditorPreview } = useEditorPreview();
   const isAdminRoute = location.pathname.startsWith("/admin");
   const isCartPage = location.pathname === "/cart";
   const { currentAchievement, dismiss } = useAchievements();

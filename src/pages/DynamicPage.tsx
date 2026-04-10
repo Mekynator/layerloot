@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { renderBlock } from "@/components/admin/BlockRenderer";
@@ -33,7 +33,30 @@ const DynamicPage = ({ slug: slugProp, emptyTitle, emptyDescription }: DynamicPa
   const isEditorPreview = searchParams.get("editorPreview") === "1";
   const { data: pageMeta, isLoading: pageLoading } = useSitePage(slug, Boolean(slug));
   const { data: blocks = [], isLoading: blocksLoading } = usePageBlocks(slug, Boolean(slug), isEditorPreview);
-  const visibleBlocks = useMemo(() => blocks.filter((block) => block.is_active !== false), [blocks]);
+
+  const [localBlocks, setLocalBlocks] = useState<typeof blocks | null>(null);
+
+  // Listen for parent editor sync messages to update preview live
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data;
+      if (!data || data.source !== "layerloot-editor-sync") return;
+      if (data.type === "blocks-update" && Array.isArray(data.blocks)) {
+        try {
+          const pageBlocksForThis = (data.blocks as any[]).filter((b) => (b.page || "") === slug);
+          setLocalBlocks(pageBlocksForThis as any);
+        } catch {
+          // ignore
+        }
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [slug]);
+
+  const effectiveBlocks = localBlocks ?? blocks;
+  const visibleBlocks = useMemo(() => (effectiveBlocks ?? []).filter((block) => block.is_active !== false), [effectiveBlocks]);
 
   const resolvedEmptyTitle = emptyTitle ?? t("dynamicPage.emptyTitle", "Coming soon");
   const resolvedEmptyDescription = emptyDescription ?? t("dynamicPage.emptyDescription", "Content coming soon.");

@@ -8,6 +8,9 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Search, ChevronRight, Calendar, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { renderBlock } from "@/components/admin/BlockRenderer";
+import { usePageBlocks } from "@/hooks/use-page-blocks";
+import { useSearchParams } from "react-router-dom";
 
 interface PolicyData {
   id: string;
@@ -25,6 +28,13 @@ const Policies = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  // Page-level blocks for policies
+  const [searchParams] = useSearchParams();
+  const isEditorQuery = searchParams.get("editorPreview") === "1";
+  const sessionFlag = typeof window !== "undefined" && sessionStorage.getItem("layerloot.editorPreview") === "1";
+  const isEditorPreview = isEditorQuery || sessionFlag || window.location.pathname.startsWith("/admin/visual-editor") || window.location.pathname.startsWith("/admin/editor");
+  const blocksQuery = usePageBlocks("policies", true, isEditorPreview);
+  const pageBlocks: any[] = blocksQuery.data ?? [];
   const [policies, setPolicies] = useState<PolicyData[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -95,6 +105,10 @@ const Policies = () => {
       <div className="container py-8">
         <h1 className="mb-6 font-display text-2xl font-bold uppercase text-foreground">Policies</h1>
 
+        {pageBlocks.length > 0 && pageBlocks.map((b) => (
+          <div key={b.id}>{renderBlock(b)}</div>
+        ))}
+
         {policies.length > 5 && (
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
@@ -152,6 +166,10 @@ const Policies = () => {
   return (
     <div className="container py-10">
       <h1 className="mb-6 font-display text-2xl font-bold uppercase text-foreground">Policies</h1>
+
+      {pageBlocks.length > 0 && pageBlocks.map((b) => (
+        <div key={b.id}>{renderBlock(b)}</div>
+      ))}
 
       <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
         {/* Sidebar */}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
+import EditorErrorBoundary from "@/components/admin/EditorErrorBoundary";
 
 function normalizePageParam(pageParam?: string) {
   if (!pageParam || pageParam === "home") return "home";
@@ -77,14 +78,15 @@ export default function EditorPagePreview() {
       ) : (
         <div className="min-h-screen">
           {blocks.map((block) => (
-            <div
-              key={block.id}
-              data-editor-preview-block="true"
-              data-block-id={block.id}
-              data-block-type={block.block_type}
-            >
-              {renderBlock(block, true)}
-            </div>
+            <EditorErrorBoundary key={block.id}>
+              <div
+                data-editor-preview-block="true"
+                data-block-id={block.id}
+                data-block-type={block.block_type}
+              >
+                {renderBlock(block, true)}
+              </div>
+            </EditorErrorBoundary>
           ))}
         </div>
       )}

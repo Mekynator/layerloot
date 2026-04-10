@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, ArrowUp, ArrowDown, Trash2, Type, ImageIcon, Link2, LayoutGrid, Database, Eye, Settings2 } from "lucide-react";
+import AdminPageSelect from "@/components/admin/AdminPageSelect";
+import { supabase } from "@/integrations/supabase/client";
 
 // ─── Shared Constants ────────────────────────────────────────────
 
@@ -874,6 +876,43 @@ function ActionEditor({
   pages: string[];
 }) {
   const actionType = String(item.actionType || "none");
+  const [products, setProducts] = useState<{ id: string; title: string; slug: string }[]>([]);
+  const [pageForAnchors, setPageForAnchors] = useState<string>(String(item.actionTarget || ""));
+  const [pageAnchors, setPageAnchors] = useState<string[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const { data } = await (supabase as any).from("products").select("id,title,slug").order("title");
+        if (!mounted) return;
+        setProducts((data || []) as any);
+      } catch (err) {
+        // ignore
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const pg = pageForAnchors || String(item.actionTarget || "");
+    if (!pg) return;
+    (async () => {
+      try {
+        const slug = pg.replace(/^\//, "").replace(/^home$/, "");
+        const { data } = await (supabase as any).from("site_blocks").select("id,content").eq("page", slug || "home");
+        if (!mounted || !data) return;
+        const anchors = (data as any[])
+          .map((r) => (r.content && (r.content.anchorId || r.content.anchor)) || `section-${r.id}`)
+          .filter(Boolean);
+        setPageAnchors(Array.from(new Set(anchors)));
+      } catch (err) {
+        // ignore
+      }
+    })();
+    return () => { mounted = false; };
+  }, [pageForAnchors]);
 
   return (
     <div className="space-y-2 rounded-md border border-border/30 p-2.5">
@@ -885,6 +924,10 @@ function ActionEditor({
             <SelectItem value="none">No action</SelectItem>
             <SelectItem value="internal_link">Internal page</SelectItem>
             <SelectItem value="external_link">External URL</SelectItem>
+            <SelectItem value="anchor">Section on this page</SelectItem>
+            <SelectItem value="page_anchor">Section on another page</SelectItem>
+            <SelectItem value="product">Product page</SelectItem>
+            <SelectItem value="product_anchor">Product page + section</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -903,6 +946,40 @@ function ActionEditor({
         </div>
       )}
 
+      {actionType === "anchor" && (
+        <div>
+          <Label className={labelCls}>Anchor ID (same page)</Label>
+          <div className="flex gap-2">
+            <Input value={String(item.actionTarget || item.anchorId || "")} onChange={(e) => patchItem(index, { anchorId: e.target.value, actionTarget: `#${e.target.value}` })} className={inputH} placeholder="e.g. about-section" />
+            <Button type="button" variant="ghost" size="icon" onClick={() => { /* keep simple */ }} title="Pick from page">
+              <Link2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {actionType === "page_anchor" && (
+        <div>
+          <Label className={labelCls}>Target page</Label>
+          <div className="flex gap-2">
+            <AdminPageSelect label="Page" value={String(item.actionTarget || "")} onChange={(v) => { patchItem(index, { actionTarget: v }); setPageForAnchors(v); }} />
+          </div>
+          <div className="mt-2">
+            <Label className={labelCls}>Section on page (anchor)</Label>
+            <Select value={String(item.anchorId || item.actionAnchor || "")} onValueChange={(v) => patchItem(index, { anchorId: v })}>
+              <SelectTrigger className={inputH}><SelectValue placeholder="Choose section or enter id" /></SelectTrigger>
+              <SelectContent>
+                {pageAnchors.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                <SelectItem value="__custom__">Enter custom...</SelectItem>
+              </SelectContent>
+            </Select>
+            {String(item.anchorId || "") === "__custom__" && (
+              <Input className="mt-2" value={String(item.actionAnchor || "")} onChange={(e) => patchItem(index, { actionAnchor: e.target.value, anchorId: e.target.value })} />
+            )}
+          </div>
+        </div>
+      )}
+
       {actionType === "external_link" && (
         <div>
           <Label className={labelCls}>External URL</Label>
@@ -912,6 +989,34 @@ function ActionEditor({
             className={inputH}
             placeholder="https://..."
           />
+        </div>
+      )}
+
+      {actionType === "product" && (
+        <div>
+          <Label className={labelCls}>Product</Label>
+          <Select value={String(item.actionTarget || "")} onValueChange={(v) => patchItem(index, { actionTarget: v })}>
+            <SelectTrigger className={inputH}><SelectValue placeholder="Choose product" /></SelectTrigger>
+            <SelectContent>
+              {products.map((p) => (<SelectItem key={p.id} value={p.slug}>{p.title}</SelectItem>))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {actionType === "product_anchor" && (
+        <div>
+          <Label className={labelCls}>Product</Label>
+          <Select value={String(item.actionTarget || "")} onValueChange={(v) => patchItem(index, { actionTarget: v })}>
+            <SelectTrigger className={inputH}><SelectValue placeholder="Choose product" /></SelectTrigger>
+            <SelectContent>
+              {products.map((p) => (<SelectItem key={p.id} value={p.slug}>{p.title}</SelectItem>))}
+            </SelectContent>
+          </Select>
+          <div className="mt-2">
+            <Label className={labelCls}>Anchor on product page</Label>
+            <Input value={String(item.anchorId || "")} onChange={(e) => patchItem(index, { anchorId: e.target.value })} className={inputH} placeholder="e.g. specs" />
+          </div>
         </div>
       )}
 

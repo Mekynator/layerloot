@@ -1,6 +1,8 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { EditorPreviewProvider } from "@/contexts/EditorPreviewContext";
+import EditorPreviewGuard from "@/components/editor/EditorPreviewGuard";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
@@ -83,6 +85,7 @@ const AppShell = () => {
   return (
     <CampaignThemeProvider>
       <Layout>
+        <EditorPreviewGuard />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/products" element={<Products />} />
@@ -151,7 +154,7 @@ const AppShell = () => {
         </Routes>
       </Layout>
 
-      {!isEditorPreview && !isAdminRoute && (
+          {!isEditorPreview && !isAdminRoute && (
         <Suspense fallback={null}>
           <ChatWidget />
           <PromotionPopup />
@@ -170,7 +173,9 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <AppShell />
+            <EditorPreviewProvider>
+              <AppShell />
+            </EditorPreviewProvider>
           </BrowserRouter>
         </CartProvider>
       </AuthProvider>

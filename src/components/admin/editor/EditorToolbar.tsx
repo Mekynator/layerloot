@@ -32,6 +32,7 @@ export default function EditorToolbar({ onAddBlock, onPageSettings, onDeletePage
     activePage, setActivePage, selectedPage,
     frontendPages, globalPages,
     isDirty, save, saving, discardChanges,
+    lastSavedAt,
     publish, publishing, discardDraft, draftStatus,
     undo, redo, canUndo, canRedo,
     viewport, setViewport,
@@ -47,10 +48,24 @@ export default function EditorToolbar({ onAddBlock, onPageSettings, onDeletePage
   const previewPath = selectedPage ? pageToRealPath(selectedPage) : "/";
 
   const statusBadge = () => {
+    if (saving) {
+      return (
+        <Badge variant="outline" className="gap-1 border-blue-500/50 bg-blue-500/10 text-blue-400 text-[10px]">
+          <Clock className="h-3 w-3" /> Saving...
+        </Badge>
+      );
+    }
     if (isDirty) {
       return (
         <Badge variant="outline" className="gap-1 border-amber-500/50 bg-amber-500/10 text-amber-400 text-[10px]">
           <AlertCircle className="h-3 w-3" /> Unsaved
+        </Badge>
+      );
+    }
+    if (lastSavedAt) {
+      return (
+        <Badge variant="outline" className="gap-1 border-emerald-500/50 bg-emerald-500/10 text-emerald-400 text-[10px]">
+          <CheckCircle2 className="h-3 w-3" /> Saved {format(new Date(lastSavedAt), "HH:mm")}
         </Badge>
       );
     }

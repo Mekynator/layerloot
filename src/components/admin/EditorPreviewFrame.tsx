@@ -148,6 +148,17 @@ export default function EditorPreviewFrame({
     };
   }, [iframeSrc, blocks]);
 
+  // Post block updates to iframe to enable live editing without reload
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    try {
+      const frameWindow = iframe.contentWindow;
+      if (!frameWindow) return;
+      frameWindow.postMessage({ source: "layerloot-editor-sync", type: "blocks-update", blocks }, window.location.origin);
+    } catch {}
+  }, [blocks]);
+
   useEffect(() => {
     if (!selectedBlockId) return;
 

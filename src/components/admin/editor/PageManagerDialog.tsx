@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useVisualEditor, pageToEditorKey, pageToRealPath, pageDisplayTitle } from "@/contexts/VisualEditorContext";
 import type { Tables } from "@/integrations/supabase/types";
+import { tr } from "@/lib/translate";
 
 type SitePage = Tables<"site_pages">;
 
@@ -45,7 +46,7 @@ export default function PageManagerDialog({ open, onOpenChange, mode }: PageMana
     if (mode === "edit" && selectedPage) {
       setForm({
         name: selectedPage.name || "",
-        title: selectedPage.title || "",
+        title: tr(selectedPage.title ?? "", selectedPage.name || ""),
         slug: selectedPage.is_home ? "home" : selectedPage.slug || "",
         pageType: selectedPage.page_type === "child" ? "child" : "main",
         parentId: selectedPage.parent_id || "",

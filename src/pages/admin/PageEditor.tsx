@@ -379,7 +379,7 @@ const PageEditor = () => {
     setEditingPageId(selectedPage.id);
     setPageForm({
       name: selectedPage.name || "",
-      title: selectedPage.title || "",
+      title: tr(selectedPage.title ?? "", selectedPage.name || ""),
       slug: selectedPage.is_home ? "home" : selectedPage.slug || "",
       pageType: selectedPage.page_type === "child" ? "child" : "main",
       parentId: selectedPage.parent_id || "",

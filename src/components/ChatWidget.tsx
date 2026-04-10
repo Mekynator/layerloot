@@ -28,6 +28,10 @@ type ParsedChatProduct = {
   productUrl?: string;
 };
 
+import { formatPrice } from "@/lib/currency";
+import { useNavigate } from "react-router-dom";
+import { parseChatProducts, stripProductBlocks, sanitizeContent } from "@/lib/chatPostprocess";
+
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 const STORAGE_KEY = "layerloot-chat-history";
 const PROMPT_BUBBLE_DELAY_MS = 8000;
@@ -126,40 +130,7 @@ function getCartSnapshot() {  const raw = localStorage.getItem("layerloot-cart")
   };
 }
 
-function parseChatProducts(content: string): ParsedChatProduct[] {
-  const products: ParsedChatProduct[] = [];
-  // Match the mandatory AI product format: • **name** \n  - bullet lines
-  const re = /•\s+\*\*([^*\n]+)\*\*[ \t]*\n((?:[ \t]*-[ \t]+[^\n]*\n?)*)/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(content)) !== null) {
-    const name = m[1].trim();
-    const body = m[2];
-    const imgMatch = body.match(/!\[[^\]]*\]\(([^)]+)\)/);
-    const linkMatch = body.match(/→\s*\[[^\]]*\]\(([^)]+)\)/);
-    const priceMatch = body.match(/-[ \t]+([^\n]*\b\d[\d.,]*\s*kr[^\n]*)/i);
-    const bodyLines = body
-      .split("\n")
-      .map((l) => l.replace(/^[ \t]*-[ \t]+/, "").trim())
-      .filter(Boolean);
-    const benefit = bodyLines.find(
-      (l) => !l.startsWith("!") && !l.startsWith("→") && !/\b\d[\d.,]*\s*kr\b/i.test(l),
-    );
-    products.push({
-      name,
-      imageUrl: imgMatch?.[1],
-      productUrl: linkMatch?.[1],
-      price: priceMatch?.[1]?.trim(),
-      benefit,
-    });
-  }
-  return products;
-}
-
-function stripProductBlocks(content: string): string {
-  return content
-    .replace(/•\s+\*\*[^*\n]+\*\*[ \t]*\n(?:[ \t]*-[ \t]+[^\n]*\n?)*/g, "")
-    .trim();
-}
+// parseChatProducts, stripProductBlocks and sanitizeContent are implemented in src/lib/chatPostprocess.ts
 
 function ChatProductCard({ product }: { product: ParsedChatProduct }) {
   const isInternal = product.productUrl?.startsWith("/") ?? false;
@@ -438,6 +409,7 @@ function saveConversation(messages: Msg[], page: string, userId: string | null, 
 }
 
 const ChatWidget = () => {
+  const navigate = useNavigate();
   const location = useLocation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const promptBubbleTimerRef = useRef<number | null>(null);
@@ -470,6 +442,11 @@ const ChatWidget = () => {
       },
     ];
   });
+
+  // Map assistant message id => suggested products (rendered as cards)
+  const [assistantProductMap, setAssistantProductMap] = useState<Record<string, ParsedChatProduct[]>>({});
+  // Map assistant message id => action buttons (label + route or handler)
+  const [assistantActionMap, setAssistantActionMap] = useState<Record<string, { label: string; to?: string; action?: () => void }[]>>({});
 
   const starterSuggestions = useMemo((): ChatQuickItem[] => {
     const adminReplies = chatSettings.quickReplies ?? [];
@@ -637,6 +614,9 @@ const ChatWidget = () => {
           setLoading(false);
         },
       });
+
+      // After streaming completes, post-process the assistant message
+      await processAssistantMessage(assistantMsgId, assistantSoFar, location.pathname, cart);
     } catch (error) {
       console.error("Chat error:", error);
       setMessages((prev) =>
@@ -647,6 +627,112 @@ const ChatWidget = () => {
       setLoading(false);
     }
   };
+
+  async function processAssistantMessage(messageId: string, content: string, page: string, cart: any) {
+    if (!content) return;
+
+    // 1) Remove raw internal routes and markdown links that point to internal paths
+    const routeRegex = /(?:\[[^\]]+\]\((\/[^)]+)\))|((?:\/[a-zA-Z0-9_\-\/\?=&%]+))/g;
+    const foundRoutes = new Set<string>();
+    const sanitized = content.replace(routeRegex, (match, p1, p2) => {
+      const route = p1 || p2;
+      if (route) foundRoutes.add(route);
+      // Replace with nothing to avoid showing raw routes in chat text
+      return "";
+    }).trim();
+
+    // Update the assistant message content to sanitized version
+    setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, content: sanitized } : m)));
+
+    // 2) Parse any explicit product blocks present in original content
+    const parsed = parseChatProducts(content);
+    if (parsed.length > 0) {
+      // Convert parsed to sanitized ParsedChatProduct (prices may be present already)
+      setAssistantProductMap((s) => ({ ...s, [messageId]: parsed.map((p) => ({
+        name: p.name,
+        benefit: p.benefit,
+        price: p.price || undefined,
+        imageUrl: p.imageUrl || undefined,
+        productUrl: p.productUrl || undefined,
+      })) }));
+      return;
+    }
+
+    // 3) If no explicit products, but routes include category or user intent, query Supabase for 1-3 real products
+    // Map known route patterns to friendly category slug
+    let categorySlug: string | null = null;
+    foundRoutes.forEach((r) => {
+      const m = /category=([^&]+)/.exec(r);
+      if (m) categorySlug = decodeURIComponent(m[1]);
+      if (!categorySlug && /^\/products\//.test(r)) {
+        // maybe a product path - ignore: we won't expose raw path
+      }
+    });
+
+    // Determine if message implies a product intent
+    const intentKeywords = /(recommend|best sellers|best-selling|show (?:products|items)|suggest|looking for|find|gifts|paint by numbers|figurine|figure|miniature)/i;
+    const hasProductIntent = intentKeywords.test(content);
+
+    if (!hasProductIntent && !categorySlug) {
+      // no product intent detected — but still offer navigation buttons if routes exist
+      if (foundRoutes.size > 0) {
+        const actions = Array.from(foundRoutes).map((r) => mapRouteToAction(r));
+        setAssistantActionMap((s) => ({ ...s, [messageId]: actions.filter(Boolean) as any }));
+      }
+      return;
+    }
+
+    // Build query
+    try {
+      let query = supabase.from("products").select("id,name,slug,images,price,short_description").eq("is_active", true).eq("published", true).limit(3);
+      if (categorySlug) {
+        // try filter by category slug if a relation exists
+        // safe fallback: filter by category slug column if present
+        query = query.ilike("category_slugs", `%${categorySlug}%` as any).limit(3 as any);
+      }
+      const { data } = await query;
+      const products = (data ?? []).slice(0, 3);
+      if (products.length > 0) {
+        const items: ParsedChatProduct[] = products.map((p: any) => ({
+          name: p.name,
+          benefit: p.short_description ?? undefined,
+          price: formatPrice(Number(p.price ?? 0)),
+          imageUrl: (p.images && p.images[0]) || undefined,
+          productUrl: `/products/${p.slug}`,
+        }));
+        setAssistantProductMap((s) => ({ ...s, [messageId]: items }));
+        // Also add a secondary action to view the category or browse products
+        const actions = [];
+        if (categorySlug) actions.push({ label: `View all ${titleCase(categorySlug)}`, to: `/products?category=${categorySlug}` });
+        actions.push({ label: "Browse Products", to: "/products" });
+        setAssistantActionMap((s) => ({ ...s, [messageId]: actions }));
+        return;
+      }
+    } catch (err) {
+      // ignore supabase query failures — keep UI stable
+      console.error("Product fetch failed:", err);
+    }
+
+    // 4) Fallback: honest message and action buttons
+    setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, content: (m.content ? m.content + "\n\n" : "") + "I couldn't find matching products right now. You can browse all products or create your own." } : m)));
+    setAssistantActionMap((s) => ({ ...s, [messageId]: [{ label: "Browse Products", to: "/products" }, { label: "Create Your Own", to: "/create" }] }));
+  }
+
+  function titleCase(slug: string) {
+    return slug.replace(/[-_]/g, " ").split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  }
+
+  function mapRouteToAction(route: string) {
+    try {
+      if (route.startsWith("/create")) return { label: "Create Your Own", to: "/create" };
+      const cat = /category=([^&]+)/.exec(route);
+      if (cat) return { label: `View all ${titleCase(decodeURIComponent(cat[1]))}`, to: `/products?category=${cat[1]}` };
+      if (route.startsWith("/products")) return { label: "Browse Products", to: "/products" };
+    } catch {
+      return null;
+    }
+    return null;
+  }
 
   const clearChat = () => {
     const loggedInGreeting = getLocalizedStr(chatSettings.greetings.loggedInGreeting);
@@ -861,7 +947,29 @@ const ChatWidget = () => {
                     {msg.role === "assistant" && !msg.content && loading ? (
                       <ChatTypingIndicator style={chatSettings.bubbles.typingIndicator} />
                     ) : msg.role === "assistant" ? (
-                      <MarkdownMessage content={msg.content} />
+                      <>
+                        <MarkdownMessage content={msg.content} />
+                        {assistantProductMap[msg.id] && (
+                          <div className="mt-2 space-y-2">
+                            {assistantProductMap[msg.id].map((p, i) => (
+                              <ChatProductCard key={i} product={p as any} />
+                            ))}
+                          </div>
+                        )}
+                        {assistantActionMap[msg.id] && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {assistantActionMap[msg.id].map((a, i) => (
+                              a.to ? (
+                                <Button key={i} size="sm" variant="outline" asChild>
+                                  <Link to={a.to!}>{a.label}</Link>
+                                </Button>
+                              ) : (
+                                <Button key={i} size="sm" variant="outline" onClick={a.action}>{a.label}</Button>
+                              )
+                            ))}
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <span className="whitespace-pre-wrap">{msg.content}</span>
                     )}

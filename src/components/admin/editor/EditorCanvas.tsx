@@ -466,7 +466,7 @@ function CanvasBlockWrapper({
           />
         ) : (
           <EditorErrorBoundary>{renderBlock(block)}</EditorErrorBoundary>
-        )
+        )}
       </div>
     </div>
   );

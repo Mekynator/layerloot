@@ -209,13 +209,13 @@ const buildPageLabelMap = (
   page: SitePageOption,
   allPages: SitePageOption[],
 ): Partial<Record<SupportedLanguage, string>> => {
-  const own = page.title || page.name || page.slug;
+  const own = getLocalizedValue(page.title, page.name || page.slug);
   if (!page.parent_id) return { en: own };
 
   const parent = allPages.find((item) => item.id === page.parent_id);
   if (!parent) return { en: own };
 
-  const parentLabel = parent.title || parent.name || parent.slug;
+  const parentLabel = getLocalizedValue(parent.title, parent.name || parent.slug);
   return { en: `${parentLabel} / ${own}` };
 };
 
@@ -424,7 +424,10 @@ const NavLinkEditor = () => {
         .map((page) => ({
           ...page,
           displayLabelMap: buildPageLabelMap(page, sitePages),
-          displayLabel: getLocalizedValue(buildPageLabelMap(page, sitePages), page.title || page.name || page.slug),
+          displayLabel: getLocalizedValue(
+            buildPageLabelMap(page, sitePages),
+            getLocalizedValue(page.title, page.name || page.slug),
+          ),
           path: normalizePath(page.full_path),
         })),
     [sitePages, editingLanguage],

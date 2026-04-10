@@ -10,7 +10,6 @@ import AchievementToast, { useAchievements } from "@/components/smart/Achievemen
 import ScrollProgress from "@/components/ui/scroll-progress";
 
 const Layout = ({ children }: { children: ReactNode }) => {
-  const [searchParams] = useSearchParams();
   const location = useLocation();
   const { isEditorPreview } = useEditorPreview();
   const isAdminRoute = location.pathname.startsWith("/admin");

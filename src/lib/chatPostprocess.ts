@@ -1,7 +1,10 @@
 export type ParsedChatProduct = {
+  id?: string;
+  slug?: string;
   name: string;
   benefit?: string;
   price?: string;
+  priceValue?: number;
   imageUrl?: string;
   productUrl?: string;
 };

@@ -30,7 +30,8 @@ type ParsedChatProduct = {
 
 import { formatPrice } from "@/lib/currency";
 import { useNavigate } from "react-router-dom";
-import { parseChatProducts, stripProductBlocks, sanitizeContent } from "@/lib/chatPostprocess";
+import { parseChatProducts, stripProductBlocks, sanitizeContent, ParsedChatProduct } from "@/lib/chatPostprocess";
+import { useCart } from "@/contexts/CartContext";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 const STORAGE_KEY = "layerloot-chat-history";
@@ -133,6 +134,7 @@ function getCartSnapshot() {  const raw = localStorage.getItem("layerloot-cart")
 // parseChatProducts, stripProductBlocks and sanitizeContent are implemented in src/lib/chatPostprocess.ts
 
 function ChatProductCard({ product }: { product: ParsedChatProduct }) {
+  const { addItem } = useCart();
   const isInternal = product.productUrl?.startsWith("/") ?? false;
   const ctaClass =
     "mt-1.5 inline-flex items-center gap-1 self-start rounded-full bg-primary px-3 py-1 text-[11px] font-semibold text-primary-foreground transition hover:bg-primary/90 active:scale-95";
@@ -141,6 +143,17 @@ function ChatProductCard({ product }: { product: ParsedChatProduct }) {
       View <ArrowRight className="h-3 w-3" />
     </>
   );
+
+  const handleAddToCart = () => {
+    try {
+      const price = typeof product.priceValue === "number" ? product.priceValue : parseFloat(String((product.price || "").replace(/[^0-9.,]/g, "").replace(/,/g, "."))) || 0;
+      addItem({ id: product.id ?? product.slug ?? product.name, name: product.name, price, image: product.imageUrl, slug: product.slug });
+      trackChatEvent("add_to_cart_from_chat", { product: product.id ?? product.slug ?? product.name }, window.location.pathname, null);
+    } catch (e) {
+      // keep UI stable
+    }
+  };
+
   return (
     <div className="flex gap-3 rounded-xl border border-border/30 bg-background/70 p-2.5 backdrop-blur-sm">
       {product.imageUrl && (
@@ -161,16 +174,16 @@ function ChatProductCard({ product }: { product: ParsedChatProduct }) {
         {product.price && (
           <p className="mt-0.5 text-[11px] font-medium text-primary">{product.price}</p>
         )}
-        {product.productUrl &&
-          (isInternal ? (
-            <Link to={product.productUrl} className={ctaClass}>
-              {ctaContent}
-            </Link>
+        <div className="mt-2 flex gap-2">
+          {product.productUrl && (isInternal ? (
+            <Link to={product.productUrl} className={ctaClass}>{ctaContent}</Link>
           ) : (
-            <a href={product.productUrl} target="_blank" rel="noopener noreferrer" className={ctaClass}>
-              {ctaContent}
-            </a>
+            <a href={product.productUrl} target="_blank" rel="noopener noreferrer" className={ctaClass}>{ctaContent}</a>
           ))}
+          <button type="button" onClick={handleAddToCart} className="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] font-semibold text-foreground hover:bg-muted">
+            Add
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -694,17 +707,35 @@ const ChatWidget = () => {
       const products = (data ?? []).slice(0, 3);
       if (products.length > 0) {
         const items: ParsedChatProduct[] = products.map((p: any) => ({
+          id: p.id,
+          slug: p.slug,
           name: p.name,
           benefit: p.short_description ?? undefined,
           price: formatPrice(Number(p.price ?? 0)),
+          priceValue: Number(p.price ?? 0),
           imageUrl: (p.images && p.images[0]) || undefined,
           productUrl: `/products/${p.slug}`,
         }));
         setAssistantProductMap((s) => ({ ...s, [messageId]: items }));
-        // Also add a secondary action to view the category or browse products
-        const actions = [];
+        // contextual quick actions (product-first)
+        const actions: { label: string; to?: string; action?: () => void }[] = [];
         if (categorySlug) actions.push({ label: `View all ${titleCase(categorySlug)}`, to: `/products?category=${categorySlug}` });
         actions.push({ label: "Browse Products", to: "/products" });
+        // Add useful follow-ups: cheaper options, similar, add cheapest to cart
+        actions.push({ label: "Show cheaper options", action: () => send("Show cheaper options for these items") });
+        actions.push({ label: "Show similar items", action: () => send("Show similar items") });
+        // add action to add cheapest item directly
+        actions.push({ label: "Add cheapest to cart", action: () => {
+          try {
+            const cheapest = items.reduce((acc, it) => (acc == null || (it.priceValue ?? 0) < (acc.priceValue ?? 0) ? it : acc), undefined as ParsedChatProduct | undefined);
+            if (cheapest) {
+              const price = cheapest.priceValue ?? 0;
+              // use window dispatch via addItem event for safe integration with header animations
+              window.dispatchEvent(new CustomEvent('layerloot:add-to-cart', { detail: { id: cheapest.id ?? cheapest.slug ?? cheapest.name, name: cheapest.name, image: cheapest.imageUrl ?? null, totalItems: 1, quantity: 1, timestamp: Date.now() } }));
+            }
+          } catch (e) {}
+        }});
+        actions.push({ label: "Go to cart", to: "/cart" });
         setAssistantActionMap((s) => ({ ...s, [messageId]: actions }));
         return;
       }

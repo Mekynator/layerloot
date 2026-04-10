@@ -31,7 +31,7 @@ import { computeLoyaltyProgress } from "@/hooks/use-loyalty-progress";
 import LoyaltyProgressCard from "@/components/social/LoyaltyProgressCard";
 import { CartSummarySkeleton } from "@/components/shared/loading-states";
 import { formatPrice } from "@/lib/currency";
-import GiftMode, { type GiftSettings } from "@/components/cart/GiftMode";
+import CartItemGiftControls from "@/components/cart/CartItemGiftControls";
 import FreeShippingBar from "@/components/cart/FreeShippingBar";
 import CartUpsellSection from "@/components/smart/CartUpsellSection";
 import { useStorefrontCatalog } from "@/hooks/use-storefront";
@@ -52,7 +52,7 @@ type RecommendedProduct = {
 };
 
 export default function CartPage() {
-  const { items, removeItem, updateQuantity, totalPrice, addItem } = useCart();
+  const { items, removeItem, updateQuantity, totalPrice, addItem, updateItem } = useCart() as any;
   const { user } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation("common");
@@ -81,14 +81,7 @@ export default function CartPage() {
   const [savedToast, setSavedToast] = useState<string>("");
   const [manualCodeError, setManualCodeError] = useState<string | undefined>();
   const [manualCodeLoading, setManualCodeLoading] = useState(false);
-  const [giftSettings, setGiftSettings] = useState<GiftSettings>({
-    enabled: false,
-    personalMessage: "",
-    giftWrap: false,
-    recipientAgeGroup: "",
-    recipientInterests: [],
-    occasion: "",
-  });
+ 
 
   const checkoutButtonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -102,29 +95,18 @@ export default function CartPage() {
   const GIFT_FEE_PER_ITEM = 10;
   const GIFT_WRAP_FEE = 25;
   const totalItemCount = cartItems.reduce((sum, i) => sum + i.quantity, 0);
-  const hasItemLevelGiftSelections = cartItems.some((item) => Boolean(item.isGift));
-  const legacyGiftMessage = giftSettings.personalMessage.trim();
-  const shouldUseLegacyGiftMode = giftSettings.enabled && hasItemLevelGiftSelections === false;
   const getGiftState = (item: CartItemExt) => {
-    const isGift = Boolean(item.isGift) || shouldUseLegacyGiftMode;
+    const isGift = Boolean(item.isGift);
     const itemGiftMessage = typeof item.giftMessage === "string" ? item.giftMessage.trim() : "";
-    const message = itemGiftMessage || (shouldUseLegacyGiftMode ? legacyGiftMessage : "");
-
-    return {
-      isGift,
-      hasMessage: isGift && message.length > 0,
-    };
+    return { isGift, hasMessage: isGift && itemGiftMessage.length > 0 };
   };
-  const giftMarkedItemCount = cartItems.reduce((sum, item) => {
-    const { isGift } = getGiftState(item);
-    return isGift ? sum + item.quantity : sum;
-  }, 0);
+  const giftMarkedItemCount = cartItems.reduce((sum, item) => (item.isGift ? sum + item.quantity : sum), 0);
   const giftMessageItemCount = cartItems.reduce((sum, item) => {
     const { hasMessage } = getGiftState(item);
     return hasMessage ? sum + item.quantity : sum;
   }, 0);
-  const giftFee = giftSettings.enabled ? GIFT_FEE_PER_ITEM * totalItemCount : 0;
-  const giftWrapFee = giftSettings.enabled && giftSettings.giftWrap ? GIFT_WRAP_FEE : 0;
+  const giftFee = cartItems.reduce((sum, item) => sum + (item.isGift ? GIFT_FEE_PER_ITEM * item.quantity : 0), 0);
+  const giftWrapFee = cartItems.reduce((sum, item) => sum + (item.giftWrap ? GIFT_WRAP_FEE * item.quantity : 0), 0);
 
   const pointsToEarn = Math.floor(totalPrice / 4);
 
@@ -243,19 +225,16 @@ export default function CartPage() {
             material: item.material || null,
             color: item.color || null,
             size: item.size || null,
+            // Item-level gift fields
+            is_gift: Boolean(item.isGift) || undefined,
+            gift_message: item.giftMessage || null,
+            gift_wrap: Boolean(item.giftWrap) || undefined,
+            gift_addons: Array.isArray(item.perfectAddons) ? item.perfectAddons : undefined,
           })),
           appliedSavings,
           discountCode: appliedSavings.find((s) => s.category === "voucher" || s.category === "discount")?.code || null,
           shippingCost: effectiveShipping,
-          giftMode: giftSettings.enabled
-            ? {
-                personalMessage: giftSettings.personalMessage,
-                giftWrap: giftSettings.giftWrap,
-                recipientAgeGroup: giftSettings.recipientAgeGroup,
-                recipientInterests: giftSettings.recipientInterests,
-                occasion: giftSettings.occasion,
-              }
-            : null,
+          // giftMode intentionally omitted — item-level gift data sent on each item
           success_url: `${window.location.origin}/checkout/success`,
           cancel_url: `${window.location.origin}/cart`,
         },
@@ -272,7 +251,8 @@ export default function CartPage() {
       }
 
       throw new Error("No Stripe checkout URL returned.");
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const error = err as { message?: string } | undefined;
       console.error("Checkout error:", error);
       toast({
         title: t("cart.checkoutError"),
@@ -348,8 +328,7 @@ export default function CartPage() {
               <FreeShippingBar subtotal={totalPrice} threshold={FREE_SHIPPING_THRESHOLD} />
             </motion.div>
 
-            {/* Gift Mode */}
-            <GiftMode settings={giftSettings} onChange={setGiftSettings} />
+            {/* Item-level Gift Controls (per item) — global gift mode removed */}
 
             <div className="space-y-4">
               <AnimatePresence initial={false}>
@@ -445,6 +424,11 @@ export default function CartPage() {
                             )}
 
                             <div className="mt-3 flex flex-wrap items-center gap-3">
+                              <CartItemGiftControls
+                                item={item}
+                                onChange={(patch) => updateItem(item.id, patch)}
+                              />
+
                               <button
                                 onClick={() => handleSaveForLater(item)}
                                 className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"

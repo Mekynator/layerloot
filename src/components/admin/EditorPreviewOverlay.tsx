@@ -76,28 +76,11 @@ export default function EditorPreviewOverlay({
     [blocks],
   );
 
-  // Debug: log ordered block ids to help trace duplicate-key warnings
-  // (left as debug during investigation; remove once resolved)
-  if (typeof window !== "undefined") {
-    // eslint-disable-next-line no-console
-    console.log("EditorPreviewOverlay orderedBlockIds:", orderedBlocks.map((b) => b.id));
-  }
-
-  const keyedBlocks = useMemo(() => {
-    const keyCounts = new Map<string, number>();
-
-    return orderedBlocks.map((block) => {
-      const prev = keyCounts.get(block.id) ?? 0;
-      const count = prev + 1;
-      keyCounts.set(block.id, count);
-
-      return {
-        block,
-        renderKey: count === 1 ? block.id : `${block.id}-${count}`,
-      };
-    });
-  }, [orderedBlocks]);
-
+  // Build a stable, unique render key per block (index-suffixed)
+  const keyedBlocks = useMemo(() =>
+    orderedBlocks.map((block, i) => ({ block, renderKey: `${block.id}-${i}` })),
+    [orderedBlocks],
+  );
   return (
     <div className="pointer-events-none absolute inset-0 z-20">
       {/* Inline add controls between sections */}
@@ -111,12 +94,9 @@ export default function EditorPreviewOverlay({
             + Add Section
           </button>
         </div>
-      ) : (
-        // top insertion
-        orderedBlocks.map((b, i) => null)
-      )}
+      ) : null}
 
-      {keyedBlocks.map(({ block, renderKey }) => {
+  {keyedBlocks.map(({ block, renderKey }) => {
         const selected = selectedBlockId === block.id;
         const hidden = hiddenBlockIds.includes(block.id);
         const dragging = draggingBlockId === block.id;
@@ -248,7 +228,7 @@ export default function EditorPreviewOverlay({
           const nextTop = block.top + block.height + 8;
           const centerX = block.left + block.width / 2 - 80;
           return (
-            <div key={`add-${block.id}`} style={{ top: nextTop, left: centerX }} className="pointer-events-auto absolute z-30">
+            <div key={`add-${block.id}-${idx}`} style={{ top: nextTop, left: centerX }} className="pointer-events-auto absolute z-30">
               <button
                 type="button"
                 onClick={() => onAddAtIndex?.(idx + 1)}

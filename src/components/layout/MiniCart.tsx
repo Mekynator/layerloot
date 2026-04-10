@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { ProductImage } from "@/components/product/ProductImage";
+import type { CartItem } from "@/types/cart";
 import { useAuth } from "@/contexts/AuthContext";
 import { saveProduct } from "@/lib/savedItems";
 import { useToast } from "@/hooks/use-toast";
@@ -27,7 +27,7 @@ const MiniCart = ({ cartButtonRef, cartPulse, cartGlow, totalItems }: MiniCartPr
   const { user } = useAuth();
   const { toast } = useToast();
     // Move to Saved handler (shared logic)
-    const handleMoveToSaved = async (item: any) => {
+    const handleMoveToSaved = async (item: CartItem) => {
       if (!user) {
         toast({ title: t("cart.loginToSave", "Please log in to save items") });
         return;
@@ -110,24 +110,18 @@ const MiniCart = ({ cartButtonRef, cartPulse, cartGlow, totalItems }: MiniCartPr
               <>
                 <div className="max-h-72 overflow-y-auto p-3 space-y-1">
                   {items.map((item) => (
-                    <div key={item.id} className="flex items-start gap-2 rounded-lg py-1.5 px-2 hover:bg-muted/20 transition-colors">
-                      {item.image ? (
-                        <ProductImage src={item.image} alt={item.name} className="h-9 w-9 shrink-0 rounded-md border border-border/10" fit="contain" />
-                      ) : (
-                        <div className="h-9 w-9 shrink-0 rounded-md bg-muted/30 flex items-center justify-center">
-                          <ShoppingBag className="h-3.5 w-3.5 text-muted-foreground/40" />
-                        </div>
-                      )}
+                    <div key={item.id} className="flex items-center gap-3 rounded-md py-2 px-3 hover:bg-muted/20 transition-colors">
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-foreground truncate leading-snug">{item.name}</p>
-                        <p className="text-[10px] text-muted-foreground leading-snug">×{item.quantity}</p>
+                        <p className="text-sm font-medium text-foreground truncate">{item.title || item.name}</p>
+                        <p className="text-[11px] text-muted-foreground">{`Qty ×${item.quantity}`}</p>
                       </div>
-                      <div className="flex flex-col items-end gap-0.5 shrink-0">
-                        <span className="text-xs font-bold text-primary leading-snug">{formatPrice(item.price * item.quantity)}</span>
-                        <div className="flex items-center gap-1.5">
+
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span className="text-sm font-bold text-foreground">{formatPrice(item.price * item.quantity)}</span>
+                        <div className="flex items-center gap-2">
                           <button
                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleMoveToSaved(item); }}
-                            className="text-[10px] font-medium text-muted-foreground/60 hover:text-primary transition-colors leading-snug"
+                            className="text-[11px] font-medium text-muted-foreground/60 hover:text-primary transition-colors"
                           >
                             {t("cart.moveToSaved", "Save")}
                           </button>
@@ -135,7 +129,7 @@ const MiniCart = ({ cartButtonRef, cartPulse, cartGlow, totalItems }: MiniCartPr
                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeItem(item.id); }}
                             className="text-muted-foreground/40 hover:text-destructive transition-colors"
                           >
-                            <Trash2 className="h-2.5 w-2.5" />
+                            <Trash2 className="h-3 w-3" />
                           </button>
                         </div>
                       </div>

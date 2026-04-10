@@ -9,6 +9,8 @@ export interface CartItem {
   quantity: number;
   isGift?: boolean;
   giftMessage?: string | null;
+  giftWrap?: boolean;
+  perfectAddons?: string[];
 }
 
 type AddItemOptions = {
@@ -26,6 +28,7 @@ interface CartContextType {
   addItem: (item: Omit<CartItem, "quantity">, options?: AddItemOptions) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
+  updateItem: (id: string, patch: Partial<CartItem>) => void;
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
@@ -132,6 +135,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const updateItem = (id: string, patch: Partial<CartItem>) => {
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
+  };
+
   const clearCart = () => {
     setItems([]);
   };
@@ -146,6 +153,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         addItem,
         removeItem,
         updateQuantity,
+        updateItem,
         clearCart,
         totalItems,
         totalPrice,

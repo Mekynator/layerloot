@@ -22,6 +22,15 @@ interface ShippingProvider {
   sort_order: number;
 }
 
+type ShippingProviderUpdateField = "base_cost" | "cost_per_kg" | "free_threshold" | "estimated_days";
+
+type ShippingProviderUpdate = {
+  base_cost?: number;
+  cost_per_kg?: number;
+  free_threshold?: number | null;
+  estimated_days?: string | null;
+};
+
 const AdminShipping = () => {
   const [threshold, setThreshold] = useState(75);
   const [flatRate, setFlatRate] = useState(5.99);
@@ -78,8 +87,17 @@ const AdminShipping = () => {
     fetchProviders();
   };
 
-  const updateProvider = async (id: string, field: string, value: any) => {
-    await supabase.from("shipping_providers").update({ [field]: value }).eq("id", id);
+  const updateProvider = async (id: string, field: ShippingProviderUpdateField, value: number | string | null) => {
+    const payload: ShippingProviderUpdate =
+      field === "base_cost"
+        ? { base_cost: Number(value) || 0 }
+        : field === "cost_per_kg"
+          ? { cost_per_kg: Number(value) || 0 }
+          : field === "free_threshold"
+            ? { free_threshold: typeof value === "number" ? value : null }
+            : { estimated_days: typeof value === "string" ? value : null };
+
+    await supabase.from("shipping_providers").update(payload).eq("id", id);
     fetchProviders();
   };
 

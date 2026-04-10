@@ -34,7 +34,7 @@ export default function CustomOrderPriceEditor({ orderId, initialPrice }: Props)
       const { error } = await supabase
         .from("custom_orders")
         .update({
-          price_dkk: parsed,
+          quoted_price: parsed,
           status: "quoted",
           payment_status: "unpaid",
         })

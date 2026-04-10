@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ExternalLink, MonitorSmartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
+import InlineEditor from "@/components/admin/InlineEditor";
 import EditorPreviewOverlay, { type PreviewBlockRect } from "@/components/admin/EditorPreviewOverlay";
 import { useVisualEditor } from "@/contexts/VisualEditorContext";
 
@@ -35,6 +36,7 @@ export default function EditorPreviewFrame({
   onEditBlock,
   onToggleActive,
   onAddBefore,
+  onAddAtIndex,
   onMoveBlock,
 }: Props) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -345,7 +347,11 @@ export default function EditorPreviewFrame({
                 <Button
                   variant="default"
                   onClick={() => {
-                    // Attempt to add before first block, or call with empty string if none exist.
+                    if (onAddAtIndex) {
+                      onAddAtIndex(0);
+                      return;
+                    }
+
                     onAddBefore(blocks[0]?.id ?? "");
                   }}
                 >

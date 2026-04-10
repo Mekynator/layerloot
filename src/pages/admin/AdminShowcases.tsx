@@ -27,6 +27,12 @@ type Showcase = {
   owner_user_id: string;
 };
 
+type ShowcaseUpdateFields = {
+  approved_by_admin?: boolean;
+  featured?: boolean;
+  reorder_enabled?: boolean;
+};
+
 export default function AdminShowcases() {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -50,7 +56,7 @@ export default function AdminShowcases() {
   });
 
   const updateShowcase = useMutation({
-    mutationFn: async ({ id, fields }: { id: string; fields: Record<string, any> }) => {
+    mutationFn: async ({ id, fields }: { id: string; fields: ShowcaseUpdateFields }) => {
       const { error } = await supabase.from("custom_order_showcases").update(fields).eq("id", id);
       if (error) throw error;
     },

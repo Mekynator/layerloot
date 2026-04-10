@@ -46,55 +46,22 @@ interface EmailSendStateRow {
   updated_at: string
 }
 
-type Database = {
-  public: {
-    Tables: {
-      email_send_log: {
-        Row: EmailSendLogRow
-        Insert: Omit<EmailSendLogRow, 'id' | 'created_at' | 'metadata'> & { metadata?: Record<string, unknown> | null }
-        Update: Partial<Omit<EmailSendLogRow, 'id'>>
-        Relationships: []
-      }
-      email_send_state: {
-        Row: EmailSendStateRow
-        Insert: EmailSendStateRow
-        Update: Partial<EmailSendStateRow>
-        Relationships: []
-      }
-    }
-    Views: Record<string, never>
-    Functions: {
-      read_email_batch: {
-        Args: {
-          queue_name: string
-          batch_size: number
-          vt: number
-        }
-        Returns: EmailBatchMessage[]
-      }
-      delete_email: {
-        Args: {
-          queue_name: string
-          message_id: number
-        }
-        Returns: boolean
-      }
-      move_to_dlq: {
-        Args: {
-          source_queue: string
-          dlq_name: string
-          message_id: number
-          payload: Record<string, unknown>
-        }
-        Returns: number
-      }
-    }
-    Enums: Record<string, never>
-    CompositeTypes: Record<string, never>
-  }
+type EmailSendLogInsert = {
+  message_id: string | null
+  template_name: string
+  recipient_email: string
+  status: string
+  error_message?: string | null
+  metadata?: Record<string, unknown> | null
 }
 
-type EmailSendLogInsert = Database['public']['Tables']['email_send_log']['Insert']
+type EmailSendStateConfig = Pick<
+  EmailSendStateRow,
+  'retry_after_until' | 'batch_size' | 'send_delay_ms' | 'auth_email_ttl_minutes' | 'transactional_email_ttl_minutes'
+>
+
+type EmailMessageIdRow = Pick<EmailSendLogRow, 'message_id'>
+type EmailLogIdRow = Pick<EmailSendLogRow, 'id'>
 
 const MAX_RETRIES = 5
 const DEFAULT_BATCH_SIZE = 10
@@ -149,7 +116,7 @@ function parseJwtClaims(token: string): Record<string, unknown> | null {
 
 // Move a message to the dead letter queue and log the reason.
 async function moveToDlq(
-  supabase: SupabaseClient<Database>,
+  supabase: SupabaseClient,
   queue: EmailQueueName,
   msg: Pick<EmailBatchMessage, 'msg_id' | 'message'>,
   reason: string
@@ -162,13 +129,13 @@ async function moveToDlq(
     status: 'dlq',
     error_message: reason,
   }
-  await supabase.from('email_send_log').insert(logEntry)
+  await supabase.from('email_send_log').insert(logEntry as never)
   const { error } = await supabase.rpc('move_to_dlq', {
     source_queue: queue,
     dlq_name: `${queue}_dlq`,
     message_id: msg.msg_id,
     payload,
-  })
+  } as never)
   if (error) {
     console.error('Failed to move message to DLQ', { queue, msg_id: msg.msg_id, reason, error })
   }
@@ -207,13 +174,15 @@ Deno.serve(async (req) => {
     )
   }
 
-  const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
+  const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
   // 1. Check rate-limit cooldown and read queue config
-  const { data: state } = await supabase
+  const { data: stateData } = await supabase
     .from('email_send_state')
     .select('retry_after_until, batch_size, send_delay_ms, auth_email_ttl_minutes, transactional_email_ttl_minutes')
     .single()
+
+  const state = stateData as EmailSendStateConfig | null
 
   if (state?.retry_after_until && new Date(state.retry_after_until) > new Date()) {
     return new Response(
@@ -234,18 +203,18 @@ Deno.serve(async (req) => {
 
   // 2. Process auth_emails first (priority), then transactional_emails
   for (const queue of queues) {
-    const { data: messages, error: readError } = await supabase.rpc('read_email_batch', {
+    const { data: messagesData, error: readError } = await supabase.rpc('read_email_batch', {
       queue_name: queue,
       batch_size: batchSize,
       vt: 30,
-    })
+    } as never)
 
     if (readError) {
       console.error('Failed to read email batch', { queue, error: readError })
       continue
     }
 
-    const typedMessages = messages ?? []
+    const typedMessages = (messagesData ?? []) as unknown as EmailBatchMessage[]
 
     if (!typedMessages.length) continue
 
@@ -265,11 +234,13 @@ Deno.serve(async (req) => {
     )
     const failedAttemptsByMessageId = new Map<string, number>()
     if (messageIds.length > 0) {
-      const { data: failedRows, error: failedRowsError } = await supabase
+      const { data: failedRowsData, error: failedRowsError } = await supabase
         .from('email_send_log')
         .select('message_id')
         .in('message_id', messageIds)
         .eq('status', 'failed')
+
+      const failedRows = (failedRowsData ?? []) as unknown as EmailMessageIdRow[]
 
       if (failedRowsError) {
         console.error('Failed to load failed-attempt counters', {
@@ -277,7 +248,7 @@ Deno.serve(async (req) => {
           error: failedRowsError,
         })
       } else {
-        for (const row of failedRows ?? []) {
+        for (const row of failedRows) {
           const messageId = row?.message_id
           if (typeof messageId !== 'string' || !messageId) continue
           failedAttemptsByMessageId.set(
@@ -334,12 +305,14 @@ Deno.serve(async (req) => {
 
       // Guard: skip if another worker already sent this message (VT expired race)
       if (payload.message_id) {
-        const { data: alreadySent } = await supabase
+          const { data: alreadySentData } = await supabase
           .from('email_send_log')
           .select('id')
           .eq('message_id', payload.message_id)
           .eq('status', 'sent')
           .maybeSingle()
+
+          const alreadySent = alreadySentData as EmailLogIdRow | null
 
         if (alreadySent) {
           console.warn('Skipping duplicate send (already sent)', {
@@ -350,7 +323,7 @@ Deno.serve(async (req) => {
           const { error: dupDelError } = await supabase.rpc('delete_email', {
             queue_name: queue,
             message_id: msg.msg_id,
-          })
+          } as never)
           if (dupDelError) {
             console.error('Failed to delete duplicate message from queue', { queue, msg_id: msg.msg_id, error: dupDelError })
           }
@@ -373,13 +346,13 @@ Deno.serve(async (req) => {
           template_name: emailPayload.label,
           recipient_email: emailPayload.to,
           status: 'sent',
-        })
+        } as never)
 
         // Delete from queue
         const { error: delError } = await supabase.rpc('delete_email', {
           queue_name: queue,
           message_id: msg.msg_id,
-        })
+        } as never)
         if (delError) {
           console.error('Failed to delete sent message from queue', { queue, msg_id: msg.msg_id, error: delError })
         }
@@ -401,7 +374,7 @@ Deno.serve(async (req) => {
             recipient_email: emailPayload.to,
             status: 'rate_limited',
             error_message: errorMsg.slice(0, 1000),
-          })
+          } as never)
 
           const retryAfterSecs = getRetryAfterSeconds(error)
           await supabase
@@ -411,7 +384,7 @@ Deno.serve(async (req) => {
                 Date.now() + retryAfterSecs * 1000
               ).toISOString(),
               updated_at: new Date().toISOString(),
-            })
+            } as never)
             .eq('id', 1)
 
           // Stop processing — remaining messages stay in queue (VT expires, retried next cycle)
@@ -438,7 +411,7 @@ Deno.serve(async (req) => {
           recipient_email: emailPayload.to,
           status: 'failed',
           error_message: errorMsg.slice(0, 1000),
-        })
+        } as never)
         if (payload?.message_id && typeof payload.message_id === 'string') {
           failedAttemptsByMessageId.set(payload.message_id, failedAttempts + 1)
         }

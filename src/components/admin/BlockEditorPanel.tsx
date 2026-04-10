@@ -324,7 +324,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
             </div>
             {/* Keep minimal for now; existing visibility toggles are in the header/group */}
             <div className="flex items-center gap-3">
-              <Switch checked={!!content.visibility ?? isActive} onCheckedChange={(v) => patchContent("visibility", !!v)} />
+              <Switch checked={typeof content.visibility === "boolean" ? content.visibility : isActive} onCheckedChange={(v) => patchContent("visibility", !!v)} />
               <Label className="text-xs text-muted-foreground">Visible on storefront</Label>
             </div>
           </div>

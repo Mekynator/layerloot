@@ -56,6 +56,7 @@ export default function EditorPreviewOverlay({
   onEditBlock,
   onToggleActive,
   onAddBefore,
+  onAddAtIndex,
   onStartDrag,
   onDragOverBlock,
   onDropBlock,
@@ -82,6 +83,21 @@ export default function EditorPreviewOverlay({
     console.log("EditorPreviewOverlay orderedBlockIds:", orderedBlocks.map((b) => b.id));
   }
 
+  const keyedBlocks = useMemo(() => {
+    const keyCounts = new Map<string, number>();
+
+    return orderedBlocks.map((block) => {
+      const prev = keyCounts.get(block.id) ?? 0;
+      const count = prev + 1;
+      keyCounts.set(block.id, count);
+
+      return {
+        block,
+        renderKey: count === 1 ? block.id : `${block.id}-${count}`,
+      };
+    });
+  }, [orderedBlocks]);
+
   return (
     <div className="pointer-events-none absolute inset-0 z-20">
       {/* Inline add controls between sections */}
@@ -100,16 +116,7 @@ export default function EditorPreviewOverlay({
         orderedBlocks.map((b, i) => null)
       )}
 
-      {
-        const keyCounts = new Map<string, number>();
-        // ensure unique keys even if duplicate ids slip through
-      }
-
-      {orderedBlocks.map((block) => {
-        const prev = keyCounts.get(block.id) ?? 0;
-        const count = prev + 1;
-        keyCounts.set(block.id, count);
-        const renderKey = count === 1 ? block.id : `${block.id}-${count}`;
+      {keyedBlocks.map(({ block, renderKey }) => {
         const selected = selectedBlockId === block.id;
         const hidden = hiddenBlockIds.includes(block.id);
         const dragging = draggingBlockId === block.id;

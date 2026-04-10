@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ShoppingBag, Heart } from "lucide-react";
+import { Check, ShoppingBag, Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { useProductSavedState } from "@/hooks/use-product-saved-state";
 import { useTranslation } from "react-i18next";
 import { useCart } from "@/contexts/CartContext";
@@ -37,6 +37,7 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
   const isMobile = useIsMobile();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
+  const [isActive, setIsActive] = useState(false); // mobile tap-activated interaction state
   const [justAdded, setJustAdded] = useState(false);
 
   const imageRef = useRef<HTMLImageElement | null>(null);
@@ -55,12 +56,13 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
     : 0;
 
   useEffect(() => {
-    if (images.length <= 1 || isHovered) return;
+    // Only auto-slide while intentionally interacting: hovered (desktop) or activated (mobile)
+    if (images.length <= 1 || !(isHovered || isActive)) return;
     const timer = window.setInterval(() => {
       setCurrentImageIndex((prev) => (prev + 1) % images.length);
     }, AUTO_SLIDE_MS);
     return () => window.clearInterval(timer);
-  }, [images.length, isHovered]);
+  }, [images.length, isHovered, isActive]);
 
   useEffect(() => {
     if (!justAdded) return;
@@ -107,6 +109,27 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
 
   const { saved, loading: saving, toggleSave } = useProductSavedState(product.id);
 
+  const prevImage = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (images.length <= 1) return;
+    setCurrentImageIndex((i) => (i - 1 + images.length) % images.length);
+  };
+
+  const nextImage = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (images.length <= 1) return;
+    setCurrentImageIndex((i) => (i + 1) % images.length);
+  };
+
+  const handleImageAreaClick = (e: React.MouseEvent) => {
+    // On mobile, first tap activates image controls; second tap should navigate
+    if (isMobile && images.length > 1 && !isActive) {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsActive(true);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
@@ -128,7 +151,7 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
         }}
       >
         {/* Image area */}
-        <div className="relative aspect-[4/5] overflow-hidden">
+        <div onClick={handleImageAreaClick} className="relative aspect-[4/5] overflow-hidden">
                     {/* Save/Heart icon button */}
                     <button
                       type="button"
@@ -172,8 +195,31 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
             </AnimatePresence>
           )}
 
-          {/* Soft bottom gradient for text readability */}
-          <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent opacity-70" />
+          {/* Soft bottom gradient for text readability / unify with lower tile */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />
+
+          {/* Prev/Next arrows — shown only on hover (desktop) or when mobile-activated */}
+          {images.length > 1 && ((isHovered && !isMobile) || isActive) && (
+            <>
+              <button
+                type="button"
+                aria-label={t("products.previousImage")}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); prevImage(e); }}
+                className="absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full border border-border/20 bg-background/80 p-2 text-foreground/80 shadow-md hover:bg-background/90 focus:outline-none"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+
+              <button
+                type="button"
+                aria-label={t("products.nextImage")}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); nextImage(e); }}
+                className="absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full border border-border/20 bg-background/80 p-2 text-foreground/80 shadow-md hover:bg-background/90 focus:outline-none"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </>
+          )}
 
           {/* Badges — floating, no background strips */}
           <div className="absolute left-3 top-3 flex flex-wrap gap-2">

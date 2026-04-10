@@ -14,7 +14,7 @@ export const ProductImage = React.forwardRef<HTMLImageElement, ProductImageProps
         ref={ref}
         src={src}
         alt={alt}
-        className={`h-full w-full ${fit === "contain" ? "object-contain bg-white" : "object-cover"} ${className}`}
+        className={`h-full w-full ${fit === "contain" ? "object-contain object-center bg-background/10" : "object-cover object-center"} ${className}`}
         loading="lazy"
         draggable={false}
         {...props}

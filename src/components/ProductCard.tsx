@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ShoppingBag, ArrowRight, Heart } from "lucide-react";
+import { Check, ShoppingBag, Heart } from "lucide-react";
 import { useProductSavedState } from "@/hooks/use-product-saved-state";
 import { useTranslation } from "react-i18next";
 import { useCart } from "@/contexts/CartContext";
@@ -205,33 +205,6 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
             </div>
           )}
 
-          {/* Quick add — always visible on mobile, slides up on hover for desktop */}
-          <motion.div
-            initial={false}
-            animate={{ opacity: isMobile || isHovered ? 1 : 0, y: isMobile || isHovered ? 0 : 12 }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
-            className="absolute bottom-3 right-3 pointer-events-auto"
-          >
-            <Button
-              ref={addButtonRef}
-              type="button"
-              size="sm"
-              onClick={handleAddToCart}
-              className="rounded-full border-0 bg-primary/90 px-4 shadow-xl shadow-primary/25 backdrop-blur-sm transition-all duration-300 hover:bg-primary hover:shadow-primary/40 min-h-[44px]"
-            >
-              {justAdded ? (
-                <>
-                  <Check className="mr-1 h-3.5 w-3.5" />
-                  {t("products.added")}
-                </>
-              ) : (
-                <>
-                  <ShoppingBag className="mr-1 h-3.5 w-3.5" />
-                  {t("products.addToCart")}
-                </>
-              )}
-            </Button>
-          </motion.div>
         </div>
 
         {/* Content — clean, no dividers */}
@@ -242,8 +215,8 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
 
           <RatingStars rating={socialProof?.averageRating} count={socialProof?.reviewCount} className="min-h-5" />
 
-          <div className="mt-auto flex items-end justify-between gap-2 pt-2">
-            <div className="flex items-baseline gap-2">
+          <div className="mt-auto flex items-end justify-between gap-3 pt-2">
+            <div className="min-w-0 flex items-baseline gap-2">
               <span className="font-display text-base font-bold text-foreground md:text-xl">{formatPrice(Number(product.price))}</span>
               {hasSale && (
                 <span className="text-xs text-muted-foreground line-through">
@@ -252,14 +225,31 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
               )}
             </div>
 
-            {/* Subtle "view" arrow on hover — hidden on mobile */}
             <motion.div
               initial={false}
-              animate={{ opacity: !isMobile && isHovered ? 1 : 0, x: !isMobile && isHovered ? 0 : -8 }}
+              animate={{ opacity: isMobile || isHovered ? 1 : 0, x: isMobile || isHovered ? 0 : 10 }}
               transition={{ duration: 0.25 }}
-              className={isMobile ? "hidden" : ""}
+              className="pointer-events-auto shrink-0"
             >
-              <ArrowRight className="h-4 w-4 text-primary" />
+              <Button
+                ref={addButtonRef}
+                type="button"
+                size="sm"
+                onClick={handleAddToCart}
+                className="min-h-[40px] rounded-full border border-primary/20 bg-primary/10 px-3 text-xs font-medium uppercase tracking-[0.12em] text-primary transition-all duration-300 hover:bg-primary hover:text-primary-foreground hover:shadow-lg hover:shadow-primary/25 md:px-4"
+              >
+                {justAdded ? (
+                  <>
+                    <Check className="mr-1 h-3.5 w-3.5" />
+                    {t("products.added")}
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag className="mr-1 h-3.5 w-3.5" />
+                    {t("products.addToCart")}
+                  </>
+                )}
+              </Button>
             </motion.div>
           </div>
         </div>

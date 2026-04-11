@@ -726,7 +726,7 @@ function FieldRenderer({
           <Select value={String(value ?? field.options?.[0]?.value ?? "")} onValueChange={(v) => onChange(v)}>
             <SelectTrigger className={inputH}><SelectValue /></SelectTrigger>
             <SelectContent>
-              {field.options?.map((o) => (
+              {field.options?.filter((o) => o.value !== "").map((o) => (
                 <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
               ))}
             </SelectContent>
@@ -982,7 +982,7 @@ function ActionEditor({
           <Select value={String(item.actionTarget || "")} onValueChange={(v) => patchItem(index, { actionTarget: v })}>
             <SelectTrigger className={inputH}><SelectValue placeholder="Choose page" /></SelectTrigger>
             <SelectContent>
-              {pages.map((page) => (
+              {pages.filter((page) => page !== "").map((page) => (
                 <SelectItem key={page} value={page}>{page}</SelectItem>
               ))}
             </SelectContent>
@@ -1013,7 +1013,7 @@ function ActionEditor({
             <Select value={String(item.anchorId || item.actionAnchor || "")} onValueChange={(v) => patchItem(index, { anchorId: v })}>
               <SelectTrigger className={inputH}><SelectValue placeholder="Choose section or enter id" /></SelectTrigger>
               <SelectContent>
-                {pageAnchors.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                {pageAnchors.filter((a) => a !== "").map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
                 <SelectItem value="__custom__">Enter custom...</SelectItem>
               </SelectContent>
             </Select>

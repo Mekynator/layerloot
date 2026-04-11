@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { useEditorPreview } from "@/contexts/EditorPreviewContext";
 
 function findEditorBlock(el: HTMLElement | null): HTMLElement | null {
@@ -9,11 +10,29 @@ function findEditorBlock(el: HTMLElement | null): HTMLElement | null {
   return null;
 }
 
+/** True when the page is running inside an iframe. */
+function isInIframe(): boolean {
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+}
+
 export default function EditorPreviewGuard() {
   const { isEditorPreview } = useEditorPreview();
+  const location = useLocation();
 
   useEffect(() => {
     if (!isEditorPreview) return;
+
+    // Extra safety: never install the click interceptor on the live storefront when
+    // running as a top-level window. It is only valid inside the editor's iframe
+    // or when explicitly on an editor/visual-editor admin route.
+    const onEditorRoute =
+      location.pathname.startsWith("/admin/visual-editor") ||
+      location.pathname.startsWith("/admin/editor");
+    if (!isInIframe() && !onEditorRoute) return;
 
     const handleClick = (ev: MouseEvent) => {
       try {

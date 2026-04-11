@@ -14,10 +14,30 @@ export function useEditorPreview() {
   return ctx;
 }
 
+/** True when the page is running inside an iframe (e.g. the visual editor preview pane). */
+function isInIframe(): boolean {
+  try {
+    return window.self !== window.top;
+  } catch {
+    // Cross-origin parent: assume we're in an iframe.
+    return true;
+  }
+}
+
 export function EditorPreviewProvider({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const [sessionFlag, setSessionFlag] = useState(() => sessionStorage.getItem("layerloot.editorPreview") === "1");
+
+  // If the page is a top-level window (not inside the editor iframe), any stale
+  // sessionStorage flag must be cleared immediately so it never bleeds into the
+  // live storefront and triggers the EditorPreviewGuard click interceptor.
+  useEffect(() => {
+    if (!isInIframe() && sessionStorage.getItem("layerloot.editorPreview") === "1") {
+      sessionStorage.removeItem("layerloot.editorPreview");
+      setSessionFlag(false);
+    }
+  }, []);
 
   useEffect(() => {
     const handler = (ev: StorageEvent) => {
@@ -30,7 +50,11 @@ export function EditorPreviewProvider({ children }: { children: React.ReactNode 
   const isEditorPreview = useMemo(() => {
     const param = searchParams.get("editorPreview") === "1";
     const inAdminEditor = location.pathname.startsWith("/admin/visual-editor") || location.pathname.startsWith("/admin/editor");
-    return param || sessionFlag || inAdminEditor;
+    // sessionFlag is only valid when the page is embedded inside the editor iframe.
+    // Ignore it in a top-level browser window to prevent a stale flag from
+    // activating the click interceptor on live storefront pages.
+    const sessionFlagActive = sessionFlag && isInIframe();
+    return param || sessionFlagActive || inAdminEditor;
   }, [searchParams, sessionFlag, location.pathname]);
 
   const setEditorPreview = (v: boolean) => {

@@ -24,11 +24,17 @@ import SmartFunnelSection from "@/components/smart/SmartFunnelSection";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useFeaturedProducts, useStorefrontCatalog } from "@/hooks/use-storefront";
 import { ProductGridSkeleton } from "@/components/shared/loading-states";
-import { fadeUp } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import i18n from "@/lib/i18n";
 import { useTranslation } from "react-i18next";
 import BlockBackgroundSlideshow from "@/components/admin/BlockBackgroundSlideshow";
+import {
+  buildEntranceAnimation,
+  buildHoverAnimation,
+  buildPressAnimation,
+  buildChildRevealProps,
+  isMotionEnabledForViewport,
+} from "@/lib/animation-system";
 
 type ActionType = "none" | "internal_link" | "external_link";
 
@@ -182,8 +188,8 @@ export interface SiteBlock {
 
 export type BlockAction = {
   // legacy: "internal_link" | "external_link"
-  actionType?: "none" | "internal_link" | "external_link" | "anchor" | "page_anchor" | "product" | "product_anchor";
-  actionTarget?: string; // generic target (page path, url, or slug)
+  actionType?: "none" | "internal_link" | "external_link" | "anchor" | "page_anchor" | "product" | "product_anchor" | "category" | "email" | "phone";
+  actionTarget?: string; // generic target (page path, url, slug, email, phone, or category slug)
   anchorId?: string; // explicit anchor id (without #)
   openInNewTab?: boolean;
 };
@@ -234,9 +240,11 @@ const normalizeAction = (source: any): Required<BlockAction> => {
   // allow anchors expressed via target containing '#'
   if (!actionType || actionType === "none") {
     if (typeof actionTarget === "string" && actionTarget.includes("#")) actionType = "page_anchor";
+    if (typeof actionTarget === "string" && /^mailto:/i.test(actionTarget)) actionType = "email";
+    if (typeof actionTarget === "string" && /^tel:/i.test(actionTarget)) actionType = "phone";
   }
 
-  const allowed = ["none", "internal_link", "external_link", "anchor", "page_anchor", "product", "product_anchor"];
+  const allowed = ["none", "internal_link", "external_link", "anchor", "page_anchor", "product", "product_anchor", "category", "email", "phone"];
   if (!allowed.includes(actionType)) actionType = "none";
 
   return { actionType: actionType as any, actionTarget: String(actionTarget || ""), anchorId: String(anchorId || ""), openInNewTab };
@@ -524,6 +532,26 @@ const navigateWithAction = (action: Required<BlockAction>) => {
     window.location.href = url;
     return;
   }
+
+  if (action.actionType === "category") {
+    const slug = String(action.actionTarget || "").replace(/^\//, "");
+    if (!slug) return;
+    window.location.href = `/products?category=${encodeURIComponent(slug)}`;
+    return;
+  }
+
+  if (action.actionType === "email") {
+    const email = String(action.actionTarget || "").replace(/^mailto:/i, "");
+    if (!email) return;
+    window.location.href = `mailto:${email}`;
+    return;
+  }
+
+  if (action.actionType === "phone") {
+    const phone = String(action.actionTarget || "").replace(/^tel:/i, "");
+    if (!phone) return;
+    window.location.href = `tel:${phone}`;
+  }
 };
 
 const applySectionAction = (action: Required<BlockAction>) => ({
@@ -566,7 +594,10 @@ const ActionButton = ({
   );
 
   const buttonNode = (
-    <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}>
+    <motion.div
+      whileHover={Object.keys(getHoverProps(button)).length > 0 ? getHoverProps(button) : { y: -2 }}
+      whileTap={Object.keys(getPressProps(button)).length > 0 ? getPressProps(button) : { scale: 0.98 }}
+    >
       <Button variant={variant} className={className} size="lg">
         {content}
       </Button>
@@ -634,50 +665,49 @@ const ActionButton = ({
     );
   }
 
+  if (action.actionType === "category") {
+    const slug = String(action.actionTarget || "").replace(/^\//, "");
+    if (!slug) return buttonNode;
+    return (
+      <Link to={`/products?category=${encodeURIComponent(slug)}`} target={action.openInNewTab ? "_blank" : "_self"}>
+        {buttonNode}
+      </Link>
+    );
+  }
+
+  if (action.actionType === "email") {
+    const email = String(action.actionTarget || "").replace(/^mailto:/i, "");
+    if (!email) return buttonNode;
+    return (
+      <a href={`mailto:${email}`}>
+        {buttonNode}
+      </a>
+    );
+  }
+
+  if (action.actionType === "phone") {
+    const phone = String(action.actionTarget || "").replace(/^tel:/i, "");
+    if (!phone) return buttonNode;
+    return (
+      <a href={`tel:${phone}`}>
+        {buttonNode}
+      </a>
+    );
+  }
+
   return buttonNode;
 };
 
-const getEntranceAnimation = (c: any) => {
-  const anim = c.animation || "none";
-  const dist = c.animationDistance ?? 20;
-  const dur = c.animationDuration ?? 0.4;
-  const delay = c.animationDelay ?? 0;
+const getEntranceAnimation = (c: any) => buildEntranceAnimation(c);
 
-  const map: Record<string, { initial: any; animate: any }> = {
-    none: { initial: { opacity: 0, y: 18 }, animate: { opacity: 1, y: 0 } },
-    fadeUp: { initial: { opacity: 0, y: dist }, animate: { opacity: 1, y: 0 } },
-    fadeDown: { initial: { opacity: 0, y: -dist }, animate: { opacity: 1, y: 0 } },
-    fadeIn: { initial: { opacity: 0 }, animate: { opacity: 1 } },
-    fadeLeft: { initial: { opacity: 0, x: -dist }, animate: { opacity: 1, x: 0 } },
-    fadeRight: { initial: { opacity: 0, x: dist }, animate: { opacity: 1, x: 0 } },
-    slideUp: { initial: { y: dist, opacity: 0 }, animate: { y: 0, opacity: 1 } },
-    slideDown: { initial: { y: -dist, opacity: 0 }, animate: { y: 0, opacity: 1 } },
-    slideLeft: { initial: { x: -dist, opacity: 0 }, animate: { x: 0, opacity: 1 } },
-    slideRight: { initial: { x: dist, opacity: 0 }, animate: { x: 0, opacity: 1 } },
-    scaleIn: { initial: { scale: 0.9, opacity: 0 }, animate: { scale: 1, opacity: 1 } },
-    scaleUp: { initial: { scale: 0.8, opacity: 0 }, animate: { scale: 1, opacity: 1 } },
-    rotateIn: { initial: { rotate: -5, opacity: 0, scale: 0.95 }, animate: { rotate: 0, opacity: 1, scale: 1 } },
-    blurIn: { initial: { opacity: 0, filter: "blur(10px)" }, animate: { opacity: 1, filter: "blur(0px)" } },
-    flipIn: { initial: { rotateX: 90, opacity: 0 }, animate: { rotateX: 0, opacity: 1 } },
-    bounceIn: { initial: { scale: 0.5, opacity: 0 }, animate: { scale: 1, opacity: 1 } },
-  };
+const getHoverProps = (c: any) => buildHoverAnimation(c);
 
-  const entry = map[anim] || map.none;
-  return { ...entry, transition: { duration: dur, delay, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } };
-};
+const getPressProps = (c: any) => buildPressAnimation(c);
 
-const getHoverProps = (c: any) => {
-  const effect = c.hoverEffect || "none";
-  const intensity = (c.hoverIntensity ?? 50) / 100;
-  const map: Record<string, any> = {
-    lift: { y: -6 * intensity },
-    scale: { scale: 1 + 0.05 * intensity },
-    glow: { boxShadow: `0 0 ${30 * intensity}px hsl(217 91% 60% / ${0.3 * intensity})` },
-    shadowGrow: { boxShadow: `0 ${20 * intensity}px ${40 * intensity}px -10px hsl(228 33% 2% / 0.5)` },
-    brighten: { filter: `brightness(${1 + 0.2 * intensity})` },
-    tiltX: { rotateY: 3 * intensity, rotateX: -2 * intensity },
-  };
-  return map[effect] || {};
+const getGroupMotionProps = (c: any, index: number, columns = 1, disableAnimations = false) => {
+  const viewport = typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches ? "mobile" : "desktop";
+  const enabled = !disableAnimations && isMotionEnabledForViewport(c, viewport, false);
+  return buildChildRevealProps(c, index, { columns, enabled, disableAnimations: !enabled });
 };
 
 const getContinuousAnimation = (c: any): string => {
@@ -765,6 +795,7 @@ const Section = ({ block, defaultClasses, children }: { block: SiteBlock; defaul
   // Entrance animation
   const entranceAnim = getEntranceAnimation(c);
   const hoverProps = getHoverProps(c);
+  const pressProps = getPressProps(c);
   const continuousAnim = getContinuousAnimation(c);
 
   // Glow animation
@@ -945,10 +976,12 @@ const Section = ({ block, defaultClasses, children }: { block: SiteBlock; defaul
         id={anchorAttr}
         data-editor-anchor={anchorAttr}
         initial={entranceAnim.initial}
-        whileInView={entranceAnim.animate || entranceAnim.initial}
-        viewport={{ once: true, amount: 0.12 }}
+        whileInView={c.animationTrigger === "onLoad" ? undefined : (entranceAnim.animate || entranceAnim.initial)}
+        animate={c.animationTrigger === "onLoad" ? entranceAnim.animate : undefined}
+        viewport={{ once: c.animateOnce !== false, amount: (c.viewportThreshold as number) ?? 0.12 }}
         transition={entranceAnim.transition}
         whileHover={Object.keys(hoverProps).length > 0 ? hoverProps : undefined}
+        whileTap={Object.keys(pressProps).length > 0 ? pressProps : undefined}
         className={`${needsRelative ? "relative overflow-hidden" : ""} ${props.className} ${clickable.className} ${sectionWidthClass(c.sectionWidth)}`.trim()}
         style={{ ...props.style, ...sectionStyleOverrides }}
         onClick={handleSectionClick}
@@ -1105,7 +1138,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
         <div className="container">
           {c.image_url ? (
             <motion.img
-              whileHover={{ scale: 1.01 }}
+              {...getGroupMotionProps(c, 0)}
               src={c.image_url}
               alt={getLocalizedValue(c.alt, "")}
               className={cn(
@@ -1450,7 +1483,7 @@ const EntryCardsBlock = ({ block }: { block: SiteBlock; disableAnimations: boole
             const cta = getLocalizedValue(card.cta, "");
             const cardBody = (
               <motion.div
-                whileHover={{ y: -4 }}
+                {...getGroupMotionProps(c, index, columns)}
                 className={`group flex h-full flex-col rounded-2xl border border-border/30 bg-card/70 p-8 backdrop-blur-xl transition-all duration-500 hover:border-primary/20 hover:shadow-[0_24px_80px_-12px_hsl(217_91%_60%/0.15)] ${alignmentClass(card.alignment || align)}`}
                 style={{ boxShadow: '0 8px 40px -8px hsl(228 33% 2% / 0.5), inset 0 1px 0 0 hsl(215 25% 95% / 0.04)' }}
               >
@@ -1570,11 +1603,7 @@ const CategoriesBlock = ({ block, disableAnimations = false }: { block: SiteBloc
     const catName = getLocalizedValue(cat.name, cat.name || "");
     const cardContent = (
       <motion.div
-        initial={disableAnimations ? false : { opacity: 0, y: 16 }}
-        whileInView={disableAnimations ? undefined : { opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ delay: index * 0.04 }}
-        whileHover={{ y: -6 }}
+        {...getGroupMotionProps(c, index, gridColumns, disableAnimations)}
         className="group relative flex h-40 items-end overflow-hidden rounded-2xl border border-border/30 bg-card/70 p-6 backdrop-blur-xl transition-all duration-500 hover:border-primary/20"
         style={{ boxShadow: '0 8px 40px -8px hsl(228 33% 2% / 0.5), inset 0 1px 0 0 hsl(215 25% 95% / 0.04)' }}
       >
@@ -1754,11 +1783,7 @@ const FeaturedProductsBlock = ({
             {products.map(({ product, socialProof }, i) => (
               <motion.div
                 key={product.id}
-                variants={fadeUp}
-                initial={disableAnimations ? false : "hidden"}
-                whileInView={disableAnimations ? undefined : "visible"}
-                animate={disableAnimations ? { opacity: 1, y: 0 } : undefined}
-                viewport={{ once: true }}
+                {...getGroupMotionProps(c, i, 1, disableAnimations)}
                 className="shrink-0 snap-start"
                 style={{ minWidth: `${cardMinWidth}px`, width: `${cardMinWidth}px` }}
               >
@@ -1792,11 +1817,7 @@ const FeaturedProductsBlock = ({
           {products.map(({ product, socialProof }, i) => (
             <motion.div
               key={product.id}
-              variants={fadeUp}
-              initial={disableAnimations ? false : "hidden"}
-              whileInView={disableAnimations ? undefined : "visible"}
-              animate={disableAnimations ? { opacity: 1, y: 0 } : undefined}
-              viewport={{ once: true }}
+              {...getGroupMotionProps(c, i, gridColumns, disableAnimations)}
             >
               <ProductCard product={product} socialProof={socialProof} index={i} />
             </motion.div>
@@ -1873,11 +1894,7 @@ const HowItWorksBlock = ({ block }: { block: SiteBlock; disableAnimations?: bool
 
             const stepContent = (
               <motion.div
-                initial={{ opacity: 0, y: 14 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ y: -3 }}
+                {...getGroupMotionProps(c, index, columns)}
                 className={`${alignmentClass(s.alignment || align)} ${isClickable && !isEditorPreviewMode() ? "cursor-pointer" : ""}`}
               >
                 <div
@@ -2033,11 +2050,7 @@ const TrustBadgesBlock = ({ block }: { block: SiteBlock; disableAnimations?: boo
 
             const badgeContent = (
               <motion.div
-                initial={{ opacity: 0, y: 14 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ y: -3 }}
+                {...getGroupMotionProps(c, index, columns)}
                 className={`flex gap-4 rounded-2xl border border-border/30 bg-card/70 p-6 backdrop-blur-xl transition-all duration-500 hover:border-primary/20 hover:shadow-[0_24px_80px_-12px_hsl(217_91%_60%/0.15)] ${verticalClass(c.verticalAlignment)} ${action.actionType !== "none" && !isEditorPreviewMode() ? "cursor-pointer" : ""}`}
                 style={{ boxShadow: '0 8px 40px -8px hsl(228 33% 2% / 0.5), inset 0 1px 0 0 hsl(215 25% 95% / 0.04)' }}
               >
@@ -2267,7 +2280,7 @@ const VideoBlock = ({ block }: { block: SiteBlock }) => {
         </h2>
       )}
 
-      <motion.div whileHover={{ y: -4 }} className="overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md" style={{ boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)' }}>
+      <motion.div {...getGroupMotionProps(block.content || {}, 0)} className="overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md" style={{ boxShadow: '0 8px 40px -8px hsl(225 44% 4% / 0.5)' }}>
         {isYouTube ? (
           <div className="aspect-video">
             <iframe
@@ -2561,10 +2574,7 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
       return (
         <motion.div
           key={item.id}
-          initial={{ opacity: 0, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: index * 0.04 }}
+          {...getGroupMotionProps(c, index)}
           className="relative overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md"
           style={{ boxShadow: '0 4px 24px -4px hsl(var(--primary) / 0.15)' }}
         >
@@ -2579,11 +2589,7 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
         href={item.permalink || profileUrl}
         target="_blank"
         rel="noreferrer"
-        initial={{ opacity: 0, y: 12 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ delay: index * 0.04 }}
-        whileHover={{ y: -3 }}
+        {...getGroupMotionProps(c, index)}
         className="relative overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md transition-all duration-500 hover:shadow-lg"
         style={{ boxShadow: '0 4px 24px -4px hsl(var(--primary) / 0.15)' }}
       >

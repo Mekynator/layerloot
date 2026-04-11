@@ -19,7 +19,7 @@ const STATIC_PAGES: PageOption[] = [
   { title: "Contact", slug: "/contact" },
   { title: "Gallery", slug: "/gallery" },
   { title: "Creations", slug: "/creations" },
-  { title: "Create Your Own", slug: "/create-your-own" },
+  { title: "Create Your Own", slug: "/create" },
   { title: "Submit Design", slug: "/submit-design" },
   { title: "Order Tracking", slug: "/order-tracking" },
   { title: "Account", slug: "/account" },
@@ -42,12 +42,15 @@ export default function PageLinkSelect({ label, value, onChange, className }: Pa
   useEffect(() => {
     if (cachedDynamic) return;
     (async () => {
-      const result: { data: { title: string; slug: string }[] | null } = await (supabase as any)
+      const result: { data: { title?: string; name?: string; slug: string; full_path?: string | null }[] | null } = await (supabase as any)
         .from("site_pages")
-        .select("title, slug")
-        .eq("is_active", true)
-        .order("title");
-      const pages: PageOption[] = (result.data ?? []).map((p) => ({ title: p.title, slug: `/${p.slug}` }));
+        .select("title, name, slug, full_path")
+        .eq("is_published", true)
+        .order("sort_order", { ascending: true });
+      const pages: PageOption[] = (result.data ?? []).map((p) => ({
+        title: p.title || p.name || p.slug,
+        slug: p.full_path || (p.slug === "home" ? "/" : `/${p.slug}`),
+      }));
       cachedDynamic = pages;
       setDynamicPages(pages);
     })();

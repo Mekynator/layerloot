@@ -69,8 +69,11 @@ interface EditorState {
   addBlock: (type: string, atIndex?: number, preset?: Partial<Pick<SiteBlock, "title" | "content" | "is_active">>) => void;
   deleteBlock: (id: string) => void;
   duplicateBlock: (id: string) => void;
+  copyBlock: (id: string) => void;
+  pasteBlock: (atIndex?: number) => void;
   moveBlock: (fromIndex: number, toIndex: number) => void;
   toggleBlockActive: (id: string) => void;
+  toggleBlockLocked: (id: string) => void;
 
   // Layout order (unified static + dynamic)
   layoutOrder: import("@/lib/static-page-sections").LayoutEntry[] | null;
@@ -150,6 +153,7 @@ const BLOCK_TYPES = [
   { value: "entry_cards", label: "Entry Cards" },
   { value: "categories", label: "Categories Grid" },
   { value: "featured_products", label: "Featured Products" },
+  { value: "smart_funnel", label: "Smart Funnel" },
   { value: "how_it_works", label: "How It Works" },
   { value: "faq", label: "FAQ Section" },
   { value: "trust_badges", label: "Trust Badges" },
@@ -203,6 +207,14 @@ const createDefaultContent = (type: string): Record<string, any> => {
       return { heading: "Shop by Category", subheading: "Find exactly what you need", limit: 6 };
     case "featured_products":
       return { heading: "Best Sellers", subheading: "Our most popular 3D printed items", limit: 8 };
+    case "smart_funnel":
+      return {
+        heading: "Recommended for you",
+        subtitle: "Stage-aware personalised picks based on visitor behaviour.",
+        limit: 4,
+        ctaLabel: "Browse products",
+        ctaHref: "/products",
+      };
     case "how_it_works":
       return { heading: "How It Works", subheading: "From idea to your doorstep in 4 simple steps" };
     case "faq":
@@ -259,6 +271,9 @@ const createDefaultContent = (type: string): Record<string, any> => {
 };
 
 const MAX_UNDO = 50;
+const BLOCK_CLIPBOARD_KEY = "layerloot-editor-block-clipboard";
+
+const isBlockLockedContent = (content: unknown) => Boolean((content as Record<string, any> | null | undefined)?._editorLocked);
 
 export function VisualEditorProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -274,6 +289,14 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
   const [inlineEditingKey, setInlineEditingKey] = useState<string | null>(null);
+  const [blockClipboard, setBlockClipboard] = useState<Pick<SiteBlock, "block_type" | "title" | "content" | "is_active"> | null>(() => {
+    try {
+      const raw = typeof window !== "undefined" ? sessionStorage.getItem(BLOCK_CLIPBOARD_KEY) : null;
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  });
   const [publishing, setPublishing] = useState(false);
   const [draftStatus, setDraftStatus] = useState<DraftStatus>("published");
   const [scheduledAt, setScheduledAt] = useState<string | null>(null);
@@ -545,7 +568,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     const preparedContent = prepareReusableContentForSave(content);
     setDraftBlocks(prev => {
       const idx = prev.findIndex(b => b.id === id);
-      if (idx === -1) return prev;
+      if (idx === -1 || isBlockLockedContent(prev[idx].content)) return prev;
       const next = [...prev];
       next[idx] = { ...next[idx], content: preparedContent };
       return next;
@@ -562,7 +585,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
 
   const updateBlockMeta = useCallback((id: string, patch: Partial<Pick<SiteBlock, "title" | "is_active">>) => {
     pushUndo("Update block");
-    setDraftBlocks(prev => prev.map(b => b.id === id ? { ...b, ...patch } : b));
+    setDraftBlocks(prev => prev.map(b => (b.id === id && !isBlockLockedContent(b.content)) ? { ...b, ...patch } : b));
   }, [pushUndo]);
 
   const addBlock = useCallback((type: string, atIndex?: number, preset?: Partial<Pick<SiteBlock, "title" | "content" | "is_active">>) => {
@@ -602,6 +625,11 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   }, [activePage, pageBlocks.length, pushUndo, setSelectedBlockId, track]);
 
   const deleteBlock = useCallback((id: string) => {
+    const target = draftBlocks.find(b => b.id === id);
+    if (target && isBlockLockedContent(target.content)) {
+      toast.info("Unlock the block before deleting it");
+      return;
+    }
     pushUndo("Delete block");
     setDraftBlocks(prev => {
       const filtered = prev.filter(b => b.id !== id);
@@ -610,7 +638,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
       return [...others, ...pageFiltered];
     });
     if (selectedBlockId === id) setSelectedBlockId(null);
-  }, [activePage, selectedBlockId, pushUndo]);
+  }, [activePage, selectedBlockId, pushUndo, draftBlocks]);
 
   const duplicateBlock = useCallback((id: string) => {
     pushUndo("Duplicate block");
@@ -618,6 +646,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
       const idx = prev.findIndex(b => b.id === id);
       if (idx === -1) return prev;
       const source = prev[idx];
+      if (isBlockLockedContent(source.content)) return prev;
       const clone: SiteBlock = {
         ...source,
         id: `draft-${crypto.randomUUID()}`,
@@ -638,6 +667,8 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     pushUndo("Move block");
     setDraftBlocks(prev => {
       const current = sortBlocks(prev.filter(b => b.page === activePage));
+      const moving = current[fromIndex];
+      if (!moving || isBlockLockedContent(moving.content)) return prev;
       const others = prev.filter(b => b.page !== activePage);
       const [moved] = current.splice(fromIndex, 1);
       current.splice(toIndex, 0, moved);
@@ -647,7 +678,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
 
   const toggleBlockActive = useCallback((id: string) => {
     pushUndo("Toggle visibility");
-    setDraftBlocks(prev => prev.map(b => b.id === id ? { ...b, is_active: !(b.is_active ?? true) } : b));
+    setDraftBlocks(prev => prev.map(b => (b.id === id && !isBlockLockedContent(b.content)) ? { ...b, is_active: !(b.is_active ?? true) } : b));
   }, [pushUndo]);
 
   // Save as draft (to site_settings, not directly to site_blocks)
@@ -775,6 +806,44 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     });
   }, [activePage, draftBlocks, track]);
 
+  const copyBlock = useCallback((id: string) => {
+    const block = draftBlocks.find((b) => b.id === id);
+    if (!block) return;
+    const clip = {
+      block_type: block.block_type,
+      title: block.title,
+      content: JSON.parse(JSON.stringify(block.content || {})),
+      is_active: block.is_active ?? true,
+    };
+    setBlockClipboard(clip);
+    try { sessionStorage.setItem(BLOCK_CLIPBOARD_KEY, JSON.stringify(clip)); } catch {
+      // ignore storage failures
+    }
+    toast.success("Block copied");
+  }, [draftBlocks]);
+
+  const pasteBlock = useCallback((atIndex?: number) => {
+    if (!blockClipboard) {
+      toast.info("Copy a block first");
+      return;
+    }
+    addBlock(blockClipboard.block_type, atIndex, {
+      title: `${typeof blockClipboard.title === "string" ? blockClipboard.title : blockClipboard.block_type} (copy)`,
+      content: JSON.parse(JSON.stringify(blockClipboard.content || {})),
+      is_active: blockClipboard.is_active,
+    });
+  }, [addBlock, blockClipboard]);
+
+  const toggleBlockLocked = useCallback((id: string) => {
+    pushUndo("Toggle lock");
+    setDraftBlocks((prev) => prev.map((b) => {
+      if (b.id !== id) return b;
+      const nextContent = { ...((b.content as Record<string, any>) || {}) };
+      nextContent._editorLocked = !Boolean(nextContent._editorLocked);
+      return { ...b, content: nextContent };
+    }));
+  }, [pushUndo]);
+
   const canUndo = undoStack.current.length > 0;
   const canRedo = redoStack.current.length > 0;
 
@@ -806,8 +875,11 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     addBlock,
     deleteBlock,
     duplicateBlock,
+    copyBlock,
+    pasteBlock,
     moveBlock,
     toggleBlockActive,
+    toggleBlockLocked,
     layoutOrder,
     setLayoutOrder,
     save,
@@ -871,7 +943,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
       toast.success("Reusable section inserted");
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [pages, activePage, selectedPage, pageBlocks, savedBlocks, isDirty, selectedBlockId, selectedBlock, hoveredBlockId, saving, publishing, draftStatus, scheduledAt, viewport, frontendPages, globalPages, lastSavedAt, undoVersion, selectedElement, inlineEditingKey, layoutOrder, selectedStaticId, selectedStatic, staticSettings]);
+  }), [pages, activePage, selectedPage, pageBlocks, savedBlocks, isDirty, selectedBlockId, selectedBlock, hoveredBlockId, saving, publishing, draftStatus, scheduledAt, viewport, frontendPages, globalPages, lastSavedAt, undoVersion, selectedElement, inlineEditingKey, layoutOrder, selectedStaticId, selectedStatic, staticSettings, copyBlock, pasteBlock, toggleBlockLocked]);
 
   return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;
 }

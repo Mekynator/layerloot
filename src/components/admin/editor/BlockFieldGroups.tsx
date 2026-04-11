@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, ArrowUp, ArrowDown, Copy, Trash2, Type, ImageIcon, Link2, LayoutGrid, Database, Eye, Settings2 } from "lucide-react";
 import AdminPageSelect from "@/components/admin/AdminPageSelect";
+import PageLinkSelect from "@/components/admin/PageLinkSelect";
 import { supabase } from "@/integrations/supabase/client";
 import ImageUploadField from "./controls/ImageUploadField";
 import SliderField from "./controls/SliderField";
@@ -329,6 +330,25 @@ function getBlockGroupConfig(blockType: string): BlockGroupConfig {
             { key: "tileGridColumns", label: "Grid columns", type: "select", options: COL_2_5 },
             { key: "tileLayoutMode", label: "Layout mode", type: "select", options: LAYOUT_MODE },
             { key: "alignment", label: "Alignment", type: "select", options: ALIGN_OPTS },
+          ]},
+        ],
+      };
+
+    case "smart_funnel":
+      return {
+        groups: [
+          { id: "content", label: "Content", icon: contentIcon, defaultOpen: true, fields: [
+            { key: "heading", label: "Heading", type: "text" },
+            { key: "subtitle", label: "Subtitle", type: "textarea", rows: 3 },
+          ]},
+          { id: "data", label: "Recommendation Logic", icon: dataIcon, fields: [
+            { key: "limit", label: "Product limit", type: "select", options: [
+              { value: "2", label: "2" }, { value: "4", label: "4" }, { value: "6", label: "6" }, { value: "8", label: "8" },
+            ]},
+          ]},
+          { id: "buttons", label: "CTA", icon: linkIcon, fields: [
+            { key: "ctaLabel", label: "CTA text", type: "text" },
+            { key: "ctaHref", label: "CTA destination", type: "text" },
           ]},
         ],
       };
@@ -683,7 +703,18 @@ function FieldRenderer({
   compact: boolean;
 }) {
   switch (field.type) {
-    case "text":
+    case "text": {
+      const isLinkField = /link|href/i.test(field.key);
+      if (isLinkField) {
+        return (
+          <PageLinkSelect
+            label={field.label}
+            value={String(value ?? "")}
+            onChange={(nextValue) => onChange(nextValue)}
+          />
+        );
+      }
+
       return (
         <div>
           <Label className={labelCls}>{field.label}</Label>
@@ -695,6 +726,7 @@ function FieldRenderer({
           />
         </div>
       );
+    }
 
     case "image":
       return (
@@ -909,6 +941,7 @@ function ActionEditor({
 }) {
   const actionType = String(item.actionType || "none");
   const [products, setProducts] = useState<{ id: string; name: string; slug: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string; slug: string }[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
   const [productsError, setProductsError] = useState(false);
   const [productSearch, setProductSearch] = useState("");
@@ -921,14 +954,21 @@ function ActionEditor({
     setProductsError(false);
     (async () => {
       try {
-        const { data, error } = await supabase
-          .from("products")
-          .select("id, name, slug")
-          .eq("is_active", true)
-          .order("name");
+        const [{ data, error }, { data: categoryData }] = await Promise.all([
+          supabase
+            .from("products")
+            .select("id, name, slug")
+            .eq("is_active", true)
+            .order("name"),
+          supabase
+            .from("categories")
+            .select("id, name, slug")
+            .order("name"),
+        ]);
         if (!mounted) return;
         if (error) { setProductsError(true); return; }
         setProducts(data ?? []);
+        setCategories((categoryData as { id: string; name: string; slug: string }[] | null) ?? []);
       } catch {
         if (mounted) setProductsError(true);
       } finally {
@@ -972,6 +1012,9 @@ function ActionEditor({
             <SelectItem value="page_anchor">Section on another page</SelectItem>
             <SelectItem value="product">Product page</SelectItem>
             <SelectItem value="product_anchor">Product page + section</SelectItem>
+            <SelectItem value="category">Category page</SelectItem>
+            <SelectItem value="email">Email link</SelectItem>
+            <SelectItem value="phone">Phone link</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -1032,6 +1075,44 @@ function ActionEditor({
             onChange={(e) => patchItem(index, { actionTarget: e.target.value })}
             className={inputH}
             placeholder="https://..."
+          />
+        </div>
+      )}
+
+      {actionType === "category" && (
+        <div>
+          <Label className={labelCls}>Category</Label>
+          <Select value={String(item.actionTarget || "")} onValueChange={(v) => patchItem(index, { actionTarget: v })}>
+            <SelectTrigger className={inputH}><SelectValue placeholder="Choose category" /></SelectTrigger>
+            <SelectContent>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.slug}>{category.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {actionType === "email" && (
+        <div>
+          <Label className={labelCls}>Email address</Label>
+          <Input
+            value={String(item.actionTarget || "")}
+            onChange={(e) => patchItem(index, { actionTarget: e.target.value.replace(/^mailto:/i, "") })}
+            className={inputH}
+            placeholder="hello@example.com"
+          />
+        </div>
+      )}
+
+      {actionType === "phone" && (
+        <div>
+          <Label className={labelCls}>Phone number</Label>
+          <Input
+            value={String(item.actionTarget || "")}
+            onChange={(e) => patchItem(index, { actionTarget: e.target.value.replace(/^tel:/i, "") })}
+            className={inputH}
+            placeholder="+45 12 34 56 78"
           />
         </div>
       )}

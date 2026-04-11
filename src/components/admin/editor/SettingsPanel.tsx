@@ -440,7 +440,7 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
                 />
               </div>
 
-              <AnimationControls content={localContent} patchContent={patchContent} />
+              <AnimationControls content={localContent} patchContent={patchContent} title="Animation & Interaction" storageScope="visual-builder" />
 
               <AIAssistantPanel content={localContent} patchContent={patchContent} blockType={block.block_type} blockTitle={block.title} />
 
@@ -1030,6 +1030,16 @@ function StaticSectionSettings({ section, sectionId, settings, onUpdate, onClose
               </div>
             );
           })}
+
+          <AnimationControls
+            title="Section Motion"
+            storageScope="static-sections"
+            content={(settings.motion as Record<string, any>) || {}}
+            patchContent={(key, value) => {
+              const prev = (settings.motion as Record<string, any>) || {};
+              onUpdate(sectionId, "motion", { ...prev, [key]: value });
+            }}
+          />
         </div>
       </ScrollArea>
     </div>

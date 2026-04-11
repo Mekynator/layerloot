@@ -28,7 +28,7 @@ import {
 
 const BLOCK_ICONS: Record<string, any> = {
   hero: Square, shipping_banner: Truck, entry_cards: Layers, categories: FolderTree,
-  featured_products: Star, how_it_works: Package, faq: HelpCircle, trust_badges: ShieldCheck,
+  featured_products: Star, smart_funnel: Sparkles, how_it_works: Package, faq: HelpCircle, trust_badges: ShieldCheck,
   text: Type, image: Image, carousel: Columns, video: PlayCircle,
   banner: Square, cta: MousePointer, button: Link2, spacer: Square,
   html: Code, embed: Globe, newsletter: Mail, instagram_auto_feed: Globe,
@@ -38,7 +38,7 @@ const BLOCK_ICONS: Record<string, any> = {
 
 const BLOCK_COLORS: Record<string, string> = {
   hero: "border-l-primary", shipping_banner: "border-l-amber-500", entry_cards: "border-l-cyan-500",
-  categories: "border-l-violet-500", featured_products: "border-l-yellow-500", how_it_works: "border-l-teal-500",
+  categories: "border-l-violet-500", featured_products: "border-l-yellow-500", smart_funnel: "border-l-violet-500", how_it_works: "border-l-teal-500",
   faq: "border-l-sky-500", trust_badges: "border-l-emerald-500", text: "border-l-blue-500",
   image: "border-l-green-500", carousel: "border-l-purple-500", video: "border-l-red-500",
   banner: "border-l-amber-500", cta: "border-l-emerald-500", button: "border-l-cyan-500",
@@ -57,6 +57,7 @@ const QUICK_ELEMENTS = [
   { id: "icon", label: "Icon", desc: "Trust/icon-based section", icon: ShieldCheck, blockType: "trust_badges" },
   { id: "container", label: "Container", desc: "Flexible content wrapper", icon: Square, blockType: "banner" },
   { id: "grid", label: "Grid", desc: "Cards or category layout", icon: Columns, blockType: "entry_cards" },
+  { id: "smart", label: "Smart Funnel", desc: "Personalised recommendation section", icon: Sparkles, blockType: "smart_funnel" },
   { id: "spacer", label: "Spacer", desc: "Vertical breathing room", icon: Square, blockType: "spacer" },
   { id: "divider", label: "Divider", desc: "Visual separator", icon: Minus, blockType: "divider" },
   { id: "video", label: "Video", desc: "Embedded media section", icon: PlayCircle, blockType: "video" },
@@ -72,7 +73,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
   const {
     draftBlocks, selectedBlockId, hoveredBlockId, activePage,
     selectBlock, hoverBlock, selectedPage, selectedBlock, selectedStatic, selectedElement, selectElement,
-    deleteBlock, duplicateBlock, toggleBlockActive, moveBlock,
+    deleteBlock, duplicateBlock, copyBlock, pasteBlock, toggleBlockActive, toggleBlockLocked, moveBlock,
     addBlock, layoutOrder, setLayoutOrder,
     selectedStaticId, selectStaticSection, frontendPages, globalPages, setActivePage,
   } = useVisualEditor();
@@ -279,6 +280,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
                   const isSelected = selectedBlockId === block.id;
                   const isHovered = hoveredBlockId === block.id;
                   const isInactive = block.is_active === false;
+                  const isLocked = Boolean((block.content as any)?._editorLocked);
 
                   return (
                     <div key={block.id}>
@@ -315,7 +317,10 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
                           )}
                         </div>
 
-                        {isInactive && <EyeOff className="h-3 w-3 shrink-0 text-muted-foreground" />}
+                        <div className="flex shrink-0 items-center gap-1">
+                          {isLocked && <Lock className="h-3 w-3 shrink-0 text-amber-500" />}
+                          {isInactive && <EyeOff className="h-3 w-3 shrink-0 text-muted-foreground" />}
+                        </div>
 
                         <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                           <button onClick={(e) => { e.stopPropagation(); handleMoveItem(realIndex, "up"); }} className={cn("rounded p-0.5 text-muted-foreground hover:text-foreground", realIndex === 0 && "cursor-not-allowed opacity-30")} title="Move up">
@@ -329,6 +334,12 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
                           </button>
                           <button onClick={(e) => { e.stopPropagation(); duplicateBlock(block.id); }} className="rounded p-0.5 text-muted-foreground hover:text-foreground" title="Duplicate">
                             <Copy className="h-2.5 w-2.5" />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); copyBlock(block.id); }} className="rounded p-0.5 text-muted-foreground hover:text-foreground" title="Copy">
+                            <FileText className="h-2.5 w-2.5" />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); toggleBlockLocked(block.id); }} className="rounded p-0.5 text-muted-foreground hover:text-foreground" title={isLocked ? "Unlock" : "Lock"}>
+                            {isLocked ? <Unlock className="h-2.5 w-2.5" /> : <Lock className="h-2.5 w-2.5" />}
                           </button>
                           <button onClick={(e) => { e.stopPropagation(); saveAsReusable(block.id); }} className="rounded p-0.5 text-muted-foreground hover:text-foreground" title="Save as reusable">
                             <BookmarkPlus className="h-2.5 w-2.5" />
@@ -356,6 +367,13 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
               >
                 <Plus className="h-3 w-3" />
                 <span className="text-[10px] uppercase tracking-wider">Add Section</span>
+              </button>
+              <button
+                onClick={() => pasteBlock()}
+                className="flex w-full items-center justify-center gap-1 rounded-md border border-border/50 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                <Copy className="h-3 w-3" />
+                <span className="text-[10px] uppercase tracking-wider">Paste Section</span>
               </button>
               <button
                 onClick={openLibrarySection}

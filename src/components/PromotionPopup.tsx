@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAnalyticsSafe } from "@/contexts/AnalyticsContext";
@@ -16,6 +16,12 @@ import {
 } from "@/lib/promotion-popup";
 import type { PromotionPopupConfig } from "@/types/promotion-popup";
 import PromotionPopupCanvas from "@/components/promo/PromotionPopupCanvas";
+import {
+  buildEntranceAnimation,
+  buildHoverAnimation,
+  buildPressAnimation,
+  isMotionEnabledForViewport,
+} from "@/lib/animation-system";
 
 const PromotionPopup = () => {
   const location = useLocation();
@@ -190,6 +196,29 @@ const PromotionPopup = () => {
 
   if (!promo) return null;
 
+  return <PromotionPopupMotion promo={promo} visible={visible} dialogRef={dialogRef} doNotShowAgain={doNotShowAgain} setDoNotShowAgain={setDoNotShowAgain} dismiss={dismiss} />;
+};
+
+function PromotionPopupMotion({ promo, visible, dialogRef, doNotShowAgain, setDoNotShowAgain, dismiss }: {
+  promo: PromotionPopupConfig;
+  visible: boolean;
+  dialogRef: React.RefObject<HTMLDivElement | null>;
+  doNotShowAgain: boolean;
+  setDoNotShowAgain: (v: boolean) => void;
+  dismiss: (persistForever?: boolean, reason?: "dismiss" | "close" | "overlay" | "escape" | "action") => void;
+}) {
+  const { track, trackAttribution } = useAnalyticsSafe();
+  const location = useLocation();
+  const prefersReduced = useReducedMotion() ?? false;
+
+  const motionContent = useMemo(() => (promo as any).motion || {}, [promo]);
+  const viewport = typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches ? "mobile" : "desktop";
+  const motionEnabled = isMotionEnabledForViewport(motionContent, viewport as "mobile" | "desktop", prefersReduced);
+
+  const entrance = useMemo(() => motionEnabled ? buildEntranceAnimation({ animation: "popIn", animationDuration: 0.4, ...motionContent }) : null, [motionContent, motionEnabled]);
+  const hoverProps = useMemo(() => motionEnabled ? buildHoverAnimation(motionContent) : {}, [motionContent, motionEnabled]);
+  const pressProps = useMemo(() => motionEnabled ? buildPressAnimation(motionContent) : {}, [motionContent, motionEnabled]);
+
   return (
     <AnimatePresence>
       {visible && (
@@ -211,7 +240,7 @@ const PromotionPopup = () => {
           />
 
           <div className="relative z-[91] flex min-h-screen items-center justify-center p-4">
-            <div
+            <motion.div
               ref={dialogRef}
               role="dialog"
               aria-modal={promo.overlay.modal}
@@ -219,6 +248,11 @@ const PromotionPopup = () => {
               className="w-full max-w-[min(100vw-2rem,640px)] outline-none"
               tabIndex={-1}
               onClick={(event) => event.stopPropagation()}
+              initial={entrance?.initial}
+              animate={entrance?.animate}
+              transition={entrance?.transition}
+              whileHover={Object.keys(hoverProps).length > 0 ? hoverProps : undefined}
+              whileTap={Object.keys(pressProps).length > 0 ? pressProps : undefined}
             >
               <PromotionPopupCanvas
                 config={promo}
@@ -260,12 +294,12 @@ const PromotionPopup = () => {
                   Do not show again on this browser
                 </label>
               )}
-            </div>
+            </motion.div>
           </div>
         </motion.div>
       )}
     </AnimatePresence>
   );
-};
+}
 
 export default PromotionPopup;

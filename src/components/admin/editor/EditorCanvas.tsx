@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { buildReusableInstanceContent, getReusableKind } from "@/lib/reusable-blocks";
 import EditorErrorBoundary from "@/components/admin/EditorErrorBoundary";
 import { useVisualEditor } from "@/contexts/VisualEditorContext";
-import { AlignCenter, AlignLeft, AlignRight, ChevronDown, ChevronUp, Copy, Eye, EyeOff, GripVertical, Link2, Minus, Pencil, Plus, Settings2, Trash2 } from "lucide-react";
+import { AlignCenter, AlignLeft, AlignRight, ChevronDown, ChevronUp, ClipboardPaste, Copy, Eye, EyeOff, GripVertical, Link2, Lock, Minus, Pencil, Plus, Settings2, Trash2, Unlock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBlockSchema, getInlineTextKeys } from "./editable-schema";
 import { buildPreviewList, previewListToLayout, type PreviewItem } from "@/lib/static-page-sections";
@@ -21,7 +21,7 @@ export default function EditorCanvas({ zoom = 100, previewMode = false }: { zoom
   const {
     draftBlocks, selectedBlockId, hoveredBlockId,
     selectBlock, hoverBlock, viewport, activePage,
-    deleteBlock, duplicateBlock, toggleBlockActive, addBlock, moveBlock,
+    deleteBlock, duplicateBlock, copyBlock, pasteBlock, toggleBlockActive, toggleBlockLocked, addBlock, moveBlock,
     updateBlockContent, selectElement, inlineEditingKey, setInlineEditingKey,
     layoutOrder, setLayoutOrder,
     selectedStaticId, selectStaticSection,
@@ -303,7 +303,10 @@ export default function EditorCanvas({ zoom = 100, previewMode = false }: { zoom
                     onMouseLeave={() => hoverBlock(null)}
                     onDelete={() => deleteBlock(block.id)}
                     onDuplicate={() => duplicateBlock(block.id)}
+                    onCopy={() => copyBlock(block.id)}
+                    onPasteAfter={() => pasteBlock(dynamicIndex + 1)}
                     onToggleActive={() => toggleBlockActive(block.id)}
+                    onToggleLocked={() => toggleBlockLocked(block.id)}
                     onAddBefore={() => addBlock("text", dynamicIndex)}
                     onMoveUp={() => handleMoveUp(index)}
                     onMoveDown={() => handleMoveDown(index)}
@@ -324,6 +327,7 @@ export default function EditorCanvas({ zoom = 100, previewMode = false }: { zoom
                       selectElement({ blockId: block.id, nodeKey, nodeType });
                     }}
                     isDragging={dragIdx === index}
+                    isLocked={Boolean((block.content as any)?._editorLocked)}
                     previewMode={previewMode}
                   />
                 );
@@ -453,7 +457,10 @@ interface CanvasBlockWrapperProps {
   onMouseLeave: () => void;
   onDelete: () => void;
   onDuplicate: () => void;
+  onCopy: () => void;
+  onPasteAfter: () => void;
   onToggleActive: () => void;
+  onToggleLocked: () => void;
   onAddBefore: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -466,18 +473,20 @@ interface CanvasBlockWrapperProps {
   onEndInlineEdit: () => void;
   onSelectElement: (nodeKey: string, nodeType: "text" | "icon" | "button" | "media" | "layout") => void;
   isDragging?: boolean;
+  isLocked?: boolean;
   previewMode?: boolean;
 }
 
 function CanvasBlockWrapper({
   block, index, unifiedIndex, totalBlocks, totalItems, isSelected, isHovered, isDragOver,
   onClick, onMouseEnter, onMouseLeave,
-  onDelete, onDuplicate, onToggleActive, onAddBefore,
+  onDelete, onDuplicate, onCopy, onPasteAfter, onToggleActive, onToggleLocked, onAddBefore,
   onMoveUp, onMoveDown,
   onDragStart, onDragOver, onDragEnd,
   onUpdateContent,
   inlineEditingKey, onStartInlineEdit, onEndInlineEdit, onSelectElement,
   isDragging = false,
+  isLocked = false,
   previewMode = false,
 }: CanvasBlockWrapperProps) {
   const isInactive = block.is_active === false;
@@ -486,7 +495,7 @@ function CanvasBlockWrapper({
   const inlineTextKeys = getInlineTextKeys(block.block_type);
 
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    if (previewMode) return;
+    if (previewMode || isLocked) return;
     e.stopPropagation();
     e.preventDefault();
     const target = e.target as HTMLElement;
@@ -499,7 +508,7 @@ function CanvasBlockWrapper({
     if (inlineTextKeys.length > 0) {
       onStartInlineEdit(inlineTextKeys[0]);
     }
-  }, [inlineTextKeys, onStartInlineEdit, previewMode]);
+  }, [inlineTextKeys, onStartInlineEdit, previewMode, isLocked]);
 
   const handleClickCapture = useCallback((e: React.MouseEvent) => {
     if (previewMode) return;
@@ -519,10 +528,12 @@ function CanvasBlockWrapper({
   } : null;
 
   const setAlignment = useCallback((alignment: "left" | "center" | "right") => {
+    if (isLocked) return;
     onUpdateContent({ ...content, alignment });
-  }, [content, onUpdateContent]);
+  }, [content, onUpdateContent, isLocked]);
 
   const nudgeSpacing = useCallback((delta: number) => {
+    if (isLocked) return;
     if (content.paddingTop !== undefined || content.paddingBottom !== undefined) {
       onUpdateContent({
         ...content,
@@ -532,7 +543,7 @@ function CanvasBlockWrapper({
       return;
     }
     onUpdateContent({ ...content, gap: Math.max(0, Number(content.gap ?? 0) + delta) });
-  }, [content, onUpdateContent]);
+  }, [content, onUpdateContent, isLocked]);
 
   const handleInlineSave = useCallback((key: string, value: string) => {
     onEndInlineEdit();
@@ -544,7 +555,7 @@ function CanvasBlockWrapper({
   return (
     <div
       data-preview-id={block.id}
-      draggable
+      draggable={!previewMode && !isLocked}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
@@ -612,45 +623,60 @@ function CanvasBlockWrapper({
       {/* Floating action toolbar (right) */}
       {showControls && (
         <div data-editor-toolbar className="absolute top-1 right-2 z-30 flex max-w-[calc(100%-1rem)] flex-wrap items-center gap-0.5 rounded-lg border border-border/30 bg-card/95 px-1 py-0.5 shadow-[0_14px_32px_-18px_rgba(15,23,42,0.7)] backdrop-blur-xl transition-all duration-200 ease-out">
-          <ToolButton onClick={onMoveUp} title="Move forward" disabled={unifiedIndex === 0}>
+          <ToolButton onClick={onMoveUp} title="Move forward" disabled={unifiedIndex === 0 || isLocked}>
             <ChevronUp className="h-3 w-3" />
           </ToolButton>
-          <ToolButton onClick={onMoveDown} title="Move backward" disabled={unifiedIndex === totalItems - 1}>
+          <ToolButton onClick={onMoveDown} title="Move backward" disabled={unifiedIndex === totalItems - 1 || isLocked}>
             <ChevronDown className="h-3 w-3" />
           </ToolButton>
+          <ToolButton onClick={onCopy} title="Copy block">
+            <Copy className="h-3 w-3" />
+          </ToolButton>
+          <ToolButton onClick={onPasteAfter} title="Paste after">
+            <ClipboardPaste className="h-3 w-3" />
+          </ToolButton>
           {inlineTextKeys.length > 0 && (
-            <ToolButton onClick={() => onStartInlineEdit(inlineTextKeys[0])} title="Quick text edit">
+            <ToolButton onClick={() => onStartInlineEdit(inlineTextKeys[0])} title="Quick text edit" disabled={isLocked}>
               <Pencil className="h-3 w-3" />
             </ToolButton>
           )}
           {hasAlignmentControls && (
             <>
-              <ToolButton onClick={() => setAlignment("left")} title="Align left"><AlignLeft className="h-3 w-3" /></ToolButton>
-              <ToolButton onClick={() => setAlignment("center")} title="Align center"><AlignCenter className="h-3 w-3" /></ToolButton>
-              <ToolButton onClick={() => setAlignment("right")} title="Align right"><AlignRight className="h-3 w-3" /></ToolButton>
+              <ToolButton onClick={() => setAlignment("left")} title="Align left" disabled={isLocked}><AlignLeft className="h-3 w-3" /></ToolButton>
+              <ToolButton onClick={() => setAlignment("center")} title="Align center" disabled={isLocked}><AlignCenter className="h-3 w-3" /></ToolButton>
+              <ToolButton onClick={() => setAlignment("right")} title="Align right" disabled={isLocked}><AlignRight className="h-3 w-3" /></ToolButton>
             </>
           )}
           {hasSpacingControls && (
             <>
-              <ToolButton onClick={() => nudgeSpacing(-4)} title="Tighter spacing"><Minus className="h-3 w-3" /></ToolButton>
-              <ToolButton onClick={() => nudgeSpacing(4)} title="More spacing"><Plus className="h-3 w-3" /></ToolButton>
+              <ToolButton onClick={() => nudgeSpacing(-4)} title="Tighter spacing" disabled={isLocked}><Minus className="h-3 w-3" /></ToolButton>
+              <ToolButton onClick={() => nudgeSpacing(4)} title="More spacing" disabled={isLocked}><Plus className="h-3 w-3" /></ToolButton>
             </>
           )}
           <div className="mx-0.5 h-3 w-px bg-border/30" />
-          <ToolButton onClick={onToggleActive} title={isInactive ? "Show" : "Hide"}>
+          <ToolButton onClick={onToggleLocked} title={isLocked ? "Unlock" : "Lock"}>
+            {isLocked ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+          </ToolButton>
+          <ToolButton onClick={onToggleActive} title={isInactive ? "Show" : "Hide"} disabled={isLocked}>
             {isInactive ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
           </ToolButton>
-          <ToolButton onClick={onDuplicate} title="Duplicate">
+          <ToolButton onClick={onDuplicate} title="Duplicate" disabled={isLocked}>
             <Copy className="h-3 w-3" />
           </ToolButton>
-          <ToolButton onClick={onDelete} title="Delete" destructive>
+          <ToolButton onClick={onDelete} title="Delete" destructive disabled={isLocked}>
             <Trash2 className="h-3 w-3" />
           </ToolButton>
         </div>
       )}
 
+      {isSelected && isLocked && !previewMode && (
+        <div data-editor-toolbar className="absolute bottom-1 left-2 z-30 flex items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[9px] text-amber-700 shadow-lg backdrop-blur-xl dark:text-amber-300">
+          <Lock className="h-3 w-3" /> Locked block — unlock to edit
+        </div>
+      )}
+
       {/* Inline editing hint */}
-      {isSelected && !previewMode && inlineTextKeys.length > 0 && !inlineEditingKey && (
+      {isSelected && !previewMode && inlineTextKeys.length > 0 && !inlineEditingKey && !isLocked && (
         <div data-editor-toolbar className="absolute bottom-1 left-2 z-30 flex items-center gap-1 rounded-lg border border-border/30 bg-card/95 px-1.5 py-0.5 shadow-lg backdrop-blur-xl">
           <span className="text-[9px] text-muted-foreground">Double-click text to edit inline</span>
         </div>

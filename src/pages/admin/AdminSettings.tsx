@@ -18,6 +18,7 @@ import { DEFAULT_SHORTCUTS, ICON_MAP, type DashboardShortcut } from "@/pages/adm
 
 import { useDraftSettings } from "@/hooks/use-draft-settings";
 import DraftActionBar from "@/components/admin/DraftActionBar";
+import AnimationControls from "@/components/admin/editor/controls/AnimationControls";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminEmailManager from "@/components/admin/email/AdminEmailManager";
 import { Slider } from "@/components/ui/slider";
@@ -119,6 +120,7 @@ interface ContactConfig {
 interface PromoConfig {
   enabled: boolean; title: string; message: string; button_text: string;
   button_link: string; image_url: string; dismiss_key: string;
+  motion?: Record<string, unknown>;
 }
 
 interface FooterConfig {
@@ -157,7 +159,7 @@ const defaultContact: ContactConfig = {
   social: { instagram: "", facebook: "", youtube: "" },
 };
 
-const defaultPromo: PromoConfig = { enabled: false, title: "Welcome!", message: "Check out our latest 3D printed items.", button_text: "Shop Now", button_link: "/products", image_url: "", dismiss_key: "v1" };
+const defaultPromo: PromoConfig = { enabled: false, title: "Welcome!", message: "Check out our latest 3D printed items.", button_text: "Shop Now", button_link: "/products", image_url: "", dismiss_key: "v1", motion: { animation: "popIn", animationDuration: 0.4, hoverEffect: "lift", pressEffect: "shrink" } };
 
 const defaultFooter: FooterConfig = {
   description: "Premium 3D printing supplies and custom prints for makers, hobbyists, and professionals.",
@@ -624,6 +626,21 @@ const AdminSettings = () => {
               <div><Label className="text-xs">Image URL</Label><Input value={promoDraft.value.image_url} onChange={e => promoDraft.setValue(prev => ({ ...prev, image_url: e.target.value }))} /></div>
               <div><Label className="text-xs">Dismiss Key</Label><Input value={promoDraft.value.dismiss_key} onChange={e => promoDraft.setValue(prev => ({ ...prev, dismiss_key: e.target.value }))} /></div>
               <p className="text-[10px] text-muted-foreground">→ Affects: Promotion popup on all pages. Change dismiss key to re-show to returning visitors.</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="font-display text-sm uppercase">Popup Motion & Interaction</CardTitle></CardHeader>
+            <CardContent>
+              <AnimationControls
+                title="Popup Motion"
+                storageScope="promotion-popup"
+                content={(promoDraft.value.motion as Record<string, any>) || {}}
+                patchContent={(key, value) => {
+                  const prev = (promoDraft.value.motion as Record<string, any>) || {};
+                  promoDraft.setValue((p) => ({ ...p, motion: { ...prev, [key]: value } }));
+                }}
+              />
             </CardContent>
           </Card>
         </TabsContent>

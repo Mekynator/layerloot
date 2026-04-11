@@ -20,7 +20,10 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 function EditorInner() {
   const navigate = useNavigate();
   const { isAdmin, loading, user } = useAuth();
-  const { selectedPage, loadPages, setActivePage, activePage, pages, isDirty, save, undo, redo, viewport } = useVisualEditor();
+  const {
+    selectedPage, selectedBlockId, loadPages, setActivePage, activePage, pages,
+    isDirty, save, undo, redo, viewport, copyBlock, pasteBlock, deleteBlock,
+  } = useVisualEditor();
 
   const [addBlockOpen, setAddBlockOpen] = useState(false);
   const [pageDialogOpen, setPageDialogOpen] = useState(false);
@@ -68,10 +71,28 @@ function EditorInner() {
         e.preventDefault();
         redo();
       }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "c" && selectedBlockId) {
+        const target = e.target as HTMLElement | null;
+        if (target?.closest("input, textarea, [contenteditable='true']")) return;
+        e.preventDefault();
+        copyBlock(selectedBlockId);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "v") {
+        const target = e.target as HTMLElement | null;
+        if (target?.closest("input, textarea, [contenteditable='true']")) return;
+        e.preventDefault();
+        pasteBlock();
+      }
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedBlockId) {
+        const target = e.target as HTMLElement | null;
+        if (target?.closest("input, textarea, [contenteditable='true']")) return;
+        e.preventDefault();
+        deleteBlock(selectedBlockId);
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [save, undo, redo]);
+  }, [save, undo, redo, selectedBlockId, copyBlock, pasteBlock, deleteBlock]);
 
   // Warn on unsaved changes
   useEffect(() => {

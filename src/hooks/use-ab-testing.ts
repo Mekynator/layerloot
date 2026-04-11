@@ -23,7 +23,12 @@ function useRunningExperiments() {
         .from("ab_experiments" as any)
         .select("*")
         .eq("status", "running") as any;
-      if (expError) throw expError;
+      if (expError) {
+        if (String(expError.code) === "PGRST205" || String(expError.message).includes("Could not find")) {
+          return [] as Experiment[];
+        }
+        throw expError;
+      }
       if (!experiments?.length) return [] as Experiment[];
 
       const expIds = experiments.map((e: any) => e.id);

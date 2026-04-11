@@ -838,6 +838,26 @@ const Section = ({ block, defaultClasses, children }: { block: SiteBlock; defaul
     });
   }, [block.id, block.block_type, c._activeVariantId, entityType, sectionLabel, track]);
 
+  // Track A/B test variant display
+  useEffect(() => {
+    if (isEditorPreviewMode() || !c._abVariantId || !c._abExperimentId) return;
+    track({
+      eventName: "ab_variant_shown",
+      entityType: "experiment",
+      entityId: String(c._abExperimentId),
+      source: "ab_testing",
+      context: {
+        variantId: c._abVariantId,
+        variantName: c._abVariantName,
+        blockId: block.id,
+        blockType: block.block_type,
+        entityLabel: sectionLabel,
+      },
+      allowDuplicates: false,
+      dedupeKey: `ab-${c._abExperimentId}-${c._abVariantId}`,
+    });
+  }, [block.id, block.block_type, c._abExperimentId, c._abVariantId, c._abVariantName, sectionLabel, track]);
+
   const handleSectionClick = (e: MouseEvent<HTMLElement>) => {
     if (!isEditorPreviewMode()) {
       const target = e.target as HTMLElement;
@@ -859,6 +879,23 @@ const Section = ({ block, defaultClasses, children }: { block: SiteBlock; defaul
           anchorId: anchorAttr,
         },
       });
+
+      // Track A/B variant click
+      if (c._abExperimentId && c._abVariantId) {
+        track({
+          eventName: "ab_variant_click",
+          entityType: "experiment",
+          entityId: String(c._abExperimentId),
+          source: "ab_testing",
+          context: {
+            variantId: c._abVariantId,
+            variantName: c._abVariantName,
+            blockId: block.id,
+            blockType: block.block_type,
+            clickLabel: label || null,
+          },
+        });
+      }
 
       if (interactive) {
         const buttonId = `${block.id}:${String(label || "button").toLowerCase().replace(/[^a-z0-9-_]+/gi, "-")}`;

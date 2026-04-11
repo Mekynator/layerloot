@@ -42,7 +42,10 @@ export type AnalyticsEventName =
   | "component_global_edit"
   | "personalized_variant_shown"
   | "personalized_section_hidden"
-  | "personalized_recommendation_click";
+  | "personalized_recommendation_click"
+  | "ab_variant_shown"
+  | "ab_variant_click"
+  | "ab_conversion";
 
 export type AnalyticsEntityType =
   | "page"
@@ -56,7 +59,8 @@ export type AnalyticsEntityType =
   | "product"
   | "editor"
   | "preset"
-  | "order";
+  | "order"
+  | "experiment";
 
 export interface AttributionTouchpoint {
   id: string;

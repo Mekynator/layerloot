@@ -24,6 +24,7 @@ import { getBlockSchema, type EditableNode, type BlockEditableSchema } from "./e
 import BlockFieldGroups from "./BlockFieldGroups";
 import PageStylePresetsPanel from "./PageStylePresetsPanel";
 import PersonalizationPanel from "./PersonalizationPanel";
+import ABTestPanel from "./ABTestPanel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { tr } from "@/lib/translate";
 import { buildReusableInstanceContent, detachReusableContent, getReusableKind, upsertReusableFromBlock } from "@/lib/reusable-blocks";
@@ -442,6 +443,8 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
               <AnimationControls content={localContent} patchContent={patchContent} />
 
               <PersonalizationPanel content={localContent} patchContent={patchContent} />
+
+              <ABTestPanel entityType="section" entityId={block.id} content={localContent} patchContent={patchContent} />
 
               <div>
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Anchor ID</Label>

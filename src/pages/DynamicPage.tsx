@@ -7,6 +7,7 @@ import NotFound from "./NotFound";
 import { usePageBlocks, useSitePage } from "@/hooks/use-page-blocks";
 import { useUserSignals } from "@/hooks/use-user-signals";
 import { shouldShowBlock, getPersonalizedContent } from "@/lib/personalization";
+import { useABTesting } from "@/hooks/use-ab-testing";
 
 type DynamicPageProps = {
   slug?: string;
@@ -59,6 +60,7 @@ const DynamicPage = ({ slug: slugProp, emptyTitle, emptyDescription }: DynamicPa
 
   const effectiveBlocks = localBlocks ?? blocks;
   const { signals } = useUserSignals();
+  const { getABContent } = useABTesting();
 
   const visibleBlocks = useMemo(() => {
     const active = (effectiveBlocks ?? []).filter((block) => block.is_active !== false);
@@ -69,10 +71,12 @@ const DynamicPage = ({ slug: slugProp, emptyTitle, emptyDescription }: DynamicPa
       .map((block) => {
         const content = block.content as Record<string, unknown> | null;
         if (!content) return block;
-        const personalized = getPersonalizedContent(content, signals);
+        // A/B variant applied first, then personalization on top
+        const abContent = getABContent(block.id, content);
+        const personalized = getPersonalizedContent(abContent, signals);
         return personalized === content ? block : { ...block, content: personalized } as SiteBlock;
       });
-  }, [effectiveBlocks, signals, isEditorPreview]);
+  }, [effectiveBlocks, signals, isEditorPreview, getABContent]);
 
   const resolvedEmptyTitle = emptyTitle ?? t("dynamicPage.emptyTitle", "Coming soon");
   const resolvedEmptyDescription = emptyDescription ?? t("dynamicPage.emptyDescription", "Content coming soon.");

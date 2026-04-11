@@ -8,6 +8,7 @@ import {
   Clock,
   ExternalLink,
   Eye,
+  FlaskConical,
   Globe,
   HelpCircle,
   History,
@@ -67,6 +68,7 @@ interface EditorToolbarProps {
   onFitZoom: () => void;
   previewPersona?: PreviewPersona | null;
   onSetPreviewPersona?: (persona: PreviewPersona | null) => void;
+  activeExperimentCount?: number;
 }
 
 export default function EditorToolbar({
@@ -88,6 +90,7 @@ export default function EditorToolbar({
   onFitZoom,
   previewPersona,
   onSetPreviewPersona,
+  activeExperimentCount,
 }: EditorToolbarProps) {
   const navigate = useNavigate();
   const {
@@ -358,6 +361,21 @@ export default function EditorToolbar({
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              {/* A/B testing indicator */}
+              {(activeExperimentCount ?? 0) > 0 && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[10px] font-medium text-emerald-600">
+                      <FlaskConical className="h-3 w-3" />
+                      {activeExperimentCount} test{activeExperimentCount === 1 ? "" : "s"}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">
+                    {activeExperimentCount} A/B test{activeExperimentCount === 1 ? " is" : "s are"} running on this page
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </div>
 
             <div className="flex flex-1 flex-wrap items-center justify-end gap-2">

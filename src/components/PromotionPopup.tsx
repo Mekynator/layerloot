@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAnalyticsSafe } from "@/contexts/AnalyticsContext";
 import { useUserSignals } from "@/hooks/use-user-signals";
 import { evaluateAudienceRules, type AudienceRules } from "@/lib/personalization";
+import { useABTesting } from "@/hooks/use-ab-testing";
+import { applyABVariantContent } from "@/lib/ab-testing";
 import {
   normalizePromotionPopupConfig,
   persistPromotionPopupDismissal,
@@ -19,6 +21,7 @@ const PromotionPopup = () => {
   const location = useLocation();
   const { track, trackAttribution } = useAnalyticsSafe();
   const { signals } = useUserSignals();
+  const { getPopupExperiment } = useABTesting();
   const [promo, setPromo] = useState<PromotionPopupConfig | null>(null);
   const [visible, setVisible] = useState(false);
   const [doNotShowAgain, setDoNotShowAgain] = useState(false);
@@ -69,7 +72,14 @@ const PromotionPopup = () => {
         return;
       }
 
-      setPromo(config);
+      // A/B test variant overrides for popup
+      const popupId = config.metadata?.analyticsId || config.dismiss_key;
+      const abResult = popupId ? getPopupExperiment(popupId) : null;
+      const finalConfig = abResult
+        ? normalizePromotionPopupConfig(applyABVariantContent(config as any, abResult.variant, abResult.experiment.id))
+        : config;
+
+      setPromo(finalConfig);
       setVisible(false);
       timer = window.setTimeout(() => {
         if (!cancelled) setVisible(true);

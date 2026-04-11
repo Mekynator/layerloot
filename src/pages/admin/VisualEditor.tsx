@@ -5,6 +5,7 @@ import { VisualEditorProvider, useVisualEditor, pageDisplayTitle } from "@/conte
 import EditorToolbar from "@/components/admin/editor/EditorToolbar";
 import LayersPanel from "@/components/admin/editor/LayersPanel";
 import type { PreviewPersona } from "@/lib/personalization";
+import { useExperimentAdmin } from "@/hooks/use-experiment-admin";
 import EditorCanvas from "@/components/admin/editor/EditorCanvas";
 import SettingsPanel from "@/components/admin/editor/SettingsPanel";
 import AddBlockDialog from "@/components/admin/editor/AddBlockDialog";
@@ -31,6 +32,9 @@ function EditorInner() {
   const [canvasZoom, setCanvasZoom] = useState(100);
   const [previewMode, setPreviewMode] = useState(false);
   const [previewPersona, setPreviewPersona] = useState<PreviewPersona | null>(null);
+  const { experiments } = useExperimentAdmin();
+
+  const activeExperimentCount = experiments.filter((e) => e.status === "running").length;
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) navigate("/");
@@ -123,6 +127,7 @@ function EditorInner() {
         onFitZoom={() => setCanvasZoom(viewport === "desktop" ? 80 : viewport === "tablet" ? 95 : 110)}
         previewPersona={previewPersona}
         onSetPreviewPersona={setPreviewPersona}
+        activeExperimentCount={activeExperimentCount}
       />
 
       <ResizablePanelGroup direction="horizontal" className="flex-1">

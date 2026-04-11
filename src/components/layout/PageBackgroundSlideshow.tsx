@@ -133,7 +133,7 @@ export default function PageBackgroundSlideshow() {
         }
       `}</style>
 
-      <div aria-hidden="true" className="pointer-events-none inset-0 z-0 overflow-hidden" style={{ position: positionType }}>
+      <div aria-hidden="true" className="pointer-events-none inset-0 z-0 overflow-hidden layer-decorative" style={{ position: positionType }}>
         {settings.images.map((src, index) => (
           <div
             key={`${src}-${index}`}

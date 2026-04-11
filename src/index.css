@@ -157,6 +157,36 @@
 }
 
 @layer utilities {
+  /* ─── Layer interaction safeguards ─── */
+
+  /** Decorative layer: no pointer events, no user-select, hidden from assistive tech */
+  .layer-decorative {
+    pointer-events: none !important;
+    user-select: none !important;
+  }
+
+  /** Interactive layer: receives pointer events normally */
+  .layer-interactive {
+    pointer-events: auto;
+  }
+
+  /** Modal backdrop: captures clicks to close, sits above content */
+  .layer-backdrop {
+    pointer-events: auto;
+  }
+
+  /** Click-through layer: visually present but passes all clicks to content below */
+  .layer-click-through {
+    pointer-events: none !important;
+  }
+
+  /** Hidden layer safeguard: fully inert when not visible */
+  .layer-hidden {
+    pointer-events: none !important;
+    visibility: hidden;
+    opacity: 0;
+  }
+
   .glow-primary {
     box-shadow: var(--glow-primary);
   }

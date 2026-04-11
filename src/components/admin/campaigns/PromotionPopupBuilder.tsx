@@ -57,11 +57,14 @@ import PageLinkSelect from "@/components/admin/PageLinkSelect";
 import PromotionPopupCanvas from "@/components/promo/PromotionPopupCanvas";
 import { AlignmentGuidesOverlay } from "@/components/shared/AlignmentGuidesOverlay";
 import { AlignmentToolbar } from "@/components/shared/AlignmentToolbar";
+import { DeviceVisibilityControl } from "@/components/shared/DeviceVisibilityControl";
 import { GridOverlay } from "@/components/shared/GridOverlay";
+import { OverrideBadge, OverrideSummaryPanel } from "@/components/shared/OverrideSummary";
 import { SnappingSettingsPanel } from "@/components/shared/SnappingSettingsPanel";
 import { useSnapSettings } from "@/hooks/use-snap-settings";
 import { alignSingle, calculateSnap, nudge as snapNudge } from "@/lib/snap-engine";
 import type { AlignAction, SnapGuide, SnapRect } from "@/lib/snap-engine";
+import type { DeviceVisibility, PopupElementResponsiveOverrides } from "@/types/device-overrides";
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const presetId = () => `popup-preset-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -1031,6 +1034,7 @@ export default function PromotionPopupBuilder() {
                     onPointerDownElement={beginDrag}
                     onClose={() => undefined}
                     className="max-w-full"
+                    device={devicePreview}
                   />
                   <GridOverlay settings={snapSettings} />
                   <AlignmentGuidesOverlay guides={activeGuides} />
@@ -1174,6 +1178,14 @@ export default function PromotionPopupBuilder() {
                             onChangeThreshold={(threshold) => setSnapSettings((prev) => ({ ...prev, snapThreshold: threshold }))}
                           />
                         </div>
+                        <DeviceVisibilityControl
+                          visibility={selectedElement.deviceVisibility}
+                          onChange={(vis) => updateSelectedElement((el) => ({ ...el, deviceVisibility: vis }))}
+                        />
+                        <OverrideSummaryPanel
+                          responsive={selectedElement.responsive}
+                          visibility={selectedElement.deviceVisibility}
+                        />
                         <div className="flex items-center justify-between gap-3 rounded-lg border border-border/30 bg-muted/20 px-3 py-2">
                           <div>
                             <p className="text-xs font-medium">Visibility & locking</p>

@@ -1,3 +1,5 @@
+import type { DeviceVisibility, PopupElementResponsiveOverrides } from "@/types/device-overrides";
+
 export type PopupDisplayBehavior = "session" | "day" | "interval" | "always" | "first-visit";
 export type PopupRecurrenceFrequency = "none" | "daily" | "weekly" | "monthly" | "custom";
 export type PopupElementType = "title" | "subtitle" | "description" | "button" | "badge" | "countdown" | "image" | "icon" | "shape";
@@ -78,6 +80,10 @@ export interface PopupCanvasElement {
   animation: PopupElementAnimation;
   asset: PopupElementAsset;
   countdown: PopupCountdownConfig;
+  /** Optional per-device layout/style overrides */
+  responsive?: PopupElementResponsiveOverrides;
+  /** Optional per-device visibility */
+  deviceVisibility?: DeviceVisibility;
 }
 
 export interface PopupOverlayConfig {

@@ -13,6 +13,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAnalyticsSafe } from "@/contexts/AnalyticsContext";
 import { tr } from "@/lib/translate";
 import { prepareReusableContentForSave } from "@/lib/reusable-blocks";
+import { setDeviceOverride } from "@/types/device-overrides";
+import type { DeviceMode, ResponsiveOverrides } from "@/types/device-overrides";
 
 type SitePage = Tables<"site_pages">;
 
@@ -65,6 +67,8 @@ interface EditorState {
   selectBlock: (id: string | null) => void;
   hoverBlock: (id: string | null) => void;
   updateBlockContent: (id: string, content: Record<string, any>) => void;
+  /** Update a single property device-aware: desktop writes to root, tablet/mobile write to content.responsive */
+  updateBlockDeviceContent: (id: string, key: string, value: unknown) => void;
   updateBlockMeta: (id: string, patch: Partial<Pick<SiteBlock, "title" | "is_active">>) => void;
   addBlock: (type: string, atIndex?: number, preset?: Partial<Pick<SiteBlock, "title" | "content" | "is_active">>) => void;
   deleteBlock: (id: string) => void;
@@ -583,6 +587,36 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     }
   }, [pushUndo]);
 
+  const updateBlockDeviceContent = useCallback((id: string, key: string, value: unknown) => {
+    const device = viewport as DeviceMode;
+    setDraftBlocks(prev => {
+      const idx = prev.findIndex(b => b.id === id);
+      if (idx === -1 || isBlockLockedContent(prev[idx].content)) return prev;
+      const block = prev[idx];
+      const content = { ...(block.content || {}) };
+
+      if (device === "desktop") {
+        // Desktop writes directly to root content
+        content[key] = value;
+      } else {
+        // Tablet/mobile writes to content.responsive
+        const responsive = content.responsive as ResponsiveOverrides | undefined;
+        content.responsive = setDeviceOverride(responsive || {}, device, key, value);
+      }
+
+      const next = [...prev];
+      next[idx] = { ...block, content: prepareReusableContentForSave(content) };
+      return next;
+    });
+    if (!changeBatchTimer.current) {
+      changeBatchTimer.current = window.setTimeout(() => {
+        try { pushUndo("Device edit"); } catch (e) {}
+        if (changeBatchTimer.current) window.clearTimeout(changeBatchTimer.current as unknown as number);
+        changeBatchTimer.current = null;
+      }, 900) as unknown as number;
+    }
+  }, [pushUndo, viewport]);
+
   const updateBlockMeta = useCallback((id: string, patch: Partial<Pick<SiteBlock, "title" | "is_active">>) => {
     pushUndo("Update block");
     setDraftBlocks(prev => prev.map(b => (b.id === id && !isBlockLockedContent(b.content)) ? { ...b, ...patch } : b));
@@ -871,6 +905,7 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     selectBlock: setSelectedBlockId,
     hoverBlock: setHoveredBlockId,
     updateBlockContent,
+    updateBlockDeviceContent,
     updateBlockMeta,
     addBlock,
     deleteBlock,

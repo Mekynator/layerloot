@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PopupCanvasElement, PromotionPopupConfig } from "@/types/promotion-popup";
+import { isVisibleOnDevice } from "@/types/device-overrides";
+import type { DeviceMode, PopupElementDeviceOverrides } from "@/types/device-overrides";
 
 interface PromotionPopupCanvasProps {
   config: PromotionPopupConfig;
@@ -14,6 +16,8 @@ interface PromotionPopupCanvasProps {
   onPointerDownElement?: (id: string, event: MouseEvent<HTMLDivElement>) => void;
   onAction?: () => void;
   onClose?: () => void;
+  /** Current device mode for responsive rendering */
+  device?: DeviceMode;
 }
 
 const getAnimationProps = (element: PopupCanvasElement, mode: "runtime" | "editor") => {
@@ -169,6 +173,7 @@ export default function PromotionPopupCanvas({
   onPointerDownElement,
   onAction,
   onClose,
+  device = "desktop",
 }: PromotionPopupCanvasProps) {
   return (
     <motion.div
@@ -211,14 +216,45 @@ export default function PromotionPopupCanvas({
       )}
 
       {config.elements
-        .filter((element) => element.visible)
+        .filter((element) => {
+          if (!element.visible) return false;
+          // Check device visibility
+          if (!isVisibleOnDevice(element.deviceVisibility, device)) {
+            return mode !== "editor"; // In editor, we show a placeholder instead of filtering
+          }
+          return true;
+        })
         .sort((a, b) => a.zIndex - b.zIndex)
         .map((element) => {
+          // Resolve device-specific property overrides
+          const dOverrides: Partial<PopupElementDeviceOverrides> = {};
+          if (device !== "desktop" && element.responsive) {
+            // mobile inherits from tablet, then base
+            if (device === "mobile") {
+              Object.assign(dOverrides, element.responsive.tablet || {}, element.responsive.mobile || {});
+            } else {
+              Object.assign(dOverrides, element.responsive[device] || {});
+            }
+          }
+
+          const elX = dOverrides.x ?? element.x;
+          const elY = dOverrides.y ?? element.y;
+          const elWidth = dOverrides.width ?? element.width;
+          const elHeight = dOverrides.height ?? element.height;
+          const elFontSize = dOverrides.fontSize ?? element.style.fontSize;
+          const elLineHeight = dOverrides.lineHeight ?? element.style.lineHeight;
+          const elLetterSpacing = dOverrides.letterSpacing ?? element.style.letterSpacing;
+          const elPaddingX = dOverrides.paddingX ?? element.style.paddingX;
+          const elPaddingY = dOverrides.paddingY ?? element.style.paddingY;
+          const elOpacity = dOverrides.opacity ?? element.style.opacity;
+
+          const isHiddenOnDevice = !isVisibleOnDevice(element.deviceVisibility, device);
+
           const boxStyle: CSSProperties = {
             position: "absolute",
-            left: `${element.x}%`,
-            top: `${element.y}%`,
-            width: `${element.width}%`,
+            left: `${elX}%`,
+            top: `${elY}%`,
+            width: `${elWidth}%`,
             zIndex: element.zIndex,
             color: element.style.color,
             backgroundColor: element.style.backgroundColor,
@@ -227,19 +263,19 @@ export default function PromotionPopupCanvas({
             borderStyle: element.style.borderWidth > 0 ? "solid" : "none",
             borderRadius: element.type === "button" ? element.action.radius : element.style.borderRadius,
             boxShadow: element.style.shadow === "none" ? undefined : element.style.shadow,
-            padding: `${element.style.paddingY}px ${element.style.paddingX}px`,
+            padding: `${elPaddingY}px ${elPaddingX}px`,
             textAlign: element.style.textAlign,
-            fontSize: `${element.style.fontSize}px`,
+            fontSize: `${elFontSize}px`,
             fontWeight: element.style.fontWeight,
-            lineHeight: String(element.style.lineHeight),
-            letterSpacing: `${element.style.letterSpacing}px`,
+            lineHeight: String(elLineHeight),
+            letterSpacing: `${elLetterSpacing}px`,
             textShadow: element.style.textShadow === "none" ? undefined : element.style.textShadow,
             fontFamily: element.style.fontFamily === "inherit" ? undefined : element.style.fontFamily,
-            opacity: element.style.opacity,
+            opacity: elOpacity,
             transform: `rotate(${element.style.rotation}deg)`,
             cursor: mode === "editor" && !element.locked ? "move" : mode === "editor" ? "not-allowed" : undefined,
-            minHeight: element.type === "shape" || element.type === "image" ? undefined : `${element.height}%`,
-            height: element.type === "shape" || element.type === "image" ? `${element.height}%` : undefined,
+            minHeight: element.type === "shape" || element.type === "image" ? undefined : `${elHeight}%`,
+            height: element.type === "shape" || element.type === "image" ? `${elHeight}%` : undefined,
           };
 
           const selected = selectedElementId === element.id;
@@ -254,12 +290,17 @@ export default function PromotionPopupCanvas({
                 "group rounded-[inherit] transition-shadow",
                 mode === "editor" && "outline-none",
                 selected && "ring-2 ring-primary ring-offset-2 ring-offset-background",
+                isHiddenOnDevice && mode === "editor" && "border border-dashed border-amber-500/30 opacity-30",
               )}
               style={boxStyle}
               onMouseDown={mode === "editor" ? (event) => onPointerDownElement?.(element.id, event) : undefined}
               onClick={mode === "editor" ? () => onSelectElement?.(element.id) : undefined}
             >
-              {renderElementContent(element, mode, onAction)}
+              {isHiddenOnDevice && mode === "editor" ? (
+                <div className="flex items-center justify-center py-1 text-[9px] text-amber-500">Hidden on {device}</div>
+              ) : (
+                renderElementContent(element, mode, onAction)
+              )}
             </motion.div>
           );
         })}

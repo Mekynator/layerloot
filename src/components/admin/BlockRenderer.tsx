@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, FormEvent, type CSSProperties, type MouseE
 import { useVisualEditorSafe } from "@/contexts/VisualEditorContext";
 import { useDesignSystemSafe } from "@/contexts/DesignSystemContext";
 import { useAnalyticsSafe } from "@/contexts/AnalyticsContext";
+import { isVisibleOnDevice } from "@/types/device-overrides";
+import type { DeviceMode } from "@/types/device-overrides";
 import { Link } from "react-router-dom";
 import {
   ArrowRight, Truck, Shield, Star, Printer, ChevronLeft, ChevronRight,
@@ -400,6 +402,18 @@ const sectionStyle = (content: any, viewport: string): CSSProperties => {
   const borderRadius = overrides?.borderRadius ?? content?.borderRadius;
   if (borderRadius) style.borderRadius = `${borderRadius}px`;
 
+  // Max width (responsive)
+  const maxW = overrides?.maxWidth ?? content?.maxWidth;
+  if (maxW) style.maxWidth = `${Number(maxW)}px`;
+
+  // Flex direction / stack (responsive)
+  const stackDir = overrides?.stackDirection ?? content?.stackDirection;
+  if (stackDir) style.flexDirection = stackDir;
+
+  // Text alignment (responsive)
+  const textAlignVal = overrides?.textAlign ?? content?.textAlign;
+  if (textAlignVal) style.textAlign = textAlignVal;
+
   // Glassmorphism
   if (content?.glassEnabled) {
     style.backdropFilter = `blur(${content.glassBlur ?? 16}px)`;
@@ -750,6 +764,19 @@ const Section = ({ block, defaultClasses, children }: { block: SiteBlock; defaul
   const { track, trackAttribution } = useAnalyticsSafe();
   const viewport = editorCtx?.viewport ?? "desktop";
   const c = block.content || {};
+
+  // Device visibility check — hide block on the current device if configured
+  const deviceVisibility = c.deviceVisibility as { desktop?: boolean; tablet?: boolean; mobile?: boolean } | undefined;
+  if (!isVisibleOnDevice(deviceVisibility, viewport as DeviceMode)) {
+    // In editor, show a subtle placeholder; on storefront, skip entirely
+    if (!editorCtx) return null;
+    return (
+      <div className="relative border border-dashed border-amber-500/30 bg-amber-500/5 px-4 py-2 text-center text-xs text-amber-500/70" data-editor-block-id={block.id}>
+        Hidden on {viewport}
+      </div>
+    );
+  }
+
   const vp = viewport;
   const props = sectionProps(block, defaultClasses, vp);
   const action = resolveSectionAction(c);

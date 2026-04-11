@@ -27,6 +27,7 @@ import PageStylePresetsPanel from "./PageStylePresetsPanel";
 import PersonalizationPanel from "./PersonalizationPanel";
 import ABTestPanel from "./ABTestPanel";
 import AIAssistantPanel from "./AIAssistantPanel";
+import { ResponsiveOverridesPanel } from "./ResponsiveOverridesPanel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { tr } from "@/lib/translate";
 import { buildReusableInstanceContent, detachReusableContent, getReusableKind, upsertReusableFromBlock } from "@/lib/reusable-blocks";
@@ -378,7 +379,7 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
               <AccordionContent>
                 <div className="space-y-3">
                   <BorderControls content={localContent} patchContent={patchContent} />
-                  <ResponsiveEditor content={localContent} patchContent={patchContent} />
+                  <ResponsiveOverridesPanel />
                 </div>
               </AccordionContent>
             </AccordionItem>

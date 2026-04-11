@@ -11,6 +11,7 @@ import {
 } from "@/hooks/use-draft-publish";
 import { useAuth } from "@/contexts/AuthContext";
 import { tr } from "@/lib/translate";
+import { prepareReusableContentForSave } from "@/lib/reusable-blocks";
 
 type SitePage = Tables<"site_pages">;
 
@@ -64,7 +65,7 @@ interface EditorState {
   hoverBlock: (id: string | null) => void;
   updateBlockContent: (id: string, content: Record<string, any>) => void;
   updateBlockMeta: (id: string, patch: Partial<Pick<SiteBlock, "title" | "is_active">>) => void;
-  addBlock: (type: string, atIndex?: number) => void;
+  addBlock: (type: string, atIndex?: number, preset?: Partial<Pick<SiteBlock, "title" | "content" | "is_active">>) => void;
   deleteBlock: (id: string) => void;
   duplicateBlock: (id: string) => void;
   moveBlock: (fromIndex: number, toIndex: number) => void;
@@ -514,11 +515,12 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
   }, [draftBlocks, savedBlocks]);
 
   const updateBlockContent = useCallback((id: string, content: Record<string, any>) => {
+    const preparedContent = prepareReusableContentForSave(content);
     setDraftBlocks(prev => {
       const idx = prev.findIndex(b => b.id === id);
       if (idx === -1) return prev;
       const next = [...prev];
-      next[idx] = { ...next[idx], content };
+      next[idx] = { ...next[idx], content: preparedContent };
       return next;
     });
     // Batch edits into a single undo entry to avoid flooding history on rapid edits
@@ -536,17 +538,17 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     setDraftBlocks(prev => prev.map(b => b.id === id ? { ...b, ...patch } : b));
   }, [pushUndo]);
 
-  const addBlock = useCallback((type: string, atIndex?: number) => {
+  const addBlock = useCallback((type: string, atIndex?: number, preset?: Partial<Pick<SiteBlock, "title" | "content" | "is_active">>) => {
     pushUndo("Add block");
-    const label = BLOCK_TYPES.find(bt => bt.value === type)?.label || type;
+    const label = preset?.title || BLOCK_TYPES.find(bt => bt.value === type)?.label || type;
     const newBlock: SiteBlock = {
       id: `draft-${crypto.randomUUID()}`,
       page: activePage,
       block_type: type,
       title: label,
-      content: createDefaultContent(type),
+      content: prepareReusableContentForSave((preset?.content as Record<string, any>) || createDefaultContent(type)),
       sort_order: atIndex ?? pageBlocks.length,
-      is_active: true,
+      is_active: preset?.is_active ?? true,
     };
 
     setDraftBlocks(prev => {

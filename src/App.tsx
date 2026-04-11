@@ -40,6 +40,7 @@ import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
 import AdminCustomOrderDetail from "./pages/admin/AdminCustomOrderDetail";
 import AdminMedia from "./pages/admin/AdminMedia";
 import AdminReusableBlocks from "./pages/admin/AdminReusableBlocks";
+import AdminComponents from "./pages/admin/AdminComponents";
 import AdminTranslations from "./pages/admin/AdminTranslations";
 import AdminRoute from "./components/admin/AdminRoute";
 import AdminChat from "./pages/admin/AdminChat";
@@ -136,6 +137,7 @@ const AppShell = () => {
             <Route path="content" element={<AdminRoute requiredPermission="content.edit"><Navigate to="/admin/editor?section=blocks" replace /></AdminRoute>} />
             <Route path="backgrounds" element={<AdminRoute requiredPermission="backgrounds.manage"><AdminBackgrounds /></AdminRoute>} />
             <Route path="media" element={<AdminRoute requiredPermission="media.manage"><AdminMedia /></AdminRoute>} />
+            <Route path="components" element={<AdminRoute requiredPermission="content.edit"><AdminComponents /></AdminRoute>} />
             <Route path="reusable-blocks" element={<AdminRoute requiredPermission="content.edit"><AdminReusableBlocks /></AdminRoute>} />
             <Route path="translations" element={<AdminRoute requiredPermission="translations.manage"><AdminTranslations /></AdminRoute>} />
             <Route path="activity" element={<AdminRoute requiredPermission="reports.view"><AdminActivity /></AdminRoute>} />

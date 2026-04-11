@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { tr } from "@/lib/translate";
 import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
+import { supabase } from "@/integrations/supabase/client";
+import { buildReusableInstanceContent, getReusableKind } from "@/lib/reusable-blocks";
 import EditorErrorBoundary from "@/components/admin/EditorErrorBoundary";
 import { useVisualEditor } from "@/contexts/VisualEditorContext";
-import { AlignCenter, AlignLeft, AlignRight, ChevronDown, ChevronUp, Copy, Eye, EyeOff, GripVertical, Minus, Pencil, Plus, Settings2, Trash2 } from "lucide-react";
+import { AlignCenter, AlignLeft, AlignRight, ChevronDown, ChevronUp, Copy, Eye, EyeOff, GripVertical, Link2, Minus, Pencil, Plus, Settings2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBlockSchema, getInlineTextKeys } from "./editable-schema";
 import { buildPreviewList, previewListToLayout, type PreviewItem } from "@/lib/static-page-sections";
@@ -65,20 +67,48 @@ export default function EditorCanvas({ zoom = 100, previewMode = false }: { zoom
   }, [previewMode, selectBlock, selectElement, setInlineEditingKey]);
 
   const handleCanvasDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    if (e.dataTransfer.types.includes("application/x-layerloot-block")) {
-      e.preventDefault();
-      setIsExternalDragOver(true);
+    const hasSupportedPayload = e.dataTransfer.types.includes("application/x-layerloot-block") || e.dataTransfer.types.includes("application/x-layerloot-reusable-block");
+    if (!hasSupportedPayload) return;
+
+    e.preventDefault();
+    setIsExternalDragOver(true);
+
+    if (scrollRef.current) {
+      const bounds = scrollRef.current.getBoundingClientRect();
+      const edge = 72;
+      if (e.clientY < bounds.top + edge) scrollRef.current.scrollTop -= 18;
+      if (e.clientY > bounds.bottom - edge) scrollRef.current.scrollTop += 18;
     }
   }, []);
 
-  const handleCanvasDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    const blockType = e.dataTransfer.getData("application/x-layerloot-block");
-    setIsExternalDragOver(false);
-    if (!blockType) return;
+  const handleCanvasDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const selectedIndex = selectedBlockId ? draftBlocks.findIndex((block) => block.id === selectedBlockId) : draftBlocks.length;
-    addBlock(blockType, selectedIndex === -1 ? undefined : selectedIndex + 1);
-  }, [addBlock, draftBlocks, selectedBlockId]);
+    setIsExternalDragOver(false);
+
+    const currentPageBlocks = draftBlocks.filter((block) => block.page === activePage).sort((a, b) => a.sort_order - b.sort_order);
+    const selectedIndex = selectedBlockId ? currentPageBlocks.findIndex((block) => block.id === selectedBlockId) : -1;
+    const insertAt = selectedIndex === -1 ? currentPageBlocks.length : selectedIndex + 1;
+
+    const reusablePayload = e.dataTransfer.getData("application/x-layerloot-reusable-block");
+    if (reusablePayload) {
+      try {
+        const payload = JSON.parse(reusablePayload) as { id: string; title: string; block_type: string; syncMode?: "copy" | "global" | "override" };
+        const { data } = await supabase.from("reusable_blocks").select("*").eq("id", payload.id).maybeSingle();
+        if (data) {
+          const kind = getReusableKind(data as any);
+          const syncMode = payload.syncMode || (kind === "component" ? "global" : "copy");
+          addBlock(payload.block_type, insertAt, { title: payload.title, content: buildReusableInstanceContent(data as any, syncMode, kind) });
+          return;
+        }
+      } catch {
+        // ignore malformed payloads and continue to normal blocks
+      }
+    }
+
+    const blockType = e.dataTransfer.getData("application/x-layerloot-block");
+    if (!blockType) return;
+    addBlock(blockType, insertAt);
+  }, [activePage, addBlock, draftBlocks, selectedBlockId]);
 
   const handlePanStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
@@ -483,6 +513,10 @@ function CanvasBlockWrapper({
 
   const hasAlignmentControls = typeof content.alignment === "string";
   const hasSpacingControls = content.paddingTop !== undefined || content.paddingBottom !== undefined || content.gap !== undefined;
+  const reusableStatus = content._reusableId ? {
+    kind: getReusableKind(undefined, content),
+    syncMode: String(content._reusableSyncMode || "global"),
+  } : null;
 
   const setAlignment = useCallback((alignment: "left" | "center" | "right") => {
     onUpdateContent({ ...content, alignment });
@@ -565,6 +599,12 @@ function CanvasBlockWrapper({
           </span>
           {block.title && block.title !== block.block_type && (
             <span className="max-w-[80px] truncate text-[9px] text-muted-foreground">· {typeof block.title === "string" ? block.title : tr(block.title, "")}</span>
+          )}
+          {reusableStatus && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/5 px-1.5 py-0.5 text-[8px] uppercase tracking-[0.16em] text-primary">
+              <Link2 className="h-2.5 w-2.5" />
+              {reusableStatus.kind === "component" ? (reusableStatus.syncMode === "override" ? "Override" : "Global") : "Reusable"}
+            </span>
           )}
         </div>
       )}

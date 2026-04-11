@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
+import { resolveReusableSiteBlocks } from "@/lib/reusable-blocks";
 
 export type SitePageRecord = {
   id: string;
@@ -78,7 +79,7 @@ async function fetchPageBlocks(page: string, includeUnpublished = false) {
       sort_order: r.sort_order,
       is_active: r.is_active,
     } as SiteBlock));
-    return published;
+    return resolveReusableSiteBlocks(published);
   }
 
   // Include draft_content when available, respect draft deletion marker
@@ -98,7 +99,7 @@ async function fetchPageBlocks(page: string, includeUnpublished = false) {
       } as SiteBlock;
     });
 
-  return mapped;
+  return resolveReusableSiteBlocks(mapped);
 }
 
 export function usePageBlocks(page: string, enabled = true, includeUnpublished = false) {

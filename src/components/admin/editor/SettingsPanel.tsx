@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Copy, Eye, EyeOff, Palette, Type, Settings2, Layers, Monitor, Tablet, Smartphone, MousePointerClick, Square, Trash2, X } from "lucide-react";
 import { useVisualEditor, type SelectedElement } from "@/contexts/VisualEditorContext";
 import { useDesignSystemSafe } from "@/contexts/DesignSystemContext";
+import { useAuth } from "@/contexts/AuthContext";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
 import SliderField from "./controls/SliderField";
 import ColorPickerField from "./controls/ColorPickerField";
@@ -24,6 +25,8 @@ import BlockFieldGroups from "./BlockFieldGroups";
 import PageStylePresetsPanel from "./PageStylePresetsPanel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { tr } from "@/lib/translate";
+import { buildReusableInstanceContent, detachReusableContent, getReusableKind, upsertReusableFromBlock } from "@/lib/reusable-blocks";
+import { toast } from "sonner";
 
 const getRepeaterKey = (blockType?: string) => {
   switch (blockType) {
@@ -70,6 +73,7 @@ export default function SettingsPanel() {
 
 function BlockSettings({ block, selectedElement, onSelectElement }: { block: SiteBlock; selectedElement: SelectedElement | null; onSelectElement: (el: SelectedElement | null) => void }) {
   const { updateBlockContent, updateBlockMeta, selectBlock, pages } = useVisualEditor();
+  const { user } = useAuth();
 
   const content = useMemo(() => {
     const raw = typeof block.content === "object" && block.content ? { ...(block.content as Record<string, unknown>) } : {};
@@ -169,6 +173,52 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
   const getTypography = useCallback((elementKey: string) => {
     return (localContent[`_typography_${elementKey}`] as Record<string, unknown>) || {};
   }, [localContent]);
+
+  const reusableInfo = useMemo(() => {
+    if (!localContent._reusableId) return null;
+    return {
+      id: String(localContent._reusableId),
+      name: String(localContent._reusableName || title || block.block_type.replace(/_/g, " ")),
+      category: String(localContent._reusableCategory || "General"),
+      kind: getReusableKind(undefined, localContent as Record<string, any>),
+      syncMode: String(localContent._reusableSyncMode || "global"),
+      version: Number(localContent._reusableVersion || 1),
+    };
+  }, [localContent, title, block.block_type]);
+
+  const setReusableSyncMode = useCallback((mode: "global" | "override") => {
+    if (!reusableInfo) return;
+    commitContent({ ...localContent, _reusableSyncMode: mode });
+    toast.success(mode === "override" ? "Local overrides enabled" : "This instance is now fully synced again");
+  }, [commitContent, localContent, reusableInfo]);
+
+  const detachReusableInstance = useCallback(() => {
+    if (!reusableInfo) return;
+    if (!window.confirm("Detach this instance from the reusable source? It will stop receiving synced updates.")) return;
+    commitContent(detachReusableContent(localContent as Record<string, any>));
+    toast.success("Instance detached");
+  }, [commitContent, localContent, reusableInfo]);
+
+  const editGlobally = useCallback(async () => {
+    if (!reusableInfo) return;
+    const confirmed = window.confirm(`Update “${reusableInfo.name}” globally? This will refresh every synced instance using it.`);
+    if (!confirmed) return;
+
+    try {
+      const result = await upsertReusableFromBlock({
+        block: { ...block, title, content: localContent } as SiteBlock,
+        reusableId: reusableInfo.id,
+        name: reusableInfo.name,
+        category: reusableInfo.category,
+        kind: reusableInfo.kind,
+        userId: user?.id ?? null,
+      });
+      commitContent(buildReusableInstanceContent(result, "global", reusableInfo.kind));
+      toast.success("Global component updated");
+    } catch (error: any) {
+      toast.error(error?.message || "Could not update the global component");
+    }
+  }, [block, title, localContent, reusableInfo, user?.id, commitContent]);
 
   const isElementSelected = selectedElement?.blockId === block.id;
   const selectedNodeKey = isElementSelected ? selectedElement?.nodeKey : null;
@@ -330,6 +380,41 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
             </TabsContent>
 
             <TabsContent value="settings" className="space-y-3 mt-3">
+              {reusableInfo && (
+                <div className="space-y-3 rounded-xl border border-primary/25 bg-primary/5 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
+                        {reusableInfo.kind === "component" ? "Global component" : "Reusable section"}
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-foreground">{reusableInfo.name}</p>
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        {reusableInfo.syncMode === "override"
+                          ? "This instance is keeping local overrides while staying linked to the source."
+                          : "This block is synced to a reusable source and can be updated or detached safely."}
+                      </p>
+                    </div>
+                    <Badge variant={reusableInfo.syncMode === "override" ? "outline" : "secondary"} className="text-[9px]">
+                      {reusableInfo.syncMode === "override" ? "Override active" : "Synced"} · v{reusableInfo.version}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={editGlobally} className="rounded-md border border-primary/30 bg-background/80 px-2.5 py-1 text-[10px] font-medium text-primary transition-colors hover:bg-primary/10">
+                      Edit globally
+                    </button>
+                    <button type="button" onClick={() => setReusableSyncMode("override")} className="rounded-md border border-border/40 bg-background/80 px-2.5 py-1 text-[10px] font-medium text-foreground transition-colors hover:border-primary/30">
+                      Override locally
+                    </button>
+                    <button type="button" onClick={() => setReusableSyncMode("global")} className="rounded-md border border-border/40 bg-background/80 px-2.5 py-1 text-[10px] font-medium text-foreground transition-colors hover:border-primary/30">
+                      Re-sync instance
+                    </button>
+                    <button type="button" onClick={detachReusableInstance} className="rounded-md border border-destructive/30 bg-background/80 px-2.5 py-1 text-[10px] font-medium text-destructive transition-colors hover:bg-destructive/5">
+                      Detach instance
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center justify-between rounded-lg border border-border/30 px-3 py-2">
                 <div>
                   <p className="text-xs font-medium text-foreground">Visible</p>

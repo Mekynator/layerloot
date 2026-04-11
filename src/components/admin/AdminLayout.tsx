@@ -46,7 +46,7 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
         { id: "editor-workspace", to: "/admin/editor", label: "Content & Layout", icon: "LayoutGrid", visible: true, permission: "content.edit" },
         { id: "design-system", to: "/admin/design-system", label: "Design System", icon: "Palette", visible: true, permission: "content.edit" },
         { id: "media", to: "/admin/media", label: "Media Library", icon: "ImageIcon", visible: true, permission: "media.manage" },
-        { id: "reusable", to: "/admin/reusable-blocks", label: "Reusable Blocks", icon: "Box", visible: true, permission: "content.edit" },
+        { id: "reusable", to: "/admin/components", label: "Components", icon: "Box", visible: true, permission: "content.edit" },
         { id: "translations", to: "/admin/translations", label: "Translations", icon: "Globe", visible: true, permission: "translations.manage" },
         { id: "backgrounds", to: "/admin/backgrounds", label: "Backgrounds", icon: "ImageIcon", visible: true, permission: "backgrounds.manage" },
         // Hide old editor/content/policies/settings links

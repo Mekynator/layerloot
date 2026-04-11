@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
+import { prepareReusableContentForSave, resolveReusableSiteBlocks } from "@/lib/reusable-blocks";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -74,7 +75,7 @@ export async function loadAdminBlocks(page: string): Promise<{ blocks: SiteBlock
     } as SiteBlock;
   });
 
-  return { blocks, hasDraft };
+  return { blocks: await resolveReusableSiteBlocks(blocks), hasDraft };
 }
 
 /** Save draft blocks — writes to draft_content column on each block */
@@ -91,6 +92,8 @@ export async function saveDraftBlocks(page: string, blocks: SiteBlock[], userId?
       const block = blocks[i];
       const isDraftNew = block.id.startsWith("draft-");
 
+      const preparedContent = prepareReusableContentForSave((block.content as Record<string, any>) || {});
+
       if (isDraftNew) {
         // Insert new block with draft_content, content as empty default
         const { data, error } = await supabase.from("site_blocks").insert({
@@ -98,7 +101,7 @@ export async function saveDraftBlocks(page: string, blocks: SiteBlock[], userId?
           block_type: block.block_type,
           title: block.title,
           content: {} as any,
-          draft_content: block.content as any,
+          draft_content: preparedContent as any,
           sort_order: i,
           is_active: block.is_active ?? true,
           has_draft: true,
@@ -111,7 +114,7 @@ export async function saveDraftBlocks(page: string, blocks: SiteBlock[], userId?
         // Update existing block's draft_content
         const { error } = await supabase.from("site_blocks").update({
           title: block.title,
-          draft_content: block.content as any,
+          draft_content: preparedContent as any,
           sort_order: i,
           is_active: block.is_active ?? true,
           has_draft: true,
@@ -164,9 +167,19 @@ export async function publishDraftBlocks(page: string, userId?: string): Promise
       // Log revision of the old published content
       await insertRevision("site_block", row.id, row.content, "publish", userId, page);
 
+      const [{ content: resolvedContent }] = await resolveReusableSiteBlocks([{
+        id: row.id,
+        page: row.page,
+        block_type: row.block_type,
+        title: row.title,
+        content: prepareReusableContentForSave((row.draft_content as Record<string, any>) || {}),
+        sort_order: row.sort_order,
+        is_active: row.is_active,
+      } as SiteBlock]);
+
       // Promote draft_content → content
       await supabase.from("site_blocks").update({
-        content: row.draft_content,
+        content: resolvedContent as any,
         draft_content: null,
         has_draft: false,
         published_at: new Date().toISOString(),

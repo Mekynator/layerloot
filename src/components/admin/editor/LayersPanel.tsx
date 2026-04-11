@@ -15,11 +15,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useVisualEditor, pageDisplayTitle, pageToEditorKey } from "@/contexts/VisualEditorContext";
 import { cn } from "@/lib/utils";
 import { getBlockSchema } from "./editable-schema";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import InsertReusableDialog from "@/components/admin/reusable/InsertReusableDialog";
+import SectionsLibraryPanel from "./SectionsLibraryPanel";
+import SaveReusableSectionDialog from "./SaveReusableSectionDialog";
 import { buildPreviewList, previewListToLayout, type PreviewItem } from "@/lib/static-page-sections";
+import { getReusableKind, type ReusableSyncMode } from "@/lib/reusable-blocks";
 
 import {
   Award, Clock, MessageSquare as MessageSquareIcon, Eye as EyeIcon2, Gift, Minus, ThumbsUp,
@@ -75,12 +76,13 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
     addBlock, layoutOrder, setLayoutOrder,
     selectedStaticId, selectStaticSection, frontendPages, globalPages, setActivePage,
   } = useVisualEditor();
-  const { user } = useAuth();
 
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [reusableOpen, setReusableOpen] = useState(false);
+  const [saveReusableOpen, setSaveReusableOpen] = useState(false);
+  const [saveBlockId, setSaveBlockId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("structure");
   const [lockedLayers, setLockedLayers] = useState<Record<string, boolean>>({});
 
@@ -148,23 +150,20 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
     event.dataTransfer.effectAllowed = "copy";
   };
 
-  const saveAsReusable = async (blockId: string) => {
+  const saveAsReusable = (blockId: string) => {
     const block = draftBlocks.find(b => b.id === blockId);
     if (!block) return;
-    const { error } = await supabase.from("reusable_blocks").insert({
-      name: (typeof block.title === "string" ? block.title : tr(block.title, "")) || block.block_type,
-      block_type: block.block_type,
-      content: block.content as any,
-      created_by: user?.id || null,
-      updated_by: user?.id || null,
-    });
-    if (error) toast.error("Failed to save");
-    else toast.success("Saved as reusable block!");
+    setSaveBlockId(block.id);
+    setSaveReusableOpen(true);
   };
 
-  const handleInsertReusable = (data: { block_type: string; content: any; title: string }) => {
-    addBlock(data.block_type);
-    toast.success("Reusable block inserted");
+  const handleInsertReusable = (data: { block_type: string; content: any; title: string }, mode: ReusableSyncMode = "copy") => {
+    const currentPageBlocks = draftBlocks.filter((block) => block.page === activePage).sort((a, b) => a.sort_order - b.sort_order);
+    const selectedIndex = selectedBlockId ? currentPageBlocks.findIndex((block) => block.id === selectedBlockId) : -1;
+    const insertAt = selectedIndex === -1 ? currentPageBlocks.length : selectedIndex + 1;
+    addBlock(data.block_type, insertAt, { title: data.title, content: data.content });
+    toast.success(mode === "global" ? "Global component inserted" : mode === "override" ? "Reusable component inserted" : "Reusable section inserted");
+    setActiveTab("structure");
   };
 
   return (
@@ -188,9 +187,10 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex min-h-0 flex-1 flex-col">
         <div className="border-b border-border/30 px-2 py-1.5">
-          <TabsList className="grid h-8 w-full grid-cols-4 bg-background/70">
+          <TabsList className="grid h-8 w-full grid-cols-5 bg-background/70">
             <TabsTrigger value="structure" className="gap-1 px-1 text-[10px]"><LayoutGrid className="h-3 w-3" />Structure</TabsTrigger>
             <TabsTrigger value="elements" className="gap-1 px-1 text-[10px]"><Plus className="h-3 w-3" />Elements</TabsTrigger>
+            <TabsTrigger value="library" className="gap-1 px-1 text-[10px]"><Box className="h-3 w-3" />Library</TabsTrigger>
             <TabsTrigger value="layers" className="gap-1 px-1 text-[10px]"><Layers className="h-3 w-3" />Layers</TabsTrigger>
             <TabsTrigger value="pages" className="gap-1 px-1 text-[10px]"><FileText className="h-3 w-3" />Pages</TabsTrigger>
           </TabsList>
@@ -309,6 +309,11 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
                           <span className="block truncate font-display text-[10px] font-semibold uppercase tracking-wider text-foreground">
                             {(typeof block.title === "string" ? block.title : tr(block.title, "")) || block.block_type.replace(/_/g, " ")}
                           </span>
+                          {block.content && typeof block.content === "object" && (block.content as any)._reusableId && (
+                            <span className="mt-0.5 inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/5 px-1.5 py-0.5 text-[8px] uppercase tracking-[0.16em] text-primary">
+                              <Link2 className="h-2.5 w-2.5" /> {getReusableKind(undefined, block.content as Record<string, any>) === "component" ? "Global" : "Reusable"}
+                            </span>
+                          )}
                         </div>
 
                         {isInactive && <EyeOff className="h-3 w-3 shrink-0 text-muted-foreground" />}
@@ -355,11 +360,11 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
                 <span className="text-[10px] uppercase tracking-wider">Add Section</span>
               </button>
               <button
-                onClick={() => setReusableOpen(true)}
+                onClick={() => setActiveTab("library")}
                 className="flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border/50 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
               >
                 <Box className="h-3 w-3" />
-                <span className="text-[10px] uppercase tracking-wider">From Library</span>
+                <span className="text-[10px] uppercase tracking-wider">Sections Library</span>
               </button>
             </div>
           </div>
@@ -395,11 +400,18 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
               <Button variant="outline" size="sm" onClick={onAddBlock} className="w-full gap-1.5 text-xs">
                 <Plus className="h-3.5 w-3.5" /> Open full section library
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setReusableOpen(true)} className="w-full gap-1.5 text-xs">
-                <Box className="h-3.5 w-3.5" /> Open reusable blocks
+              <Button variant="outline" size="sm" onClick={() => setActiveTab("library")} className="w-full gap-1.5 text-xs">
+                <Box className="h-3.5 w-3.5" /> Open sections library
               </Button>
             </div>
           </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="library" className="mt-0 flex min-h-0 flex-1 flex-col">
+          <SectionsLibraryPanel
+            onInsertReusable={handleInsertReusable}
+            onInsertTemplate={(template) => handleInsertReusable(template, "copy")}
+          />
         </TabsContent>
 
         <TabsContent value="layers" className="mt-0 flex min-h-0 flex-1 flex-col">
@@ -562,6 +574,12 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
         open={reusableOpen}
         onOpenChange={setReusableOpen}
         onInsert={handleInsertReusable}
+      />
+      <SaveReusableSectionDialog
+        open={saveReusableOpen}
+        onOpenChange={setSaveReusableOpen}
+        block={draftBlocks.find((block) => block.id === saveBlockId) ?? null}
+        onSaved={() => setActiveTab("library")}
       />
     </div>
   );

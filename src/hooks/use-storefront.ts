@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
 import { buildProductSocialProofMap, type ProductSocialProof } from "@/lib/social-proof";
+import { resolveReusableSiteBlocks } from "@/lib/reusable-blocks";
 
 export type CatalogProduct = {
   id: string;
@@ -117,7 +118,7 @@ async function fetchStorefrontCatalog(page?: string): Promise<StorefrontCatalogD
   return {
     products,
     categories: (categoriesRes.data as CatalogCategory[]) ?? [],
-    pageBlocks: (pageBlocksRes?.data as SiteBlock[]) ?? [],
+    pageBlocks: await resolveReusableSiteBlocks((pageBlocksRes?.data as SiteBlock[]) ?? []),
     reviews,
     socialProofMap,
     recentPrints: (galleryRes.data as GalleryShowcaseItem[]) ?? [],

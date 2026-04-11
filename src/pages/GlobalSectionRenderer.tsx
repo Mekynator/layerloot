@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
+import { resolveReusableSiteBlocks } from "@/lib/reusable-blocks";
 
 type GlobalSectionRendererProps = {
   page: string;
@@ -40,7 +41,7 @@ const GlobalSectionRenderer = ({ page }: GlobalSectionRendererProps) => {
         console.error(`Failed to load global section "${page}"`, error);
         setBlocks([]);
       } else {
-        setBlocks((data as SiteBlock[]) ?? []);
+        setBlocks(await resolveReusableSiteBlocks((data as SiteBlock[]) ?? []));
       }
 
       setLoading(false);

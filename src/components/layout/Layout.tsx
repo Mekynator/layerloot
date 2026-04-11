@@ -30,7 +30,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
       data-editor-preview={isEditorPreview ? "true" : "false"}
     >
       {/* Ambient gradient blobs */}
-      <div className="ambient-bg" aria-hidden="true">
+      <div className="ambient-bg layer-decorative" aria-hidden="true">
         <div className="ambient-blob ambient-blob--1" />
         <div className="ambient-blob ambient-blob--2" />
         <div className="ambient-blob ambient-blob--3" />
@@ -40,10 +40,10 @@ const Layout = ({ children }: { children: ReactNode }) => {
       <PageBackgroundSlideshow />
 
       {/* Subtle grid */}
-      <div className="bg-grid-overlay" aria-hidden="true" />
+      <div className="bg-grid-overlay layer-decorative" aria-hidden="true" />
 
       {/* Noise texture */}
-      <div className="noise-overlay" aria-hidden="true" />
+      <div className="noise-overlay layer-decorative" aria-hidden="true" />
 
       <div className="relative z-10 flex min-h-screen flex-col">
         <Header />

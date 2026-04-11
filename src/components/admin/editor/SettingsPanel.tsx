@@ -23,9 +23,11 @@ import VisualEffectsControls from "./controls/VisualEffectsControls";
 import { getBlockSchema, type EditableNode, type BlockEditableSchema } from "./editable-schema";
 import BlockFieldGroups from "./BlockFieldGroups";
 import PageStylePresetsPanel from "./PageStylePresetsPanel";
+import PersonalizationPanel from "./PersonalizationPanel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { tr } from "@/lib/translate";
 import { buildReusableInstanceContent, detachReusableContent, getReusableKind, upsertReusableFromBlock } from "@/lib/reusable-blocks";
+import { useAnalyticsSafe } from "@/contexts/AnalyticsContext";
 import { toast } from "sonner";
 
 const getRepeaterKey = (blockType?: string) => {
@@ -74,6 +76,7 @@ export default function SettingsPanel() {
 function BlockSettings({ block, selectedElement, onSelectElement }: { block: SiteBlock; selectedElement: SelectedElement | null; onSelectElement: (el: SelectedElement | null) => void }) {
   const { updateBlockContent, updateBlockMeta, selectBlock, pages } = useVisualEditor();
   const { user } = useAuth();
+  const { track } = useAnalyticsSafe();
 
   const content = useMemo(() => {
     const raw = typeof block.content === "object" && block.content ? { ...(block.content as Record<string, unknown>) } : {};
@@ -189,6 +192,7 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
   const setReusableSyncMode = useCallback((mode: "global" | "override") => {
     if (!reusableInfo) return;
     commitContent({ ...localContent, _reusableSyncMode: mode });
+    track(mode === "override" ? "component_override_local" : "component_resynced", { id: reusableInfo.id, name: reusableInfo.name, kind: reusableInfo.kind, block_type: block.block_type });
     toast.success(mode === "override" ? "Local overrides enabled" : "This instance is now fully synced again");
   }, [commitContent, localContent, reusableInfo]);
 
@@ -196,6 +200,7 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
     if (!reusableInfo) return;
     if (!window.confirm("Detach this instance from the reusable source? It will stop receiving synced updates.")) return;
     commitContent(detachReusableContent(localContent as Record<string, any>));
+    track("component_detached", { id: reusableInfo.id, name: reusableInfo.name, kind: reusableInfo.kind, block_type: block.block_type });
     toast.success("Instance detached");
   }, [commitContent, localContent, reusableInfo]);
 
@@ -214,6 +219,7 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
         userId: user?.id ?? null,
       });
       commitContent(buildReusableInstanceContent(result, "global", reusableInfo.kind));
+      track("component_global_edit", { id: reusableInfo.id, name: reusableInfo.name, kind: reusableInfo.kind, block_type: block.block_type });
       toast.success("Global component updated");
     } catch (error: any) {
       toast.error(error?.message || "Could not update the global component");
@@ -434,6 +440,8 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
               </div>
 
               <AnimationControls content={localContent} patchContent={patchContent} />
+
+              <PersonalizationPanel content={localContent} patchContent={patchContent} />
 
               <div>
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Anchor ID</Label>

@@ -824,6 +824,20 @@ const Section = ({ block, defaultClasses, children }: { block: SiteBlock; defaul
     return () => observer.disconnect();
   }, [anchorAttr, block.block_type, block.id, block.page, c._reusableId, entityType, isTrackedComponent, reusableKind, sectionEventName, sectionLabel, track]);
 
+  // Track personalized variant display
+  useEffect(() => {
+    if (isEditorPreviewMode() || !c._activeVariantId) return;
+    track({
+      eventName: "personalized_variant_shown",
+      entityType: entityType as any,
+      entityId: block.id,
+      source: "personalization",
+      context: { variantId: c._activeVariantId, blockType: block.block_type, entityLabel: sectionLabel },
+      allowDuplicates: false,
+      dedupeKey: `pv-${block.id}-${c._activeVariantId}`,
+    });
+  }, [block.id, block.block_type, c._activeVariantId, entityType, sectionLabel, track]);
+
   const handleSectionClick = (e: MouseEvent<HTMLElement>) => {
     if (!isEditorPreviewMode()) {
       const target = e.target as HTMLElement;

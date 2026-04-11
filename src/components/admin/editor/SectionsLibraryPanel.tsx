@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAnalyticsSafe } from "@/contexts/AnalyticsContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,7 @@ interface SectionsLibraryPanelProps {
 }
 
 export default function SectionsLibraryPanel({ onInsertReusable, onInsertTemplate }: SectionsLibraryPanelProps) {
+  const { track } = useAnalyticsSafe();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [view, setView] = useState<"grid" | "list">("grid");
@@ -152,10 +154,10 @@ export default function SectionsLibraryPanel({ onInsertReusable, onInsertTemplat
           {block.description && <p className="line-clamp-2 text-[11px] text-muted-foreground">{block.description}</p>}
 
           <div className="flex flex-wrap gap-1.5">
-            <Button size="sm" variant="outline" className="h-7 gap-1 text-[10px]" onClick={() => { markRecent(block.id); onInsertReusable({ block_type: block.block_type, content: buildReusableInstanceContent(block, "copy", kind), title: block.name }, "copy"); }}>
+            <Button size="sm" variant="outline" className="h-7 gap-1 text-[10px]" onClick={() => { markRecent(block.id); track("reusable_section_insert", { id: block.id, name: block.name, kind, mode: "copy", block_type: block.block_type }); onInsertReusable({ block_type: block.block_type, content: buildReusableInstanceContent(block, "copy", kind), title: block.name }, "copy"); }}>
               <Plus className="h-3 w-3" /> Insert copy
             </Button>
-            <Button size="sm" className="h-7 gap-1 text-[10px]" onClick={() => { const syncMode: ReusableSyncMode = kind === "component" ? "global" : "override"; markRecent(block.id); onInsertReusable({ block_type: block.block_type, content: buildReusableInstanceContent(block, syncMode, kind), title: block.name }, syncMode); }}>
+            <Button size="sm" className="h-7 gap-1 text-[10px]" onClick={() => { const syncMode: ReusableSyncMode = kind === "component" ? "global" : "override"; markRecent(block.id); track("reusable_section_insert", { id: block.id, name: block.name, kind, mode: syncMode, block_type: block.block_type }); onInsertReusable({ block_type: block.block_type, content: buildReusableInstanceContent(block, syncMode, kind), title: block.name }, syncMode); }}>
               <Link2 className="h-3 w-3" /> {kind === "component" ? "Insert synced" : "Use as component"}
             </Button>
           </div>
@@ -203,7 +205,7 @@ export default function SectionsLibraryPanel({ onInsertReusable, onInsertTemplat
                   <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Recently used</p>
                   <div className="flex flex-wrap gap-1.5">
                     {recentBlocks.slice(0, 4).map((block) => (
-                      <button key={block.id} type="button" onClick={() => onInsertReusable({ block_type: block.block_type, content: buildReusableInstanceContent(block, getReusableKind(block) === "component" ? "global" : "copy", getReusableKind(block)), title: block.name }, getReusableKind(block) === "component" ? "global" : "copy")} className="rounded-full border border-border/40 bg-background/70 px-2.5 py-1 text-[10px] text-foreground hover:border-primary/40">
+                      <button key={block.id} type="button" onClick={() => { track("reusable_section_insert", { id: block.id, name: block.name, kind: getReusableKind(block), mode: getReusableKind(block) === "component" ? "global" : "copy", block_type: block.block_type, source: "recent" }); onInsertReusable({ block_type: block.block_type, content: buildReusableInstanceContent(block, getReusableKind(block) === "component" ? "global" : "copy", getReusableKind(block)), title: block.name }, getReusableKind(block) === "component" ? "global" : "copy"); }} className="rounded-full border border-border/40 bg-background/70 px-2.5 py-1 text-[10px] text-foreground hover:border-primary/40">
                         {block.name}
                       </button>
                     ))}
@@ -245,7 +247,7 @@ export default function SectionsLibraryPanel({ onInsertReusable, onInsertTemplat
                       </div>
                     </div>
                     <p className="text-[11px] text-muted-foreground">{template.description}</p>
-                    <Button size="sm" className="h-7 gap-1 text-[10px]" onClick={() => onInsertTemplate({ block_type: template.block_type, content: template.content, title: template.name })}>
+                    <Button size="sm" className="h-7 gap-1 text-[10px]" onClick={() => { track("reusable_section_insert", { template_id: template.id, name: template.name, category: template.category, block_type: template.block_type, source: "template" }); onInsertTemplate({ block_type: template.block_type, content: template.content, title: template.name }); }}>
                       <Sparkles className="h-3 w-3" /> Insert template
                     </Button>
                   </div>

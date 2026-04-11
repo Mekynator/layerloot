@@ -28,6 +28,7 @@ import {
   Trash2,
   Undo2,
   Upload,
+  Users,
   X,
   ZoomIn,
   ZoomOut,
@@ -45,6 +46,7 @@ import { useAdminPermissions } from "@/hooks/use-admin-permissions";
 import RevisionHistoryPanel from "@/components/admin/RevisionHistoryPanel";
 import SchedulePublishDialog from "@/components/admin/SchedulePublishDialog";
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS } from "@/lib/i18n";
+import { PREVIEW_PERSONAS, type PreviewPersona } from "@/lib/personalization";
 
 interface EditorToolbarProps {
   onAddBlock: () => void;
@@ -63,6 +65,8 @@ interface EditorToolbarProps {
   onResetZoom: () => void;
   onSetZoom: (value: number) => void;
   onFitZoom: () => void;
+  previewPersona?: PreviewPersona | null;
+  onSetPreviewPersona?: (persona: PreviewPersona | null) => void;
 }
 
 export default function EditorToolbar({
@@ -82,6 +86,8 @@ export default function EditorToolbar({
   onResetZoom,
   onSetZoom,
   onFitZoom,
+  previewPersona,
+  onSetPreviewPersona,
 }: EditorToolbarProps) {
   const navigate = useNavigate();
   const {
@@ -325,6 +331,33 @@ export default function EditorToolbar({
                   </Tooltip>
                 ))}
               </div>
+
+              {/* Preview persona selector */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-medium transition-colors ${
+                      previewPersona && previewPersona.id !== "default"
+                        ? "border-primary/40 bg-primary/10 text-primary"
+                        : "border-border/30 bg-background/60 text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Users className="h-3 w-3" />
+                    {previewPersona && previewPersona.id !== "default" ? previewPersona.label : "Persona"}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="min-w-40">
+                  {PREVIEW_PERSONAS.map((persona) => (
+                    <DropdownMenuItem
+                      key={persona.id}
+                      onClick={() => onSetPreviewPersona?.(persona.id === "default" ? null : persona)}
+                      className={`text-xs ${previewPersona?.id === persona.id ? "bg-primary/10 text-primary" : ""}`}
+                    >
+                      {persona.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             <div className="flex flex-1 flex-wrap items-center justify-end gap-2">

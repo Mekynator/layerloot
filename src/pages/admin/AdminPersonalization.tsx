@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
+import PersonalizationDashboard from "@/components/admin/dashboard/PersonalizationDashboard";
 
 type EventStat = { event_type: string; count: number };
 
@@ -316,6 +317,9 @@ const AdminPersonalization = () => {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Block-level personalization performance */}
+        <PersonalizationDashboard />
       </div>
     </AdminLayout>
   );

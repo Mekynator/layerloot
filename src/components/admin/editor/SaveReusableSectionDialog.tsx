@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Layers3, Link2, Save } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAnalyticsSafe } from "@/contexts/AnalyticsContext";
 import { upsertReusableFromBlock, REUSABLE_SECTION_CATEGORIES } from "@/lib/reusable-blocks";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
 import {
@@ -28,6 +29,7 @@ interface SaveReusableSectionDialogProps {
 
 export default function SaveReusableSectionDialog({ open, onOpenChange, block, onSaved }: SaveReusableSectionDialogProps) {
   const { user } = useAuth();
+  const { track } = useAnalyticsSafe();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<string>("General");
@@ -65,6 +67,7 @@ export default function SaveReusableSectionDialog({ open, onOpenChange, block, o
       });
 
       toast.success(isGlobal ? "Global component saved" : "Reusable section saved");
+      track("reusable_section_saved", { id: result.id, name: result.name, kind: isGlobal ? "component" : "section", category, block_type: block.block_type });
       onSaved?.({ id: result.id, name: result.name, kind: isGlobal ? "component" : "section" });
       onOpenChange(false);
     } catch (error: any) {

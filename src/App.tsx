@@ -52,6 +52,7 @@ import FinancialWorkspace from "./pages/admin/FinancialWorkspace";
 import EditorWorkspace from "./pages/admin/EditorWorkspace";
 import UsersWorkspace from "./pages/admin/UsersWorkspace";
 import AdminDesignSystem from "./pages/admin/AdminDesignSystem";
+import AdminPersonalization from "./pages/admin/AdminPersonalization";
 import DynamicPage from "./pages/DynamicPage";
 import CreateYourOwn from "./pages/CreateYourOwn";
 import Policies from "./pages/Policies";
@@ -134,7 +135,7 @@ const AppShell = () => {
             <Route path="chat" element={<AdminRoute requiredPermission="settings.view"><AdminChat /></AdminRoute>} />
             <Route path="chat-settings" element={<AdminRoute requiredPermission="settings.view"><Navigate to="/admin/chat?section=appearance" replace /></AdminRoute>} />
             <Route path="chat-analytics" element={<AdminRoute requiredPermission="settings.view"><Navigate to="/admin/chat?section=analytics" replace /></AdminRoute>} />
-            <Route path="personalization" element={<AdminRoute requiredPermission="settings.view"><Navigate to="/admin/chat?section=personalization" replace /></AdminRoute>} />
+            <Route path="personalization" element={<AdminRoute requiredPermission="settings.view"><AdminPersonalization /></AdminRoute>} />
             <Route path="editor" element={<AdminRoute requiredPermission="content.edit"><EditorWorkspace /></AdminRoute>} />
             <Route path="content" element={<AdminRoute requiredPermission="content.edit"><Navigate to="/admin/editor?section=blocks" replace /></AdminRoute>} />
             <Route path="backgrounds" element={<AdminRoute requiredPermission="backgrounds.manage"><AdminBackgrounds /></AdminRoute>} />

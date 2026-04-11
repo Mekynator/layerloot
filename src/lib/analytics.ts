@@ -39,7 +39,10 @@ export type AnalyticsEventName =
   | "component_detached"
   | "component_override_local"
   | "component_resynced"
-  | "component_global_edit";
+  | "component_global_edit"
+  | "personalized_variant_shown"
+  | "personalized_section_hidden"
+  | "personalized_recommendation_click";
 
 export type AnalyticsEntityType =
   | "page"

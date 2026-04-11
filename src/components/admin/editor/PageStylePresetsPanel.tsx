@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Copy, Heart, Pencil, RefreshCw, Save, Star, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAnalyticsSafe } from "@/contexts/AnalyticsContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -139,6 +140,7 @@ const extractStylePayload = (content: Record<string, unknown>) => STYLE_KEYS.red
 }, {});
 
 export default function PageStylePresetsPanel({ blockType, content, onApplyPatch }: PageStylePresetsPanelProps) {
+  const { track } = useAnalyticsSafe();
   const [presets, setPresets] = useState<PageStylePreset[]>(DEFAULT_PRESETS);
   const [loading, setLoading] = useState(true);
   const [activePresetId, setActivePresetId] = useState<string>(DEFAULT_PRESETS[0]?.id ?? "");
@@ -175,8 +177,7 @@ export default function PageStylePresetsPanel({ blockType, content, onApplyPatch
     setActivePresetId(presetId);
     const preset = presets.find((item) => item.id === presetId);
     if (!preset) return;
-    onApplyPatch({ ...preset.styles });
-    toast.success(`Applied \"${preset.name}\" preset`);
+    onApplyPatch({ ...preset.styles });    track("preset_applied", { preset_id: presetId, name: preset.name, block_type: blockType });    toast.success(`Applied \"${preset.name}\" preset`);
   };
 
   const saveCurrentAsPreset = async () => {
@@ -191,6 +192,7 @@ export default function PageStylePresetsPanel({ blockType, content, onApplyPatch
       setActivePresetId(existingPreset.id);
       setNewPresetName("");
       await persistPresets(next);
+      track("preset_saved", { preset_id: existingPreset.id, name, block_type: blockType, overwritten: true });
       toast.success(`Updated "${name}" preset`);
       return;
     }
@@ -205,6 +207,7 @@ export default function PageStylePresetsPanel({ blockType, content, onApplyPatch
     setActivePresetId(preset.id);
     setNewPresetName("");
     await persistPresets(next);
+    track("preset_saved", { preset_id: preset.id, name, block_type: blockType, overwritten: false });
     toast.success(`Saved "${name}" preset`);
   };
 
@@ -241,6 +244,7 @@ export default function PageStylePresetsPanel({ blockType, content, onApplyPatch
     setPresets(next);
     setActivePresetId(next[0]?.id ?? "");
     await persistPresets(next);
+    track("preset_deleted", { preset_id: activePreset.id, name: activePreset.name });
     toast.success(`Deleted "${activePreset.name}" preset`);
   };
 

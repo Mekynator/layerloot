@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAnalyticsSafe } from "@/contexts/AnalyticsContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ModelViewer from "@/components/ModelViewer";
@@ -19,6 +20,7 @@ const ACCEPTED_EXTENSIONS = ".stl,.obj,.3mf";
 
 const SubmitDesign = () => {
   const { user } = useAuth();
+  const { track } = useAnalyticsSafe();
   const { toast } = useToast();
   const { data: pageBlocks = [], isLoading: blocksLoading } = usePageBlocks("submit-design");
   const { isVisible } = useStaticSectionSettings("submit-design");
@@ -108,6 +110,7 @@ const SubmitDesign = () => {
     }
 
     toast({ title: "Design submitted!", description: "Our team will review your model." });
+    track("design_submitted", { model_filename: file.name });
     setForm({ creator_name: "", email: "", portfolio_url: "", description: "" });
     setFile(null);
     setPreviewUrl(null);

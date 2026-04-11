@@ -1,10 +1,12 @@
 import { useMemo, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { renderBlock } from "@/components/admin/BlockRenderer";
+import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 import { PageSkeleton } from "@/components/shared/loading-states";
 import NotFound from "./NotFound";
 import { usePageBlocks, useSitePage } from "@/hooks/use-page-blocks";
+import { useUserSignals } from "@/hooks/use-user-signals";
+import { shouldShowBlock, getPersonalizedContent } from "@/lib/personalization";
 
 type DynamicPageProps = {
   slug?: string;
@@ -56,7 +58,21 @@ const DynamicPage = ({ slug: slugProp, emptyTitle, emptyDescription }: DynamicPa
   }, [slug]);
 
   const effectiveBlocks = localBlocks ?? blocks;
-  const visibleBlocks = useMemo(() => (effectiveBlocks ?? []).filter((block) => block.is_active !== false), [effectiveBlocks]);
+  const { signals } = useUserSignals();
+
+  const visibleBlocks = useMemo(() => {
+    const active = (effectiveBlocks ?? []).filter((block) => block.is_active !== false);
+    // In editor preview, skip audience filtering to show all blocks
+    if (isEditorPreview) return active;
+    return active
+      .filter((block) => shouldShowBlock(block.content as Record<string, unknown> | null, signals))
+      .map((block) => {
+        const content = block.content as Record<string, unknown> | null;
+        if (!content) return block;
+        const personalized = getPersonalizedContent(content, signals);
+        return personalized === content ? block : { ...block, content: personalized } as SiteBlock;
+      });
+  }, [effectiveBlocks, signals, isEditorPreview]);
 
   const resolvedEmptyTitle = emptyTitle ?? t("dynamicPage.emptyTitle", "Coming soon");
   const resolvedEmptyDescription = emptyDescription ?? t("dynamicPage.emptyDescription", "Content coming soon.");

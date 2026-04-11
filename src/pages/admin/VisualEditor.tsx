@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { VisualEditorProvider, useVisualEditor, pageDisplayTitle } from "@/contexts/VisualEditorContext";
 import EditorToolbar from "@/components/admin/editor/EditorToolbar";
 import LayersPanel from "@/components/admin/editor/LayersPanel";
+import type { PreviewPersona } from "@/lib/personalization";
 import EditorCanvas from "@/components/admin/editor/EditorCanvas";
 import SettingsPanel from "@/components/admin/editor/SettingsPanel";
 import AddBlockDialog from "@/components/admin/editor/AddBlockDialog";
@@ -29,6 +30,7 @@ function EditorInner() {
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [canvasZoom, setCanvasZoom] = useState(100);
   const [previewMode, setPreviewMode] = useState(false);
+  const [previewPersona, setPreviewPersona] = useState<PreviewPersona | null>(null);
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) navigate("/");
@@ -119,6 +121,8 @@ function EditorInner() {
         onResetZoom={() => setCanvasZoom(100)}
         onSetZoom={(value) => setCanvasZoom(Math.max(50, Math.min(value, 150)))}
         onFitZoom={() => setCanvasZoom(viewport === "desktop" ? 80 : viewport === "tablet" ? 95 : 110)}
+        previewPersona={previewPersona}
+        onSetPreviewPersona={setPreviewPersona}
       />
 
       <ResizablePanelGroup direction="horizontal" className="flex-1">

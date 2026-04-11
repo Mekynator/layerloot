@@ -3,6 +3,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAnalyticsSafe } from "@/contexts/AnalyticsContext";
+import { useUserSignals } from "@/hooks/use-user-signals";
+import { evaluateAudienceRules, type AudienceRules } from "@/lib/personalization";
 import {
   normalizePromotionPopupConfig,
   persistPromotionPopupDismissal,
@@ -16,6 +18,7 @@ import PromotionPopupCanvas from "@/components/promo/PromotionPopupCanvas";
 const PromotionPopup = () => {
   const location = useLocation();
   const { track, trackAttribution } = useAnalyticsSafe();
+  const { signals } = useUserSignals();
   const [promo, setPromo] = useState<PromotionPopupConfig | null>(null);
   const [visible, setVisible] = useState(false);
   const [doNotShowAgain, setDoNotShowAgain] = useState(false);
@@ -53,6 +56,14 @@ const PromotionPopup = () => {
 
       const dismissal = readPromotionPopupDismissal(config);
       if (shouldBlockPopupByDismissal(config, dismissal, Date.now())) {
+        setPromo(config);
+        setVisible(false);
+        return;
+      }
+
+      // Audience-based targeting
+      const audienceRules = (config as any)._audienceRules as AudienceRules | undefined;
+      if (audienceRules && audienceRules.length > 0 && !evaluateAudienceRules(audienceRules, signals)) {
         setPromo(config);
         setVisible(false);
         return;

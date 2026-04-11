@@ -47,6 +47,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAnalyticsSafe } from "@/contexts/AnalyticsContext";
 import { useToast } from "@/hooks/use-toast";
 import ModelViewer from "@/components/ModelViewer";
 import Lithophane, { type LithophaneSubmitPayload } from "@/components/Lithophane";
@@ -492,6 +493,7 @@ const LithophaneOrderSection = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
+  const { track } = useAnalyticsSafe();
 
   const userName = getUserDisplayName(user);
   const userEmail = user?.email || "";
@@ -708,6 +710,8 @@ const LithophaneOrderSection = () => {
 
       await animateProgress(setLithophaneProgress, 100, "Lithophane order submitted", 280);
 
+      track("custom_order_submit", { order_type: "lithophane" });
+
       toast({
         title: t("create.lithophaneSubmitted"),
         description: t("create.lithophaneSubmittedDesc"),
@@ -778,6 +782,7 @@ const CustomPrintOrder = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
+  const { track } = useAnalyticsSafe();
 
   const userName = getUserDisplayName(user);
   const userEmail = user?.email || "";
@@ -1128,6 +1133,8 @@ const CustomPrintOrder = () => {
       if (error) throw error;
       if (!insertedOrder?.id) throw new Error("Order was created but ID was not returned");
       orderCreated = true;
+
+      track("custom_order_submit", { order_type: "custom-print", order_id: insertedOrder.id });
 
       await animateProgress(setSubmitProgress, 94, "Redirecting to payment...", 260);
       await startRequestFeeCheckout(insertedOrder.id);

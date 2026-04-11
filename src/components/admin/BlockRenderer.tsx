@@ -2210,12 +2210,16 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
         rel={currentAction.openInNewTab ? "noopener noreferrer" : undefined}
         className="block h-full w-full cursor-pointer"
         onClick={(e) => {
-          // For same-page anchors, use smooth scroll instead of hard navigation
           if (currentAction.actionType === "anchor") {
             e.preventDefault();
             const anchor = (currentAction.anchorId || currentAction.actionTarget || "").replace(/^#/, "");
-            if (anchor && !smoothScrollTo(anchor)) {
-              window.location.hash = `#${anchor}`;
+            if (anchor) {
+              const el = document.getElementById(anchor);
+              if (el) {
+                el.scrollIntoView({ behavior: "smooth" });
+              } else {
+                window.location.hash = `#${anchor}`;
+              }
             }
           }
         }}

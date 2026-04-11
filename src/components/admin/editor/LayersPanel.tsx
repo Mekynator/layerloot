@@ -5,7 +5,7 @@ import {
   LayoutGrid, ChevronUp, ChevronDown,
   Square, Type, Image, Columns, PlayCircle, MousePointer, Link2, Code, Globe, Mail,
   Truck, Star, HelpCircle, ShieldCheck, Layers, Package, FolderTree, Search,
-  Box, BookmarkPlus, FileText, Lock, Settings2, Unlock,
+  Box, BookmarkPlus, FileText, Lock, Settings2, Unlock, Sparkles,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

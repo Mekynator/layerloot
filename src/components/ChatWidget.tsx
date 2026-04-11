@@ -20,17 +20,11 @@ type ChatQuickItem = {
   icon?: string;
 };
 
-type ParsedChatProduct = {
-  name: string;
-  benefit?: string;
-  price?: string;
-  imageUrl?: string;
-  productUrl?: string;
-};
+// Using ParsedChatProduct from chatPostprocess
 
 import { formatPrice } from "@/lib/currency";
 import { useNavigate } from "react-router-dom";
-import { parseChatProducts, stripProductBlocks, sanitizeContent, ParsedChatProduct } from "@/lib/chatPostprocess";
+import { parseChatProducts, stripProductBlocks, sanitizeContent, type ParsedChatProduct } from "@/lib/chatPostprocess";
 import { useCart } from "@/contexts/CartContext";
 import { useRecentlyViewedProducts } from "@/hooks/use-recently-viewed";
 import { getSavedProducts } from "@/lib/savedItems";
@@ -664,26 +658,26 @@ const ChatWidget = () => {
           let resolved: any = null;
           if (p.productUrl && p.productUrl.startsWith("/products/")) {
             const slug = p.productUrl.replace(/^\/products\//, "");
-            const { data } = await supabase.from("products").select("id,slug,name,price,images,short_description,is_active,published").eq("slug", slug).maybeSingle();
-            if (data && data.is_active && data.published) resolved = data;
+            const { data } = await supabase.from("products").select("id,slug,name,price,images,is_active,published").eq("slug", slug).maybeSingle();
+            if (data && (data as any).is_active && (data as any).published) resolved = data;
           }
 
           if (!resolved && p.name) {
             // try to match by name as a last resort (case-insensitive)
-            const { data } = await supabase.from("products").select("id,slug,name,price,images,short_description,is_active,published").ilike("name", `%${p.name}%`).limit(1);
-            if (data && data[0] && data[0].is_active && data[0].published) resolved = data[0];
+            const { data } = await supabase.from("products").select("id,slug,name,price,images,is_active,published").ilike("name", `%${p.name}%`).limit(1);
+            if (data && data[0] && (data[0] as any).is_active && (data[0] as any).published) resolved = data[0];
           }
 
           if (resolved) {
             validated.push({
-              id: resolved.id,
-              slug: resolved.slug,
-              name: resolved.name,
-              benefit: resolved.short_description ?? p.benefit,
-              price: formatPrice(Number(resolved.price ?? 0)),
-              priceValue: Number(resolved.price ?? 0),
-              imageUrl: (resolved.images && resolved.images[0]) || p.imageUrl,
-              productUrl: `/products/${resolved.slug}`,
+              id: (resolved as any).id,
+              slug: (resolved as any).slug,
+              name: (resolved as any).name,
+              benefit: (resolved as any).short_description ?? p.benefit,
+              price: formatPrice(Number((resolved as any).price ?? 0)),
+              priceValue: Number((resolved as any).price ?? 0),
+              imageUrl: ((resolved as any).images && (resolved as any).images[0]) || p.imageUrl,
+              productUrl: `/products/${(resolved as any).slug}`,
             });
           }
         } catch (e) {

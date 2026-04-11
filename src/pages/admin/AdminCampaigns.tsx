@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  Megaphone, Plus, Calendar, Users, Zap, Trash2, Edit, Eye,
+  Megaphone, Plus, Calendar, Zap, Trash2, Edit,
   Snowflake, Sun, Leaf, Heart, Sparkles, PartyPopper, Gift,
   Palette, Clock, Power, PowerOff,
 } from "lucide-react";
@@ -17,6 +17,8 @@ import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import AdminLayout from "@/components/admin/AdminLayout";
+import AdminColorPicker from "@/components/admin/AdminColorPicker";
+import PromotionPopupBuilder from "@/components/admin/campaigns/PromotionPopupBuilder";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Campaign {
@@ -251,6 +253,8 @@ const AdminCampaigns = () => {
         </div>
       </div>
 
+      <PromotionPopupBuilder />
+
       {/* Campaign Cards */}
       {loading ? (
         <div className="py-16 text-center text-muted-foreground">Loading campaigns...</div>
@@ -399,34 +403,48 @@ const AdminCampaigns = () => {
             </TabsContent>
 
             <TabsContent value="theme" className="space-y-4 pt-2">
-              <div>
-                <Label className="text-xs">Primary Color (HSL)</Label>
-                <Input
-                  value={form.theme_overrides.primaryColor || ""}
-                  onChange={(e) => setForm({ ...form, theme_overrides: { ...form.theme_overrides, primaryColor: e.target.value } })}
-                  placeholder="217 91% 60%"
-                />
-                {form.theme_overrides.primaryColor && (
-                  <div className="mt-1 h-6 w-full rounded" style={{ background: `hsl(${form.theme_overrides.primaryColor})` }} />
-                )}
-              </div>
-              <div>
-                <Label className="text-xs">Accent Color (HSL)</Label>
-                <Input
-                  value={form.theme_overrides.accentColor || ""}
-                  onChange={(e) => setForm({ ...form, theme_overrides: { ...form.theme_overrides, accentColor: e.target.value } })}
-                  placeholder="200 80% 55%"
-                />
-                {form.theme_overrides.accentColor && (
-                  <div className="mt-1 h-6 w-full rounded" style={{ background: `hsl(${form.theme_overrides.accentColor})` }} />
-                )}
-              </div>
-              <div className="flex items-center gap-3">
-                <Switch
-                  checked={form.theme_overrides.buttonGlow || false}
-                  onCheckedChange={(v) => setForm({ ...form, theme_overrides: { ...form.theme_overrides, buttonGlow: v } })}
-                />
-                <Label className="text-xs">Button glow effect</Label>
+              <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                <div className="space-y-3 rounded-xl border border-border/30 bg-muted/10 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Theme color controls</p>
+                  <AdminColorPicker
+                    label="Primary Color"
+                    value={form.theme_overrides.primaryColor || ""}
+                    onChange={(value) => setForm({ ...form, theme_overrides: { ...form.theme_overrides, primaryColor: value } })}
+                    defaultValue="217 91% 60%"
+                    placeholder="217 91% 60%"
+                    format="hsl"
+                    description="Used for the main campaign glow and brand emphasis."
+                  />
+                  <AdminColorPicker
+                    label="Accent Color"
+                    value={form.theme_overrides.accentColor || ""}
+                    onChange={(value) => setForm({ ...form, theme_overrides: { ...form.theme_overrides, accentColor: value } })}
+                    defaultValue="200 80% 55%"
+                    placeholder="200 80% 55%"
+                    format="hsl"
+                    description="Secondary highlights for borders, badges, and supporting UI accents."
+                  />
+                </div>
+
+                <div className="space-y-3 rounded-xl border border-border/30 bg-card/60 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Live color preview</p>
+                  <div className="rounded-xl border border-border/20 p-4" style={{
+                    background: `linear-gradient(135deg, hsl(${form.theme_overrides.primaryColor || "217 91% 60%"}) 0%, hsl(${form.theme_overrides.accentColor || "200 80% 55%"}) 100%)`,
+                  }}>
+                    <p className="font-display text-lg font-semibold uppercase tracking-wide text-white">Campaign Preview</p>
+                    <p className="mt-1 text-xs text-white/85">Your storefront theme updates instantly with the chosen primary and accent colors.</p>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-lg border border-border/30 bg-muted/20 px-3 py-2">
+                    <Switch
+                      checked={form.theme_overrides.buttonGlow || false}
+                      onCheckedChange={(v) => setForm({ ...form, theme_overrides: { ...form.theme_overrides, buttonGlow: v } })}
+                    />
+                    <div>
+                      <Label className="text-xs">Button glow effect</Label>
+                      <p className="text-[10px] text-muted-foreground">Keeps the existing animated glow behavior while making the theme easier to tune.</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </TabsContent>
 
@@ -492,23 +510,25 @@ const AdminCampaigns = () => {
                       placeholder="🎄 Holiday sale is live!"
                     />
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <Label className="text-xs">Background Color</Label>
-                      <Input
-                        value={form.banner_config.bgColor || ""}
-                        onChange={(e) => setForm({ ...form, banner_config: { ...form.banner_config, bgColor: e.target.value } })}
-                        placeholder="hsl(0 72% 51%)"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Text Color</Label>
-                      <Input
-                        value={form.banner_config.textColor || ""}
-                        onChange={(e) => setForm({ ...form, banner_config: { ...form.banner_config, textColor: e.target.value } })}
-                        placeholder="#ffffff"
-                      />
-                    </div>
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <AdminColorPicker
+                      label="Background Color"
+                      value={form.banner_config.bgColor || ""}
+                      onChange={(value) => setForm({ ...form, banner_config: { ...form.banner_config, bgColor: value } })}
+                      defaultValue="hsl(0 72% 51%)"
+                      placeholder="hsl(0 72% 51%)"
+                      format="css"
+                      description="Shown behind the campaign banner across the storefront."
+                    />
+                    <AdminColorPicker
+                      label="Text Color"
+                      value={form.banner_config.textColor || ""}
+                      onChange={(value) => setForm({ ...form, banner_config: { ...form.banner_config, textColor: value } })}
+                      defaultValue="#ffffff"
+                      placeholder="#ffffff"
+                      format="css"
+                      description="Use a high-contrast text color for readability."
+                    />
                   </div>
                   <div>
                     <Label className="text-xs">Link (optional)</Label>
@@ -562,14 +582,15 @@ const AdminCampaigns = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label className="text-xs">Chat Header Color (HSL)</Label>
-                <Input
-                  value={form.chat_overrides.headerColor || ""}
-                  onChange={(e) => setForm({ ...form, chat_overrides: { ...form.chat_overrides, headerColor: e.target.value } })}
-                  placeholder="0 72% 51%"
-                />
-              </div>
+              <AdminColorPicker
+                label="Chat Header Color"
+                value={form.chat_overrides.headerColor || ""}
+                onChange={(value) => setForm({ ...form, chat_overrides: { ...form.chat_overrides, headerColor: value } })}
+                defaultValue="0 72% 51%"
+                placeholder="0 72% 51%"
+                format="hsl"
+                description="Applies the campaign color treatment to the chat header while preserving the existing override format."
+              />
             </TabsContent>
           </Tabs>
 

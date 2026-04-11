@@ -166,7 +166,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
     const insertAt = selectedIndex === -1 ? currentPageBlocks.length : selectedIndex + 1;
     addBlock(data.block_type, insertAt, { title: data.title, content: data.content });
     toast.success(mode === "global" ? "Global component inserted" : mode === "override" ? "Reusable component inserted" : "Reusable section inserted");
-    setActiveTab("structure");
+    // tab switch handled by parent
   };
 
   return (

@@ -797,12 +797,12 @@ const ChatWidget = () => {
         }
       }
 
-      let query = supabase.from("products").select("id,name,slug,images,price,short_description").eq("is_active", true).eq("published", true).limit(3);
+      let query: any = (supabase.from("products") as any).select("id,name,slug,images,price,short_description").eq("is_active", true).eq("published", true).limit(3);
       if (categorySlug) {
         // try filter by category slug if a relation exists
         // only recommend the category if it contains active products
         try {
-          const { data: catCount } = await supabase.from("products").select("id").ilike("category_slugs", `%${categorySlug}%` as any).eq("is_active", true).eq("published", true).limit(1);
+          const { data: catCount } = await (supabase.from("products") as any).select("id").ilike("category_slugs", `%${categorySlug}%`).eq("is_active", true).eq("published", true).limit(1);
           if (!catCount || catCount.length === 0) {
             // empty category — do not recommend
             setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, content: (m.content ? m.content + "\n\n" : "") + `We don't have active products in that category right now.` } : m)));
@@ -812,7 +812,7 @@ const ChatWidget = () => {
         } catch (e) {
           // ignore and continue
         }
-        query = query.ilike("category_slugs", `%${categorySlug}%` as any).limit(3 as any);
+        query = query.ilike("category_slugs", `%${categorySlug}%`).limit(3);
       }
       const { data } = await query;
       const products = (data ?? []).slice(0, 3);

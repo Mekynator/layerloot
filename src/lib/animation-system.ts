@@ -160,7 +160,7 @@ export function buildEntranceAnimation(content: Record<string, unknown>) {
   const delay = (content.animationDelay as number) ?? 0;
   const startOpacity = (content.startOpacity as number) ?? 0;
 
-  const map: Record<string, { initial: Record<string, unknown>; animate: Record<string, unknown> }> = {
+  const map: Record<string, { initial: Record<string, number | string>; animate: Record<string, number | string> }> = {
     none: { initial: { opacity: startOpacity, y: 18 }, animate: { opacity: 1, y: 0 } },
     fadeUp: { initial: { opacity: startOpacity, y: dist }, animate: { opacity: 1, y: 0 } },
     fadeDown: { initial: { opacity: startOpacity, y: -dist }, animate: { opacity: 1, y: 0 } },
@@ -194,10 +194,10 @@ export function buildEntranceAnimation(content: Record<string, unknown>) {
 
 /* ── Hover animation builder ── */
 
-export function buildHoverAnimation(content: Record<string, unknown>): Record<string, unknown> {
+export function buildHoverAnimation(content: Record<string, unknown>): Record<string, number | string> {
   const effect = (content.hoverEffect as string) || "none";
   const intensity = ((content.hoverIntensity as number) ?? 50) / 100;
-  const map: Record<string, Record<string, unknown>> = {
+  const map: Record<string, Record<string, number | string>> = {
     lift: { y: -6 * intensity },
     scale: { scale: 1 + 0.05 * intensity },
     glow: { boxShadow: `0 0 ${30 * intensity}px hsl(217 91% 60% / ${0.3 * intensity})` },
@@ -210,10 +210,10 @@ export function buildHoverAnimation(content: Record<string, unknown>): Record<st
 
 /* ── Press animation builder ── */
 
-export function buildPressAnimation(content: Record<string, unknown>): Record<string, unknown> {
+export function buildPressAnimation(content: Record<string, unknown>): Record<string, number | string> {
   const effect = (content.pressEffect as string) || "none";
   const intensity = ((content.pressIntensity as number) ?? 50) / 100;
-  const map: Record<string, Record<string, unknown>> = {
+  const map: Record<string, Record<string, number | string>> = {
     shrink: { scale: 1 - 0.04 * intensity },
     push: { y: 3 * intensity },
     squish: { scaleY: 1 - 0.03 * intensity, scaleX: 1 + 0.01 * intensity },

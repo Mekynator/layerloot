@@ -417,6 +417,7 @@ function saveConversation(messages: Msg[], page: string, userId: string | null, 
 const ChatWidget = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { addItem } = useCart();
   const scrollRef = useRef<HTMLDivElement>(null);
   const promptBubbleTimerRef = useRef<number | null>(null);
   const { campaign } = useCampaign();

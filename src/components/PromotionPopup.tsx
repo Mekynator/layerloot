@@ -216,8 +216,8 @@ function PromotionPopupMotion({ promo, visible, dialogRef, doNotShowAgain, setDo
   const motionEnabled = isMotionEnabledForViewport(motionContent, viewport as "mobile" | "desktop", prefersReduced);
 
   const entrance = useMemo(() => motionEnabled ? buildEntranceAnimation({ animation: "popIn", animationDuration: 0.4, ...motionContent }) : null, [motionContent, motionEnabled]);
-  const hoverProps = useMemo(() => motionEnabled ? buildHoverAnimation(motionContent) : {}, [motionContent, motionEnabled]);
-  const pressProps = useMemo(() => motionEnabled ? buildPressAnimation(motionContent) : {}, [motionContent, motionEnabled]);
+  const hoverProps = useMemo(() => motionEnabled ? buildHoverAnimation(motionContent) : undefined, [motionContent, motionEnabled]);
+  const pressProps = useMemo(() => motionEnabled ? buildPressAnimation(motionContent) : undefined, [motionContent, motionEnabled]);
 
   return (
     <AnimatePresence>
@@ -251,8 +251,8 @@ function PromotionPopupMotion({ promo, visible, dialogRef, doNotShowAgain, setDo
               initial={entrance?.initial}
               animate={entrance?.animate}
               transition={entrance?.transition}
-              whileHover={Object.keys(hoverProps).length > 0 ? hoverProps : undefined}
-              whileTap={Object.keys(pressProps).length > 0 ? pressProps : undefined}
+              whileHover={hoverProps && Object.keys(hoverProps).length > 0 ? hoverProps : undefined}
+              whileTap={pressProps && Object.keys(pressProps).length > 0 ? pressProps : undefined}
             >
               <PromotionPopupCanvas
                 config={promo}

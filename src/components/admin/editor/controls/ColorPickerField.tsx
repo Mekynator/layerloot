@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useDesignSystemSafe } from "@/contexts/DesignSystemContext";
+import { DESIGN_SYSTEM_COLOR_OPTIONS } from "@/types/design-system";
 
 const THEME_SWATCHES = [
   "#ffffff", "#000000", "#3b82f6", "#8b5cf6", "#ef4444",
@@ -28,11 +30,17 @@ interface ColorPickerFieldProps {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  showGlobalTokens?: boolean;
 }
 
-export default function ColorPickerField({ label, value, onChange, placeholder = "transparent" }: ColorPickerFieldProps) {
+export default function ColorPickerField({ label, value, onChange, placeholder = "transparent", showGlobalTokens = true }: ColorPickerFieldProps) {
+  const { tokens } = useDesignSystemSafe();
   const [hex, setHex] = useState(value || "");
   const [recent, setRecent] = useState<string[]>(getRecentColors);
+  const designSwatches = useMemo(
+    () => DESIGN_SYSTEM_COLOR_OPTIONS.map((option) => ({ label: option.label, value: tokens.colors[option.key] })).filter((option, index, array) => option.value && array.findIndex((entry) => entry.value === option.value) === index),
+    [tokens],
+  );
 
   useEffect(() => { setHex(value || ""); }, [value]);
 
@@ -45,7 +53,7 @@ export default function ColorPickerField({ label, value, onChange, placeholder =
     }
   }, [onChange]);
 
-  const displayColor = value && value !== "transparent" ? value : "#000000";
+  const displayColor = typeof value === "string" && /^#(?:[0-9a-fA-F]{3}){1,2}$/.test(value) ? value : "#000000";
 
   return (
     <div className="space-y-1">
@@ -86,6 +94,29 @@ export default function ColorPickerField({ label, value, onChange, placeholder =
               placeholder="#000000"
             />
           </div>
+
+          {showGlobalTokens && designSwatches.length > 0 && (
+            <div>
+              <p className="mb-1.5 text-[9px] font-medium uppercase tracking-wider text-muted-foreground">Design System</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {designSwatches.map((swatch) => (
+                  <button
+                    key={`${swatch.label}-${swatch.value}`}
+                    type="button"
+                    onClick={() => commit(swatch.value)}
+                    className={cn(
+                      "flex items-center gap-2 rounded-md border border-border/30 px-2 py-1.5 text-left text-[10px] transition-colors hover:border-primary/30",
+                      value === swatch.value && "border-primary/50 bg-primary/10"
+                    )}
+                    title={swatch.label}
+                  >
+                    <span className="h-4 w-4 rounded border border-border/40" style={{ backgroundColor: swatch.value }} />
+                    <span className="truncate text-foreground">{swatch.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Theme swatches */}
           <div>

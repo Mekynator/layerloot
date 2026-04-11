@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { useActiveCampaign, type CampaignTheme } from "@/hooks/use-active-campaign";
+import { hexToHslString } from "@/lib/design-system";
 
 const CampaignContext = createContext<{ campaign: CampaignTheme | null }>({ campaign: null });
 
@@ -17,29 +18,47 @@ export function CampaignThemeProvider({ children }: { children: ReactNode }) {
     const root = document.documentElement;
     const overrides = campaign?.theme_overrides;
 
+    const cleanup = () => {
+      [
+        "--campaign-primary-hsl",
+        "--campaign-accent-hsl",
+        "--campaign-border-hsl",
+        "--campaign-font-display",
+        "--glow-primary",
+        "--glow-primary-strong",
+      ].forEach((name) => root.style.removeProperty(name));
+    };
+
     if (!overrides) {
-      // Remove any campaign overrides
-      root.style.removeProperty("--campaign-primary");
-      root.style.removeProperty("--campaign-accent");
-      root.style.removeProperty("--campaign-glow");
+      cleanup();
       return;
     }
 
     if (overrides.primaryColor) {
-      root.style.setProperty("--campaign-primary", overrides.primaryColor);
-    }
-    if (overrides.accentColor) {
-      root.style.setProperty("--campaign-accent", overrides.accentColor);
-    }
-    if (overrides.buttonGlow) {
-      root.style.setProperty("--campaign-glow", "1");
+      const primaryHsl = hexToHslString(overrides.primaryColor);
+      if (primaryHsl) root.style.setProperty("--campaign-primary-hsl", primaryHsl);
     }
 
-    return () => {
-      root.style.removeProperty("--campaign-primary");
-      root.style.removeProperty("--campaign-accent");
-      root.style.removeProperty("--campaign-glow");
-    };
+    if (overrides.accentColor) {
+      const accentHsl = hexToHslString(overrides.accentColor);
+      if (accentHsl) root.style.setProperty("--campaign-accent-hsl", accentHsl);
+    }
+
+    if (overrides.borderColor) {
+      const borderHsl = hexToHslString(overrides.borderColor);
+      if (borderHsl) root.style.setProperty("--campaign-border-hsl", borderHsl);
+    }
+
+    if (overrides.fontAccent) {
+      root.style.setProperty("--campaign-font-display", overrides.fontAccent);
+    }
+
+    if (overrides.buttonGlow && overrides.primaryColor) {
+      root.style.setProperty("--glow-primary", `0 0 28px color-mix(in srgb, ${overrides.primaryColor} 32%, transparent)`);
+      root.style.setProperty("--glow-primary-strong", `0 0 52px color-mix(in srgb, ${overrides.primaryColor} 48%, transparent)`);
+    }
+
+    return cleanup;
   }, [campaign]);
 
   return (

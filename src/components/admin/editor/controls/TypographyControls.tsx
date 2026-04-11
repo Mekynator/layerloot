@@ -5,6 +5,8 @@ import SliderField from "./SliderField";
 import ColorPickerField from "./ColorPickerField";
 import { AlignLeft, AlignCenter, AlignRight, Bold, Italic, Type } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useDesignSystemSafe } from "@/contexts/DesignSystemContext";
+import type { DesignTypographyPresetKey } from "@/types/design-system";
 
 interface TypographyControlsProps {
   /** Current typography settings */
@@ -40,13 +42,39 @@ const TEXT_TRANSFORMS = [
 ];
 
 export default function TypographyControls({ typography, onChange, compact }: TypographyControlsProps) {
+  const { tokens } = useDesignSystemSafe();
   const get = useCallback((key: string, fallback: any = "") => typography[key] ?? fallback, [typography]);
+  const applyPreset = useCallback((presetKey: string) => {
+    onChange("typographyPreset", presetKey);
+    if (presetKey === "custom") return;
+    const preset = tokens.typography.presets[presetKey as DesignTypographyPresetKey];
+    if (!preset) return;
+    onChange("fontFamily", preset.fontFamily);
+    onChange("fontWeight", preset.fontWeight);
+    onChange("fontSize", preset.fontSize);
+    onChange("lineHeight", preset.lineHeight);
+    onChange("letterSpacing", preset.letterSpacing);
+    onChange("textTransform", preset.textTransform);
+  }, [onChange, tokens]);
 
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-1.5 mb-1">
         <Type className="h-3.5 w-3.5 text-primary" />
         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Typography</span>
+      </div>
+
+      <div>
+        <Label className="text-[10px]">Text Preset</Label>
+        <Select value={get("typographyPreset", "custom")} onValueChange={applyPreset}>
+          <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="custom">Custom</SelectItem>
+            {Object.entries(tokens.typography.presets).map(([key, preset]) => (
+              <SelectItem key={key} value={key}>{preset.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Font Family */}

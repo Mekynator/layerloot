@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, FormEvent, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { useVisualEditorSafe } from "@/contexts/VisualEditorContext";
+import { useDesignSystemSafe } from "@/contexts/DesignSystemContext";
 import { Link } from "react-router-dom";
 import {
   ArrowRight, Truck, Shield, Star, Printer, ChevronLeft, ChevronRight,
@@ -102,7 +103,7 @@ const ImageCollectionBlock = ({ content, className }: { content?: ImageCollectio
       <div
         className="group relative overflow-hidden rounded-2xl border border-border/30 bg-card/70 backdrop-blur-xl"
         style={{
-          boxShadow: '0 8px 40px -8px hsl(228 33% 2% / 0.5), inset 0 1px 0 0 hsl(215 25% 95% / 0.04)',
+          boxShadow: 'var(--ll-shadow-soft), inset 0 1px 0 0 hsl(215 25% 95% / 0.04)',
           gridColumn: `span ${Math.min(Math.max(item.colSpan ?? 1, 1), columns)}`,
           gridRow: `span ${Math.min(Math.max(item.rowSpan ?? 1, 1), 4)}`,
           minHeight: 220,
@@ -189,7 +190,7 @@ export type BlockButton = {
   text?: string;
   icon?: string;
   iconPosition?: "left" | "right" | "top";
-  variant?: "default" | "outline" | "ghost" | "secondary" | "link";
+  variant?: "default" | "outline" | "ghost" | "secondary" | "link" | "luxury" | "pill";
   visible?: boolean;
   // allow extended action types; preserve legacy fields
   actionType?: BlockAction["actionType"];
@@ -420,16 +421,16 @@ const sectionStyle = (content: any, viewport: string): CSSProperties => {
   if (content?.shadow && content.shadow !== "none") {
     const color = content.shadowColor || "hsl(228 33% 2% / 0.4)";
     const shadowMap: Record<string, string> = {
-      sm: `0 1px 2px 0 ${color}`,
-      md: `0 4px 6px -1px ${color}`,
-      lg: `0 10px 15px -3px ${color}`,
-      xl: `0 20px 25px -5px ${color}`,
-      "2xl": `0 25px 50px -12px ${color}`,
-      soft: `0 8px 40px -8px ${color}`,
-      hard: `4px 4px 0px ${color}`,
-      colored: `0 10px 30px -5px ${color}`,
-      layered: `0 2px 4px ${color}, 0 8px 20px ${color}`,
-      inset: `inset 0 2px 12px ${color}`,
+      sm: content.shadowColor ? `0 1px 2px 0 ${color}` : "var(--ll-shadow-sm)",
+      md: content.shadowColor ? `0 4px 6px -1px ${color}` : "var(--ll-shadow-md)",
+      lg: content.shadowColor ? `0 10px 15px -3px ${color}` : "var(--ll-shadow-lg)",
+      xl: content.shadowColor ? `0 20px 25px -5px ${color}` : "var(--ll-shadow-xl)",
+      "2xl": content.shadowColor ? `0 25px 50px -12px ${color}` : "var(--ll-shadow-2xl)",
+      soft: content.shadowColor ? `0 8px 40px -8px ${color}` : "var(--ll-shadow-soft)",
+      hard: content.shadowColor ? `4px 4px 0px ${color}` : "var(--ll-shadow-hard)",
+      colored: content.shadowColor ? `0 10px 30px -5px ${color}` : "var(--ll-shadow-colored)",
+      layered: content.shadowColor ? `0 2px 4px ${color}, 0 8px 20px ${color}` : "var(--ll-shadow-layered)",
+      inset: content.shadowColor ? `inset 0 2px 12px ${color}` : "var(--ll-shadow-inset)",
     };
     if (shadowMap[content.shadow]) {
       style.boxShadow = shadowMap[content.shadow];
@@ -546,9 +547,13 @@ const ActionButton = ({
   const text = getLocalizedValue(button.text, "") || fallbackText;
   if (!text) return null;
 
+  const { tokens } = useDesignSystemSafe();
   const action = normalizeAction(button);
   const Icon = iconForName(button.icon, ArrowRight);
   const icon = <Icon className="h-4 w-4" />;
+  const variant = (button.variant && button.variant !== "default"
+    ? button.variant
+    : tokens.buttons.defaultVariant || "default") as any;
 
   const content = (
     <span className={`inline-flex items-center gap-2 ${button.iconPosition === "top" ? "flex-col" : ""}`}>
@@ -560,7 +565,7 @@ const ActionButton = ({
 
   const buttonNode = (
     <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}>
-      <Button variant={(button.variant as any) || "default"} className={className} size="lg">
+      <Button variant={variant} className={className} size="lg">
         {content}
       </Button>
     </motion.div>
@@ -1029,7 +1034,7 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
             </h2>
           )}
           {c.embed_url ? (
-            <div className="overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md shadow-[0_4px_24px_-4px_hsl(225_44%_4%/0.4)]" style={{ height: `${c.height || 400}px` }}>
+            <div className="overflow-hidden rounded-2xl bg-card/60 backdrop-blur-md" style={{ height: `${c.height || 400}px`, boxShadow: "var(--ll-shadow-md)" }}>
               <iframe
                 src={c.embed_url}
                 className="h-full w-full border-0"

@@ -13,6 +13,7 @@ import {
   History,
   Monitor,
   Paintbrush,
+  Palette,
   PanelLeft,
   PanelLeftClose,
   PanelRight,
@@ -378,6 +379,14 @@ export default function EditorToolbar({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Background settings</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" onClick={() => window.open("/admin/design-system", "_blank", "noopener,noreferrer")} className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                        <Palette className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Open design system</TooltipContent>
                   </Tooltip>
                 </>
               )}

@@ -65,13 +65,17 @@ const getCountdownText = (element: PopupCanvasElement) => {
 const getButtonClasses = (variant: string) => {
   switch (variant) {
     case "secondary":
-      return "shadow-sm";
+      return "ll-btn ll-btn-secondary";
     case "outline":
-      return "border border-current bg-transparent";
+      return "ll-btn ll-btn-outline";
     case "ghost":
-      return "bg-transparent";
+      return "ll-btn ll-btn-ghost";
+    case "luxury":
+      return "ll-btn ll-btn-luxury";
+    case "pill":
+      return "ll-btn ll-btn-default ll-btn-pill";
     default:
-      return "";
+      return "ll-btn ll-btn-default";
   }
 };
 
@@ -105,7 +109,7 @@ const renderElementContent = (
       const label = element.action.label || element.content || "Learn more";
       const isExternal = element.action.target === "external" || /^https?:\/\//i.test(element.action.link);
       const inner = (
-        <span className={cn("inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-transform", getButtonClasses(element.action.variant))}>
+        <span className={cn("inline-flex w-full items-center justify-center gap-2 px-4 py-2 text-sm font-semibold transition-transform", getButtonClasses(element.action.variant))}>
           <span>{label}</span>
           {element.action.icon && <span aria-hidden="true">{element.action.icon}</span>}
         </span>

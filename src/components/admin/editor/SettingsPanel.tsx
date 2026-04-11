@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Copy, Eye, EyeOff, Palette, Type, Settings2, Layers, Monitor, Tablet, Smartphone, MousePointerClick, Square, Trash2, X } from "lucide-react";
 import { useVisualEditor, type SelectedElement } from "@/contexts/VisualEditorContext";
+import { useDesignSystemSafe } from "@/contexts/DesignSystemContext";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
 import SliderField from "./controls/SliderField";
 import ColorPickerField from "./controls/ColorPickerField";
@@ -633,6 +634,8 @@ function ElementInspector({
 
 // ─── Advanced Style Editor ───────────────────────────────────────
 function AdvancedStyleEditor({ content, patchContent }: { content: Record<string, unknown>; patchContent: (key: string, value: unknown) => void }) {
+  const { tokens } = useDesignSystemSafe();
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -649,6 +652,26 @@ function AdvancedStyleEditor({ content, patchContent }: { content: Record<string
 
       <div className="space-y-2">
         <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Padding</Label>
+        <div>
+          <Label className="text-[10px]">Vertical Rhythm</Label>
+          <Select onValueChange={(value) => {
+            if (value === "custom") return;
+            const spacing = tokens.spacing[value as keyof typeof tokens.spacing];
+            patchContent("paddingTop", spacing);
+            patchContent("paddingBottom", spacing);
+          }} value="custom">
+            <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Apply shared spacing" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="custom">Custom</SelectItem>
+              <SelectItem value="xs">Extra Tight</SelectItem>
+              <SelectItem value="sm">Small</SelectItem>
+              <SelectItem value="md">Balanced</SelectItem>
+              <SelectItem value="lg">Comfortable</SelectItem>
+              <SelectItem value="xl">Spacious</SelectItem>
+              <SelectItem value="section">Section</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="grid grid-cols-2 gap-2">
           <SliderField label="Top" value={(content.paddingTop as number) ?? 0} onChange={(v) => patchContent("paddingTop", v)} min={0} max={120} step={4} />
           <SliderField label="Bottom" value={(content.paddingBottom as number) ?? 0} onChange={(v) => patchContent("paddingBottom", v)} min={0} max={120} step={4} />
@@ -659,6 +682,26 @@ function AdvancedStyleEditor({ content, patchContent }: { content: Record<string
 
       <div className="space-y-2">
         <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Margin</Label>
+        <div>
+          <Label className="text-[10px]">Breathing Room</Label>
+          <Select onValueChange={(value) => {
+            if (value === "custom") return;
+            const spacing = tokens.spacing[value as keyof typeof tokens.spacing];
+            patchContent("marginTop", spacing);
+            patchContent("marginBottom", spacing);
+          }} value="custom">
+            <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Apply shared spacing" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="custom">Custom</SelectItem>
+              <SelectItem value="xs">Extra Tight</SelectItem>
+              <SelectItem value="sm">Small</SelectItem>
+              <SelectItem value="md">Balanced</SelectItem>
+              <SelectItem value="lg">Comfortable</SelectItem>
+              <SelectItem value="xl">Spacious</SelectItem>
+              <SelectItem value="section">Section</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="grid grid-cols-2 gap-2">
           <SliderField label="Top" value={(content.marginTop as number) ?? 0} onChange={(v) => patchContent("marginTop", v)} min={0} max={120} step={4} />
           <SliderField label="Bottom" value={(content.marginBottom as number) ?? 0} onChange={(v) => patchContent("marginBottom", v)} min={0} max={120} step={4} />

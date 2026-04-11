@@ -49,6 +49,7 @@ import AdminEmailLogs from "./pages/admin/AdminEmailLogs";
 import FinancialWorkspace from "./pages/admin/FinancialWorkspace";
 import EditorWorkspace from "./pages/admin/EditorWorkspace";
 import UsersWorkspace from "./pages/admin/UsersWorkspace";
+import AdminDesignSystem from "./pages/admin/AdminDesignSystem";
 import DynamicPage from "./pages/DynamicPage";
 import CreateYourOwn from "./pages/CreateYourOwn";
 import Policies from "./pages/Policies";
@@ -65,6 +66,7 @@ const ChatWidget = lazy(() => import("./components/ChatWidget"));
 const PromotionPopup = lazy(() => import("./components/PromotionPopup"));
 const GiftClaimPopup = lazy(() => import("./components/GiftClaimPopup"));
 import { CampaignThemeProvider } from "./components/campaign/CampaignThemeProvider";
+import { DesignSystemProvider } from "./contexts/DesignSystemContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,8 +85,9 @@ const AppShell = () => {
   const isAdminRoute = location.pathname.startsWith("/admin");
 
   return (
-    <CampaignThemeProvider>
-      <Layout>
+    <DesignSystemProvider>
+      <CampaignThemeProvider>
+        <Layout>
         <EditorPreviewGuard />
         <Routes>
           <Route path="/" element={<Index />} />
@@ -124,6 +127,7 @@ const AppShell = () => {
             <Route path="showcases" element={<AdminRoute requiredPermission="showcases.manage"><AdminShowcases /></AdminRoute>} />
             <Route path="pricing" element={<AdminRoute requiredPermission="pricing.manage"><AdminPricing /></AdminRoute>} />
             <Route path="campaigns" element={<AdminRoute requiredPermission="campaigns.manage"><AdminCampaigns /></AdminRoute>} />
+            <Route path="design-system" element={<AdminRoute requiredPermission="content.edit"><AdminDesignSystem /></AdminRoute>} />
             <Route path="chat" element={<AdminRoute requiredPermission="settings.view"><AdminChat /></AdminRoute>} />
             <Route path="chat-settings" element={<AdminRoute requiredPermission="settings.view"><Navigate to="/admin/chat?section=appearance" replace /></AdminRoute>} />
             <Route path="chat-analytics" element={<AdminRoute requiredPermission="settings.view"><Navigate to="/admin/chat?section=analytics" replace /></AdminRoute>} />
@@ -152,16 +156,17 @@ const AppShell = () => {
           <Route path="/:slug" element={<DynamicPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </Layout>
+        </Layout>
 
-          {!isEditorPreview && !isAdminRoute && (
-        <Suspense fallback={null}>
-          <ChatWidget />
-          <PromotionPopup />
-          <GiftClaimPopup />
-        </Suspense>
-      )}
-    </CampaignThemeProvider>
+        {!isEditorPreview && !isAdminRoute && (
+          <Suspense fallback={null}>
+            <ChatWidget />
+            <PromotionPopup />
+            <GiftClaimPopup />
+          </Suspense>
+        )}
+      </CampaignThemeProvider>
+    </DesignSystemProvider>
   );
 };
 

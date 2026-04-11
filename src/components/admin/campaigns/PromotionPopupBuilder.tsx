@@ -975,10 +975,12 @@ export default function PromotionPopupBuilder() {
                                 <Select value={selectedElement.action.variant} onValueChange={(value) => updateSelectedElement((element) => ({ ...element, action: { ...element.action, variant: value as PopupCanvasElement["action"]["variant"] } }))}>
                                   <SelectTrigger><SelectValue /></SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="default">Default</SelectItem>
-                                    <SelectItem value="secondary">Secondary</SelectItem>
-                                    <SelectItem value="outline">Outline</SelectItem>
-                                    <SelectItem value="ghost">Ghost</SelectItem>
+                                    <SelectItem value="default">Primary CTA</SelectItem>
+                                    <SelectItem value="secondary">Soft Secondary</SelectItem>
+                                    <SelectItem value="outline">Secondary Outline</SelectItem>
+                                    <SelectItem value="ghost">Ghost Minimal</SelectItem>
+                                    <SelectItem value="luxury">Luxury Glow</SelectItem>
+                                    <SelectItem value="pill">Pill CTA</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </div>

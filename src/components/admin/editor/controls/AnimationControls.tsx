@@ -3,6 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import SliderField from "./SliderField";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useDesignSystemSafe } from "@/contexts/DesignSystemContext";
 
 interface AnimationControlsProps {
   content: Record<string, any>;
@@ -73,15 +74,6 @@ const SCROLL_EFFECTS = [
   { value: "scaleOnScroll", label: "Scale on Scroll" },
 ];
 
-const PRESETS = [
-  { value: "none", label: "Custom" },
-  { value: "subtle", label: "Subtle" },
-  { value: "modern", label: "Modern" },
-  { value: "premium", label: "Premium" },
-  { value: "playful", label: "Playful" },
-  { value: "cinematic", label: "Cinematic" },
-];
-
 const PRESET_VALUES: Record<string, Partial<Record<string, any>>> = {
   subtle: { animation: "fadeIn", animationDuration: 0.5, hoverEffect: "lift" },
   modern: { animation: "fadeUp", animationDuration: 0.4, hoverEffect: "scale", continuousEffect: "none" },
@@ -91,9 +83,17 @@ const PRESET_VALUES: Record<string, Partial<Record<string, any>>> = {
 };
 
 export default function AnimationControls({ content, patchContent }: AnimationControlsProps) {
+  const { tokens } = useDesignSystemSafe();
+  const presetOptions = [
+    { value: "none", label: "Custom" },
+    ...Object.entries(tokens.animations.presets).map(([key, preset]) => ({ value: key, label: preset.label })),
+  ];
+
   const applyPreset = (preset: string) => {
     patchContent("animationPreset", preset);
-    const values = PRESET_VALUES[preset];
+    if (preset === "none") return;
+    const tokenPreset = tokens.animations.presets[preset as keyof typeof tokens.animations.presets];
+    const values = tokenPreset || PRESET_VALUES[preset];
     if (values) {
       Object.entries(values).forEach(([k, v]) => patchContent(k, v));
     }
@@ -106,10 +106,10 @@ export default function AnimationControls({ content, patchContent }: AnimationCo
       {/* Presets */}
       <div>
         <Label className="text-[10px]">Preset</Label>
-        <Select value={content.animationPreset || "none"} onValueChange={applyPreset}>
+        <Select value={content.animationPreset || tokens.animations.defaultPreset || "none"} onValueChange={applyPreset}>
           <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {PRESETS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+            {presetOptions.map((preset) => <SelectItem key={preset.value} value={preset.value}>{preset.label}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>

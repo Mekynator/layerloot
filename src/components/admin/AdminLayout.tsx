@@ -44,6 +44,7 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
       items: [
         { id: "dashboard", to: "/admin", label: "Dashboard", icon: "LayoutDashboard", visible: true },
         { id: "editor-workspace", to: "/admin/editor", label: "Content & Layout", icon: "LayoutGrid", visible: true, permission: "content.edit" },
+        { id: "design-system", to: "/admin/design-system", label: "Design System", icon: "Palette", visible: true, permission: "content.edit" },
         { id: "media", to: "/admin/media", label: "Media Library", icon: "ImageIcon", visible: true, permission: "media.manage" },
         { id: "reusable", to: "/admin/reusable-blocks", label: "Reusable Blocks", icon: "Box", visible: true, permission: "content.edit" },
         { id: "translations", to: "/admin/translations", label: "Translations", icon: "Globe", visible: true, permission: "translations.manage" },

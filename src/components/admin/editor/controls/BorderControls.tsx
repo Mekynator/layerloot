@@ -3,6 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SliderField from "./SliderField";
 import ColorPickerField from "./ColorPickerField";
+import { useDesignSystemSafe } from "@/contexts/DesignSystemContext";
 
 interface BorderControlsProps {
   content: Record<string, any>;
@@ -20,7 +21,9 @@ const BORDER_STYLES = [
 const SIDES = ["Top", "Right", "Bottom", "Left"] as const;
 
 export default function BorderControls({ content, patchContent }: BorderControlsProps) {
+  const { tokens } = useDesignSystemSafe();
   const isPerSide = content._borderPerSide === true;
+  const radiusPreset = Object.entries(tokens.radius).find(([, value]) => Number(content.borderRadius ?? NaN) === value)?.[0] || "custom";
 
   return (
     <div className="space-y-3">
@@ -98,12 +101,33 @@ export default function BorderControls({ content, patchContent }: BorderControls
         </div>
       )}
 
+      <div>
+        <Label className="text-[10px]">Corner Style</Label>
+        <Select
+          value={String(radiusPreset)}
+          onValueChange={(value) => {
+            if (value === "custom") return;
+            patchContent("borderRadius", tokens.radius[value as keyof typeof tokens.radius]);
+          }}
+        >
+          <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="custom">Custom</SelectItem>
+            <SelectItem value="sm">Subtle</SelectItem>
+            <SelectItem value="md">Soft</SelectItem>
+            <SelectItem value="lg">Rounded</SelectItem>
+            <SelectItem value="xl">Showcase</SelectItem>
+            <SelectItem value="pill">Pill</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Border Radius - always shown */}
       <SliderField
         label="Roundness"
-        value={content.borderRadius ?? 0}
+        value={typeof content.borderRadius === "number" ? content.borderRadius : 0}
         onChange={(v) => patchContent("borderRadius", v)}
-        min={0} max={48} step={2}
+        min={0} max={120} step={2}
       />
 
       {/* Border Opacity */}

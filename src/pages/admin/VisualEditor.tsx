@@ -46,10 +46,6 @@ function EditorInner() {
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  useEffect(() => {
-    try { sessionStorage.setItem("layerloot.editorPreview", "1"); } catch {}
-    return () => { try { sessionStorage.removeItem("layerloot.editorPreview"); } catch {} };
-  }, []);
 
   
 

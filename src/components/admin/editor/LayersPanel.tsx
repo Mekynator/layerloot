@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useVisualEditor, pageDisplayTitle, pageToEditorKey } from "@/contexts/VisualEditorContext";
 import { cn } from "@/lib/utils";
 import { getBlockSchema } from "./editable-schema";
@@ -83,7 +83,10 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
   const [reusableOpen, setReusableOpen] = useState(false);
   const [saveReusableOpen, setSaveReusableOpen] = useState(false);
   const [saveBlockId, setSaveBlockId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("structure");
+  const [openSections, setOpenSections] = useState<string[]>(["sections", "add", "library", "layers", "pages"]);
+  const openLibrarySection = useCallback(() => {
+    setOpenSections(prev => prev.includes("library") ? prev : [...prev, "library"]);
+  }, []);
   const [lockedLayers, setLockedLayers] = useState<Record<string, boolean>>({});
 
   const previewItems = useMemo(
@@ -185,18 +188,15 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex min-h-0 flex-1 flex-col">
-        <div className="border-b border-border/30 px-2 py-1.5">
-          <TabsList className="grid h-8 w-full grid-cols-5 bg-background/70">
-            <TabsTrigger value="structure" className="gap-1 px-1 text-[10px]"><LayoutGrid className="h-3 w-3" />Structure</TabsTrigger>
-            <TabsTrigger value="elements" className="gap-1 px-1 text-[10px]"><Plus className="h-3 w-3" />Elements</TabsTrigger>
-            <TabsTrigger value="library" className="gap-1 px-1 text-[10px]"><Box className="h-3 w-3" />Library</TabsTrigger>
-            <TabsTrigger value="layers" className="gap-1 px-1 text-[10px]"><Layers className="h-3 w-3" />Layers</TabsTrigger>
-            <TabsTrigger value="pages" className="gap-1 px-1 text-[10px]"><FileText className="h-3 w-3" />Pages</TabsTrigger>
-          </TabsList>
-        </div>
+      <ScrollArea className="flex-1">
+        <Accordion type="multiple" value={openSections} onValueChange={setOpenSections} className="w-full">
 
-        <TabsContent value="structure" className="mt-0 flex min-h-0 flex-1 flex-col">
+          <AccordionItem value="sections" className="border-b border-border/30">
+            <AccordionTrigger className="px-3 py-2 text-xs font-semibold uppercase tracking-wider hover:no-underline">
+              Sections
+              <Badge variant="secondary" className="ml-auto mr-2 font-mono text-[10px]">{totalCount}</Badge>
+            </AccordionTrigger>
+            <AccordionContent className="p-0">
           {totalCount > 4 && (
             <div className="border-b border-border/30 px-2 py-1.5">
               <div className="relative">
@@ -211,8 +211,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
             </div>
           )}
 
-          <ScrollArea className="flex-1">
-            <div className="space-y-0.5 p-1.5">
+          <div className="space-y-0.5 p-1.5">
               {filteredItems.length === 0 && totalCount === 0 ? (
                 <div className="flex flex-col items-center py-12 text-center">
                   <Layers className="mb-2 h-8 w-8 text-muted-foreground/30" />
@@ -344,7 +343,6 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
                 })
               )}
             </div>
-          </ScrollArea>
 
           <div className="border-t border-border/30 px-3 py-2">
             <div className="mb-2 flex justify-between text-[10px] text-muted-foreground">
@@ -360,7 +358,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
                 <span className="text-[10px] uppercase tracking-wider">Add Section</span>
               </button>
               <button
-                onClick={() => setActiveTab("library")}
+                onClick={openLibrarySection}
                 className="flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border/50 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
               >
                 <Box className="h-3 w-3" />
@@ -368,10 +366,12 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
               </button>
             </div>
           </div>
-        </TabsContent>
+            </AccordionContent>
+          </AccordionItem>
 
-        <TabsContent value="elements" className="mt-0 flex min-h-0 flex-1 flex-col">
-          <ScrollArea className="flex-1">
+          <AccordionItem value="add" className="border-b border-border/30">
+            <AccordionTrigger className="px-3 py-2 text-xs font-semibold uppercase tracking-wider hover:no-underline">Add Elements</AccordionTrigger>
+            <AccordionContent>
             <div className="space-y-3 p-2">
               <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Drag-in compatible blocks</p>
@@ -400,23 +400,27 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
               <Button variant="outline" size="sm" onClick={onAddBlock} className="w-full gap-1.5 text-xs">
                 <Plus className="h-3.5 w-3.5" /> Open full section library
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setActiveTab("library")} className="w-full gap-1.5 text-xs">
+              <Button variant="outline" size="sm" onClick={openLibrarySection} className="w-full gap-1.5 text-xs">
                 <Box className="h-3.5 w-3.5" /> Open sections library
               </Button>
             </div>
-          </ScrollArea>
-        </TabsContent>
+          </AccordionContent>
+        </AccordionItem>
 
-        <TabsContent value="library" className="mt-0 flex min-h-0 flex-1 flex-col">
+          <AccordionItem value="library" className="border-b border-border/30">
+            <AccordionTrigger className="px-3 py-2 text-xs font-semibold uppercase tracking-wider hover:no-underline">Sections Library</AccordionTrigger>
+            <AccordionContent className="p-0">
           <SectionsLibraryPanel
             onInsertReusable={handleInsertReusable}
             onInsertTemplate={(template) => handleInsertReusable(template, "copy")}
           />
-        </TabsContent>
+            </AccordionContent>
+          </AccordionItem>
 
-        <TabsContent value="layers" className="mt-0 flex min-h-0 flex-1 flex-col">
-          <ScrollArea className="flex-1">
-            <div className="space-y-3 p-2">
+          <AccordionItem value="layers" className="border-b border-border/30">
+            <AccordionTrigger className="px-3 py-2 text-xs font-semibold uppercase tracking-wider hover:no-underline">Layers</AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-3 p-2">
               {!selectedBlock && !selectedStatic ? (
                 <div className="rounded-xl border border-dashed border-border/40 p-4 text-center text-xs text-muted-foreground">
                   Select a block on the canvas to inspect its inner layers and quick actions.
@@ -517,13 +521,14 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
                   )}
                 </>
               )}
-            </div>
-          </ScrollArea>
-        </TabsContent>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
 
-        <TabsContent value="pages" className="mt-0 flex min-h-0 flex-1 flex-col">
-          <ScrollArea className="flex-1">
-            <div className="space-y-3 p-2">
+          <AccordionItem value="pages">
+            <AccordionTrigger className="px-3 py-2 text-xs font-semibold uppercase tracking-wider hover:no-underline">Pages</AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-3 p-2">
               <div>
                 <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Frontend pages</p>
                 <div className="space-y-1">
@@ -566,9 +571,10 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
                 </div>
               </div>
             </div>
-          </ScrollArea>
-        </TabsContent>
-      </Tabs>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </ScrollArea>
 
       <InsertReusableDialog
         open={reusableOpen}
@@ -579,7 +585,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
         open={saveReusableOpen}
         onOpenChange={setSaveReusableOpen}
         block={draftBlocks.find((block) => block.id === saveBlockId) ?? null}
-        onSaved={() => setActiveTab("library")}
+        onSaved={openLibrarySection}
       />
     </div>
   );

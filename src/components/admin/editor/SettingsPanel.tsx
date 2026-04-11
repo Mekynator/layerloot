@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Copy, Eye, EyeOff, Palette, Type, Settings2, Layers, Monitor, Tablet, Smartphone, MousePointerClick, Square, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useVisualEditor, type SelectedElement } from "@/contexts/VisualEditorContext";
@@ -267,26 +267,12 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
 
       <ScrollArea className="flex-1">
         <div className="p-3">
-          <Tabs defaultValue="content" className="w-full">
-            <TabsList className="w-full grid grid-cols-5">
-              <TabsTrigger value="content" className="gap-1 text-[10px]">
-                <Type className="h-3 w-3" /> Content
-              </TabsTrigger>
-              <TabsTrigger value="style" className="gap-1 text-[10px]">
-                <Palette className="h-3 w-3" /> Style
-              </TabsTrigger>
-              <TabsTrigger value="border" className="gap-1 text-[10px]">
-                <Square className="h-3 w-3" /> Border
-              </TabsTrigger>
-              <TabsTrigger value="responsive" className="gap-1 text-[10px]">
-                <Monitor className="h-3 w-3" /> Device
-              </TabsTrigger>
-              <TabsTrigger value="settings" className="gap-1 text-[10px]">
-                <Layers className="h-3 w-3" /> More
-              </TabsTrigger>
-            </TabsList>
+          <Accordion type="multiple" defaultValue={["content", "appearance", "layout", "advanced"]} className="w-full">
 
-            <TabsContent value="content" className="space-y-3 mt-3">
+            <AccordionItem value="content" className="border-b border-border/30">
+              <AccordionTrigger className="py-2 text-xs font-semibold uppercase tracking-wider hover:no-underline">Content &amp; Elements</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-3">
               <div>
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Block Label</Label>
                 <Input value={title} onChange={(e) => handleTitleChange(e.target.value)} className="mt-1 h-8 text-xs" />
@@ -361,9 +347,14 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
                 compact
                 pages={pageList}
               />
-            </TabsContent>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
 
-            <TabsContent value="style" className="space-y-3 mt-3">
+            <AccordionItem value="appearance" className="border-b border-border/30">
+              <AccordionTrigger className="py-2 text-xs font-semibold uppercase tracking-wider hover:no-underline">Appearance</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-3">
               <PageStylePresetsPanel blockType={block.block_type} content={localContent} onApplyPatch={(patch) => commitContent({ ...localContent, ...patch })} />
               <AdvancedStyleEditor content={localContent} patchContent={patchContent} />
               <ImageEffectsControls content={localContent} patchContent={patchContent} />
@@ -378,17 +369,24 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
                   />
                 </div>
               )}
-            </TabsContent>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
 
-            <TabsContent value="border" className="space-y-3 mt-3">
-              <BorderControls content={localContent} patchContent={patchContent} />
-            </TabsContent>
+            <AccordionItem value="layout" className="border-b border-border/30">
+              <AccordionTrigger className="py-2 text-xs font-semibold uppercase tracking-wider hover:no-underline">Layout &amp; Border</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-3">
+                  <BorderControls content={localContent} patchContent={patchContent} />
+                  <ResponsiveEditor content={localContent} patchContent={patchContent} />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
 
-            <TabsContent value="responsive" className="space-y-3 mt-3">
-              <ResponsiveEditor content={localContent} patchContent={patchContent} />
-            </TabsContent>
-
-            <TabsContent value="settings" className="space-y-3 mt-3">
+            <AccordionItem value="advanced">
+              <AccordionTrigger className="py-2 text-xs font-semibold uppercase tracking-wider hover:no-underline">Advanced</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-3">
               {reusableInfo && (
                 <div className="space-y-3 rounded-xl border border-primary/25 bg-primary/5 p-3">
                   <div className="flex items-start justify-between gap-3">
@@ -468,8 +466,10 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
                   className="h-8 text-xs"
                 />
               </div>
-            </TabsContent>
-          </Tabs>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
       </ScrollArea>
     </div>

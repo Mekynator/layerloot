@@ -55,6 +55,13 @@ import AdminColorPicker from "@/components/admin/AdminColorPicker";
 import { BuilderControlRow, BuilderDevicePicker, BuilderSlider } from "@/components/admin/builder";
 import PageLinkSelect from "@/components/admin/PageLinkSelect";
 import PromotionPopupCanvas from "@/components/promo/PromotionPopupCanvas";
+import { AlignmentGuidesOverlay } from "@/components/shared/AlignmentGuidesOverlay";
+import { AlignmentToolbar } from "@/components/shared/AlignmentToolbar";
+import { GridOverlay } from "@/components/shared/GridOverlay";
+import { SnappingSettingsPanel } from "@/components/shared/SnappingSettingsPanel";
+import { useSnapSettings } from "@/hooks/use-snap-settings";
+import { alignSingle, calculateSnap, nudge as snapNudge } from "@/lib/snap-engine";
+import type { AlignAction, SnapGuide, SnapRect } from "@/lib/snap-engine";
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const presetId = () => `popup-preset-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -121,6 +128,8 @@ export default function PromotionPopupBuilder() {
   const [renameValue, setRenameValue] = useState("");
   const [deletePresetConfirmOpen, setDeletePresetConfirmOpen] = useState(false);
   const previewRef = useRef<HTMLDivElement | null>(null);
+  const { settings: snapSettings, setSettings: setSnapSettings, toggleSetting: toggleSnapSetting } = useSnapSettings();
+  const [activeGuides, setActiveGuides] = useState<SnapGuide[]>([]);
 
   const selectedElement = useMemo(
     () => config.elements.find((element) => element.id === selectedElementId) ?? null,
@@ -193,23 +202,42 @@ export default function PromotionPopupBuilder() {
       const selected = config.elements.find((element) => element.id === dragging.id);
       if (!selected || selected.locked) return;
 
-      const x = ((event.clientX - rect.left - dragging.offsetX) / rect.width) * 100;
-      const y = ((event.clientY - rect.top - dragging.offsetY) / rect.height) * 100;
+      const rawX = ((event.clientX - rect.left - dragging.offsetX) / rect.width) * 100;
+      const rawY = ((event.clientY - rect.top - dragging.offsetY) / rect.height) * 100;
+
+      const dragRect: SnapRect = {
+        id: selected.id,
+        x: clamp(rawX, 0, 100 - selected.width),
+        y: clamp(rawY, 0, 100 - selected.height),
+        width: selected.width,
+        height: selected.height,
+      };
+
+      const siblings: SnapRect[] = config.elements
+        .filter((el) => el.id !== dragging.id && el.visible)
+        .map((el) => ({ id: el.id, x: el.x, y: el.y, width: el.width, height: el.height }));
+
+      const snap = calculateSnap(dragRect, siblings, snapSettings);
+
+      setActiveGuides(snapSettings.showGuides ? snap.guides : []);
 
       applyConfigChange((draft) => {
         draft.elements = draft.elements.map((element) => {
           if (element.id !== dragging.id) return element;
           return {
             ...element,
-            x: clamp(x, 0, 100 - element.width),
-            y: clamp(y, 0, 100 - element.height),
+            x: clamp(snap.x, 0, 100 - element.width),
+            y: clamp(snap.y, 0, 100 - element.height),
           };
         });
         return draft;
       }, false);
     };
 
-    const handleUp = () => setDragging(null);
+    const handleUp = () => {
+      setDragging(null);
+      setActiveGuides([]);
+    };
 
     window.addEventListener("mousemove", handleMove);
     window.addEventListener("mouseup", handleUp);
@@ -218,7 +246,7 @@ export default function PromotionPopupBuilder() {
       window.removeEventListener("mousemove", handleMove);
       window.removeEventListener("mouseup", handleUp);
     };
-  }, [applyConfigChange, config.elements, dragging]);
+  }, [applyConfigChange, config.elements, dragging, snapSettings]);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -485,6 +513,15 @@ export default function PromotionPopupBuilder() {
 
   const targetPathsValue = config.schedule.pageTargets.join(", ");
 
+  const handleAlignAction = useCallback((action: AlignAction) => {
+    if (!selectedElementId) return;
+    const element = config.elements.find((el) => el.id === selectedElementId);
+    if (!element) return;
+    const rect: SnapRect = { id: element.id, x: element.x, y: element.y, width: element.width, height: element.height };
+    const changes = alignSingle(rect, action);
+    updateSelectedElement((el) => ({ ...el, ...changes }));
+  }, [config.elements, selectedElementId, updateSelectedElement]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -500,10 +537,23 @@ export default function PromotionPopupBuilder() {
         e.preventDefault();
         redo();
       }
+
+      // Arrow key nudge for selected element
+      const ARROW_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"] as const;
+      if (selectedElementId && ARROW_KEYS.includes(e.key as typeof ARROW_KEYS[number])) {
+        const el = config.elements.find((item) => item.id === selectedElementId);
+        if (!el || el.locked) return;
+        e.preventDefault();
+        const step = e.shiftKey ? 0.5 : 2;
+        const direction = e.key === "ArrowUp" ? "up" : e.key === "ArrowDown" ? "down" : e.key === "ArrowLeft" ? "left" : "right";
+        const rect: SnapRect = { id: el.id, x: el.x, y: el.y, width: el.width, height: el.height };
+        const changes = snapNudge(rect, direction, step);
+        updateSelectedElement((element) => ({ ...element, ...changes }));
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [handleSave, undo, redo]);
+  }, [handleSave, undo, redo, selectedElementId, config.elements, updateSelectedElement]);
 
   // Warn on unsaved changes
   useEffect(() => {
@@ -972,7 +1022,7 @@ export default function PromotionPopupBuilder() {
               <div className="absolute inset-5 rounded-[24px] border border-white/10 bg-white/10" />
 
               <div className="relative z-10 flex min-h-[460px] items-center justify-center p-4">
-                <div ref={previewRef} className="max-w-full">
+                <div ref={previewRef} className="relative max-w-full">
                   <PromotionPopupCanvas
                     config={config}
                     mode="editor"
@@ -982,6 +1032,8 @@ export default function PromotionPopupBuilder() {
                     onClose={() => undefined}
                     className="max-w-full"
                   />
+                  <GridOverlay settings={snapSettings} />
+                  <AlignmentGuidesOverlay guides={activeGuides} />
                 </div>
               </div>
             </div>
@@ -1112,11 +1164,15 @@ export default function PromotionPopupBuilder() {
                         </div>
                         <div>
                           <Label className="mb-2 block text-xs">Alignment tools</Label>
-                          <div className="flex flex-wrap gap-2">
-                            <Button type="button" variant="outline" size="sm" onClick={() => updateSelectedElement((element) => ({ ...element, x: 6, style: { ...element.style, textAlign: "left" } }))}>Left</Button>
-                            <Button type="button" variant="outline" size="sm" onClick={() => updateSelectedElement((element) => ({ ...element, x: clamp(50 - element.width / 2, 0, 100 - element.width), style: { ...element.style, textAlign: "center" } }))}>Center</Button>
-                            <Button type="button" variant="outline" size="sm" onClick={() => updateSelectedElement((element) => ({ ...element, x: clamp(94 - element.width, 0, 100 - element.width), style: { ...element.style, textAlign: "right" } }))}>Right</Button>
-                          </div>
+                          <AlignmentToolbar onAction={handleAlignAction} />
+                        </div>
+                        <div className="rounded-lg border border-border/30 bg-muted/20 p-3">
+                          <SnappingSettingsPanel
+                            settings={snapSettings}
+                            onToggle={toggleSnapSetting}
+                            onChangeGridSize={(size) => setSnapSettings((prev) => ({ ...prev, gridSize: size }))}
+                            onChangeThreshold={(threshold) => setSnapSettings((prev) => ({ ...prev, snapThreshold: threshold }))}
+                          />
                         </div>
                         <div className="flex items-center justify-between gap-3 rounded-lg border border-border/30 bg-muted/20 px-3 py-2">
                           <div>

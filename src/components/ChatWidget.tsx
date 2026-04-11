@@ -721,7 +721,7 @@ const ChatWidget = () => {
             if (cat) {
               // verify category has active products
               const slug = decodeURIComponent(cat[1]);
-              const { data: catCount } = await supabase.from("products").select("id").ilike("category_slugs", `%${slug}%` as any).eq("is_active", true).eq("published", true).limit(1);
+              const { data: catCount } = await (supabase.from("products") as any).select("id").ilike("category_slugs", `%${slug}%`).eq("is_active", true).eq("published", true).limit(1);
               if (catCount && catCount.length > 0) {
                 actions.push({ label: `View all ${titleCase(slug)}`, to: `/products?category=${cat[1]}` });
               }

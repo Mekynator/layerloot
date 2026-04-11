@@ -33,6 +33,7 @@ type ImageItem = {
   image: string;
   title?: string;
   subtitle?: string;
+  alt?: string;
   actionType?: ActionType;
   actionTarget?: string;
   openInNewTab?: boolean;
@@ -41,6 +42,11 @@ type ImageItem = {
   rowSpan?: number;
   order?: number;
   objectFit?: CSSProperties["objectFit"];
+  opacity?: number;
+  borderRadius?: number;
+  shadow?: string;
+  positionX?: string;
+  positionY?: string;
 };
 
 type ImageCollectionContent = {
@@ -71,9 +77,14 @@ const ImageCollectionBlock = ({ content, className }: { content?: ImageCollectio
     <>
       <img
         src={item.image}
-        alt={getLocalizedValue(item.title, tr("blocks.imageCollection.alt", "Gallery image"))}
+        alt={getLocalizedValue(item.alt, getLocalizedValue(item.title, tr("blocks.imageCollection.alt", "Gallery image")))}
         className="h-full w-full rounded-2xl transition-transform duration-300 group-hover:scale-[1.02]"
-        style={{ objectFit: item.objectFit || "cover" }}
+        style={{
+          objectFit: item.objectFit || "cover",
+          objectPosition: `${item.positionX || "center"} ${item.positionY || "center"}`,
+          opacity: (item.opacity ?? 100) / 100,
+          borderRadius: `${item.borderRadius ?? 16}px`,
+        }}
       />
       {(item.title || item.subtitle) && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-2xl bg-gradient-to-t from-black/70 to-transparent p-4 text-white hidden md:block">
@@ -933,7 +944,18 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
               whileHover={{ scale: 1.01 }}
               src={c.image_url}
               alt={getLocalizedValue(c.alt, "")}
-              className="mx-auto max-h-[600px] w-full rounded-lg object-contain"
+              className={cn(
+                "mx-auto max-h-[600px] w-full",
+                c.imageShadow === "sm" && "shadow-md",
+                c.imageShadow === "md" && "shadow-xl",
+                c.imageShadow === "lg" && "shadow-2xl",
+              )}
+              style={{
+                objectFit: c.imageFit || "contain",
+                objectPosition: `${c.imagePositionX || "center"} ${c.imagePositionY || "center"}`,
+                opacity: ((c.imageOpacity ?? 100) as number) / 100,
+                borderRadius: `${(c.imageBorderRadius ?? 16) as number}px`,
+              }}
             />
           ) : (
             <div className="flex h-64 items-center justify-center rounded-2xl border-2 border-dashed border-muted-foreground/20 bg-muted/10 text-muted-foreground">

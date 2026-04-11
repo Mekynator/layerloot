@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Copy, Heart, Pencil, Save, Star, Trash2 } from "lucide-react";
+import { Copy, Heart, Pencil, RefreshCw, Save, Star, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -181,6 +181,20 @@ export default function PageStylePresetsPanel({ blockType, content, onApplyPatch
 
   const saveCurrentAsPreset = async () => {
     const name = (newPresetName || `${blockType.replace(/_/g, " ")} preset`).trim();
+    const existingPreset = presets.find((preset) => preset.name.toLowerCase() === name.toLowerCase());
+
+    if (existingPreset) {
+      const shouldOverwrite = window.confirm(`A preset named "${name}" already exists. Overwrite it with the current styles?`);
+      if (!shouldOverwrite) return;
+      const next = presets.map((preset) => preset.id === existingPreset.id ? { ...preset, styles: extractStylePayload(content) } : preset);
+      setPresets(next);
+      setActivePresetId(existingPreset.id);
+      setNewPresetName("");
+      await persistPresets(next);
+      toast.success(`Updated "${name}" preset`);
+      return;
+    }
+
     const preset: PageStylePreset = {
       id: `page-style-${Date.now()}`,
       name,
@@ -191,7 +205,7 @@ export default function PageStylePresetsPanel({ blockType, content, onApplyPatch
     setActivePresetId(preset.id);
     setNewPresetName("");
     await persistPresets(next);
-    toast.success(`Saved \"${name}\" preset`);
+    toast.success(`Saved "${name}" preset`);
   };
 
   const renamePreset = async () => {
@@ -201,6 +215,7 @@ export default function PageStylePresetsPanel({ blockType, content, onApplyPatch
     const next = presets.map((preset) => preset.id === activePreset.id ? { ...preset, name: nextName } : preset);
     setPresets(next);
     await persistPresets(next);
+    toast.success(`Renamed preset to "${nextName}"`);
   };
 
   const duplicatePreset = async () => {
@@ -215,14 +230,18 @@ export default function PageStylePresetsPanel({ blockType, content, onApplyPatch
     setPresets(next);
     setActivePresetId(copyPreset.id);
     await persistPresets(next);
+    toast.success(`Duplicated "${activePreset.name}" preset`);
   };
 
   const deletePreset = async () => {
     if (!activePreset || DEFAULT_PRESETS.some((preset) => preset.id === activePreset.id)) return;
+    const shouldDelete = window.confirm(`Delete the preset "${activePreset.name}"? This cannot be undone.`);
+    if (!shouldDelete) return;
     const next = presets.filter((preset) => preset.id !== activePreset.id);
     setPresets(next);
     setActivePresetId(next[0]?.id ?? "");
     await persistPresets(next);
+    toast.success(`Deleted "${activePreset.name}" preset`);
   };
 
   const toggleFavorite = async () => {
@@ -230,6 +249,7 @@ export default function PageStylePresetsPanel({ blockType, content, onApplyPatch
     const next = presets.map((preset) => preset.id === activePreset.id ? { ...preset, isFavorite: !preset.isFavorite } : preset);
     setPresets(next);
     await persistPresets(next);
+    toast.success(activePreset.isFavorite ? "Removed from favorites" : "Marked as favorite");
   };
 
   const markDefault = async () => {
@@ -237,6 +257,7 @@ export default function PageStylePresetsPanel({ blockType, content, onApplyPatch
     const next = presets.map((preset) => ({ ...preset, isDefault: preset.id === activePreset.id }));
     setPresets(next);
     await persistPresets(next);
+    toast.success(`Set "${activePreset.name}" as the default preset`);
   };
 
   if (loading) {
@@ -274,6 +295,7 @@ export default function PageStylePresetsPanel({ blockType, content, onApplyPatch
 
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" size="sm" onClick={() => void duplicatePreset()} disabled={!activePreset}><Copy className="mr-1 h-3.5 w-3.5" /> Duplicate</Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => void saveCurrentAsPreset()} disabled={!activePreset}><RefreshCw className="mr-1 h-3.5 w-3.5" /> Save / overwrite</Button>
         <Button type="button" variant="outline" size="sm" onClick={() => void renamePreset()} disabled={!activePreset}><Pencil className="mr-1 h-3.5 w-3.5" /> Rename</Button>
         <Button type="button" variant="outline" size="sm" onClick={() => void toggleFavorite()} disabled={!activePreset}><Heart className="mr-1 h-3.5 w-3.5" /> Favorite</Button>
         <Button type="button" variant="outline" size="sm" onClick={() => void markDefault()} disabled={!activePreset}><Star className="mr-1 h-3.5 w-3.5" /> Default</Button>

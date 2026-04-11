@@ -100,7 +100,7 @@ export default function BorderControls({ content, patchContent }: BorderControls
 
       {/* Border Radius - always shown */}
       <SliderField
-        label="Border Radius"
+        label="Roundness"
         value={content.borderRadius ?? 0}
         onChange={(v) => patchContent("borderRadius", v)}
         min={0} max={48} step={2}
@@ -108,7 +108,7 @@ export default function BorderControls({ content, patchContent }: BorderControls
 
       {/* Border Opacity */}
       <SliderField
-        label="Border Opacity"
+        label="Border Fade"
         value={content.borderOpacity ?? 100}
         onChange={(v) => patchContent("borderOpacity", v)}
         min={0} max={100} step={5} unit="%"
@@ -116,7 +116,7 @@ export default function BorderControls({ content, patchContent }: BorderControls
 
       {/* Outline / Hover border */}
       <div className="space-y-2 pt-2 border-t border-border/20">
-        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Hover Border</Label>
+        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Hover outline</Label>
         <ColorPickerField
           label="Hover Color"
           value={content.borderHoverColor || ""}

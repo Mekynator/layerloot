@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Palette, Type, Settings2, Layers, Monitor, Tablet, Smartphone, MousePointerClick, Square, X } from "lucide-react";
+import { Copy, Eye, EyeOff, Palette, Type, Settings2, Layers, Monitor, Tablet, Smartphone, MousePointerClick, Square, Trash2, X } from "lucide-react";
 import { useVisualEditor, type SelectedElement } from "@/contexts/VisualEditorContext";
 import type { SiteBlock } from "@/components/admin/BlockRenderer";
 import SliderField from "./controls/SliderField";
@@ -131,6 +131,15 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
     commitContent({ ...localContent, [repeaterKey]: items.map((item, i) => ({ ...item, order: i + 1 })) });
   }, [localContent, repeaterKey, commitContent]);
 
+  const duplicateItem = useCallback((index: number) => {
+    if (!repeaterKey) return;
+    const items = [...(localContent[repeaterKey] as Record<string, unknown>[] || [])];
+    const source = items[index];
+    if (!source) return;
+    items.splice(index + 1, 0, { ...source, order: index + 2 });
+    commitContent({ ...localContent, [repeaterKey]: items.map((item, i) => ({ ...item, order: i + 1 })) });
+  }, [localContent, repeaterKey, commitContent]);
+
   const moveItem = useCallback((index: number, dir: -1 | 1) => {
     if (!repeaterKey) return;
     const items = [...(localContent[repeaterKey] as Record<string, unknown>[] || [])];
@@ -236,6 +245,30 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
                   node={selectedNode}
                   value={selectedRepeaterItem?.[selectedNodeKey] ?? localContent[selectedNodeKey]}
                   repeaterLabel={typeof selectedRepeaterIndex === "number" ? `${selectedRepeaterIndex + 1}` : null}
+                  isVisible={typeof selectedRepeaterIndex === "number" ? selectedRepeaterItem?.visible !== false : null}
+                  onToggleVisibility={typeof selectedRepeaterIndex === "number" ? (checked) => patchItem(selectedRepeaterIndex, { visible: checked }) : undefined}
+                  onDuplicate={typeof selectedRepeaterIndex === "number" ? () => duplicateItem(selectedRepeaterIndex) : undefined}
+                  onDelete={typeof selectedRepeaterIndex === "number" ? () => {
+                    removeItem(selectedRepeaterIndex);
+                    onSelectElement(null);
+                  } : undefined}
+                  mediaSettings={selectedNode.type === "media" ? {
+                    fit: String((typeof selectedRepeaterIndex === "number" ? selectedRepeaterItem?.objectFit : (selectedNodeKey === "bg_image" || selectedNodeKey === "backgroundImage") ? localContent.bgImageFit : localContent.imageFit) || ((selectedNodeKey === "bg_image" || selectedNodeKey === "backgroundImage") ? "cover" : "contain")),
+                    opacity: Number((typeof selectedRepeaterIndex === "number" ? selectedRepeaterItem?.opacity : (selectedNodeKey === "bg_image" || selectedNodeKey === "backgroundImage") ? localContent.bgImageOpacity : localContent.imageOpacity) ?? 100),
+                    radius: Number((typeof selectedRepeaterIndex === "number" ? selectedRepeaterItem?.borderRadius : localContent.imageBorderRadius) ?? 16),
+                    shadow: String((typeof selectedRepeaterIndex === "number" ? selectedRepeaterItem?.shadow : localContent.imageShadow) || "none"),
+                    posX: String((typeof selectedRepeaterIndex === "number" ? selectedRepeaterItem?.positionX : (selectedNodeKey === "bg_image" || selectedNodeKey === "backgroundImage") ? localContent.bgImagePositionX : localContent.imagePositionX) || "center"),
+                    posY: String((typeof selectedRepeaterIndex === "number" ? selectedRepeaterItem?.positionY : (selectedNodeKey === "bg_image" || selectedNodeKey === "backgroundImage") ? localContent.bgImagePositionY : localContent.imagePositionY) || "center"),
+                    alt: String((typeof selectedRepeaterIndex === "number" ? selectedRepeaterItem?.alt : localContent.alt) || ""),
+                    isBackground: selectedNodeKey === "bg_image" || selectedNodeKey === "backgroundImage",
+                  } : null}
+                  onPatchMediaSetting={selectedNode.type === "media" ? (key, nextValue) => {
+                    if (typeof selectedRepeaterIndex === "number") {
+                      patchItem(selectedRepeaterIndex, { [key]: nextValue });
+                      return;
+                    }
+                    patchContent(key, nextValue);
+                  } : undefined}
                   onBack={() => onSelectElement(null)}
                   onChange={(value) => {
                     if (typeof selectedRepeaterIndex === "number") {
@@ -263,6 +296,7 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
                 patchItem={patchItem}
                 addItem={addItem}
                 removeItem={removeItem}
+                duplicateItem={duplicateItem}
                 moveItem={moveItem}
                 compact
                 pages={pageList}
@@ -421,6 +455,12 @@ function ElementInspector({
   node,
   value,
   repeaterLabel,
+  isVisible,
+  onToggleVisibility,
+  onDuplicate,
+  onDelete,
+  mediaSettings,
+  onPatchMediaSetting,
   onBack,
   onChange,
   children,
@@ -428,6 +468,21 @@ function ElementInspector({
   node: EditableNode;
   value: unknown;
   repeaterLabel: string | null;
+  isVisible?: boolean | null;
+  onToggleVisibility?: (checked: boolean) => void;
+  onDuplicate?: () => void;
+  onDelete?: () => void;
+  mediaSettings?: {
+    fit: string;
+    opacity: number;
+    radius: number;
+    shadow: string;
+    posX: string;
+    posY: string;
+    alt: string;
+    isBackground: boolean;
+  } | null;
+  onPatchMediaSetting?: (key: string, value: unknown) => void;
   onBack: () => void;
   onChange: (value: unknown) => void;
   children?: ReactNode;
@@ -479,7 +534,96 @@ function ElementInspector({
       )}
 
       {node.type === "media" && (
-        <ImageUploadField label={node.label} value={String(value || "")} onChange={onChange} />
+        <>
+          <ImageUploadField label={node.label} value={String(value || "")} onChange={onChange} />
+          {mediaSettings && onPatchMediaSetting && (
+            <div className="space-y-2 rounded-lg border border-border/30 bg-background/60 p-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Quick image styling</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-[10px]">Fit</Label>
+                  <Select value={mediaSettings.fit} onValueChange={(nextValue) => onPatchMediaSetting(mediaSettings.isBackground ? "bgImageFit" : repeaterLabel ? "objectFit" : "imageFit", nextValue)}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cover">Cover</SelectItem>
+                      <SelectItem value="contain">Contain</SelectItem>
+                      <SelectItem value="fill">Fill</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-[10px]">Shadow</Label>
+                  <Select value={mediaSettings.shadow} onValueChange={(nextValue) => onPatchMediaSetting(repeaterLabel ? "shadow" : "imageShadow", nextValue)}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="sm">Soft</SelectItem>
+                      <SelectItem value="md">Medium</SelectItem>
+                      <SelectItem value="lg">Strong</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <SliderField label="Opacity" value={mediaSettings.opacity} onChange={(nextValue) => onPatchMediaSetting(mediaSettings.isBackground ? "bgImageOpacity" : repeaterLabel ? "opacity" : "imageOpacity", nextValue)} min={0} max={100} step={5} unit="%" />
+                {!mediaSettings.isBackground && (
+                  <SliderField label="Roundness" value={mediaSettings.radius} onChange={(nextValue) => onPatchMediaSetting(repeaterLabel ? "borderRadius" : "imageBorderRadius", nextValue)} min={0} max={48} step={2} unit="px" />
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-[10px]">Horizontal</Label>
+                  <Select value={mediaSettings.posX} onValueChange={(nextValue) => onPatchMediaSetting(mediaSettings.isBackground ? "bgImagePositionX" : repeaterLabel ? "positionX" : "imagePositionX", nextValue)}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="left">Left</SelectItem>
+                      <SelectItem value="center">Center</SelectItem>
+                      <SelectItem value="right">Right</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-[10px]">Vertical</Label>
+                  <Select value={mediaSettings.posY} onValueChange={(nextValue) => onPatchMediaSetting(mediaSettings.isBackground ? "bgImagePositionY" : repeaterLabel ? "positionY" : "imagePositionY", nextValue)}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="top">Top</SelectItem>
+                      <SelectItem value="center">Center</SelectItem>
+                      <SelectItem value="bottom">Bottom</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              {!mediaSettings.isBackground && (
+                <div>
+                  <Label className="text-[10px]">Alt text</Label>
+                  <Input value={mediaSettings.alt} onChange={(event) => onPatchMediaSetting("alt", event.target.value)} className="h-8 text-xs" placeholder="Describe the image for accessibility" />
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {(onDuplicate || onDelete || onToggleVisibility) && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/30 bg-background/60 p-2">
+          {typeof isVisible === "boolean" && onToggleVisibility && (
+            <button type="button" onClick={() => onToggleVisibility(!isVisible)} className="inline-flex items-center gap-1 rounded-md border border-border/30 px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:text-foreground">
+              {isVisible ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />} {isVisible ? "Hide" : "Show"}
+            </button>
+          )}
+          {onDuplicate && (
+            <button type="button" onClick={onDuplicate} className="inline-flex items-center gap-1 rounded-md border border-border/30 px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:text-foreground">
+              <Copy className="h-3 w-3" /> Duplicate item
+            </button>
+          )}
+          {onDelete && (
+            <button type="button" onClick={onDelete} className="inline-flex items-center gap-1 rounded-md border border-destructive/30 px-2 py-1 text-[10px] text-destructive transition-colors hover:bg-destructive/5">
+              <Trash2 className="h-3 w-3" /> Delete item
+            </button>
+          )}
+        </div>
       )}
 
       {children}

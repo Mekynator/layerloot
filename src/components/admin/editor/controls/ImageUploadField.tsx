@@ -25,6 +25,7 @@ export default function ImageUploadField({ label, value, onChange }: ImageUpload
       toast.error("Please select an image file");
       return;
     }
+    const isReplacing = Boolean(value);
     setUploading(true);
     try {
       const ext = file.name.split(".").pop() || "jpg";
@@ -33,13 +34,13 @@ export default function ImageUploadField({ label, value, onChange }: ImageUpload
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from("editor-images").getPublicUrl(path);
       onChange(publicUrl);
-      toast.success("Image uploaded");
+      toast.success(isReplacing ? "Image replaced" : "Image uploaded");
     } catch (err: any) {
       toast.error(`Upload failed: ${err.message}`);
     } finally {
       setUploading(false);
     }
-  }, [onChange]);
+  }, [onChange, value]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -90,7 +91,10 @@ export default function ImageUploadField({ label, value, onChange }: ImageUpload
                 type="button"
                 size="sm"
                 variant="destructive"
-                onClick={() => onChange("")}
+                onClick={() => {
+                  onChange("");
+                  toast.success("Image removed");
+                }}
                 className="h-7 text-[10px]"
               >
                 <X className="h-3 w-3" />
@@ -117,7 +121,7 @@ export default function ImageUploadField({ label, value, onChange }: ImageUpload
               <Upload className="h-5 w-5 text-muted-foreground" />
             )}
             <span className="text-[10px] text-muted-foreground">
-              {uploading ? "Uploading..." : "Click or drag"}
+              {uploading ? "Uploading..." : "Upload or drag an image"}
             </span>
           </div>
           <button
@@ -154,7 +158,10 @@ export default function ImageUploadField({ label, value, onChange }: ImageUpload
       <MediaPickerDialog
         open={pickerOpen}
         onOpenChange={setPickerOpen}
-        onSelect={(url) => onChange(url)}
+        onSelect={(url) => {
+          onChange(url);
+          toast.success(value ? "Image replaced" : "Image selected");
+        }}
         mediaType="image"
       />
     </div>

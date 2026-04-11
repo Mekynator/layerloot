@@ -101,7 +101,7 @@ export default function AnimationControls({ content, patchContent }: AnimationCo
 
   return (
     <div className="space-y-3">
-      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Animation & Motion</Label>
+      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Animation</Label>
 
       {/* Presets */}
       <div>

@@ -41,9 +41,9 @@ export default function VisualEffectsControls({ content, patchContent }: VisualE
       <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Visual Effects</Label>
 
       <Accordion type="multiple" className="space-y-1">
-        {/* Glassmorphism */}
+        {/* Glass effect */}
         <AccordionItem value="glass" className="rounded-md border border-border/30 px-2">
-          <AccordionTrigger className="py-2 text-[10px] uppercase tracking-wider">Glassmorphism</AccordionTrigger>
+          <AccordionTrigger className="py-2 text-[10px] uppercase tracking-wider">Glass effect</AccordionTrigger>
           <AccordionContent className="space-y-2 pb-2">
             <div className="flex items-center justify-between">
               <Label className="text-[10px]">Enable Glass</Label>
@@ -51,7 +51,7 @@ export default function VisualEffectsControls({ content, patchContent }: VisualE
             </div>
             {content.glassEnabled && (
               <>
-                <SliderField label="Blur Strength" value={content.glassBlur ?? 16} onChange={(v) => patchContent("glassBlur", v)} min={4} max={64} step={2} />
+                <SliderField label="Blur strength" value={content.glassBlur ?? 16} onChange={(v) => patchContent("glassBlur", v)} min={4} max={64} step={2} />
                 <SliderField label="Transparency" value={content.glassOpacity ?? 70} onChange={(v) => patchContent("glassOpacity", v)} min={10} max={95} step={5} unit="%" />
                 <ColorPickerField label="Glass Tint" value={content.glassTint || ""} onChange={(v) => patchContent("glassTint", v)} />
                 <div className="flex items-center justify-between">
@@ -67,9 +67,9 @@ export default function VisualEffectsControls({ content, patchContent }: VisualE
           </AccordionContent>
         </AccordionItem>
 
-        {/* Glow & Neon */}
+        {/* Glow */}
         <AccordionItem value="glow" className="rounded-md border border-border/30 px-2">
-          <AccordionTrigger className="py-2 text-[10px] uppercase tracking-wider">Glow & Neon</AccordionTrigger>
+          <AccordionTrigger className="py-2 text-[10px] uppercase tracking-wider">Glow</AccordionTrigger>
           <AccordionContent className="space-y-2 pb-2">
             <div className="flex items-center justify-between">
               <Label className="text-[10px]">Enable Glow</Label>

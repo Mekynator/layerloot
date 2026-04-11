@@ -63,7 +63,9 @@ export default function ColorPickerField({ label, value, onChange, placeholder =
               )}
               style={value && value !== "transparent" ? { backgroundColor: value } : undefined}
             />
-            <span className="flex-1 truncate text-left text-foreground">{typeof value === "string" ? value : placeholder}</span>
+            <span className="flex-1 truncate text-left text-foreground">
+              {value === "transparent" ? "Transparent" : typeof value === "string" && value ? value : placeholder}
+            </span>
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-64 space-y-3 p-3" align="start">
@@ -102,10 +104,31 @@ export default function ColorPickerField({ label, value, onChange, placeholder =
                     value === c && "ring-2 ring-primary ring-offset-1 ring-offset-background"
                   )}
                   style={c !== "transparent" ? { backgroundColor: c } : undefined}
-                  title={c}
+                  title={c === "transparent" ? "Transparent" : c}
                 />
               ))}
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => commit("transparent")}
+              className={cn(
+                "flex items-center justify-center gap-2 rounded-md border px-2 py-1.5 text-[10px] transition-colors",
+                value === "transparent" ? "border-primary/50 bg-primary/10 text-primary" : "border-border/30 text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <span className="h-3.5 w-3.5 rounded border border-border/50 bg-[repeating-conic-gradient(#ccc_0_25%,#fff_0_50%)] bg-[length:6px_6px]" />
+              Transparent
+            </button>
+            <button
+              type="button"
+              onClick={() => commit("")}
+              className="rounded-md border border-border/30 px-2 py-1.5 text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Clear / default
+            </button>
           </div>
 
           {/* Recent */}
@@ -130,14 +153,9 @@ export default function ColorPickerField({ label, value, onChange, placeholder =
             </div>
           )}
 
-          {/* Clear */}
-          <button
-            type="button"
-            onClick={() => commit("")}
-            className="w-full rounded-md border border-border/30 py-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Clear color
-          </button>
+          <div className="rounded-md border border-border/30 bg-muted/20 px-2 py-1.5 text-[10px] text-muted-foreground">
+            {value === "transparent" ? "Transparent is active." : value ? "Custom color selected." : "Using default or inherited color."}
+          </div>
         </PopoverContent>
       </Popover>
     </div>

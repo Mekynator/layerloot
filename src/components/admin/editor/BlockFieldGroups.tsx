@@ -6,7 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, ArrowUp, ArrowDown, Trash2, Type, ImageIcon, Link2, LayoutGrid, Database, Eye, Settings2 } from "lucide-react";
+import { Plus, ArrowUp, ArrowDown, Copy, Trash2, Type, ImageIcon, Link2, LayoutGrid, Database, Eye, Settings2 } from "lucide-react";
+ import AdminPageSelect from "@/components/admin/AdminPageSelect";
+ import { supabase } from "@/integrations/supabase/client";
++import ImageUploadField from "./controls/ImageUploadField";
++import SliderField from "./controls/SliderField";
 import AdminPageSelect from "@/components/admin/AdminPageSelect";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -552,7 +556,7 @@ function getBlockGroupConfig(blockType: string): BlockGroupConfig {
           ]},
         ],
         repeater: { key: "images", label: "Images", itemLabel: "Image", titleKey: "caption", fields: [
-          { key: "url", label: "Image URL", type: "image", placeholder: "https://..." },
+          { key: "url", label: "Image", type: "image", placeholder: "https://..." },
           { key: "caption", label: "Caption", type: "text" },
           { key: "alt", label: "Alt text", type: "text" },
         ]},
@@ -573,6 +577,7 @@ interface BlockFieldGroupsProps {
   patchItem: (index: number, patch: Record<string, unknown>) => void;
   addItem: () => void;
   removeItem: (index: number) => void;
+  duplicateItem: (index: number) => void;
   moveItem: (index: number, dir: -1 | 1) => void;
   compact?: boolean;
   pages?: string[];
@@ -582,7 +587,7 @@ interface BlockFieldGroupsProps {
 
 export default function BlockFieldGroups({
   blockType, content, patchContent,
-  repeaterItems, patchItem, addItem, removeItem, moveItem,
+  repeaterItems, patchItem, addItem, removeItem, duplicateItem, moveItem,
   compact = false, pages = [],
 }: BlockFieldGroupsProps) {
   const config = getBlockGroupConfig(blockType);
@@ -651,6 +656,7 @@ export default function BlockFieldGroups({
                   config={config.repeater!}
                   patchItem={patchItem}
                   removeItem={removeItem}
+                  duplicateItem={duplicateItem}
                   moveItem={moveItem}
                   inputH={inputH}
                   labelCls={labelCls}
@@ -680,7 +686,6 @@ function FieldRenderer({
 }) {
   switch (field.type) {
     case "text":
-    case "image":
       return (
         <div>
           <Label className={labelCls}>{field.label}</Label>
@@ -691,6 +696,15 @@ function FieldRenderer({
             placeholder={field.placeholder}
           />
         </div>
+      );
+
+    case "image":
+      return (
+        <ImageUploadField
+          label={field.label}
+          value={String(value ?? "")}
+          onChange={(url) => onChange(url)}
+        />
       );
 
     case "textarea":
@@ -733,7 +747,22 @@ function FieldRenderer({
         </div>
       );
 
-    case "number":
+    case "number": {
+      const numericValue = Number(value ?? field.defaultValue ?? 0);
+      if (field.min !== undefined || field.max !== undefined) {
+        return (
+          <SliderField
+            label={field.label}
+            value={numericValue}
+            onChange={(nextValue) => onChange(nextValue)}
+            min={field.min ?? 0}
+            max={field.max ?? 100}
+            step={field.step ?? 1}
+            unit={field.label.toLowerCase().includes("opacity") ? "%" : field.label.toLowerCase().includes("rating") ? "" : "px"}
+          />
+        );
+      }
+
       return (
         <div>
           <Label className={labelCls}>{field.label}</Label>
@@ -741,12 +770,13 @@ function FieldRenderer({
             type="number"
             min={field.min}
             max={field.max}
-            value={Number(value ?? field.defaultValue ?? 0)}
+            value={numericValue}
             onChange={(e) => onChange(Number(e.target.value))}
             className={inputH}
           />
         </div>
       );
+    }
 
     case "datetime":
       return (
@@ -785,7 +815,7 @@ function FieldRenderer({
 
 function RepeaterItemEditor({
   item, index, total, config,
-  patchItem, removeItem, moveItem,
+  patchItem, removeItem, duplicateItem, moveItem,
   inputH, labelCls, compact, pages,
 }: {
   item: Record<string, unknown>;
@@ -794,6 +824,7 @@ function RepeaterItemEditor({
   config: RepeaterFieldConfig;
   patchItem: (index: number, patch: Record<string, unknown>) => void;
   removeItem: (index: number) => void;
+  duplicateItem: (index: number) => void;
   moveItem: (index: number, dir: -1 | 1) => void;
   inputH: string;
   labelCls: string;
@@ -846,12 +877,15 @@ function RepeaterItemEditor({
         </div>
 
         {/* Move / Delete */}
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-wrap">
           <Button type="button" variant="outline" size="sm" onClick={() => moveItem(index, -1)} disabled={index === 0} className={btnH}>
             <ArrowUp className="mr-1 h-3 w-3" /> Up
           </Button>
           <Button type="button" variant="outline" size="sm" onClick={() => moveItem(index, 1)} disabled={index === total - 1} className={btnH}>
             <ArrowDown className="mr-1 h-3 w-3" /> Down
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => duplicateItem(index)} className={btnH}>
+            <Copy className="mr-1 h-3 w-3" /> Duplicate
           </Button>
           <Button type="button" variant="destructive" size="sm" onClick={() => removeItem(index)} className={`ml-auto ${btnH}`}>
             <Trash2 className="mr-1 h-3 w-3" /> Delete

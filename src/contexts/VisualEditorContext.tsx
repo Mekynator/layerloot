@@ -10,6 +10,7 @@ import {
   type DraftStatus,
 } from "@/hooks/use-draft-publish";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAnalyticsSafe } from "@/contexts/AnalyticsContext";
 import { tr } from "@/lib/translate";
 import { prepareReusableContentForSave } from "@/lib/reusable-blocks";
 
@@ -261,6 +262,7 @@ const MAX_UNDO = 50;
 
 export function VisualEditorProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const { track } = useAnalyticsSafe();
   const [pages, setPages] = useState<SitePage[]>([]);
   const [activePage, setActivePageRaw] = useState("home");
   const [draftBlocks, setDraftBlocks] = useState<SiteBlock[]>([]);
@@ -509,6 +511,31 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     [pageBlocks, selectedBlockId],
   );
 
+  useEffect(() => {
+    track({
+      eventName: "editor_page_opened",
+      entityType: "page",
+      entityId: activePage,
+      source: "visual_editor",
+      context: { pageKey: activePage },
+    });
+  }, [activePage, track]);
+
+  useEffect(() => {
+    if (!selectedBlock) return;
+    track({
+      eventName: "editor_block_selected",
+      entityType: "section",
+      entityId: selectedBlock.id,
+      source: "visual_editor",
+      context: {
+        pageKey: activePage,
+        blockType: selectedBlock.block_type,
+        blockTitle: selectedBlock.title || selectedBlock.block_type,
+      },
+    });
+  }, [activePage, selectedBlock, track]);
+
   const isDirty = useMemo(() => {
     if (draftBlocks.length !== savedBlocks.length) return true;
     return JSON.stringify(draftBlocks) !== JSON.stringify(savedBlocks);
@@ -560,7 +587,19 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     });
 
     setSelectedBlockId(newBlock.id);
-  }, [activePage, pageBlocks.length, pushUndo]);
+    track({
+      eventName: "editor_block_added",
+      entityType: "section",
+      entityId: newBlock.id,
+      source: "visual_editor",
+      context: {
+        pageKey: activePage,
+        blockType: type,
+        blockTitle: label,
+        insertedAt: atIndex ?? pageBlocks.length,
+      },
+    });
+  }, [activePage, pageBlocks.length, pushUndo, setSelectedBlockId, track]);
 
   const deleteBlock = useCallback((id: string) => {
     pushUndo("Delete block");
@@ -620,6 +659,17 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
       if (!ok) throw new Error("Failed to save draft");
       setDraftStatus("draft");
       setLastSavedAt(new Date().toISOString());
+      track({
+        eventName: "editor_save",
+        entityType: "editor",
+        entityId: activePage,
+        source: "visual_editor",
+        context: {
+          pageKey: activePage,
+          blockCount: currentPageBlocks.length,
+          draftStatus: "draft",
+        },
+      });
       try { sessionStorage.removeItem(sessionKey); } catch (e) {}
       toast.success("Draft saved!");
     } catch (err: any) {
@@ -643,6 +693,17 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
       // Refresh from DB to get real IDs
       await fetchBlocks(activePage);
       setDraftStatus("published");
+      track({
+        eventName: "editor_publish",
+        entityType: "editor",
+        entityId: activePage,
+        source: "visual_editor",
+        context: {
+          pageKey: activePage,
+          blockCount: currentPageBlocks.length,
+          draftStatus: "published",
+        },
+      });
       try { sessionStorage.removeItem(sessionKey); } catch (e) {}
       toast.success("Published successfully!");
     } catch (err: any) {
@@ -690,7 +751,14 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     redoStack.current.push({ blocks: draftBlocks.map(b => ({ ...b, content: { ...(b.content as any) } })), label: entry.label });
     setDraftBlocks(entry.blocks);
     setUndoVersion(v => v + 1);
-  }, [draftBlocks]);
+    track({
+      eventName: "editor_undo",
+      entityType: "editor",
+      entityId: activePage,
+      source: "visual_editor",
+      context: { pageKey: activePage, label: entry.label },
+    });
+  }, [activePage, draftBlocks, track]);
 
   const redo = useCallback(() => {
     const entry = redoStack.current.pop();
@@ -698,7 +766,14 @@ export function VisualEditorProvider({ children }: { children: React.ReactNode }
     undoStack.current.push({ blocks: draftBlocks.map(b => ({ ...b, content: { ...(b.content as any) } })), label: entry.label });
     setDraftBlocks(entry.blocks);
     setUndoVersion(v => v + 1);
-  }, [draftBlocks]);
+    track({
+      eventName: "editor_redo",
+      entityType: "editor",
+      entityId: activePage,
+      source: "visual_editor",
+      context: { pageKey: activePage, label: entry.label },
+    });
+  }, [activePage, draftBlocks, track]);
 
   const canUndo = undoStack.current.length > 0;
   const canRedo = redoStack.current.length > 0;

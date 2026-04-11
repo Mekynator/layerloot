@@ -8,6 +8,7 @@ import { Check, ShoppingBag, Heart, ChevronLeft, ChevronRight } from "lucide-rea
 import { useProductSavedState } from "@/hooks/use-product-saved-state";
 import { useTranslation } from "react-i18next";
 import { useCart } from "@/contexts/CartContext";
+import { useAnalyticsSafe } from "@/contexts/AnalyticsContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import RatingStars from "@/components/social/RatingStars";
 import { formatPrice } from "@/lib/currency";
@@ -34,12 +35,14 @@ const AUTO_SLIDE_MS = 7000;
 const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
   const { t } = useTranslation("common");
   const { addItem } = useCart();
+  const { track, trackAttribution } = useAnalyticsSafe();
   const isMobile = useIsMobile();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const [isActive, setIsActive] = useState(false); // mobile tap-activated interaction state
   const [justAdded, setJustAdded] = useState(false);
 
+  const cardRef = useRef<HTMLDivElement | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const addButtonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -70,6 +73,39 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
     return () => window.clearTimeout(timer);
   }, [justAdded]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const node = cardRef.current;
+    if (!node) return;
+
+    let fired = false;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (fired || !entry.isIntersecting) return;
+          fired = true;
+          track({
+            eventName: "product_view",
+            entityType: "product",
+            entityId: product.id,
+            source: "product_grid",
+            context: {
+              productName: product.name,
+              slug: product.slug,
+              price: Number(product.price),
+              position: index,
+            },
+          });
+          observer.disconnect();
+        });
+      },
+      { threshold: 0.45 },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [index, product.id, product.name, product.price, product.slug, track]);
+
   const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -88,9 +124,18 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
         ? {
             sourceRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
             sourceImage: currentImage,
+            source: "product_card",
           }
-        : undefined,
+        : { source: "product_card" },
     );
+
+    trackAttribution({
+      sourceType: "cta",
+      sourceId: product.id,
+      label: `${product.name} add to cart`,
+      pagePath: typeof window !== "undefined" ? window.location.pathname : undefined,
+      metadata: { source: "product_card", slug: product.slug },
+    });
 
     setJustAdded(true);
 
@@ -135,12 +180,34 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: Math.min(index * 0.06, 0.3), ease: [0.22, 1, 0.36, 1] }}
+      ref={cardRef}
       className="h-full"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <Link
         to={`/products/${product.slug}`}
+        onClick={() => {
+          track({
+            eventName: "product_click",
+            entityType: "product",
+            entityId: product.id,
+            source: "product_grid",
+            context: {
+              productName: product.name,
+              slug: product.slug,
+              price: Number(product.price),
+              position: index,
+            },
+          });
+          trackAttribution({
+            sourceType: "cta",
+            sourceId: product.id,
+            label: product.name,
+            pagePath: typeof window !== "undefined" ? window.location.pathname : undefined,
+            metadata: { source: "product_grid", slug: product.slug },
+          });
+        }}
         className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/30 bg-card/70 backdrop-blur-xl transition-all duration-500"
         style={{
           boxShadow: isHovered && !isMobile

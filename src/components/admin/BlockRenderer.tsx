@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, FormEvent, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { useVisualEditorSafe } from "@/contexts/VisualEditorContext";
 import { useDesignSystemSafe } from "@/contexts/DesignSystemContext";
+import { useAnalyticsSafe } from "@/contexts/AnalyticsContext";
 import { Link } from "react-router-dom";
 import {
   ArrowRight, Truck, Shield, Star, Printer, ChevronLeft, ChevronRight,
@@ -715,6 +716,7 @@ const sectionWidthClass = (width?: string) => {
 
 const Section = ({ block, defaultClasses, children }: { block: SiteBlock; defaultClasses: string; children: ReactNode }) => {
   const editorCtx = useVisualEditorSafe();
+  const { track, trackAttribution } = useAnalyticsSafe();
   const viewport = editorCtx?.viewport ?? "desktop";
   const c = block.content || {};
   const vp = viewport;
@@ -722,6 +724,14 @@ const Section = ({ block, defaultClasses, children }: { block: SiteBlock; defaul
   const action = resolveSectionAction(c);
   const clickable = applySectionAction(action);
   const hasSlideshow = c._slideshow?.enabled && c._slideshow?.images?.length > 0;
+  const sectionRef = useRef<HTMLElement | null>(null);
+
+  const reusableKind = String(c._reusableKind || "section");
+  const isTrackedComponent = reusableKind === "component" || String(c._reusableSyncMode || "") === "global";
+  const entityType = isTrackedComponent ? "global_component" : (c._reusableId ? "reusable_section" : "section");
+  const sectionEventName = isTrackedComponent ? "component_view" : "section_view";
+  const sectionClickEventName = isTrackedComponent ? "component_click" : "section_click";
+  const sectionLabel = getLocalizedValue(block.title, "") || getLocalizedValue(c.heading, "") || block.block_type.replace(/_/g, " ");
 
   // Hover border CSS
   const hoverBorderCSS = (c.borderHoverColor || c.borderHoverWidth || c.shadowGrowOnHover)
@@ -778,11 +788,108 @@ const Section = ({ block, defaultClasses, children }: { block: SiteBlock; defaul
 
   const anchorAttr = c.anchorId || c.anchor || `section-${(block.page || "page").replace(/[^a-z0-9-_]/gi, "-")}-${block.id}`;
 
+  useEffect(() => {
+    if (isEditorPreviewMode() || typeof window === "undefined") return;
+    const node = sectionRef.current;
+    if (!node) return;
+
+    let fired = false;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (fired || !entry.isIntersecting) return;
+          fired = true;
+          track({
+            eventName: sectionEventName,
+            entityType: entityType as any,
+            entityId: block.id,
+            reusableId: c._reusableId ? String(c._reusableId) : null,
+            componentId: isTrackedComponent && c._reusableId ? String(c._reusableId) : null,
+            source: "block_renderer",
+            context: {
+              entityLabel: sectionLabel,
+              blockType: block.block_type,
+              pageKey: block.page || null,
+              anchorId: anchorAttr,
+              reusableKind,
+            },
+          });
+          observer.disconnect();
+        });
+      },
+      { threshold: 0.35 },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [anchorAttr, block.block_type, block.id, block.page, c._reusableId, entityType, isTrackedComponent, reusableKind, sectionEventName, sectionLabel, track]);
+
+  const handleSectionClick = (e: MouseEvent<HTMLElement>) => {
+    if (!isEditorPreviewMode()) {
+      const target = e.target as HTMLElement;
+      const interactive = target.closest("a,button") as HTMLElement | null;
+      const label = interactive?.innerText?.trim() || target.textContent?.trim() || sectionLabel;
+
+      track({
+        eventName: sectionClickEventName,
+        entityType: entityType as any,
+        entityId: block.id,
+        reusableId: c._reusableId ? String(c._reusableId) : null,
+        componentId: isTrackedComponent && c._reusableId ? String(c._reusableId) : null,
+        source: interactive ? "cta" : "section",
+        context: {
+          entityLabel: sectionLabel,
+          blockType: block.block_type,
+          clickLabel: label || null,
+          actionTarget: action.actionTarget || null,
+          anchorId: anchorAttr,
+        },
+      });
+
+      if (interactive) {
+        const buttonId = `${block.id}:${String(label || "button").toLowerCase().replace(/[^a-z0-9-_]+/gi, "-")}`;
+        const ctaLike = /shop|buy|learn|discover|get|start|claim|order|subscribe|submit|contact/i.test(label || "");
+        track({
+          eventName: ctaLike ? "cta_click" : "button_click",
+          entityType: "button",
+          entityId: buttonId,
+          parentEntityId: block.id,
+          reusableId: c._reusableId ? String(c._reusableId) : null,
+          componentId: isTrackedComponent && c._reusableId ? String(c._reusableId) : null,
+          source: action.actionType || "button",
+          context: {
+            entityLabel: label || sectionLabel,
+            blockType: block.block_type,
+            buttonText: label || null,
+            actionType: action.actionType || "none",
+            actionTarget: action.actionTarget || null,
+          },
+        });
+
+        trackAttribution({
+          sourceType: ctaLike ? "cta" : (isTrackedComponent ? "component" : "section"),
+          sourceId: c._reusableId ? String(c._reusableId) : block.id,
+          label: label || sectionLabel,
+          reusableId: c._reusableId ? String(c._reusableId) : null,
+          pagePath: typeof window !== "undefined" ? window.location.pathname : undefined,
+          metadata: {
+            blockType: block.block_type,
+            actionType: action.actionType || "none",
+            actionTarget: action.actionTarget || null,
+          },
+        });
+      }
+    }
+
+    clickable.onClick(e);
+  };
+
   return (
     <>
       {dynamicCSS && <style>{dynamicCSS}</style>}
       <motion.section
         {...props}
+        ref={sectionRef as any}
         id={anchorAttr}
         data-editor-anchor={anchorAttr}
         initial={entranceAnim.initial}
@@ -792,7 +899,7 @@ const Section = ({ block, defaultClasses, children }: { block: SiteBlock; defaul
         whileHover={Object.keys(hoverProps).length > 0 ? hoverProps : undefined}
         className={`${needsRelative ? "relative overflow-hidden" : ""} ${props.className} ${clickable.className} ${sectionWidthClass(c.sectionWidth)}`.trim()}
         style={{ ...props.style, ...sectionStyleOverrides }}
-        onClick={clickable.onClick}
+        onClick={handleSectionClick}
         data-editor-block-id={block.id}
         data-editor-block-type={getLocalizedValue(block.title, "") || block.block_type}
       >
@@ -2148,6 +2255,7 @@ const SingleButtonBlock = ({ block }: { block: SiteBlock }) => {
 
 const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
   useTranslation();
+  const { track } = useAnalyticsSafe();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const c = block.content || {};
@@ -2156,9 +2264,23 @@ const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
     e.preventDefault();
     if (isEditorPreviewMode()) return;
     if (!email) return;
+    const submittedEmail = email;
     const { error } = await supabase.from("newsletter_subscribers").insert({ email } as any);
     setStatus(error ? "error" : "success");
-    if (!error) setEmail("");
+    if (!error) {
+      track({
+        eventName: "newsletter_signup",
+        entityType: "section",
+        entityId: block.id,
+        source: "newsletter_block",
+        context: {
+          entityLabel: getLocalizedValue(block.title, "") || getLocalizedValue(c.heading, "Newsletter"),
+          emailDomain: submittedEmail.includes("@") ? submittedEmail.split("@").pop() : null,
+          blockType: block.block_type,
+        },
+      });
+      setEmail("");
+    }
   };
 
   const align = c.alignment || "center";

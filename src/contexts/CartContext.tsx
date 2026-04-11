@@ -21,6 +21,7 @@ type AddItemOptions = {
     height: number;
   };
   sourceImage?: string;
+  source?: string;
 };
 
 interface CartContextType {
@@ -100,6 +101,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
               id: newItem.id,
               name: newItem.name,
               image: options?.sourceImage ?? newItem.image ?? null,
+              slug: newItem.slug ?? null,
+              price: newItem.price,
+              source: options?.source ?? null,
               sourceRect: options?.sourceRect ?? null,
               totalItems: nextTotalItems,
               quantity: nextQuantity,
@@ -114,7 +118,29 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const removeItem = (id: string) => {
-    setItems((prev) => prev.filter((i) => i.id !== id));
+    setItems((prev) => {
+      const existing = prev.find((i) => i.id === id);
+      const nextItems = prev.filter((i) => i.id !== id);
+
+      if (existing && typeof window !== "undefined") {
+        const nextTotalItems = nextItems.reduce((sum, item) => sum + item.quantity, 0);
+        window.dispatchEvent(
+          new CustomEvent("layerloot:remove-from-cart", {
+            detail: {
+              id: existing.id,
+              name: existing.name,
+              slug: existing.slug ?? null,
+              price: existing.price,
+              quantity: existing.quantity,
+              totalItems: nextTotalItems,
+              timestamp: Date.now(),
+            },
+          }),
+        );
+      }
+
+      return nextItems;
+    });
   };
 
   const updateQuantity = (id: string, quantity: number) => {
@@ -123,16 +149,36 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    setItems((prev) =>
-      prev.map((i) =>
+    setItems((prev) => {
+      const existing = prev.find((i) => i.id === id);
+      const nextItems = prev.map((i) =>
         i.id === id
           ? {
               ...i,
               quantity,
             }
           : i,
-      ),
-    );
+      );
+
+      if (existing && quantity < existing.quantity && typeof window !== "undefined") {
+        const nextTotalItems = nextItems.reduce((sum, item) => sum + item.quantity, 0);
+        window.dispatchEvent(
+          new CustomEvent("layerloot:remove-from-cart", {
+            detail: {
+              id: existing.id,
+              name: existing.name,
+              slug: existing.slug ?? null,
+              price: existing.price,
+              quantity: existing.quantity - quantity,
+              totalItems: nextTotalItems,
+              timestamp: Date.now(),
+            },
+          }),
+        );
+      }
+
+      return nextItems;
+    });
   };
 
   const updateItem = (id: string, patch: Partial<CartItem>) => {

@@ -36,6 +36,7 @@ import VisualEditor from "./pages/admin/VisualEditor";
 import AdminBackgrounds from "./pages/admin/AdminBackgrounds";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminActivity from "./pages/admin/AdminActivity";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
 import AdminCustomOrderDetail from "./pages/admin/AdminCustomOrderDetail";
 import AdminMedia from "./pages/admin/AdminMedia";
@@ -68,6 +69,7 @@ const PromotionPopup = lazy(() => import("./components/PromotionPopup"));
 const GiftClaimPopup = lazy(() => import("./components/GiftClaimPopup"));
 import { CampaignThemeProvider } from "./components/campaign/CampaignThemeProvider";
 import { DesignSystemProvider } from "./contexts/DesignSystemContext";
+import { AnalyticsProvider } from "./contexts/AnalyticsContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -141,6 +143,7 @@ const AppShell = () => {
             <Route path="reusable-blocks" element={<AdminRoute requiredPermission="content.edit"><AdminReusableBlocks /></AdminRoute>} />
             <Route path="translations" element={<AdminRoute requiredPermission="translations.manage"><AdminTranslations /></AdminRoute>} />
             <Route path="activity" element={<AdminRoute requiredPermission="reports.view"><AdminActivity /></AdminRoute>} />
+            <Route path="analytics" element={<AdminRoute requiredPermission="reports.view"><AdminAnalytics /></AdminRoute>} />
             <Route path="automations" element={<AdminRoute requiredPermission="campaigns.manage"><AdminAutomations /></AdminRoute>} />
             <Route path="instagram" element={<AdminRoute requiredPermission="settings.view"><AdminInstagram /></AdminRoute>} />
             <Route path="email-logs" element={<AdminRoute requiredPermission="reports.view"><AdminEmailLogs /></AdminRoute>} />
@@ -181,7 +184,9 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <EditorPreviewProvider>
-              <AppShell />
+              <AnalyticsProvider>
+                <AppShell />
+              </AnalyticsProvider>
             </EditorPreviewProvider>
           </BrowserRouter>
         </CartProvider>

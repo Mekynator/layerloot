@@ -216,6 +216,26 @@ export default function CartPage() {
         voucherType: a.voucherType,
       }));
 
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("layerloot:checkout-started", {
+            detail: {
+              id: `checkout-${Date.now()}`,
+              total: finalTotal,
+              shipping: effectiveShipping,
+              itemCount: totalItemCount,
+              items: cartItems.map((item) => ({
+                id: item.id,
+                name: item.name,
+                slug: item.slug,
+                price: item.price,
+                quantity: item.quantity,
+              })),
+            },
+          }),
+        );
+      }
+
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: {
           items: cartItems.map((item) => ({

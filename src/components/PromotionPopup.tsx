@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAnalyticsSafe } from "@/contexts/AnalyticsContext";
 import {
   normalizePromotionPopupConfig,
   persistPromotionPopupDismissal,
@@ -14,6 +15,7 @@ import PromotionPopupCanvas from "@/components/promo/PromotionPopupCanvas";
 
 const PromotionPopup = () => {
   const location = useLocation();
+  const { track, trackAttribution } = useAnalyticsSafe();
   const [promo, setPromo] = useState<PromotionPopupConfig | null>(null);
   const [visible, setVisible] = useState(false);
   const [doNotShowAgain, setDoNotShowAgain] = useState(false);
@@ -71,8 +73,20 @@ const PromotionPopup = () => {
     };
   }, [location.pathname]);
 
-  const dismiss = (persistForever = false) => {
+  const dismiss = (persistForever = false, reason: "dismiss" | "close" | "overlay" | "escape" | "action" = "dismiss") => {
     if (!promo) return;
+    track({
+      eventName: "popup_close",
+      entityType: "popup",
+      entityId: promo.metadata.analyticsId || promo.dismiss_key,
+      popupId: promo.metadata.analyticsId || promo.dismiss_key,
+      source: reason,
+      context: {
+        popupName: promo.metadata.name || promo.title,
+        dismissKey: promo.dismiss_key,
+        doNotShowAgain,
+      },
+    });
     setVisible(false);
     persistPromotionPopupDismissal(promo, {
       permanent: promo.schedule.allowDoNotShowAgain && doNotShowAgain ? persistForever : false,
@@ -86,6 +100,32 @@ const PromotionPopup = () => {
   }, [promo, visible]);
 
   useEffect(() => {
+    if (!visible || !promo) return;
+    const popupId = promo.metadata.analyticsId || promo.dismiss_key;
+
+    track({
+      eventName: "popup_view",
+      entityType: "popup",
+      entityId: popupId,
+      popupId,
+      source: "promotion_popup",
+      context: {
+        popupName: promo.metadata.name || promo.title,
+        dismissKey: promo.dismiss_key,
+        path: location.pathname,
+      },
+    });
+
+    trackAttribution({
+      sourceType: "popup",
+      sourceId: popupId,
+      label: promo.metadata.name || promo.title,
+      pagePath: location.pathname,
+      metadata: { dismissKey: promo.dismiss_key },
+    });
+  }, [location.pathname, promo, track, trackAttribution, visible]);
+
+  useEffect(() => {
     if (!visible || !promo || !promo.overlay.modal) return;
 
     const dialog = dialogRef.current;
@@ -97,7 +137,7 @@ const PromotionPopup = () => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && promo.overlay.closeOnEscape) {
         event.preventDefault();
-        dismiss(true);
+        dismiss(true, "escape");
         return;
       }
 
@@ -145,7 +185,7 @@ const PromotionPopup = () => {
               opacity: promo.overlay.opacity,
               backdropFilter: `blur(${promo.overlay.blur}px)`,
             }}
-            onClick={promo.overlay.clickOutsideToClose ? () => dismiss(true) : undefined}
+            onClick={promo.overlay.clickOutsideToClose ? () => dismiss(true, "overlay") : undefined}
             aria-hidden="true"
           />
 
@@ -162,8 +202,30 @@ const PromotionPopup = () => {
               <PromotionPopupCanvas
                 config={promo}
                 mode="runtime"
-                onAction={() => dismiss(true)}
-                onClose={promo.container.showCloseButton ? () => dismiss(true) : undefined}
+                onAction={() => {
+                  const popupId = promo.metadata.analyticsId || promo.dismiss_key;
+                  track({
+                    eventName: "popup_click",
+                    entityType: "popup",
+                    entityId: popupId,
+                    popupId,
+                    source: "promotion_popup",
+                    context: {
+                      popupName: promo.metadata.name || promo.title,
+                      buttonText: promo.button_text || null,
+                      target: promo.button_link || null,
+                    },
+                  });
+                  trackAttribution({
+                    sourceType: "popup",
+                    sourceId: popupId,
+                    label: promo.button_text || promo.metadata.name || promo.title,
+                    pagePath: location.pathname,
+                    metadata: { target: promo.button_link || null },
+                  });
+                  dismiss(true, "action");
+                }}
+                onClose={promo.container.showCloseButton ? () => dismiss(true, "close") : undefined}
               />
 
               {promo.schedule.allowDoNotShowAgain && (

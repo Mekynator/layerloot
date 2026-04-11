@@ -81,6 +81,7 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
         { id: "chat", to: "/admin/chat", label: "AI Chat", icon: "MessageCircle", visible: true, permission: "settings.view" },
         { id: "instagram", to: "/admin/instagram", label: "Instagram", icon: "Instagram", visible: true, permission: "settings.view" },
         { id: "campaigns", to: "/admin/campaigns", label: "Campaigns", icon: "Megaphone", visible: true, permission: "campaigns.manage" },
+        { id: "analytics", to: "/admin/analytics", label: "Analytics", icon: "BarChart3", visible: true, permission: "reports.view" },
         // Hide Growth, Revenue, Reports, Declaration, Policies, Settings from sidebar
         { id: "financial", to: "/admin/financial", label: "Adjustments / Financial", icon: "DollarSign", visible: true, permission: "settings.view" },
         { id: "growth", to: "/admin/growth", label: "Growth", icon: "TrendingUp", visible: false, permission: "settings.view" },

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/contexts/CartContext";
+import { useAnalyticsSafe } from "@/contexts/AnalyticsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useProductSavedState } from "@/hooks/use-product-saved-state";
@@ -47,6 +48,7 @@ const ProductDetail = () => {
   const { t } = useTranslation("common");
   const { slug } = useParams<{ slug: string }>();
   const { addItem } = useCart();
+  const { track, trackAttribution } = useAnalyticsSafe();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -118,6 +120,21 @@ const ProductDetail = () => {
     return () => window.clearTimeout(timer);
   }, [justAdded]);
 
+  useEffect(() => {
+    if (!product) return;
+    track({
+      eventName: "product_view",
+      entityType: "product",
+      entityId: product.id,
+      source: "product_detail",
+      context: {
+        productName: product.name,
+        slug: product.slug,
+        price: Number(product.price),
+      },
+    });
+  }, [product?.id, product?.name, product?.price, product?.slug, track]);
+
   // Track recently viewed product
   useEffect(() => {
     if (!product) return;
@@ -158,9 +175,18 @@ const ProductDetail = () => {
               height: rect.height,
             },
             sourceImage: images[currentImage] || "/placeholder.svg",
+            source: "product_detail",
           }
-        : undefined,
+        : { source: "product_detail" },
     );
+
+    trackAttribution({
+      sourceType: "cta",
+      sourceId: product.id,
+      label: `${product.name} add to cart`,
+      pagePath: typeof window !== "undefined" ? window.location.pathname : undefined,
+      metadata: { source: "product_detail", slug: product.slug },
+    });
 
     setJustAdded(true);
     toast({ title: t("common.addedToCart"), description: name });

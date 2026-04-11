@@ -1054,10 +1054,10 @@ function ActionEditor({
               <SelectValue placeholder={productsLoading ? "Loading…" : productsError ? "Could not load products" : "Select a product"} />
             </SelectTrigger>
             <SelectContent>
-              {productsLoading && <SelectItem value="" disabled>Loading products…</SelectItem>}
-              {productsError && <SelectItem value="" disabled>Error loading products</SelectItem>}
+              {productsLoading && <SelectItem value="__loading__" disabled>Loading products…</SelectItem>}
+              {productsError && <SelectItem value="__error__" disabled>Error loading products</SelectItem>}
               {!productsLoading && !productsError && products.filter(p => !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase())).length === 0 && (
-                <SelectItem value="" disabled>No products found</SelectItem>
+                <SelectItem value="__empty__" disabled>No products found</SelectItem>
               )}
               {!productsLoading && !productsError && products
                 .filter(p => !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase()))
@@ -1094,10 +1094,10 @@ function ActionEditor({
               <SelectValue placeholder={productsLoading ? "Loading…" : productsError ? "Could not load products" : "Select a product"} />
             </SelectTrigger>
             <SelectContent>
-              {productsLoading && <SelectItem value="" disabled>Loading products…</SelectItem>}
-              {productsError && <SelectItem value="" disabled>Error loading products</SelectItem>}
+              {productsLoading && <SelectItem value="__loading__" disabled>Loading products…</SelectItem>}
+              {productsError && <SelectItem value="__error__" disabled>Error loading products</SelectItem>}
               {!productsLoading && !productsError && products.filter(p => !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase())).length === 0 && (
-                <SelectItem value="" disabled>No products found</SelectItem>
+                <SelectItem value="__empty__" disabled>No products found</SelectItem>
               )}
               {!productsLoading && !productsError && products
                 .filter(p => !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase()))

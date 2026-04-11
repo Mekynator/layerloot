@@ -6,7 +6,7 @@ import {
   Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone,
   BarChart3, Wallet, ImageIcon, Shield, Activity, Globe, MessageCircle,
   Instagram, Brain, UserPlus, Crown, ClipboardList, FlaskConical,
-  DollarSign, Calendar,
+  DollarSign, Calendar, Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminPermissions } from "@/hooks/use-admin-permissions";
@@ -19,7 +19,7 @@ const ICON_MAP: Record<string, typeof Package> = {
   LayoutDashboard, LayoutGrid, Package, ShoppingCart, Users, Truck, Star, FileText, Settings,
   Box, TicketPercent, Palette, Calculator, TrendingUp, Megaphone, BarChart3,
   Wallet, Tags, Layers, ImageIcon, Shield, Activity, Globe, MessageCircle, Instagram, Brain, UserPlus, ClipboardList,
-  DollarSign, Calendar, FlaskConical,
+  DollarSign, Calendar, FlaskConical, Sparkles,
 };
 
 const AdminLayoutDepthContext = createContext(0);
@@ -98,6 +98,7 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
         { id: "chat", to: "/admin/chat", label: "AI Chat", icon: "MessageCircle", visible: false, permission: "settings.view" },
         { id: "personalization", to: "/admin/personalization", label: "AI Personalization", icon: "Brain", visible: true, permission: "settings.view" },
         { id: "ab-testing", to: "/admin/ab-testing", label: "A/B Testing", icon: "FlaskConical", visible: true, permission: "settings.view" },
+        { id: "ai-insights", to: "/admin/ai-insights", label: "AI Insights", icon: "Sparkles", visible: true, permission: "settings.view" },
         { id: "activity", to: "/admin/activity", label: "Activity Log", icon: "Activity", visible: false, permission: "reports.view" },
         { id: "chat-analytics", to: "/admin/chat-analytics", label: "AI Analytics", icon: "BarChart3", visible: false, permission: "reports.view" },
       ],

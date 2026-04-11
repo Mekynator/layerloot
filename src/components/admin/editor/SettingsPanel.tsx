@@ -26,6 +26,7 @@ import BlockFieldGroups from "./BlockFieldGroups";
 import PageStylePresetsPanel from "./PageStylePresetsPanel";
 import PersonalizationPanel from "./PersonalizationPanel";
 import ABTestPanel from "./ABTestPanel";
+import AIAssistantPanel from "./AIAssistantPanel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { tr } from "@/lib/translate";
 import { buildReusableInstanceContent, detachReusableContent, getReusableKind, upsertReusableFromBlock } from "@/lib/reusable-blocks";
@@ -442,6 +443,8 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
               </div>
 
               <AnimationControls content={localContent} patchContent={patchContent} />
+
+              <AIAssistantPanel content={localContent} patchContent={patchContent} blockType={block.type} blockTitle={block.title} />
 
               <PersonalizationPanel content={localContent} patchContent={patchContent} />
 

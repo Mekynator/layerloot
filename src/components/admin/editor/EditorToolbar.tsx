@@ -25,6 +25,7 @@ import {
   Save,
   Settings2,
   Smartphone,
+  Sparkles,
   Tablet,
   Trash2,
   Undo2,
@@ -376,6 +377,19 @@ export default function EditorToolbar({
                   </TooltipContent>
                 </Tooltip>
               )}
+
+              {/* AI assistant indicator */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1 rounded-lg border border-violet-500/30 bg-violet-500/10 px-2 py-1 text-[10px] font-medium text-violet-600">
+                    <Sparkles className="h-3 w-3" />
+                    AI
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  AI Assistant available — select a block and open the More tab
+                </TooltipContent>
+              </Tooltip>
             </div>
 
             <div className="flex flex-1 flex-wrap items-center justify-end gap-2">

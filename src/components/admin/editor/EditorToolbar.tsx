@@ -110,6 +110,13 @@ export default function EditorToolbar({
         : pageDisplayTitle(selectedPage) || activePage;
 
   const statusBadge = () => {
+    if (publishing) {
+      return (
+        <Badge variant="outline" className="gap-1 border-violet-500/50 bg-violet-500/10 text-violet-400 text-[10px]">
+          <Upload className="h-3 w-3" /> Publishing...
+        </Badge>
+      );
+    }
     if (saving) {
       return (
         <Badge variant="outline" className="gap-1 border-blue-500/50 bg-blue-500/10 text-blue-400 text-[10px]">
@@ -158,7 +165,7 @@ export default function EditorToolbar({
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => navigate("/admin")} className="h-8 gap-1.5 text-xs font-medium">
+              <Button variant="outline" size="sm" onClick={() => navigate("/admin")} className="h-8 gap-1.5 text-xs font-medium transition-all duration-200 ease-out hover:-translate-y-[1px] active:scale-[0.98]">
                 <ArrowLeft className="h-3.5 w-3.5" /> Back to Admin
               </Button>
 
@@ -233,7 +240,7 @@ export default function EditorToolbar({
                 variant="outline"
                 onClick={() => void save()}
                 disabled={!isDirty || saving}
-                className="h-8 gap-1.5 text-xs"
+                className="h-8 gap-1.5 text-xs transition-all duration-200 ease-out hover:-translate-y-[1px] active:scale-[0.98]"
               >
                 <Save className="h-3.5 w-3.5" />
                 {saving ? "Saving..." : "Save"}
@@ -245,7 +252,7 @@ export default function EditorToolbar({
                     <Button
                       size="sm"
                       disabled={publishing || (draftStatus === "published" && !isDirty)}
-                      className="h-8 gap-1.5 text-xs font-display uppercase tracking-wider"
+                      className="h-8 gap-1.5 text-xs font-display uppercase tracking-wider transition-all duration-200 ease-out hover:-translate-y-[1px] active:scale-[0.98]"
                     >
                       <Upload className="h-3.5 w-3.5" />
                       {publishing ? "Publishing..." : "Publish"}
@@ -294,7 +301,7 @@ export default function EditorToolbar({
 
               <div className="h-5 w-px bg-border/30" />
 
-              <Button variant={previewMode ? "default" : "outline"} size="sm" onClick={onTogglePreview} className="h-8 gap-1.5 text-xs">
+              <Button variant={previewMode ? "default" : "outline"} size="sm" onClick={onTogglePreview} className="h-8 gap-1.5 text-xs transition-all duration-200 ease-out hover:-translate-y-[1px] active:scale-[0.98]">
                 <Eye className="h-3.5 w-3.5" /> {previewMode ? "Exit Preview" : "Preview"}
               </Button>
 
@@ -340,7 +347,7 @@ export default function EditorToolbar({
                 </button>
               </div>
 
-              <Button variant="outline" size="sm" onClick={onAddBlock} className="h-8 gap-1.5 text-xs">
+              <Button variant="outline" size="sm" onClick={onAddBlock} className="h-8 gap-1.5 text-xs transition-all duration-200 ease-out hover:-translate-y-[1px] active:scale-[0.98]">
                 <Plus className="h-3.5 w-3.5" /> Add Section
               </Button>
 
@@ -453,6 +460,12 @@ export default function EditorToolbar({
               </Button>
             </div>
           </div>
+
+          {(saving || publishing) && (
+            <div className="h-1 overflow-hidden rounded-full bg-primary/10">
+              <div className="h-full w-full animate-pulse rounded-full bg-primary/60" />
+            </div>
+          )}
         </div>
       </div>
 

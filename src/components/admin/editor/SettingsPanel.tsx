@@ -49,15 +49,15 @@ export default function SettingsPanel() {
   if (!selectedBlock) {
     return (
       <div className="flex h-full flex-col border-l border-border/30 bg-card/80 backdrop-blur-xl">
-        <div className="flex items-center gap-2 border-b border-border/30 px-3 py-2">
+        <div className="flex items-center gap-2 border-b border-border/30 px-3 py-2 transition-colors duration-200">
           <Settings2 className="h-3.5 w-3.5 text-primary" />
           <span className="font-display text-[10px] font-bold uppercase tracking-widest text-foreground">Settings</span>
         </div>
         <div className="flex flex-1 items-center justify-center p-4">
           <div className="text-center">
             <Settings2 className="mx-auto mb-3 h-8 w-8 text-muted-foreground/20" />
-            <p className="text-xs text-muted-foreground">Select a block to edit</p>
-            <p className="mt-1 text-[10px] text-muted-foreground/60">Click any section on the canvas</p>
+            <p className="text-xs text-muted-foreground">Select something to edit</p>
+            <p className="mt-1 text-[10px] text-muted-foreground/60">Click any section or element on the canvas</p>
           </div>
         </div>
       </div>
@@ -398,7 +398,7 @@ function ElementNavigator({
   );
 
   return (
-    <div className="space-y-2 rounded-lg border border-border/30 bg-background/40 p-2">
+    <div className="space-y-2 rounded-lg border border-border/30 bg-background/40 p-2 transition-all duration-200 ease-out">
       <div className="flex items-center gap-1.5">
         <MousePointerClick className="h-3 w-3 text-primary" />
         <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Element map</span>
@@ -488,7 +488,7 @@ function ElementInspector({
   children?: ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-primary/30 bg-primary/5 p-2 space-y-2">
+    <div className="rounded-lg border border-primary/30 bg-primary/5 p-2 space-y-2 shadow-[0_12px_28px_-20px_rgba(99,102,241,0.45)] transition-all duration-200 ease-out">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <MousePointerClick className="h-3 w-3 text-primary" />

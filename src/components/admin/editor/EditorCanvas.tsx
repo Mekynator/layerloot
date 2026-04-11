@@ -29,6 +29,7 @@ export default function EditorCanvas({ zoom = 100, previewMode = false }: { zoom
   const scrollRef = useRef<HTMLDivElement>(null);
   const panState = useRef<{ startX: number; startY: number; scrollLeft: number; scrollTop: number } | null>(null);
   const [isPanning, setIsPanning] = useState(false);
+  const [isExternalDragOver, setIsExternalDragOver] = useState(false);
 
   // Scroll selected block into view
   useEffect(() => {
@@ -66,11 +67,13 @@ export default function EditorCanvas({ zoom = 100, previewMode = false }: { zoom
   const handleCanvasDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     if (e.dataTransfer.types.includes("application/x-layerloot-block")) {
       e.preventDefault();
+      setIsExternalDragOver(true);
     }
   }, []);
 
   const handleCanvasDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     const blockType = e.dataTransfer.getData("application/x-layerloot-block");
+    setIsExternalDragOver(false);
     if (!blockType) return;
     e.preventDefault();
     const selectedIndex = selectedBlockId ? draftBlocks.findIndex((block) => block.id === selectedBlockId) : draftBlocks.length;
@@ -109,7 +112,10 @@ export default function EditorCanvas({ zoom = 100, previewMode = false }: { zoom
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dropIdx, setDropIdx] = useState<number | null>(null);
 
-  const handleUnifiedDragStart = useCallback((index: number) => setDragIdx(index), []);
+  const handleUnifiedDragStart = useCallback((index: number) => {
+    setDragIdx(index);
+    setDropIdx(index);
+  }, []);
   const handleUnifiedDragOver = useCallback((e: React.DragEvent, index: number) => {
     e.preventDefault();
     setDropIdx(index);
@@ -181,11 +187,14 @@ export default function EditorCanvas({ zoom = 100, previewMode = false }: { zoom
       </div>
       <div
         ref={scrollRef}
-        className={cn("flex-1 overflow-auto", isPanning ? "cursor-grabbing" : "cursor-grab")}
+        className={cn("flex-1 overflow-auto transition-colors duration-200", previewMode ? "cursor-default" : isPanning ? "cursor-grabbing" : "cursor-grab")}
         onMouseDown={handlePanStart}
         onMouseMove={handlePanMove}
         onMouseUp={stopPan}
-        onMouseLeave={stopPan}
+        onMouseLeave={() => {
+          stopPan();
+          setIsExternalDragOver(false);
+        }}
         onDragOver={handleCanvasDragOver}
         onDrop={handleCanvasDrop}
       >
@@ -193,18 +202,27 @@ export default function EditorCanvas({ zoom = 100, previewMode = false }: { zoom
           <div
             ref={canvasRef}
             className={cn(
-              "relative min-h-0 overflow-hidden rounded-[28px] border border-border/40 bg-background shadow-[0_20px_90px_-35px_rgba(15,23,42,0.85)] transition-all duration-300",
+              "relative min-h-0 overflow-hidden rounded-[28px] border border-border/40 bg-background shadow-[0_20px_90px_-35px_rgba(15,23,42,0.85)] transition-all duration-300 ease-out",
               viewport === "desktop" && "rounded-[20px]",
+              isExternalDragOver && "border-primary/60 shadow-[0_24px_100px_-40px_rgba(99,102,241,0.8)]",
             )}
             style={{ width: viewportWidth, maxWidth: "100%", transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}
           >
             <div className="pointer-events-none absolute inset-0 opacity-40" style={{ backgroundImage: "linear-gradient(rgba(148,163,184,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.08) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+            {isExternalDragOver && !previewMode && (
+              <div className="pointer-events-none absolute inset-4 z-30 flex items-center justify-center rounded-2xl border border-dashed border-primary/50 bg-primary/5 backdrop-blur-sm">
+                <div className="rounded-full border border-primary/30 bg-background/90 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary shadow-lg">
+                  Drop section here
+                </div>
+              </div>
+            )}
+
             {previewItems.length === 0 ? (
               <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-                <div className="mb-4 rounded-2xl bg-card/60 p-6 backdrop-blur-xl" style={{ boxShadow: '0 8px 40px -8px hsl(228 33% 2% / 0.5)' }}>
+                <div className="mb-4 rounded-2xl bg-card/60 p-6 backdrop-blur-xl transition-all duration-200" style={{ boxShadow: '0 8px 40px -8px hsl(228 33% 2% / 0.5)' }}>
                   <Plus className="mx-auto mb-3 h-10 w-10 text-muted-foreground/30" />
-                  <p className="text-sm text-muted-foreground">Empty page</p>
-                  <p className="mt-1 text-xs text-muted-foreground/70">Add sections to start building</p>
+                  <p className="text-sm text-muted-foreground">Start building this page</p>
+                  <p className="mt-1 text-xs text-muted-foreground/70">Drag elements here or use “Add Section” to begin.</p>
                 </div>
               </div>
             ) : (
@@ -230,6 +248,7 @@ export default function EditorCanvas({ zoom = 100, previewMode = false }: { zoom
                           .filter(i => i.source === "dynamic").length;
                         addBlock("text", dynamicInsertIdx);
                       }}
+                      isDragging={dragIdx === index}
                       previewMode={previewMode}
                     />
                   );
@@ -274,6 +293,7 @@ export default function EditorCanvas({ zoom = 100, previewMode = false }: { zoom
                       selectBlock(block.id);
                       selectElement({ blockId: block.id, nodeKey, nodeType });
                     }}
+                    isDragging={dragIdx === index}
                     previewMode={previewMode}
                   />
                 );
@@ -288,7 +308,7 @@ export default function EditorCanvas({ zoom = 100, previewMode = false }: { zoom
 
 /* ─── Static Section Shell — renders real content, now selectable ─── */
 
-function StaticSectionShell({ item, index, totalItems, isSelected, isDragOver, onSelect, onDragStart, onDragOver, onDragEnd, onMoveUp, onMoveDown, onAddAfter, previewMode = false }: {
+function StaticSectionShell({ item, index, totalItems, isSelected, isDragOver, onSelect, onDragStart, onDragOver, onDragEnd, onMoveUp, onMoveDown, onAddAfter, isDragging = false, previewMode = false }: {
   item: PreviewItem;
   index: number;
   totalItems: number;
@@ -301,6 +321,7 @@ function StaticSectionShell({ item, index, totalItems, isSelected, isDragOver, o
   onMoveUp: () => void;
   onMoveDown: () => void;
   onAddAfter: () => void;
+  isDragging?: boolean;
   previewMode?: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
@@ -316,10 +337,11 @@ function StaticSectionShell({ item, index, totalItems, isSelected, isDragOver, o
       onDragEnd={onDragEnd}
       onClick={(e) => { e.stopPropagation(); if (previewMode) return; onSelect?.(); }}
       className={cn(
-        "relative cursor-pointer transition-all duration-150",
-        isSelected && "ring-2 ring-primary/60 ring-inset z-10",
-        hovered && !isSelected && "ring-1 ring-primary/30 ring-inset",
+        "relative cursor-pointer transition-all duration-200 ease-out",
+        isSelected && "z-10 ring-2 ring-primary/70 ring-inset shadow-[0_0_0_1px_rgba(99,102,241,0.2),0_18px_36px_-24px_rgba(99,102,241,0.55)]",
+        hovered && !isSelected && "ring-1 ring-primary/35 ring-inset shadow-[0_12px_30px_-26px_rgba(99,102,241,0.45)]",
         isDragOver && "border-t-2 border-t-primary",
+        isDragging && "scale-[1.01] shadow-[0_24px_50px_-26px_rgba(15,23,42,0.65)]",
       )}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -335,9 +357,15 @@ function StaticSectionShell({ item, index, totalItems, isSelected, isDragOver, o
         </div>
       )}
 
+      {isDragOver && !isDragging && (
+        <div className="absolute right-2 top-2 z-30 rounded-full border border-primary/30 bg-background/90 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-primary shadow-lg backdrop-blur-xl">
+          Drop here
+        </div>
+      )}
+
       {/* Reorder controls on hover */}
       {showControls && (
-        <div className="absolute top-1 right-2 z-20 flex items-center gap-0.5 rounded-lg border border-border/30 bg-card/95 px-1 py-0.5 shadow-lg backdrop-blur-xl">
+        <div className="absolute top-1 right-2 z-20 flex items-center gap-0.5 rounded-lg border border-border/30 bg-card/95 px-1 py-0.5 shadow-lg backdrop-blur-xl transition-all duration-200 ease-out">
           <button
             onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
             disabled={index === 0}
@@ -407,6 +435,7 @@ interface CanvasBlockWrapperProps {
   onStartInlineEdit: (key: string) => void;
   onEndInlineEdit: () => void;
   onSelectElement: (nodeKey: string, nodeType: "text" | "icon" | "button" | "media" | "layout") => void;
+  isDragging?: boolean;
   previewMode?: boolean;
 }
 
@@ -418,6 +447,7 @@ function CanvasBlockWrapper({
   onDragStart, onDragOver, onDragEnd,
   onUpdateContent,
   inlineEditingKey, onStartInlineEdit, onEndInlineEdit, onSelectElement,
+  isDragging = false,
   previewMode = false,
 }: CanvasBlockWrapperProps) {
   const isInactive = block.is_active === false;
@@ -485,11 +515,13 @@ function CanvasBlockWrapper({
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
       className={cn(
-        "relative transition-all duration-150 group/block",
-        isSelected && "ring-2 ring-primary/60 ring-inset z-10",
-        isHovered && !isSelected && "ring-1 ring-primary/30 ring-inset",
+        "group/block relative transition-all duration-200 ease-out",
+        isSelected && "z-10 scale-[1.002] ring-2 ring-primary/70 ring-inset shadow-[0_0_0_1px_rgba(99,102,241,0.2),0_22px_44px_-28px_rgba(99,102,241,0.6)]",
+        isHovered && !isSelected && "ring-1 ring-primary/35 ring-inset shadow-[0_12px_28px_-24px_rgba(99,102,241,0.4)]",
         isInactive && "opacity-30",
         isDragOver && "border-t-2 border-t-primary",
+        isDragging && "scale-[1.01] -rotate-[0.2deg] shadow-[0_28px_56px_-26px_rgba(15,23,42,0.65)] cursor-grabbing",
+        !isDragging && !previewMode && "cursor-pointer",
       )}
       onClick={(e) => onClick(e, block.id)}
       onClickCapture={handleClickCapture}
@@ -518,9 +550,15 @@ function CanvasBlockWrapper({
         </>
       )}
 
+      {isDragOver && !isDragging && (
+        <div className="absolute right-2 top-12 z-30 rounded-full border border-primary/30 bg-background/90 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-primary shadow-lg backdrop-blur-xl">
+          Drop position
+        </div>
+      )}
+
       {/* Floating label toolbar (left) */}
       {showControls && (
-        <div data-editor-toolbar className="absolute top-1 left-2 z-30 flex items-center gap-1 rounded-lg border border-border/30 bg-card/95 px-1.5 py-0.5 shadow-lg backdrop-blur-xl">
+        <div data-editor-toolbar className="absolute top-1 left-2 z-30 flex items-center gap-1 rounded-lg border border-border/30 bg-card/95 px-1.5 py-0.5 shadow-[0_12px_30px_-16px_rgba(15,23,42,0.65)] backdrop-blur-xl transition-all duration-200 ease-out">
           <GripVertical className="h-3 w-3 text-muted-foreground cursor-grab" />
           <span className="font-display text-[9px] font-semibold uppercase tracking-wider text-primary">
             {block.block_type.replace(/_/g, " ")}
@@ -533,7 +571,7 @@ function CanvasBlockWrapper({
 
       {/* Floating action toolbar (right) */}
       {showControls && (
-        <div data-editor-toolbar className="absolute top-1 right-2 z-30 flex max-w-[calc(100%-1rem)] flex-wrap items-center gap-0.5 rounded-lg border border-border/30 bg-card/95 px-1 py-0.5 shadow-lg backdrop-blur-xl">
+        <div data-editor-toolbar className="absolute top-1 right-2 z-30 flex max-w-[calc(100%-1rem)] flex-wrap items-center gap-0.5 rounded-lg border border-border/30 bg-card/95 px-1 py-0.5 shadow-[0_14px_32px_-18px_rgba(15,23,42,0.7)] backdrop-blur-xl transition-all duration-200 ease-out">
           <ToolButton onClick={onMoveUp} title="Move forward" disabled={unifiedIndex === 0}>
             <ChevronUp className="h-3 w-3" />
           </ToolButton>
@@ -585,7 +623,7 @@ function CanvasBlockWrapper({
       )}
 
       {/* Block content */}
-      <div className={cn(isInactive ? "pointer-events-none" : "")}>
+      <div className={cn(isInactive ? "pointer-events-none" : "", previewMode ? "select-none" : "")}>
         {isSelected && inlineEditingKey ? (
           <InlineEditableBlock
             block={block}
@@ -612,7 +650,7 @@ function ToolButton({ children, onClick, title, destructive, disabled }: {
       disabled={disabled}
       data-editor-toolbar
       className={cn(
-        "rounded p-1 transition-colors",
+        "rounded p-1 transition-all duration-150 ease-out hover:scale-105 active:scale-95",
         disabled && "opacity-30 cursor-not-allowed",
         destructive ? "text-muted-foreground hover:text-destructive" : "text-muted-foreground hover:text-foreground",
       )}
@@ -669,7 +707,7 @@ function InlineEditableBlock({
           ref={editCallbackRef}
           contentEditable
           suppressContentEditableWarning
-          className="pointer-events-auto min-w-[100px] max-w-[80%] rounded border-2 border-primary bg-background/90 px-3 py-2 text-foreground shadow-lg outline-none backdrop-blur-xl"
+          className="pointer-events-auto min-w-[100px] max-w-[80%] rounded border-2 border-primary bg-background/90 px-3 py-2 text-foreground shadow-lg outline-none backdrop-blur-xl transition-all duration-150 caret-primary selection:bg-primary/20"
           style={{ fontSize: "inherit" }}
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}

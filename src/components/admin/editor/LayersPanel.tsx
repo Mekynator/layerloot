@@ -168,7 +168,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
   };
 
   return (
-    <div className="flex h-full flex-col border-r border-border/30 bg-card/80 backdrop-blur-xl">
+    <div className="flex h-full flex-col border-r border-border/30 bg-card/80 shadow-[inset_-1px_0_0_rgba(148,163,184,0.08)] backdrop-blur-xl transition-colors duration-200">
       <div className="flex items-center justify-between border-b border-border/30 px-3 py-2">
         <div className="flex items-center gap-2">
           <LayoutGrid className="h-3.5 w-3.5 text-primary" />
@@ -188,7 +188,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex min-h-0 flex-1 flex-col">
         <div className="border-b border-border/30 px-2 py-1.5">
-          <TabsList className="grid h-8 w-full grid-cols-4">
+          <TabsList className="grid h-8 w-full grid-cols-4 bg-background/70">
             <TabsTrigger value="structure" className="gap-1 px-1 text-[10px]"><LayoutGrid className="h-3 w-3" />Structure</TabsTrigger>
             <TabsTrigger value="elements" className="gap-1 px-1 text-[10px]"><Plus className="h-3 w-3" />Elements</TabsTrigger>
             <TabsTrigger value="layers" className="gap-1 px-1 text-[10px]"><Layers className="h-3 w-3" />Layers</TabsTrigger>
@@ -216,7 +216,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
               {filteredItems.length === 0 && totalCount === 0 ? (
                 <div className="flex flex-col items-center py-12 text-center">
                   <Layers className="mb-2 h-8 w-8 text-muted-foreground/30" />
-                  <p className="text-xs text-muted-foreground">No blocks yet</p>
+                  <p className="text-xs text-muted-foreground">No sections yet</p>
                   <Button size="sm" className="mt-3" onClick={onAddBlock}>
                     <Plus className="mr-1 h-3 w-3" /> Add Section
                   </Button>
@@ -238,7 +238,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
                         onDragEnd={handleDragEnd}
                         onClick={() => selectStaticSection(isStaticSelected ? null : item.id)}
                         className={cn(
-                          "group flex cursor-pointer items-start gap-1.5 rounded-lg border-l-[3px] border-l-primary/60 px-2 py-1.5 text-xs transition-all",
+                          "group flex cursor-pointer items-start gap-1.5 rounded-lg border-l-[3px] border-l-primary/60 px-2 py-1.5 text-xs transition-all duration-200 ease-out active:scale-[0.99]",
                           isStaticSelected && "bg-primary/10 ring-1 ring-primary/40",
                           !isStaticSelected && "hover:bg-accent/20",
                           dragOverIndex === realIndex && dragIndex !== realIndex && "ring-1 ring-primary",
@@ -295,7 +295,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
                         onMouseEnter={() => hoverBlock(block.id)}
                         onMouseLeave={() => hoverBlock(null)}
                         className={cn(
-                          "group flex cursor-pointer items-start gap-1.5 rounded-lg border-l-[3px] px-2 py-1.5 text-xs transition-all",
+                          "group flex cursor-pointer items-start gap-1.5 rounded-lg border-l-[3px] px-2 py-1.5 text-xs transition-all duration-200 ease-out active:scale-[0.99]",
                           colorClass,
                           isSelected && "bg-primary/10 ring-1 ring-primary/40",
                           isHovered && !isSelected && "bg-accent/10",
@@ -407,7 +407,7 @@ export default function LayersPanel({ onAddBlock }: LayersPanelProps) {
             <div className="space-y-3 p-2">
               {!selectedBlock && !selectedStatic ? (
                 <div className="rounded-xl border border-dashed border-border/40 p-4 text-center text-xs text-muted-foreground">
-                  Select a block or static section on the canvas to inspect its internal layers.
+                  Select a block on the canvas to inspect its inner layers and quick actions.
                 </div>
               ) : null}
 

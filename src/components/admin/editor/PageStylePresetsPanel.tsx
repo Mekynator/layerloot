@@ -261,7 +261,7 @@ export default function PageStylePresetsPanel({ blockType, content, onApplyPatch
   };
 
   if (loading) {
-    return <div className="rounded-lg border border-border/30 p-3 text-xs text-muted-foreground">Loading style presets...</div>;
+    return <div className="rounded-lg border border-border/30 p-3 text-xs text-muted-foreground animate-pulse">Loading style presets...</div>;
   }
 
   return (

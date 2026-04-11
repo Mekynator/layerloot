@@ -61,7 +61,7 @@ export default function ImageUploadField({ label, value, onChange }: ImageUpload
 
       {value ? (
         <div className="space-y-1.5">
-          <div className="group relative overflow-hidden rounded-lg border border-border/30">
+          <div className="group relative overflow-hidden rounded-lg border border-border/30 transition-all duration-200 ease-out hover:border-primary/30 hover:shadow-[0_12px_28px_-16px_rgba(59,130,246,0.45)]">
             <img
               src={value}
               alt="Preview"
@@ -132,6 +132,12 @@ export default function ImageUploadField({ label, value, onChange }: ImageUpload
             <FolderOpen className="h-5 w-5 text-muted-foreground" />
             <span className="text-[10px] text-muted-foreground">Library</span>
           </button>
+        </div>
+      )}
+
+      {uploading && (
+        <div className="overflow-hidden rounded-full bg-primary/10">
+          <div className="h-1 w-full animate-pulse rounded-full bg-primary/70" />
         </div>
       )}
 

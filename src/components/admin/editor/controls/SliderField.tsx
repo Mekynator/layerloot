@@ -23,7 +23,7 @@ export default function SliderField({ label, value, onChange, min = 0, max = 100
         <button
           type="button"
           onClick={() => setManualMode(!manualMode)}
-          className="rounded bg-muted/50 px-1.5 py-0.5 text-[10px] font-medium text-foreground tabular-nums hover:bg-muted transition-colors"
+          className="rounded bg-muted/50 px-1.5 py-0.5 text-[10px] font-medium text-foreground tabular-nums transition-all duration-200 ease-out hover:-translate-y-[1px] hover:bg-muted active:scale-[0.98]"
         >
           {value}{unit}
         </button>

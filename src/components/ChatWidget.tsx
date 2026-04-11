@@ -775,7 +775,7 @@ const ChatWidget = () => {
           const savedResp = await getSavedProducts(userId);
           const savedIds = (savedResp.data ?? []).map((r: any) => r.product_id).slice(0, 6);
           if (savedIds.length > 0) {
-            const { data } = await supabase.from("products").select("id,name,slug,images,price,short_description").in("id", savedIds).eq("is_active", true).eq("published", true).limit(3);
+            const { data } = await (supabase.from("products") as any).select("id,name,slug,images,price,short_description").in("id", savedIds).eq("is_active", true).eq("published", true).limit(3);
             if (data && data.length > 0) {
               const items: ParsedChatProduct[] = data.map((p: any) => ({
                 id: p.id,

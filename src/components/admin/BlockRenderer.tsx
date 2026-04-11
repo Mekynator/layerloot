@@ -20,8 +20,9 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import ProductCard from "@/components/ProductCard";
+import SmartFunnelSection from "@/components/smart/SmartFunnelSection";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { useFeaturedProducts } from "@/hooks/use-storefront";
+import { useFeaturedProducts, useStorefrontCatalog } from "@/hooks/use-storefront";
 import { ProductGridSkeleton } from "@/components/shared/loading-states";
 import { fadeUp } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -1223,6 +1224,8 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
       return <GiftFinderBlock block={block} />;
     case "countdown":
       return <CountdownBlock block={block} />;
+    case "smart_funnel":
+      return <SmartFunnelBlock block={block} />;
     case "divider":
       return <DividerBlock block={block} />;
     default:
@@ -1236,6 +1239,28 @@ export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
         </div>
       );
   }
+};
+
+const SmartFunnelBlock = ({ block }: { block: SiteBlock }) => {
+  const { data: catalog } = useStorefrontCatalog();
+  const content = (block.content || {}) as {
+    heading?: string;
+    subtitle?: string;
+    limit?: number;
+    ctaLabel?: string;
+    ctaHref?: string;
+    excludeProductId?: string;
+  };
+
+  return (
+    <SmartFunnelSection
+      catalog={catalog}
+      sectionId={block.id}
+      excludeProductId={content.excludeProductId}
+      content={content}
+      className="py-6 md:py-10"
+    />
+  );
 };
 
 const HeroBlock = ({ block }: { block: SiteBlock }) => {
@@ -2097,33 +2122,67 @@ const CarouselBlock = ({ block }: { block: SiteBlock }) => {
   );
 
   const wrappedImage = (() => {
-    if (!hasSlides || !currentAction.actionTarget || isEditorPreviewMode()) return imageNode;
+    if (!hasSlides || currentAction.actionType === "none" || isEditorPreviewMode()) return imageNode;
 
-    if (currentAction.actionType === "internal_link") {
-      const target = currentAction.actionTarget.startsWith("/")
-        ? currentAction.actionTarget
-        : `/${currentAction.actionTarget}`;
-      return (
-        <Link to={target} target={currentAction.openInNewTab ? "_blank" : "_self"} className="block h-full w-full">
-          {imageNode}
-        </Link>
-      );
-    }
-
+    // External link — native <a> for best browser/touch behaviour
     if (currentAction.actionType === "external_link") {
       return (
         <a
           href={currentAction.actionTarget}
           target={currentAction.openInNewTab ? "_blank" : "_self"}
           rel={currentAction.openInNewTab ? "noopener noreferrer" : undefined}
-          className="block h-full w-full"
+          className="block h-full w-full cursor-pointer"
         >
           {imageNode}
         </a>
       );
     }
 
-    return imageNode;
+    // For all internal navigation types (page, anchor, product) resolve the href
+    // so the link is natively tappable on mobile without depending on JS click handlers.
+    const resolveHref = (): string => {
+      const { actionType, actionTarget, anchorId } = currentAction;
+      if (actionType === "product" || actionType === "product_anchor") {
+        const slug = String(actionTarget || "");
+        if (!slug) return "";
+        const base = slug.startsWith("/") ? slug : `/products/${slug}`;
+        const anchor = (anchorId || "").replace(/^#/, "");
+        return anchor ? `${base}#${anchor}` : base;
+      }
+      if (actionType === "anchor") {
+        const anchor = (anchorId || actionTarget || "").replace(/^#/, "");
+        return anchor ? `#${anchor}` : "";
+      }
+      // page_anchor / internal_link
+      const target = String(actionTarget || "");
+      if (!target) return "";
+      const anchor = (anchorId || "").replace(/^#/, "");
+      return anchor ? `${target.replace(/\/$/, "")}#${anchor}` : target;
+    };
+
+    const href = resolveHref();
+    if (!href) return imageNode;
+
+    return (
+      <a
+        href={href}
+        target={currentAction.openInNewTab ? "_blank" : "_self"}
+        rel={currentAction.openInNewTab ? "noopener noreferrer" : undefined}
+        className="block h-full w-full cursor-pointer"
+        onClick={(e) => {
+          // For same-page anchors, use smooth scroll instead of hard navigation
+          if (currentAction.actionType === "anchor") {
+            e.preventDefault();
+            const anchor = (currentAction.anchorId || currentAction.actionTarget || "").replace(/^#/, "");
+            if (anchor && !smoothScrollTo(anchor)) {
+              window.location.hash = `#${anchor}`;
+            }
+          }
+        }}
+      >
+        {imageNode}
+      </a>
+    );
   })();
 
   return withSection(

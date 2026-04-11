@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/dialog";
 import { useAIInsights } from "@/hooks/use-ai-insights";
 import { useAutomationRules } from "@/hooks/use-automation-rules";
+import FunnelInsightsPanel from "@/components/admin/funnel/FunnelInsightsPanel";
 import {
   SUGGESTION_TYPE_LABELS,
   SUGGESTION_PRIORITY_COLORS,
@@ -100,6 +101,10 @@ export default function AIInsightsDashboard() {
           <TabsTrigger value="automation" className="gap-1.5">
             <Zap className="h-3.5 w-3.5" />
             Automation
+          </TabsTrigger>
+          <TabsTrigger value="funnel" className="gap-1.5">
+            <TrendingUp className="h-3.5 w-3.5" />
+            Funnel
           </TabsTrigger>
         </TabsList>
 
@@ -243,6 +248,11 @@ export default function AIInsightsDashboard() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        {/* Funnel Tab */}
+        <TabsContent value="funnel" className="space-y-4">
+          <FunnelInsightsPanel />
         </TabsContent>
       </Tabs>
     </div>

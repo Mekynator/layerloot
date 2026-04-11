@@ -1,25 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { format } from "date-fns";
 import {
+  AlertCircle,
   BadgePlus,
+  CheckCircle2,
+  Clock,
   Copy,
   Eye,
   EyeOff,
   ImagePlus,
   LayoutTemplate,
   Lock,
-  Monitor,
   Redo2,
   Save,
+  Settings2,
   Shapes,
-  Smartphone,
   Sparkles,
   Star,
-  TabletSmartphone,
   TimerReset,
   Trash2,
   Type,
   Undo2,
   Unlock,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,10 +48,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import AdminColorPicker from "@/components/admin/AdminColorPicker";
+import { BuilderControlRow, BuilderDevicePicker, BuilderSlider } from "@/components/admin/builder";
 import PageLinkSelect from "@/components/admin/PageLinkSelect";
 import PromotionPopupCanvas from "@/components/promo/PromotionPopupCanvas";
 
@@ -105,12 +109,17 @@ export default function PromotionPopupBuilder() {
   const [config, setConfig] = useState<PromotionPopupConfig>(DEFAULT_PROMOTION_POPUP_CONFIG);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(DEFAULT_PROMOTION_POPUP_CONFIG.elements[0]?.id ?? null);
   const [devicePreview, setDevicePreview] = useState<DevicePreview>("desktop");
   const [history, setHistory] = useState<PromotionPopupConfig[]>([]);
   const [future, setFuture] = useState<PromotionPopupConfig[]>([]);
   const [presetName, setPresetName] = useState(DEFAULT_PROMOTION_POPUP_CONFIG.metadata.name);
   const [dragging, setDragging] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
+  const [deletePresetConfirmOpen, setDeletePresetConfirmOpen] = useState(false);
   const previewRef = useRef<HTMLDivElement | null>(null);
 
   const selectedElement = useMemo(
@@ -135,6 +144,7 @@ export default function PromotionPopupBuilder() {
 
       return next;
     });
+    setIsDirty(true);
   }, []);
 
   const updateSelectedElement = useCallback((updater: (element: PopupCanvasElement) => PopupCanvasElement) => {
@@ -210,7 +220,7 @@ export default function PromotionPopupBuilder() {
     };
   }, [applyConfigChange, config.elements, dragging]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     setSaving(true);
     const valueToSave = syncPromotionPopupSummary({
       ...config,
@@ -245,8 +255,10 @@ export default function PromotionPopupBuilder() {
     }
 
     setConfig(valueToSave);
+    setIsDirty(false);
+    setLastSavedAt(new Date().toISOString());
     toast.success("Promotion popup saved");
-  };
+  }, [config, presetName]);
 
   const resetBuilder = () => {
     applyConfigChange(() => normalizePromotionPopupConfig({ ...DEFAULT_PROMOTION_POPUP_CONFIG, presets: config.presets }));
@@ -380,8 +392,13 @@ export default function PromotionPopupBuilder() {
 
   const renamePreset = () => {
     if (!activePreset) return;
-    const nextName = window.prompt("Rename preset", activePreset.name)?.trim();
-    if (!nextName) return;
+    setRenameValue(activePreset.name);
+    setRenameDialogOpen(true);
+  };
+
+  const confirmRenamePreset = () => {
+    const nextName = renameValue.trim();
+    if (!nextName || !activePreset) return;
 
     applyConfigChange((draft) => {
       draft.presets = draft.presets.map((preset) => (
@@ -393,9 +410,15 @@ export default function PromotionPopupBuilder() {
       return draft;
     });
     setPresetName(nextName);
+    setRenameDialogOpen(false);
   };
 
   const deletePreset = () => {
+    if (!activePreset) return;
+    setDeletePresetConfirmOpen(true);
+  };
+
+  const confirmDeletePreset = () => {
     if (!activePreset) return;
     applyConfigChange((draft) => {
       draft.presets = draft.presets.filter((preset) => preset.id !== activePreset.id);
@@ -404,6 +427,7 @@ export default function PromotionPopupBuilder() {
       }
       return draft;
     });
+    setDeletePresetConfirmOpen(false);
   };
 
   const markPresetFavorite = (presetIdValue: string) => {
@@ -426,21 +450,21 @@ export default function PromotionPopupBuilder() {
     });
   };
 
-  const undo = () => {
+  const undo = useCallback(() => {
     if (history.length === 0) return;
     const previous = history[history.length - 1];
     setHistory((items) => items.slice(0, -1));
     setFuture((items) => [clonePromotionPopupConfig(config), ...items.slice(0, 24)]);
     setConfig(previous);
-  };
+  }, [history, config]);
 
-  const redo = () => {
+  const redo = useCallback(() => {
     if (future.length === 0) return;
     const [next, ...rest] = future;
     setFuture(rest);
     setHistory((items) => [...items.slice(-24), clonePromotionPopupConfig(config)]);
     setConfig(next);
-  };
+  }, [future, config]);
 
   const beginDrag = (id: string, event: React.MouseEvent<HTMLDivElement>) => {
     const element = config.elements.find((item) => item.id === id);
@@ -461,6 +485,60 @@ export default function PromotionPopupBuilder() {
 
   const targetPathsValue = config.schedule.pageTargets.join(", ");
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        void handleSave();
+      }
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === "z") {
+        e.preventDefault();
+        undo();
+      }
+      if (((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "z") || ((e.metaKey || e.ctrlKey) && e.key === "y")) {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [handleSave, undo, redo]);
+
+  // Warn on unsaved changes
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (isDirty) { e.preventDefault(); e.returnValue = ""; }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
+
+  const statusIndicator = () => {
+    if (saving) {
+      return (
+        <Badge variant="outline" className="gap-1 border-blue-500/50 bg-blue-500/10 text-blue-400 text-[10px]">
+          <Clock className="h-3 w-3" /> Saving...
+        </Badge>
+      );
+    }
+    if (isDirty) {
+      return (
+        <Badge variant="outline" className="gap-1 border-amber-500/50 bg-amber-500/10 text-amber-400 text-[10px]">
+          <AlertCircle className="h-3 w-3" /> Unsaved changes
+        </Badge>
+      );
+    }
+    if (lastSavedAt) {
+      return (
+        <Badge variant="outline" className="gap-1 border-emerald-500/50 bg-emerald-500/10 text-emerald-400 text-[10px]">
+          <CheckCircle2 className="h-3 w-3" /> Saved {format(new Date(lastSavedAt), "HH:mm")}
+        </Badge>
+      );
+    }
+    return null;
+  };
+
   if (loading) {
     return (
       <Card className="mb-6 border-border/40">
@@ -470,6 +548,7 @@ export default function PromotionPopupBuilder() {
   }
 
   return (
+    <>
     <Card className="mb-6 overflow-hidden border-border/40 bg-card/70 backdrop-blur-sm">
       <CardHeader className="border-b border-border/30 bg-muted/10">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -477,6 +556,7 @@ export default function PromotionPopupBuilder() {
             <div className="mb-2 flex items-center gap-2">
               <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">Promotion Popup</Badge>
               <Badge variant="outline" className="text-[10px]">Home-first modal</Badge>
+              {statusIndicator()}
             </div>
             <CardTitle className="font-display text-xl uppercase tracking-wide">Popup Campaign Builder</CardTitle>
             <CardDescription className="mt-1 max-w-2xl">
@@ -494,22 +574,25 @@ export default function PromotionPopupBuilder() {
             <Button variant="outline" size="sm" onClick={resetBuilder}>
               Reset defaults
             </Button>
-            <Button size="sm" onClick={handleSave} disabled={saving} className="font-display uppercase tracking-wider">
+            <Button size="sm" onClick={() => void handleSave()} disabled={saving || !isDirty} className="font-display uppercase tracking-wider">
               <Save className="mr-1 h-4 w-4" /> {saving ? "Saving..." : "Save popup"}
             </Button>
           </div>
         </div>
+        {saving && (
+          <div className="mt-2 h-1 overflow-hidden rounded-full bg-primary/10">
+            <div className="h-full w-full animate-pulse rounded-full bg-primary/60" />
+          </div>
+        )}
       </CardHeader>
 
       <CardContent className="p-4 lg:p-6">
         <div className="mb-4 flex flex-col gap-3 rounded-xl border border-border/30 bg-background/40 p-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4 lg:items-end">
-            <div>
-              <Label className="text-xs">Popup name</Label>
+            <BuilderControlRow label="Popup name">
               <Input value={presetName} onChange={(event) => setPresetName(event.target.value)} placeholder="Homepage Promotion Popup" />
-            </div>
-            <div>
-              <Label className="text-xs">Display behavior</Label>
+            </BuilderControlRow>
+            <BuilderControlRow label="Display behavior">
               <Select value={config.schedule.behavior} onValueChange={(value) => applyConfigChange((draft) => {
                 draft.schedule.behavior = value as PromotionPopupConfig["schedule"]["behavior"];
                 return draft;
@@ -523,10 +606,9 @@ export default function PromotionPopupBuilder() {
                   <SelectItem value="first-visit">First visit ever</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </BuilderControlRow>
             {config.schedule.behavior === "interval" && (
-              <div>
-                <Label className="text-xs">X days</Label>
+              <BuilderControlRow label="X days">
                 <Input
                   type="number"
                   min={1}
@@ -536,7 +618,7 @@ export default function PromotionPopupBuilder() {
                     return draft;
                   })}
                 />
-              </div>
+              </BuilderControlRow>
             )}
             <div className="flex items-center gap-3 rounded-lg border border-border/30 bg-muted/20 px-3 py-2">
               <Switch checked={config.enabled} onCheckedChange={(checked) => applyConfigChange((draft) => {
@@ -550,17 +632,7 @@ export default function PromotionPopupBuilder() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 rounded-full border border-border/30 bg-background/60 p-1">
-            <Button type="button" variant={devicePreview === "desktop" ? "default" : "ghost"} size="sm" onClick={() => setDevicePreview("desktop")}>
-              <Monitor className="mr-1 h-4 w-4" /> Desktop
-            </Button>
-            <Button type="button" variant={devicePreview === "tablet" ? "default" : "ghost"} size="sm" onClick={() => setDevicePreview("tablet")}>
-              <TabletSmartphone className="mr-1 h-4 w-4" /> Tablet
-            </Button>
-            <Button type="button" variant={devicePreview === "mobile" ? "default" : "ghost"} size="sm" onClick={() => setDevicePreview("mobile")}>
-              <Smartphone className="mr-1 h-4 w-4" /> Mobile
-            </Button>
-          </div>
+          <BuilderDevicePicker value={devicePreview} onChange={setDevicePreview} />
         </div>
 
         <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)_320px]">
@@ -569,8 +641,7 @@ export default function PromotionPopupBuilder() {
               <AccordionItem value="presets">
                 <AccordionTrigger className="text-xs font-semibold uppercase tracking-wider">Presets</AccordionTrigger>
                 <AccordionContent className="space-y-3 pb-3">
-                  <div>
-                    <Label className="text-xs">Load preset</Label>
+                  <BuilderControlRow label="Load preset">
                     <Select value={config.metadata.activePresetId ?? "none"} onValueChange={(value) => value !== "none" && loadPreset(value)}>
                       <SelectTrigger><SelectValue placeholder="Select preset" /></SelectTrigger>
                       <SelectContent>
@@ -580,7 +651,7 @@ export default function PromotionPopupBuilder() {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
+                  </BuilderControlRow>
                   <div className="grid grid-cols-2 gap-2">
                     <Button type="button" variant="outline" size="sm" onClick={saveCurrentAsPreset}>Save preset</Button>
                     <Button type="button" variant="outline" size="sm" onClick={duplicatePreset} disabled={!activePreset}>Duplicate</Button>
@@ -621,14 +692,20 @@ export default function PromotionPopupBuilder() {
                     onChange={(value) => applyConfigChange((draft) => { draft.overlay.color = value; return draft; })}
                     defaultValue="#020617"
                   />
-                  <div>
-                    <Label className="text-xs">Overlay opacity ({Math.round(config.overlay.opacity * 100)}%)</Label>
-                    <Slider value={[config.overlay.opacity * 100]} onValueChange={([value]) => applyConfigChange((draft) => { draft.overlay.opacity = value / 100; return draft; })} min={10} max={90} step={5} />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Blur amount ({config.overlay.blur}px)</Label>
-                    <Slider value={[config.overlay.blur]} onValueChange={([value]) => applyConfigChange((draft) => { draft.overlay.blur = value; return draft; })} min={0} max={20} step={1} />
-                  </div>
+                  <BuilderSlider
+                    label="Overlay opacity"
+                    value={config.overlay.opacity * 100}
+                    onValueChange={(value) => applyConfigChange((draft) => { draft.overlay.opacity = value / 100; return draft; })}
+                    min={10} max={90} step={5}
+                    formatValue={(v) => `${Math.round(v)}%`}
+                  />
+                  <BuilderSlider
+                    label="Blur amount"
+                    value={config.overlay.blur}
+                    onValueChange={(value) => applyConfigChange((draft) => { draft.overlay.blur = value; return draft; })}
+                    min={0} max={20} step={1}
+                    formatValue={(v) => `${v}px`}
+                  />
                   <AdminColorPicker
                     label="Popup background"
                     value={config.container.backgroundColor}
@@ -642,34 +719,27 @@ export default function PromotionPopupBuilder() {
                     defaultValue="rgba(255, 255, 255, 0.2)"
                   />
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div>
-                      <Label className="text-xs">Width</Label>
+                    <BuilderControlRow label="Width">
                       <Input type="number" value={config.container.width} onChange={(event) => applyConfigChange((draft) => { draft.container.width = Math.max(280, Number(event.target.value) || 560); return draft; })} />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Min height</Label>
+                    </BuilderControlRow>
+                    <BuilderControlRow label="Min height">
                       <Input type="number" value={config.container.minHeight} onChange={(event) => applyConfigChange((draft) => { draft.container.minHeight = Math.max(220, Number(event.target.value) || 320); return draft; })} />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Radius</Label>
+                    </BuilderControlRow>
+                    <BuilderControlRow label="Radius">
                       <Input type="number" value={config.container.borderRadius} onChange={(event) => applyConfigChange((draft) => { draft.container.borderRadius = Math.max(0, Number(event.target.value) || 0); return draft; })} />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Padding</Label>
+                    </BuilderControlRow>
+                    <BuilderControlRow label="Padding">
                       <Input type="number" value={config.container.padding} onChange={(event) => applyConfigChange((draft) => { draft.container.padding = Math.max(0, Number(event.target.value) || 0); return draft; })} />
-                    </div>
+                    </BuilderControlRow>
                   </div>
-                  <div>
-                    <Label className="text-xs">Shadow</Label>
+                  <BuilderControlRow label="Shadow">
                     <Input value={config.container.shadow} onChange={(event) => applyConfigChange((draft) => { draft.container.shadow = event.target.value; return draft; })} />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Background image URL</Label>
+                  </BuilderControlRow>
+                  <BuilderControlRow label="Background image URL">
                     <Input value={config.container.backgroundImage} onChange={(event) => applyConfigChange((draft) => { draft.container.backgroundImage = event.target.value; return draft; })} placeholder="https://..." />
-                  </div>
+                  </BuilderControlRow>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div>
-                      <Label className="text-xs">Background fit</Label>
+                    <BuilderControlRow label="Background fit">
                       <Select value={config.container.backgroundSize} onValueChange={(value) => applyConfigChange((draft) => { draft.container.backgroundSize = value as PromotionPopupConfig["container"]["backgroundSize"]; return draft; })}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -678,11 +748,10 @@ export default function PromotionPopupBuilder() {
                           <SelectItem value="auto">Auto</SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div>
-                      <Label className="text-xs">Image position</Label>
+                    </BuilderControlRow>
+                    <BuilderControlRow label="Image position">
                       <Input value={config.container.backgroundPosition} onChange={(event) => applyConfigChange((draft) => { draft.container.backgroundPosition = event.target.value; return draft; })} placeholder="center center" />
-                    </div>
+                    </BuilderControlRow>
                   </div>
                   <div className="space-y-2 rounded-lg border border-border/30 bg-muted/20 p-3">
                     <div className="flex items-center justify-between gap-3">
@@ -729,14 +798,12 @@ export default function PromotionPopupBuilder() {
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div>
-                      <Label className="text-xs">Dismiss key</Label>
+                    <BuilderControlRow label="Dismiss key">
                       <Input value={config.dismiss_key} onChange={(event) => applyConfigChange((draft) => { draft.dismiss_key = event.target.value; return draft; })} placeholder="promo-v2" />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Analytics ID</Label>
+                    </BuilderControlRow>
+                    <BuilderControlRow label="Analytics ID">
                       <Input value={config.metadata.analyticsId} onChange={(event) => applyConfigChange((draft) => { draft.metadata.analyticsId = event.target.value; return draft; })} placeholder="promo-home-hero" />
-                    </div>
+                    </BuilderControlRow>
                   </div>
 
                   <div className="flex items-center justify-between gap-3 rounded-lg border border-border/30 bg-muted/20 px-3 py-2">
@@ -752,8 +819,7 @@ export default function PromotionPopupBuilder() {
                   </div>
 
                   {!config.schedule.homepageOnly && (
-                    <div>
-                      <Label className="text-xs">Target paths (comma-separated)</Label>
+                    <BuilderControlRow label="Target paths (comma-separated)">
                       <Input
                         value={targetPathsValue}
                         onChange={(event) => applyConfigChange((draft) => {
@@ -762,18 +828,16 @@ export default function PromotionPopupBuilder() {
                         })}
                         placeholder="/, /products, /gallery"
                       />
-                    </div>
+                    </BuilderControlRow>
                   )}
 
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div>
-                      <Label className="text-xs">Priority</Label>
+                    <BuilderControlRow label="Priority">
                       <Input type="number" value={config.schedule.priority} onChange={(event) => applyConfigChange((draft) => { draft.schedule.priority = Number(event.target.value) || 0; return draft; })} />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Show delay (ms)</Label>
+                    </BuilderControlRow>
+                    <BuilderControlRow label="Show delay (ms)">
                       <Input type="number" value={config.schedule.showDelayMs} onChange={(event) => applyConfigChange((draft) => { draft.schedule.showDelayMs = Math.max(0, Number(event.target.value) || 0); return draft; })} />
-                    </div>
+                    </BuilderControlRow>
                   </div>
 
                   <div className="flex items-center justify-between gap-3 rounded-lg border border-border/30 bg-muted/20 px-3 py-2">
@@ -787,8 +851,7 @@ export default function PromotionPopupBuilder() {
                   {config.schedule.recurrenceEnabled && (
                     <>
                       <div className="grid gap-3 sm:grid-cols-2">
-                        <div>
-                          <Label className="text-xs">Recurrence</Label>
+                        <BuilderControlRow label="Recurrence">
                           <Select value={config.schedule.recurrence} onValueChange={(value) => applyConfigChange((draft) => {
                             draft.schedule.recurrence = value as PopupRecurrenceFrequency;
                             return draft;
@@ -798,11 +861,10 @@ export default function PromotionPopupBuilder() {
                               {RECURRENCE_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
                             </SelectContent>
                           </Select>
-                        </div>
-                        <div>
-                          <Label className="text-xs">Repeat every</Label>
+                        </BuilderControlRow>
+                        <BuilderControlRow label="Repeat every">
                           <Input type="number" min={1} value={config.schedule.interval} onChange={(event) => applyConfigChange((draft) => { draft.schedule.interval = Math.max(1, Number(event.target.value) || 1); return draft; })} />
-                        </div>
+                        </BuilderControlRow>
                       </div>
 
                       {config.schedule.recurrence === "weekly" && (
@@ -833,17 +895,15 @@ export default function PromotionPopupBuilder() {
                       )}
 
                       {config.schedule.recurrence === "monthly" && (
-                        <div>
-                          <Label className="text-xs">Day of month</Label>
+                        <BuilderControlRow label="Day of month">
                           <Input type="number" min={1} max={31} value={config.schedule.dayOfMonth} onChange={(event) => applyConfigChange((draft) => { draft.schedule.dayOfMonth = clamp(Number(event.target.value) || 1, 1, 31); return draft; })} />
-                        </div>
+                        </BuilderControlRow>
                       )}
 
                       {config.schedule.recurrence === "custom" && (
-                        <div>
-                          <Label className="text-xs">Custom rule</Label>
+                        <BuilderControlRow label="Custom rule">
                           <Textarea value={config.schedule.customRule} onChange={(event) => applyConfigChange((draft) => { draft.schedule.customRule = event.target.value; return draft; })} rows={2} placeholder="Example: weekdays only" />
-                        </div>
+                        </BuilderControlRow>
                       )}
                     </>
                   )}
@@ -940,38 +1000,37 @@ export default function PromotionPopupBuilder() {
               </CardHeader>
               <CardContent>
                 {!selectedElement ? (
-                  <p className="text-sm text-muted-foreground">No element selected yet.</p>
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <Settings2 className="mb-3 h-8 w-8 text-muted-foreground/20" />
+                    <p className="text-xs text-muted-foreground">No element selected</p>
+                    <p className="mt-1 text-[10px] text-muted-foreground/60">Click an element on the canvas or select one from the Layers panel</p>
+                  </div>
                 ) : (
                   <Accordion type="multiple" defaultValue={["content", "layout", "style", "animation"]} className="space-y-1">
                     <AccordionItem value="content">
                       <AccordionTrigger className="text-xs font-semibold uppercase tracking-wider">Content</AccordionTrigger>
                       <AccordionContent className="space-y-3">
-                        <div>
-                          <Label className="text-xs">Layer name</Label>
+                        <BuilderControlRow label="Layer name">
                           <Input value={selectedElement.name} onChange={(event) => updateSelectedElement((element) => ({ ...element, name: event.target.value }))} />
-                        </div>
+                        </BuilderControlRow>
                         {selectedElement.type !== "image" && selectedElement.type !== "shape" && (
-                          <div>
-                            <Label className="text-xs">Content</Label>
+                          <BuilderControlRow label="Content">
                             <Textarea value={selectedElement.content} onChange={(event) => updateSelectedElement((element) => ({ ...element, content: event.target.value, action: element.type === "button" ? { ...element.action, label: event.target.value } : element.action }))} rows={selectedElement.type === "description" ? 4 : 2} />
-                          </div>
+                          </BuilderControlRow>
                         )}
                         {selectedElement.type === "image" && (
-                          <div>
-                            <Label className="text-xs">Image URL</Label>
+                          <BuilderControlRow label="Image URL">
                             <Input value={selectedElement.asset.url} onChange={(event) => updateSelectedElement((element) => ({ ...element, asset: { ...element.asset, url: event.target.value } }))} placeholder="https://..." />
-                          </div>
+                          </BuilderControlRow>
                         )}
                         {selectedElement.type === "button" && (
                           <>
-                            <div>
-                              <Label className="text-xs">Button label</Label>
+                            <BuilderControlRow label="Button label">
                               <Input value={selectedElement.action.label} onChange={(event) => updateSelectedElement((element) => ({ ...element, content: event.target.value, action: { ...element.action, label: event.target.value } }))} />
-                            </div>
+                            </BuilderControlRow>
                             <PageLinkSelect label="Button link" value={selectedElement.action.link} onChange={(value) => updateSelectedElement((element) => ({ ...element, action: { ...element.action, link: value, target: /^https?:\/\//i.test(value) ? "external" : "internal" } }))} />
                             <div className="grid gap-3 sm:grid-cols-2">
-                              <div>
-                                <Label className="text-xs">Variant</Label>
+                              <BuilderControlRow label="Variant">
                                 <Select value={selectedElement.action.variant} onValueChange={(value) => updateSelectedElement((element) => ({ ...element, action: { ...element.action, variant: value as PopupCanvasElement["action"]["variant"] } }))}>
                                   <SelectTrigger><SelectValue /></SelectTrigger>
                                   <SelectContent>
@@ -983,19 +1042,16 @@ export default function PromotionPopupBuilder() {
                                     <SelectItem value="pill">Pill CTA</SelectItem>
                                   </SelectContent>
                                 </Select>
-                              </div>
-                              <div>
-                                <Label className="text-xs">Icon</Label>
+                              </BuilderControlRow>
+                              <BuilderControlRow label="Icon">
                                 <Input value={selectedElement.action.icon} onChange={(event) => updateSelectedElement((element) => ({ ...element, action: { ...element.action, icon: event.target.value } }))} placeholder="→" />
-                              </div>
+                              </BuilderControlRow>
                             </div>
                             <div className="grid gap-3 sm:grid-cols-2">
-                              <div>
-                                <Label className="text-xs">Radius</Label>
+                              <BuilderControlRow label="Radius">
                                 <Input type="number" value={selectedElement.action.radius} onChange={(event) => updateSelectedElement((element) => ({ ...element, action: { ...element.action, radius: Math.max(0, Number(event.target.value) || 0) } }))} />
-                              </div>
-                              <div>
-                                <Label className="text-xs">Size</Label>
+                              </BuilderControlRow>
+                              <BuilderControlRow label="Size">
                                 <Select value={selectedElement.action.size} onValueChange={(value) => updateSelectedElement((element) => ({ ...element, action: { ...element.action, size: value as PopupCanvasElement["action"]["size"] } }))}>
                                   <SelectTrigger><SelectValue /></SelectTrigger>
                                   <SelectContent>
@@ -1004,25 +1060,22 @@ export default function PromotionPopupBuilder() {
                                     <SelectItem value="lg">Large</SelectItem>
                                   </SelectContent>
                                 </Select>
-                              </div>
+                              </BuilderControlRow>
                             </div>
                           </>
                         )}
                         {selectedElement.type === "countdown" && (
                           <div className="space-y-3">
-                            <div>
-                              <Label className="text-xs">Countdown end date</Label>
+                            <BuilderControlRow label="Countdown end date">
                               <Input type="date" value={selectedElement.countdown.endDate} onChange={(event) => updateSelectedElement((element) => ({ ...element, countdown: { ...element.countdown, endDate: event.target.value } }))} />
-                            </div>
+                            </BuilderControlRow>
                             <div className="grid gap-3 sm:grid-cols-2">
-                              <div>
-                                <Label className="text-xs">Prefix</Label>
+                              <BuilderControlRow label="Prefix">
                                 <Input value={selectedElement.countdown.prefix} onChange={(event) => updateSelectedElement((element) => ({ ...element, countdown: { ...element.countdown, prefix: event.target.value } }))} />
-                              </div>
-                              <div>
-                                <Label className="text-xs">Suffix</Label>
+                              </BuilderControlRow>
+                              <BuilderControlRow label="Suffix">
                                 <Input value={selectedElement.countdown.suffix} onChange={(event) => updateSelectedElement((element) => ({ ...element, countdown: { ...element.countdown, suffix: event.target.value } }))} />
-                              </div>
+                              </BuilderControlRow>
                             </div>
                           </div>
                         )}
@@ -1037,22 +1090,18 @@ export default function PromotionPopupBuilder() {
                       <AccordionTrigger className="text-xs font-semibold uppercase tracking-wider">Layout</AccordionTrigger>
                       <AccordionContent className="space-y-3">
                         <div className="grid gap-3 sm:grid-cols-2">
-                          <div>
-                            <Label className="text-xs">X position</Label>
+                          <BuilderControlRow label="X position">
                             <Input type="number" value={Math.round(selectedElement.x)} onChange={(event) => updateSelectedElement((element) => ({ ...element, x: clamp(Number(event.target.value) || 0, 0, 100 - element.width) }))} />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Y position</Label>
+                          </BuilderControlRow>
+                          <BuilderControlRow label="Y position">
                             <Input type="number" value={Math.round(selectedElement.y)} onChange={(event) => updateSelectedElement((element) => ({ ...element, y: clamp(Number(event.target.value) || 0, 0, 100 - element.height) }))} />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Width (%)</Label>
+                          </BuilderControlRow>
+                          <BuilderControlRow label="Width (%)">
                             <Input type="number" value={Math.round(selectedElement.width)} onChange={(event) => updateSelectedElement((element) => ({ ...element, width: clamp(Number(event.target.value) || 0, 6, 100) }))} />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Height (%)</Label>
+                          </BuilderControlRow>
+                          <BuilderControlRow label="Height (%)">
                             <Input type="number" value={Math.round(selectedElement.height)} onChange={(event) => updateSelectedElement((element) => ({ ...element, height: clamp(Number(event.target.value) || 0, 6, 90) }))} />
-                          </div>
+                          </BuilderControlRow>
                         </div>
                         <div>
                           <Label className="text-xs">Layer order</Label>
@@ -1089,55 +1138,48 @@ export default function PromotionPopupBuilder() {
                         <AdminColorPicker label="Background color" value={selectedElement.style.backgroundColor} onChange={(value) => updateSelectedElement((element) => ({ ...element, style: { ...element.style, backgroundColor: value } }))} defaultValue="transparent" />
                         <AdminColorPicker label="Border color" value={selectedElement.style.borderColor} onChange={(value) => updateSelectedElement((element) => ({ ...element, style: { ...element.style, borderColor: value } }))} defaultValue="rgba(15,23,42,0.12)" />
                         <div className="grid gap-3 sm:grid-cols-2">
-                          <div>
-                            <Label className="text-xs">Font size</Label>
+                          <BuilderControlRow label="Font size">
                             <Input type="number" value={selectedElement.style.fontSize} onChange={(event) => updateSelectedElement((element) => ({ ...element, style: { ...element.style, fontSize: Math.max(10, Number(event.target.value) || 10) } }))} />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Font weight</Label>
+                          </BuilderControlRow>
+                          <BuilderControlRow label="Font weight">
                             <Input type="number" value={selectedElement.style.fontWeight} onChange={(event) => updateSelectedElement((element) => ({ ...element, style: { ...element.style, fontWeight: Math.max(300, Number(event.target.value) || 400) } }))} />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Line height</Label>
+                          </BuilderControlRow>
+                          <BuilderControlRow label="Line height">
                             <Input type="number" step="0.05" value={selectedElement.style.lineHeight} onChange={(event) => updateSelectedElement((element) => ({ ...element, style: { ...element.style, lineHeight: Math.max(0.8, Number(event.target.value) || 1) } }))} />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Letter spacing</Label>
+                          </BuilderControlRow>
+                          <BuilderControlRow label="Letter spacing">
                             <Input type="number" step="0.1" value={selectedElement.style.letterSpacing} onChange={(event) => updateSelectedElement((element) => ({ ...element, style: { ...element.style, letterSpacing: Number(event.target.value) || 0 } }))} />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Border width</Label>
+                          </BuilderControlRow>
+                          <BuilderControlRow label="Border width">
                             <Input type="number" value={selectedElement.style.borderWidth} onChange={(event) => updateSelectedElement((element) => ({ ...element, style: { ...element.style, borderWidth: Math.max(0, Number(event.target.value) || 0) } }))} />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Radius</Label>
+                          </BuilderControlRow>
+                          <BuilderControlRow label="Radius">
                             <Input type="number" value={selectedElement.style.borderRadius} onChange={(event) => updateSelectedElement((element) => ({ ...element, style: { ...element.style, borderRadius: Math.max(0, Number(event.target.value) || 0) } }))} />
-                          </div>
+                          </BuilderControlRow>
                         </div>
-                        <div>
-                          <Label className="text-xs">Text shadow</Label>
+                        <BuilderControlRow label="Text shadow">
                           <Input value={selectedElement.style.textShadow} onChange={(event) => updateSelectedElement((element) => ({ ...element, style: { ...element.style, textShadow: event.target.value } }))} placeholder="0 1px 2px rgba(0,0,0,0.25)" />
-                        </div>
-                        <div>
-                          <Label className="text-xs">Box shadow</Label>
+                        </BuilderControlRow>
+                        <BuilderControlRow label="Box shadow">
                           <Input value={selectedElement.style.shadow} onChange={(event) => updateSelectedElement((element) => ({ ...element, style: { ...element.style, shadow: event.target.value } }))} placeholder="0 12px 32px rgba(15,23,42,0.18)" />
-                        </div>
-                        <div>
-                          <Label className="text-xs">Font family</Label>
+                        </BuilderControlRow>
+                        <BuilderControlRow label="Font family">
                           <Input value={selectedElement.style.fontFamily} onChange={(event) => updateSelectedElement((element) => ({ ...element, style: { ...element.style, fontFamily: event.target.value || "inherit" } }))} placeholder="inherit" />
-                        </div>
-                        <div>
-                          <Label className="text-xs">Opacity ({Math.round(selectedElement.style.opacity * 100)}%)</Label>
-                          <Slider value={[selectedElement.style.opacity * 100]} onValueChange={([value]) => updateSelectedElement((element) => ({ ...element, style: { ...element.style, opacity: value / 100 } }))} min={10} max={100} step={5} />
-                        </div>
+                        </BuilderControlRow>
+                        <BuilderSlider
+                          label="Opacity"
+                          value={selectedElement.style.opacity * 100}
+                          onValueChange={(value) => updateSelectedElement((element) => ({ ...element, style: { ...element.style, opacity: value / 100 } }))}
+                          min={10} max={100} step={5}
+                          formatValue={(v) => `${Math.round(v)}%`}
+                        />
                       </AccordionContent>
                     </AccordionItem>
 
                     <AccordionItem value="animation">
                       <AccordionTrigger className="text-xs font-semibold uppercase tracking-wider">Animation</AccordionTrigger>
                       <AccordionContent className="space-y-3">
-                        <div>
-                          <Label className="text-xs">Entrance animation</Label>
+                        <BuilderControlRow label="Entrance animation">
                           <Select value={selectedElement.animation.entrance} onValueChange={(value) => updateSelectedElement((element) => ({ ...element, animation: { ...element.animation, entrance: value as PopupCanvasElement["animation"]["entrance"] } }))}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
@@ -1151,30 +1193,26 @@ export default function PromotionPopupBuilder() {
                               <SelectItem value="floating">Floating</SelectItem>
                             </SelectContent>
                           </Select>
-                        </div>
-                        <div>
-                          <Label className="text-xs">Hover animation</Label>
+                        </BuilderControlRow>
+                        <BuilderControlRow label="Hover animation">
                           <Select value={selectedElement.animation.hover} onValueChange={(value) => updateSelectedElement((element) => ({ ...element, animation: { ...element.animation, hover: value as PopupHoverAnimation } }))}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
                               {HOVER_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
                             </SelectContent>
                           </Select>
-                        </div>
+                        </BuilderControlRow>
                         <div className="grid gap-3 sm:grid-cols-2">
-                          <div>
-                            <Label className="text-xs">Delay (s)</Label>
+                          <BuilderControlRow label="Delay (s)">
                             <Input type="number" step="0.05" value={selectedElement.animation.delay} onChange={(event) => updateSelectedElement((element) => ({ ...element, animation: { ...element.animation, delay: Math.max(0, Number(event.target.value) || 0) } }))} />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Duration (s)</Label>
+                          </BuilderControlRow>
+                          <BuilderControlRow label="Duration (s)">
                             <Input type="number" step="0.05" value={selectedElement.animation.duration} onChange={(event) => updateSelectedElement((element) => ({ ...element, animation: { ...element.animation, duration: Math.max(0.1, Number(event.target.value) || 0.1) } }))} />
-                          </div>
+                          </BuilderControlRow>
                         </div>
-                        <div>
-                          <Label className="text-xs">Easing</Label>
+                        <BuilderControlRow label="Easing">
                           <Input value={selectedElement.animation.easing} onChange={(event) => updateSelectedElement((element) => ({ ...element, animation: { ...element.animation, easing: event.target.value } }))} placeholder="easeOut" />
-                        </div>
+                        </BuilderControlRow>
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
@@ -1185,5 +1223,43 @@ export default function PromotionPopupBuilder() {
         </div>
       </CardContent>
     </Card>
+
+    {/* Rename preset dialog */}
+    <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="font-display uppercase">Rename Preset</DialogTitle>
+          <DialogDescription>Enter a new name for this preset.</DialogDescription>
+        </DialogHeader>
+        <Input
+          value={renameValue}
+          onChange={(e) => setRenameValue(e.target.value)}
+          placeholder="Preset name"
+          onKeyDown={(e) => { if (e.key === "Enter") confirmRenamePreset(); }}
+          autoFocus
+        />
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>Cancel</Button>
+          <Button onClick={confirmRenamePreset} disabled={!renameValue.trim()}>Rename</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* Delete preset confirmation dialog */}
+    <Dialog open={deletePresetConfirmOpen} onOpenChange={setDeletePresetConfirmOpen}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="font-display uppercase">Delete Preset</DialogTitle>
+          <DialogDescription>
+            Delete &ldquo;{activePreset?.name}&rdquo;? This cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setDeletePresetConfirmOpen(false)}>Cancel</Button>
+          <Button variant="destructive" onClick={confirmDeletePreset} className="font-display uppercase">Delete</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

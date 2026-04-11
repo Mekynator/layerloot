@@ -15,6 +15,11 @@ export type ReusableSectionCategory =
   | "Trust"
   | "Media"
   | "Announcement"
+  | "Urgency"
+  | "Upsell"
+  | "Campaign"
+  | "Custom Order"
+  | "Gift"
   | "General";
 
 export type ReusableBlockRow = Tables<"reusable_blocks">;
@@ -58,6 +63,11 @@ export const REUSABLE_SECTION_CATEGORIES: ReusableSectionCategory[] = [
   "Trust",
   "Media",
   "Announcement",
+  "Urgency",
+  "Upsell",
+  "Campaign",
+  "Custom Order",
+  "Gift",
   "General",
 ];
 
@@ -204,6 +214,278 @@ export const STARTER_SECTION_TEMPLATES: StarterSectionTemplate[] = [
       paddingBottom: 28,
     },
   },
+
+  // ── Urgency ────────────────────────────────────────────────────────────────
+  {
+    id: "conv-countdown-urgency",
+    name: "Urgency Countdown",
+    description: "A high-impact countdown to drive limited-time conversions.",
+    category: "Urgency",
+    block_type: "countdown",
+    kind: "template",
+    content: {
+      heading: "Offer ends soon",
+      subheading: "Don't miss out — this deal expires in:",
+      targetDate: "",
+      prefix: "⏳",
+      suffix: "remaining",
+      showDays: true,
+      showHours: true,
+      showMinutes: true,
+      showSeconds: true,
+      alignment: "center",
+      paddingTop: 48,
+      paddingBottom: 48,
+    },
+  },
+  {
+    id: "conv-sale-banner",
+    name: "Sale Announcement Banner",
+    description: "A top-of-page banner announcing a sale or seasonal event.",
+    category: "Urgency",
+    block_type: "banner",
+    kind: "template",
+    content: {
+      text: "🔥 Limited-time sale — use code SAVE15 at checkout",
+      link: "/products",
+      linkText: "Shop now →",
+      aligned: "center",
+      paddingTop: 12,
+      paddingBottom: 12,
+    },
+  },
+  {
+    id: "conv-free-shipping-bar",
+    name: "Free Shipping Progress Bar",
+    description: "Motivational shipping threshold banner for the top of any page.",
+    category: "Urgency",
+    block_type: "shipping_banner",
+    kind: "template",
+    content: {
+      text: "Free shipping on orders over 500 kr — you're almost there!",
+      icon: "Truck",
+      paddingTop: 10,
+      paddingBottom: 10,
+    },
+  },
+
+  // ── Upsell ─────────────────────────────────────────────────────────────────
+  {
+    id: "conv-upsell-grid",
+    name: "You Might Also Like",
+    description: "An upsell product grid placed near checkout or product pages.",
+    category: "Upsell",
+    block_type: "featured_products",
+    kind: "template",
+    content: {
+      heading: "You might also like",
+      subheading: "Handpicked additions that pair perfectly with your order.",
+      limit: 4,
+      columns: 4,
+      paddingTop: 40,
+      paddingBottom: 40,
+    },
+  },
+  {
+    id: "conv-smart-funnel",
+    name: "Smart Funnel Recommendations",
+    description: "A stage-aware personalized recommendation section for home, product, or cart flows.",
+    category: "Upsell",
+    block_type: "smart_funnel",
+    kind: "template",
+    content: {
+      heading: "Recommended for you",
+      subtitle: "Personalised picks based on browsing behaviour and funnel stage.",
+      limit: 4,
+      ctaLabel: "Browse products",
+      ctaHref: "/products",
+    },
+  },
+  {
+    id: "conv-bundle-picks",
+    name: "Complete the Set",
+    description: "A cross-sell grid encouraging shoppers to build a bundle.",
+    category: "Upsell",
+    block_type: "featured_products",
+    kind: "template",
+    content: {
+      heading: "Complete the set",
+      subheading: "Customers who bought this also loved these additions.",
+      limit: 3,
+      columns: 3,
+      paddingTop: 40,
+      paddingBottom: 40,
+    },
+  },
+  {
+    id: "conv-recently-viewed",
+    name: "Recently Viewed",
+    description: "Re-engages returning visitors with products they already explored.",
+    category: "Upsell",
+    block_type: "recently_viewed",
+    kind: "template",
+    content: {
+      heading: "Pick up where you left off",
+      limit: 6,
+      paddingTop: 40,
+      paddingBottom: 40,
+    },
+  },
+
+  // ── Campaign ───────────────────────────────────────────────────────────────
+  {
+    id: "conv-campaign-hero",
+    name: "Campaign Hero",
+    description: "A seasonal or promotional hero ready for any campaign launch.",
+    category: "Campaign",
+    block_type: "hero",
+    kind: "template",
+    content: {
+      eyebrow: "Limited Edition Drop",
+      heading: "Our biggest sale of the season",
+      subheading: "Handcrafted originals at exclusive campaign pricing — for a limited time.",
+      alignment: "center",
+      buttonAlignment: "center",
+      paddingTop: 96,
+      paddingBottom: 96,
+      sectionWidth: "full",
+      buttons: [
+        { text: "Shop the Sale", icon: "ArrowRight", iconPosition: "right", variant: "default", actionType: "internal_link", actionTarget: "/products", openInNewTab: false, visible: true },
+        { text: "View Lookbook", icon: "Image", iconPosition: "left", variant: "outline", actionType: "internal_link", actionTarget: "/lookbook", openInNewTab: false, visible: true },
+      ],
+    },
+  },
+  {
+    id: "conv-social-proof-strip",
+    name: "Social Proof Strip",
+    description: "A compact strip showing customer counts, ratings, and popularity signals.",
+    category: "Campaign",
+    block_type: "social_proof",
+    kind: "template",
+    content: {
+      heading: "Trusted by thousands of customers",
+      items: [
+        { label: "Happy customers", value: "4 500+", icon: "Users", visible: true },
+        { label: "Average rating", value: "4.9 / 5", icon: "Star", visible: true },
+        { label: "Orders delivered", value: "12 000+", icon: "Package", visible: true },
+      ],
+      paddingTop: 32,
+      paddingBottom: 32,
+    },
+  },
+
+  // ── Custom Order ───────────────────────────────────────────────────────────
+  {
+    id: "conv-custom-order-cta",
+    name: "Custom Order CTA",
+    description: "Converts browsers into custom order inquiries with a clear call to action.",
+    category: "Custom Order",
+    block_type: "cta",
+    kind: "template",
+    content: {
+      heading: "Bring your idea to life",
+      subheading: "Our custom printing process turns your concept into a premium keepsake — no experience needed.",
+      buttonText: "Start a Custom Order",
+      buttonLink: "/custom-order",
+      paddingTop: 64,
+      paddingBottom: 64,
+      sectionWidth: "narrow",
+      shadow: "soft",
+      borderRadius: 24,
+    },
+  },
+  {
+    id: "conv-how-it-works",
+    name: "How It Works",
+    description: "Step-by-step walkthrough of the custom order or production process.",
+    category: "Custom Order",
+    block_type: "how_it_works",
+    kind: "template",
+    content: {
+      heading: "How it works",
+      steps: [
+        { title: "Upload your image", desc: "Send us a photo, design, or concept — any format works.", icon: "Upload", visible: true },
+        { title: "We craft it", desc: "Our team turns your file into a precision-printed lithophane or model.", icon: "Hammer", visible: true },
+        { title: "Delivered to you", desc: "Packed securely and shipped with tracking to your door.", icon: "Package", visible: true },
+      ],
+      paddingTop: 56,
+      paddingBottom: 56,
+    },
+  },
+  {
+    id: "conv-product-faq",
+    name: "Product FAQ",
+    description: "Answers the most common product-specific questions before checkout.",
+    category: "Custom Order",
+    block_type: "faq",
+    kind: "template",
+    content: {
+      heading: "Before you order",
+      items: [
+        { question: "What file formats do you accept?", answer: "JPG, PNG, and SVG files work best. Higher resolution gives sharper results.", visible: true },
+        { question: "How is the product packaged?", answer: "Orders arrive in protective packaging with a branded card insert.", visible: true },
+        { question: "Can I preview before production starts?", answer: "Yes — a digital proof is sent within 24 hours for approval.", visible: true },
+        { question: "What is your returns policy?", answer: "Custom items are non-refundable, but we guarantee to fix any production error.", visible: true },
+      ],
+      paddingTop: 48,
+      paddingBottom: 48,
+    },
+  },
+
+  // ── Gift ───────────────────────────────────────────────────────────────────
+  {
+    id: "conv-gift-hero",
+    name: "Gift Campaign Hero",
+    description: "A warm, gift-focused hero for occasions, holidays, and gift guides.",
+    category: "Gift",
+    block_type: "hero",
+    kind: "template",
+    content: {
+      eyebrow: "The perfect gift",
+      heading: "Gifts they'll never forget",
+      subheading: "Personalised prints and models crafted for the people who matter most.",
+      alignment: "center",
+      buttonAlignment: "center",
+      paddingTop: 80,
+      paddingBottom: 80,
+      sectionWidth: "wide",
+      buttons: [
+        { text: "Find the Perfect Gift", icon: "Gift", iconPosition: "left", variant: "default", actionType: "internal_link", actionTarget: "/gift-finder", openInNewTab: false, visible: true },
+        { text: "Browse All Products", icon: "ArrowRight", iconPosition: "right", variant: "outline", actionType: "internal_link", actionTarget: "/products", openInNewTab: false, visible: true },
+      ],
+    },
+  },
+  {
+    id: "conv-gift-finder",
+    name: "Gift Finder",
+    description: "Interactive quiz-style recommendation tool for gift shoppers.",
+    category: "Gift",
+    block_type: "gift_finder",
+    kind: "template",
+    content: {
+      heading: "Not sure what to get?",
+      subheading: "Answer a few quick questions and we'll find the perfect match.",
+      paddingTop: 56,
+      paddingBottom: 56,
+    },
+  },
+  {
+    id: "conv-product-benefits",
+    name: "Product Benefits",
+    description: "Key product differentiators displayed in a conversion-focused grid.",
+    category: "Gift",
+    block_type: "entry_cards",
+    kind: "template",
+    content: {
+      cards: [
+        { icon: "Gift", title: "Gift-ready packaging", desc: "Every order arrives in branded packaging ready to present as a gift.", cta: "Shop gifts", visible: true },
+        { icon: "Image", title: "Personalised from a photo", desc: "Upload any image and we'll turn it into a handcrafted keepsake.", cta: "How it works", visible: true },
+        { icon: "Truck", title: "Delivered on time", desc: "Order tracking included so your gift always arrives when it should.", cta: "Shipping info", visible: true },
+      ],
+      paddingTop: 40,
+      paddingBottom: 40,
+    },
+  },
 ];
 
 const clone = <T,>(value: T): T => {
@@ -321,13 +603,25 @@ export const getReusableCategory = (row?: Partial<ReusableBlockRow> | null, fall
     case "categories":
       return "Product Grid";
     case "testimonials":
-    case "social_proof":
       return "Testimonials";
+    case "social_proof":
+      return "Campaign";
     case "newsletter":
       return "Newsletter";
     case "trust_badges":
     case "shipping_banner":
       return "Trust";
+    case "countdown":
+      return "Urgency";
+    case "recently_viewed":
+    case "smart_funnel":
+      return "Upsell";
+    case "how_it_works":
+      return "Custom Order";
+    case "gift_finder":
+      return "Gift";
+    case "entry_cards":
+      return "Features";
     case "image":
     case "gallery":
     case "carousel":

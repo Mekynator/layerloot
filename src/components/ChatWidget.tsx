@@ -41,21 +41,21 @@ function uid() {
 function getPageSuggestions(pathname: string, loggedIn: boolean): string[] {
   if (pathname.startsWith("/products/") || pathname.startsWith("/product/")) {
     return [
-      "Compare materials for this item",
-      "Show similar but cheaper options",
-      "Is this available in a larger size?",
-      "How long until delivery?",
+      "How quickly can this be delivered?",
+      "Is there a gift version of this?",
+      "Can I personalise this product?",
+      "Show me similar alternatives",
     ];
   }
   if (pathname.startsWith("/products")) {
-    return ["Show best sellers", "Find gifts under 200 DKK", "What's trending right now?", "Custom print help"];
+    return ["Show best sellers", "Find the perfect gift", "What's trending right now?", "Help me customise a print"];
   }
   if (pathname.startsWith("/cart")) {
     return [
-      "How far am I from free shipping?",
+      "Help me reach free shipping",
+      "I'm ready to checkout",
+      "Can I add a discount code?",
       "Recommend one more item",
-      "Can I use a coupon?",
-      "Is gift wrapping available?",
     ];
   }
   if (pathname.startsWith("/account")) {
@@ -66,12 +66,16 @@ function getPageSuggestions(pathname: string, loggedIn: boolean): string[] {
   }
   if (pathname === "/") {
     return loggedIn
-      ? ["Show my points", "What's new this week?", "Recommend something for me", "Track my order"]
-      : ["Show best sellers", "How does custom printing work?", "Shipping information", "Gift ideas"];
+      ? ["What's new since my last visit?", "Recommend something for me", "Find a gift", "How many points do I have?"]
+      : ["Show best sellers", "How does custom printing work?", "Find the perfect gift", "Shipping information"];
   }
   return loggedIn
-    ? ["Show my points", "Show my latest order", "Recommended products for me"]
+    ? ["Show my points", "Show my latest order", "Recommend something for me"]
     : ["Show best sellers", "Custom print help", "Shipping information"];
+}
+
+function isBuyingIntent(text: string) {
+  return /(ready to (?:buy|checkout)|checkout|check out|buy now|order now|purchase|i(?:'|’)ll take it|add (?:it|this|one) to cart|go to cart|complete (?:my )?order)/i.test(text);
 }
 
 function safeJsonParse<T>(value: string | null, fallback: T): T {
@@ -619,7 +623,7 @@ const ChatWidget = () => {
       });
 
       // After streaming completes, post-process the assistant message
-      await processAssistantMessage(assistantMsgId, assistantSoFar, location.pathname, cart);
+      await processAssistantMessage(assistantMsgId, assistantSoFar, location.pathname, cart, text);
     } catch (error) {
       console.error("Chat error:", error);
       setMessages((prev) =>
@@ -631,8 +635,10 @@ const ChatWidget = () => {
     }
   };
 
-  async function processAssistantMessage(messageId: string, content: string, page: string, cart: any) {
+  async function processAssistantMessage(messageId: string, content: string, page: string, cart: any, userIntentText = "") {
     if (!content) return;
+
+    const readyToBuy = isBuyingIntent(userIntentText) || (page.startsWith("/cart") && Number(cart?.item_count || 0) > 0);
 
     // 1) Remove raw internal routes and markdown links that point to internal paths
     const routeRegex = /(?:\[[^\]]+\]\((\/[^)]+)\))|((?:\/[a-zA-Z0-9_\-\/\?=&%]+))/g;
@@ -686,7 +692,38 @@ const ChatWidget = () => {
       }
 
       if (validated.length > 0) {
-        setAssistantProductMap((s) => ({ ...s, [messageId]: validated }));
+        const limited = validated.slice(0, readyToBuy ? 2 : 3);
+        setAssistantProductMap((s) => ({ ...s, [messageId]: limited }));
+
+        if (readyToBuy) {
+          const topPick = limited[0];
+          setAssistantActionMap((s) => ({
+            ...s,
+            [messageId]: [
+              topPick
+                ? {
+                    label: "Add top pick to cart",
+                    action: () => {
+                      const price = Number(topPick.priceValue ?? 0);
+                      addItem(
+                        {
+                          id: topPick.id ?? topPick.slug ?? topPick.name,
+                          name: topPick.name,
+                          price,
+                          image: topPick.imageUrl,
+                          slug: topPick.slug,
+                        },
+                        { source: "chat_widget" },
+                      );
+                      trackChatEvent("add_to_cart_from_chat", { product: topPick.id ?? topPick.slug ?? topPick.name }, window.location.pathname, userId);
+                    },
+                  }
+                : { label: "Browse Products", to: "/products" },
+              { label: "Go to checkout", to: "/cart" },
+              { label: "Keep browsing", to: "/products" },
+            ].slice(0, 3),
+          }));
+        }
       } else {
         // no valid resolved products; fall through to other handlers (do not show fictional items)
       }
@@ -817,7 +854,7 @@ const ChatWidget = () => {
       const { data } = await query;
       const products = (data ?? []).slice(0, 3);
       if (products.length > 0) {
-        const items: ParsedChatProduct[] = products.map((p: any) => ({
+        const items: ParsedChatProduct[] = products.slice(0, readyToBuy ? 2 : 3).map((p: any) => ({
           id: p.id,
           slug: p.slug,
           name: p.name,
@@ -830,24 +867,60 @@ const ChatWidget = () => {
         setAssistantProductMap((s) => ({ ...s, [messageId]: items }));
         // contextual quick actions (product-first)
         const actions: { label: string; to?: string; action?: () => void }[] = [];
-        if (categorySlug) actions.push({ label: `View all ${titleCase(categorySlug)}`, to: `/products?category=${categorySlug}` });
-        actions.push({ label: "Browse Products", to: "/products" });
-        // Add useful follow-ups: cheaper options, similar, add cheapest to cart
-        actions.push({ label: "Show cheaper options", action: () => send("Show cheaper options for these items") });
-        actions.push({ label: "Show similar items", action: () => send("Show similar items") });
-        // add action to add cheapest item directly
-        actions.push({ label: "Add cheapest to cart", action: () => {
-          try {
-            const cheapest = items.reduce((acc, it) => (acc == null || (it.priceValue ?? 0) < (acc.priceValue ?? 0) ? it : acc), undefined as ParsedChatProduct | undefined);
-            if (cheapest) {
-              const price = cheapest.priceValue ?? 0;
-              // use window dispatch via addItem event for safe integration with header animations
-              window.dispatchEvent(new CustomEvent('layerloot:add-to-cart', { detail: { id: cheapest.id ?? cheapest.slug ?? cheapest.name, name: cheapest.name, image: cheapest.imageUrl ?? null, totalItems: 1, quantity: 1, timestamp: Date.now() } }));
+
+        if (readyToBuy) {
+          const topPick = items[0];
+          if (topPick) {
+            actions.push({
+              label: "Add top pick to cart",
+              action: () => {
+                const price = Number(topPick.priceValue ?? 0);
+                addItem(
+                  {
+                    id: topPick.id ?? topPick.slug ?? topPick.name,
+                    name: topPick.name,
+                    price,
+                    image: topPick.imageUrl,
+                    slug: topPick.slug,
+                  },
+                  { source: "chat_widget" },
+                );
+                trackChatEvent("add_to_cart_from_chat", { product: topPick.id ?? topPick.slug ?? topPick.name }, window.location.pathname, userId);
+              },
+            });
+          }
+          actions.push({ label: "Go to checkout", to: "/cart" });
+          actions.push({ label: "Keep browsing", to: categorySlug ? `/products?category=${categorySlug}` : "/products" });
+        } else {
+          if (categorySlug) actions.push({ label: `View all ${titleCase(categorySlug)}`, to: `/products?category=${categorySlug}` });
+          actions.push({ label: "Browse Products", to: "/products" });
+          actions.push({ label: "Show cheaper options", action: () => send("Show cheaper options for these items") });
+          actions.push({ label: "Show similar items", action: () => send("Show similar items") });
+          actions.push({ label: "Add cheapest to cart", action: () => {
+            try {
+              const cheapest = items.reduce((acc, it) => (acc == null || (it.priceValue ?? 0) < (acc.priceValue ?? 0) ? it : acc), undefined as ParsedChatProduct | undefined);
+              if (cheapest) {
+                const price = Number(cheapest.priceValue ?? 0);
+                addItem(
+                  {
+                    id: cheapest.id ?? cheapest.slug ?? cheapest.name,
+                    name: cheapest.name,
+                    price,
+                    image: cheapest.imageUrl,
+                    slug: cheapest.slug,
+                  },
+                  { source: "chat_widget" },
+                );
+                trackChatEvent("add_to_cart_from_chat", { product: cheapest.id ?? cheapest.slug ?? cheapest.name }, window.location.pathname, userId);
+              }
+            } catch {
+              // keep UI stable
             }
-          } catch (e) {}
-        }});
-        actions.push({ label: "Go to cart", to: "/cart" });
-        setAssistantActionMap((s) => ({ ...s, [messageId]: actions }));
+          }});
+          actions.push({ label: "Go to cart", to: "/cart" });
+        }
+
+        setAssistantActionMap((s) => ({ ...s, [messageId]: actions.slice(0, 3) }));
         return;
       }
     } catch (err) {

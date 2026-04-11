@@ -8,6 +8,7 @@ import {
   Square, Type, Image, Columns, PlayCircle, MousePointer, Link2, Code, Globe, Mail,
   Truck, Star, HelpCircle, ShieldCheck, Layers, Package, FolderTree,
   Clock, MessageSquare, Eye, Gift, Minus, Sparkles, Wand2, Store, LayoutTemplate, ThumbsUp,
+  TrendingUp, ShoppingBag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -78,6 +79,7 @@ const CATEGORIES: Category[] = [
     name: "Conversion",
     blocks: [
       { value: "cta", label: "Call to Action", desc: "Eye-catching action section with heading and button", icon: MousePointer, color: "border-l-emerald-500" },
+      { value: "smart_funnel", label: "Smart Funnel", desc: "Personalized recommendation section tuned to the visitor's funnel stage", icon: TrendingUp, color: "border-l-violet-500" },
       { value: "button", label: "Button", desc: "Standalone button linking to any page or URL", icon: Link2, color: "border-l-cyan-500" },
       { value: "newsletter", label: "Newsletter", desc: "Email signup form for your mailing list", icon: Mail, color: "border-l-pink-500" },
     ],
@@ -114,6 +116,41 @@ const PAGE_TEMPLATES: PageTemplateDef[] = [
     desc: "A conversion-focused sequence for promos, launches, and seasonal offers.",
     icon: Wand2,
     blocks: ["banner", "countdown", "entry_cards", "social_proof", "cta"],
+  },
+  {
+    id: "high-converting-homepage",
+    name: "High-Converting Homepage",
+    desc: "Full conversion stack: hero, products, trust, urgency timer, social proof, and newsletter.",
+    icon: TrendingUp,
+    blocks: ["hero", "featured_products", "smart_funnel", "trust_badges", "countdown", "testimonials", "social_proof", "cta", "newsletter"],
+  },
+  {
+    id: "gift-campaign-landing",
+    name: "Gift Campaign Landing",
+    desc: "Gift finder, featured products, trust strips, and a newsletter capture for gifting occasions.",
+    icon: Gift,
+    blocks: ["hero", "gift_finder", "featured_products", "trust_badges", "newsletter"],
+  },
+  {
+    id: "seasonal-promo",
+    name: "Seasonal Promo",
+    desc: "Countdown urgency, product highlights, social proof, and a closing CTA.",
+    icon: Clock,
+    blocks: ["banner", "countdown", "featured_products", "social_proof", "cta"],
+  },
+  {
+    id: "product-launch",
+    name: "Product Launch",
+    desc: "Entry cards, featured grid, testimonials, FAQ, and a launch CTA.",
+    icon: Sparkles,
+    blocks: ["hero", "entry_cards", "featured_products", "testimonials", "faq", "cta"],
+  },
+  {
+    id: "custom-order-funnel",
+    name: "Custom Order Funnel",
+    desc: "How it works, trust signals, product FAQ, and a custom order CTA.",
+    icon: ShoppingBag,
+    blocks: ["hero", "how_it_works", "trust_badges", "faq", "cta"],
   },
 ];
 

@@ -415,7 +415,7 @@ export const normalizePromotionPopupConfig = (raw: unknown): PromotionPopupConfi
 const normalizePromotionPopupPreset = (raw: unknown, index: number): PromotionPopupPreset => {
   const source = asObject(raw);
   const base = createDefaultPromotionPopupConfig();
-  const presetConfig = normalizePromotionPopupConfig({ ...base, ...asObject(source.config), presets: [] });
+  const presetConfig = normalizePromotionPopupConfig({ ...base, ...asObject(source.config) } as any);
 
   return {
     id: typeof source.id === "string" ? source.id : createId(`preset-${index}`),
@@ -424,7 +424,7 @@ const normalizePromotionPopupPreset = (raw: unknown, index: number): PromotionPo
     isDefault: source.isDefault === true,
     createdAt: typeof source.createdAt === "string" ? source.createdAt : new Date().toISOString(),
     updatedAt: typeof source.updatedAt === "string" ? source.updatedAt : new Date().toISOString(),
-    config: { ...presetConfig, presets: [] },
+    config: { ...presetConfig, presets: [] } as any,
   };
 };
 

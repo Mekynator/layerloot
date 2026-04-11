@@ -163,7 +163,7 @@ export default function PageStylePresetsPanel({ blockType, content, onApplyPatch
   useEffect(() => {
     const loadPresets = async () => {
       const { data } = await supabase.from("site_settings").select("value").eq("key", STORAGE_KEY).maybeSingle();
-      const stored = Array.isArray(data?.value) ? (data?.value as PageStylePreset[]) : [];
+      const stored = Array.isArray(data?.value) ? (data?.value as unknown as PageStylePreset[]) : [];
       const merged = dedupePresets([...DEFAULT_PRESETS, ...stored]);
       setPresets(merged);
       setActivePresetId(merged[0]?.id ?? "");

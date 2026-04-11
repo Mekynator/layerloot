@@ -14,7 +14,7 @@ import {
 } from "@/lib/analytics";
 
 interface AnalyticsContextValue {
-  track: (input: AnalyticsEventInput) => void;
+  track: (inputOrName: AnalyticsEventInput | string, context?: Record<string, unknown>) => void;
   trackAttribution: (touchpoint: Omit<AttributionTouchpoint, "id" | "timestamp"> & { id?: string; timestamp?: number }) => void;
 }
 
@@ -48,8 +48,12 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
     }, 2500);
   }, [flush]);
 
-  const track = useCallback((input: AnalyticsEventInput) => {
+  const track = useCallback((inputOrName: AnalyticsEventInput | string, context?: Record<string, unknown>) => {
     if (typeof window === "undefined" || !isAnalyticsEnabled()) return;
+
+    const input: AnalyticsEventInput = typeof inputOrName === "string"
+      ? { eventName: inputOrName as any, context }
+      : inputOrName;
 
     const dedupeKey = input.dedupeKey || buildStableAnalyticsId(input.eventName, input.entityType, input.entityId, input.pagePath || location.pathname, input.source || "");
     if (!input.allowDuplicates && shouldSkipDuplicateEvent(dedupeKey)) return;

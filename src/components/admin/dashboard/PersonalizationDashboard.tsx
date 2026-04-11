@@ -85,18 +85,18 @@ export default function PersonalizationDashboard() {
     queryFn: async () => {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-      const { data: impressions, error: impErr } = await supabase
-        .from("analytics_events")
+      const { data: impressions, error: impErr } = await (supabase
+        .from("analytics_events" as any)
         .select("entity_id, context")
         .eq("event_name", "personalized_variant_shown")
-        .gte("created_at", thirtyDaysAgo);
+        .gte("created_at", thirtyDaysAgo) as any);
       if (impErr) throw impErr;
 
-      const { data: clicks, error: clickErr } = await supabase
-        .from("analytics_events")
+      const { data: clicks, error: clickErr } = await (supabase
+        .from("analytics_events" as any)
         .select("entity_id, context")
         .in("event_name", ["section_click", "component_click", "cta_click", "button_click"])
-        .gte("created_at", thirtyDaysAgo);
+        .gte("created_at", thirtyDaysAgo) as any);
       if (clickErr) throw clickErr;
 
       // Aggregate by variantId

@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Copy, Eye, EyeOff, Palette, Type, Settings2, Layers, Monitor, Tablet, Smartphone, MousePointerClick, Square, Trash2, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useVisualEditor, type SelectedElement } from "@/contexts/VisualEditorContext";
 import { useDesignSystemSafe } from "@/contexts/DesignSystemContext";
 import { useAuth } from "@/contexts/AuthContext";

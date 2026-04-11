@@ -20,17 +20,11 @@ type ChatQuickItem = {
   icon?: string;
 };
 
-type ParsedChatProduct = {
-  name: string;
-  benefit?: string;
-  price?: string;
-  imageUrl?: string;
-  productUrl?: string;
-};
+// Using ParsedChatProduct from chatPostprocess
 
 import { formatPrice } from "@/lib/currency";
 import { useNavigate } from "react-router-dom";
-import { parseChatProducts, stripProductBlocks, sanitizeContent, ParsedChatProduct } from "@/lib/chatPostprocess";
+import { parseChatProducts, stripProductBlocks, sanitizeContent, type ParsedChatProduct } from "@/lib/chatPostprocess";
 import { useCart } from "@/contexts/CartContext";
 import { useRecentlyViewedProducts } from "@/hooks/use-recently-viewed";
 import { getSavedProducts } from "@/lib/savedItems";
@@ -664,26 +658,26 @@ const ChatWidget = () => {
           let resolved: any = null;
           if (p.productUrl && p.productUrl.startsWith("/products/")) {
             const slug = p.productUrl.replace(/^\/products\//, "");
-            const { data } = await supabase.from("products").select("id,slug,name,price,images,short_description,is_active,published").eq("slug", slug).maybeSingle();
-            if (data && data.is_active && data.published) resolved = data;
+            const { data } = await supabase.from("products").select("id,slug,name,price,images,is_active,published").eq("slug", slug).maybeSingle();
+            if (data && (data as any).is_active && (data as any).published) resolved = data;
           }
 
           if (!resolved && p.name) {
             // try to match by name as a last resort (case-insensitive)
-            const { data } = await supabase.from("products").select("id,slug,name,price,images,short_description,is_active,published").ilike("name", `%${p.name}%`).limit(1);
-            if (data && data[0] && data[0].is_active && data[0].published) resolved = data[0];
+            const { data } = await supabase.from("products").select("id,slug,name,price,images,is_active,published").ilike("name", `%${p.name}%`).limit(1);
+            if (data && data[0] && (data[0] as any).is_active && (data[0] as any).published) resolved = data[0];
           }
 
           if (resolved) {
             validated.push({
-              id: resolved.id,
-              slug: resolved.slug,
-              name: resolved.name,
-              benefit: resolved.short_description ?? p.benefit,
-              price: formatPrice(Number(resolved.price ?? 0)),
-              priceValue: Number(resolved.price ?? 0),
-              imageUrl: (resolved.images && resolved.images[0]) || p.imageUrl,
-              productUrl: `/products/${resolved.slug}`,
+              id: (resolved as any).id,
+              slug: (resolved as any).slug,
+              name: (resolved as any).name,
+              benefit: (resolved as any).short_description ?? p.benefit,
+              price: formatPrice(Number((resolved as any).price ?? 0)),
+              priceValue: Number((resolved as any).price ?? 0),
+              imageUrl: ((resolved as any).images && (resolved as any).images[0]) || p.imageUrl,
+              productUrl: `/products/${(resolved as any).slug}`,
             });
           }
         } catch (e) {
@@ -727,7 +721,7 @@ const ChatWidget = () => {
             if (cat) {
               // verify category has active products
               const slug = decodeURIComponent(cat[1]);
-              const { data: catCount } = await supabase.from("products").select("id").ilike("category_slugs", `%${slug}%` as any).eq("is_active", true).eq("published", true).limit(1);
+              const { data: catCount } = await (supabase.from("products") as any).select("id").ilike("category_slugs", `%${slug}%`).eq("is_active", true).eq("published", true).limit(1);
               if (catCount && catCount.length > 0) {
                 actions.push({ label: `View all ${titleCase(slug)}`, to: `/products?category=${cat[1]}` });
               }
@@ -758,7 +752,7 @@ const ChatWidget = () => {
       // If user asked for viewed/saved based recommendations, prefer those sources
       if (viewedIntent && recentProducts && recentProducts.length > 0) {
         const ids = recentProducts.map((r) => r.id).slice(0, 3);
-        const { data } = await supabase.from("products").select("id,name,slug,images,price,short_description").in("id", ids).eq("is_active", true).eq("published", true).limit(3);
+        const { data } = await (supabase.from("products") as any).select("id,name,slug,images,price,short_description").in("id", ids).eq("is_active", true).eq("published", true).limit(3);
         if (data && data.length > 0) {
           const items: ParsedChatProduct[] = data.map((p: any) => ({
             id: p.id,
@@ -781,7 +775,7 @@ const ChatWidget = () => {
           const savedResp = await getSavedProducts(userId);
           const savedIds = (savedResp.data ?? []).map((r: any) => r.product_id).slice(0, 6);
           if (savedIds.length > 0) {
-            const { data } = await supabase.from("products").select("id,name,slug,images,price,short_description").in("id", savedIds).eq("is_active", true).eq("published", true).limit(3);
+            const { data } = await (supabase.from("products") as any).select("id,name,slug,images,price,short_description").in("id", savedIds).eq("is_active", true).eq("published", true).limit(3);
             if (data && data.length > 0) {
               const items: ParsedChatProduct[] = data.map((p: any) => ({
                 id: p.id,
@@ -803,12 +797,12 @@ const ChatWidget = () => {
         }
       }
 
-      let query = supabase.from("products").select("id,name,slug,images,price,short_description").eq("is_active", true).eq("published", true).limit(3);
+      let query: any = (supabase.from("products") as any).select("id,name,slug,images,price,short_description").eq("is_active", true).eq("published", true).limit(3);
       if (categorySlug) {
         // try filter by category slug if a relation exists
         // only recommend the category if it contains active products
         try {
-          const { data: catCount } = await supabase.from("products").select("id").ilike("category_slugs", `%${categorySlug}%` as any).eq("is_active", true).eq("published", true).limit(1);
+          const { data: catCount } = await (supabase.from("products") as any).select("id").ilike("category_slugs", `%${categorySlug}%`).eq("is_active", true).eq("published", true).limit(1);
           if (!catCount || catCount.length === 0) {
             // empty category — do not recommend
             setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, content: (m.content ? m.content + "\n\n" : "") + `We don't have active products in that category right now.` } : m)));
@@ -818,7 +812,7 @@ const ChatWidget = () => {
         } catch (e) {
           // ignore and continue
         }
-        query = query.ilike("category_slugs", `%${categorySlug}%` as any).limit(3 as any);
+        query = query.ilike("category_slugs", `%${categorySlug}%`).limit(3);
       }
       const { data } = await query;
       const products = (data ?? []).slice(0, 3);

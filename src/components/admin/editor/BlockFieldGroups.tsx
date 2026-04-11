@@ -908,19 +908,31 @@ function ActionEditor({
   pages: string[];
 }) {
   const actionType = String(item.actionType || "none");
-  const [products, setProducts] = useState<{ id: string; title: string; slug: string }[]>([]);
+  const [products, setProducts] = useState<{ id: string; name: string; slug: string }[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [productsError, setProductsError] = useState(false);
+  const [productSearch, setProductSearch] = useState("");
   const [pageForAnchors, setPageForAnchors] = useState<string>(String(item.actionTarget || ""));
   const [pageAnchors, setPageAnchors] = useState<string[]>([]);
 
   useEffect(() => {
     let mounted = true;
+    setProductsLoading(true);
+    setProductsError(false);
     (async () => {
       try {
-        const { data } = await (supabase as any).from("products").select("id,title,slug").order("title");
+        const { data, error } = await supabase
+          .from("products")
+          .select("id, name, slug")
+          .eq("is_active", true)
+          .order("name");
         if (!mounted) return;
-        setProducts((data || []) as any);
-      } catch (err) {
-        // ignore
+        if (error) { setProductsError(true); return; }
+        setProducts(data ?? []);
+      } catch {
+        if (mounted) setProductsError(true);
+      } finally {
+        if (mounted) setProductsLoading(false);
       }
     })();
     return () => { mounted = false; };
@@ -1027,24 +1039,80 @@ function ActionEditor({
       {actionType === "product" && (
         <div>
           <Label className={labelCls}>Product</Label>
-          <Select value={String(item.actionTarget || "")} onValueChange={(v) => patchItem(index, { actionTarget: v })}>
-            <SelectTrigger className={inputH}><SelectValue placeholder="Choose product" /></SelectTrigger>
+          <Input
+            value={productSearch}
+            onChange={(e) => setProductSearch(e.target.value)}
+            className={`${inputH} mb-1`}
+            placeholder="Search products..."
+          />
+          <Select
+            value={String(item.actionTarget || "")}
+            onValueChange={(v) => patchItem(index, { actionTarget: v })}
+            disabled={productsLoading || productsError}
+          >
+            <SelectTrigger className={inputH}>
+              <SelectValue placeholder={productsLoading ? "Loading…" : productsError ? "Could not load products" : "Select a product"} />
+            </SelectTrigger>
             <SelectContent>
-              {products.map((p) => (<SelectItem key={p.id} value={p.slug}>{p.title}</SelectItem>))}
+              {productsLoading && <SelectItem value="" disabled>Loading products…</SelectItem>}
+              {productsError && <SelectItem value="" disabled>Error loading products</SelectItem>}
+              {!productsLoading && !productsError && products.filter(p => !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase())).length === 0 && (
+                <SelectItem value="" disabled>No products found</SelectItem>
+              )}
+              {!productsLoading && !productsError && products
+                .filter(p => !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase()))
+                .map((p) => (<SelectItem key={p.id} value={p.slug}>{p.name}</SelectItem>))}
             </SelectContent>
           </Select>
+          {String(item.actionTarget || "") && (
+            <button
+              type="button"
+              onClick={() => { patchItem(index, { actionTarget: "" }); setProductSearch(""); }}
+              className="mt-1 text-[10px] text-muted-foreground underline hover:text-destructive"
+            >
+              Clear selection
+            </button>
+          )}
         </div>
       )}
 
       {actionType === "product_anchor" && (
         <div>
           <Label className={labelCls}>Product</Label>
-          <Select value={String(item.actionTarget || "")} onValueChange={(v) => patchItem(index, { actionTarget: v })}>
-            <SelectTrigger className={inputH}><SelectValue placeholder="Choose product" /></SelectTrigger>
+          <Input
+            value={productSearch}
+            onChange={(e) => setProductSearch(e.target.value)}
+            className={`${inputH} mb-1`}
+            placeholder="Search products..."
+          />
+          <Select
+            value={String(item.actionTarget || "")}
+            onValueChange={(v) => patchItem(index, { actionTarget: v })}
+            disabled={productsLoading || productsError}
+          >
+            <SelectTrigger className={inputH}>
+              <SelectValue placeholder={productsLoading ? "Loading…" : productsError ? "Could not load products" : "Select a product"} />
+            </SelectTrigger>
             <SelectContent>
-              {products.map((p) => (<SelectItem key={p.id} value={p.slug}>{p.title}</SelectItem>))}
+              {productsLoading && <SelectItem value="" disabled>Loading products…</SelectItem>}
+              {productsError && <SelectItem value="" disabled>Error loading products</SelectItem>}
+              {!productsLoading && !productsError && products.filter(p => !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase())).length === 0 && (
+                <SelectItem value="" disabled>No products found</SelectItem>
+              )}
+              {!productsLoading && !productsError && products
+                .filter(p => !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase()))
+                .map((p) => (<SelectItem key={p.id} value={p.slug}>{p.name}</SelectItem>))}
             </SelectContent>
           </Select>
+          {String(item.actionTarget || "") && (
+            <button
+              type="button"
+              onClick={() => { patchItem(index, { actionTarget: "" }); setProductSearch(""); }}
+              className="mt-1 text-[10px] text-muted-foreground underline hover:text-destructive"
+            >
+              Clear selection
+            </button>
+          )}
           <div className="mt-2">
             <Label className={labelCls}>Anchor on product page</Label>
             <Input value={String(item.anchorId || "")} onChange={(e) => patchItem(index, { anchorId: e.target.value })} className={inputH} placeholder="e.g. specs" />

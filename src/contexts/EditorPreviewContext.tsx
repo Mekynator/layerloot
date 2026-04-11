@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useMemo } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 
 type EditorPreviewState = {
   isEditorPreview: boolean;
+  /** @deprecated No longer writes to sessionStorage. Kept for API compatibility. */
   setEditorPreview: (v: boolean) => void;
 };
 
@@ -14,56 +15,31 @@ export function useEditorPreview() {
   return ctx;
 }
 
-/** True when the page is running inside an iframe (e.g. the visual editor preview pane). */
-function isInIframe(): boolean {
-  try {
-    return window.self !== window.top;
-  } catch {
-    // Cross-origin parent: assume we're in an iframe.
-    return true;
-  }
-}
-
 export function EditorPreviewProvider({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const [sessionFlag, setSessionFlag] = useState(() => sessionStorage.getItem("layerloot.editorPreview") === "1");
 
-  // If the page is a top-level window (not inside the editor iframe), any stale
-  // sessionStorage flag must be cleared immediately so it never bleeds into the
-  // live storefront and triggers the EditorPreviewGuard click interceptor.
-  useEffect(() => {
-    if (!isInIframe() && sessionStorage.getItem("layerloot.editorPreview") === "1") {
-      sessionStorage.removeItem("layerloot.editorPreview");
-      setSessionFlag(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const handler = (ev: StorageEvent) => {
-      if (ev.key === "layerloot.editorPreview") setSessionFlag(sessionStorage.getItem("layerloot.editorPreview") === "1");
-    };
-    window.addEventListener("storage", handler);
-    return () => window.removeEventListener("storage", handler);
-  }, []);
-
+  // Editor preview is active only when:
+  //   1. The URL explicitly carries ?editorPreview=1  (set by EditorPreviewFrame for the live
+  //      visual-editor preview iframe), OR
+  //   2. The user is directly on an admin editor route.
+  //
+  // sessionStorage is intentionally NOT used here. A stale sessionStorage flag from a
+  // previous editor session leaks into every same-origin iframe — including Lovable's
+  // generic preview pane — and causes EditorPreviewGuard to install a global capture-phase
+  // click interceptor that blocks ALL anchor navigation on the live storefront.
+  // The EditorPreviewFrame already injects its own click-blocking script into the preview
+  // iframe via postMessage, so sessionStorage cross-page persistence is redundant.
   const isEditorPreview = useMemo(() => {
     const param = searchParams.get("editorPreview") === "1";
-    const inAdminEditor = location.pathname.startsWith("/admin/visual-editor") || location.pathname.startsWith("/admin/editor");
-    // sessionFlag is only valid when the page is embedded inside the editor iframe.
-    // Ignore it in a top-level browser window to prevent a stale flag from
-    // activating the click interceptor on live storefront pages.
-    const sessionFlagActive = sessionFlag && isInIframe();
-    return param || sessionFlagActive || inAdminEditor;
-  }, [searchParams, sessionFlag, location.pathname]);
+    const inAdminEditor =
+      location.pathname.startsWith("/admin/visual-editor") ||
+      location.pathname.startsWith("/admin/editor");
+    return param || inAdminEditor;
+  }, [searchParams, location.pathname]);
 
-  const setEditorPreview = (v: boolean) => {
-    try {
-      if (v) sessionStorage.setItem("layerloot.editorPreview", "1");
-      else sessionStorage.removeItem("layerloot.editorPreview");
-      setSessionFlag(v);
-    } catch {}
-  };
+  // Kept for API compatibility; no longer persists to sessionStorage.
+  const setEditorPreview = (_v: boolean) => {};
 
   return (
     <EditorPreviewContext.Provider value={{ isEditorPreview, setEditorPreview }}>

@@ -139,7 +139,7 @@ const renderElementContent = (
 
     case "image":
       return element.asset.url ? (
-        <img src={element.asset.url} alt="" className="h-full w-full rounded-[inherit] object-cover" style={{ objectFit: element.asset.fit, objectPosition: element.asset.position }} />
+        <img src={element.asset.url} alt="" className="h-full w-full rounded-[inherit] object-cover" style={{ objectFit: element.asset.fit as React.CSSProperties["objectFit"], objectPosition: element.asset.position }} />
       ) : (
         <div className="flex h-full min-h-20 w-full items-center justify-center rounded-[inherit] border border-dashed border-border/50 bg-muted/40 text-[11px] text-muted-foreground">
           Image placeholder

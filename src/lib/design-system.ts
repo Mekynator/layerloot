@@ -102,8 +102,8 @@ export const hexToHslString = (color: string) => {
 
 export const normalizeGlobalDesignSystem = (value: unknown): GlobalDesignSystem => {
   const raw = value && typeof value === "object" ? (value as Partial<GlobalDesignSystem>) : {};
-  const typographyPresets = raw.typography?.presets ?? {};
-  const animationPresets = raw.animations?.presets ?? {};
+  const typographyPresets = (raw.typography?.presets ?? {}) as Record<string, any>;
+  const animationPresets = (raw.animations?.presets ?? {}) as Record<string, any>;
 
   const defaultVariant = raw.buttons?.defaultVariant;
   const radiusToken = raw.buttons?.radiusToken;

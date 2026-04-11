@@ -7,12 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, ArrowUp, ArrowDown, Copy, Trash2, Type, ImageIcon, Link2, LayoutGrid, Database, Eye, Settings2 } from "lucide-react";
- import AdminPageSelect from "@/components/admin/AdminPageSelect";
- import { supabase } from "@/integrations/supabase/client";
-+import ImageUploadField from "./controls/ImageUploadField";
-+import SliderField from "./controls/SliderField";
 import AdminPageSelect from "@/components/admin/AdminPageSelect";
 import { supabase } from "@/integrations/supabase/client";
+import ImageUploadField from "./controls/ImageUploadField";
+import SliderField from "./controls/SliderField";
 
 // ─── Shared Constants ────────────────────────────────────────────
 

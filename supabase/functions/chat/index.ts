@@ -450,7 +450,7 @@ serve(async (req) => {
           user_id: user?.id ?? null,
         } as any;
         // Fire-and-forget insert to analytics table; do not block the response
-        serviceSupabase.from("chat_analytics_events").insert(payload as any).then(() => {}).catch(() => {});
+        serviceSupabase.from("chat_analytics_events").insert(payload as any).then(() => {}, () => {});
       } catch (e) {
         // swallow errors to avoid breaking chat
         console.warn("hallucination logging failed", e);

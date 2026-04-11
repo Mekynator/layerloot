@@ -142,7 +142,7 @@ function CampaignParticles({ type, density = 30 }: { type: string; density?: num
   });
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-[5] overflow-hidden" aria-hidden="true">
+    <div className="pointer-events-none fixed inset-0 z-[5] overflow-hidden layer-decorative" aria-hidden="true">
       <style>{`
         @keyframes campaign-fall {
           0% { transform: translateY(-20px) translateX(0) rotate(0deg); }

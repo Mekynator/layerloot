@@ -444,7 +444,7 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
 
               <AnimationControls content={localContent} patchContent={patchContent} />
 
-              <AIAssistantPanel content={localContent} patchContent={patchContent} blockType={block.type} blockTitle={block.title} />
+              <AIAssistantPanel content={localContent} patchContent={patchContent} blockType={block.block_type} blockTitle={block.title} />
 
               <PersonalizationPanel content={localContent} patchContent={patchContent} />
 

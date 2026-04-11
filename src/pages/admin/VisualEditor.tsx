@@ -18,7 +18,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 function EditorInner() {
   const navigate = useNavigate();
   const { isAdmin, loading, user } = useAuth();
-  const { selectedPage, loadPages, setActivePage, activePage, pages, isDirty, save, undo, redo } = useVisualEditor();
+  const { selectedPage, loadPages, setActivePage, activePage, pages, isDirty, save, undo, redo, viewport } = useVisualEditor();
 
   const [addBlockOpen, setAddBlockOpen] = useState(false);
   const [pageDialogOpen, setPageDialogOpen] = useState(false);
@@ -28,6 +28,7 @@ function EditorInner() {
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [canvasZoom, setCanvasZoom] = useState(100);
+  const [previewMode, setPreviewMode] = useState(false);
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) navigate("/");
@@ -110,10 +111,14 @@ function EditorInner() {
         rightPanelOpen={rightPanelOpen}
         onToggleLeftPanel={() => setLeftPanelOpen((value) => !value)}
         onToggleRightPanel={() => setRightPanelOpen((value) => !value)}
+        previewMode={previewMode}
+        onTogglePreview={() => setPreviewMode((value) => !value)}
         zoom={canvasZoom}
         onZoomIn={() => setCanvasZoom((value) => Math.min(value + 10, 150))}
-        onZoomOut={() => setCanvasZoom((value) => Math.max(value - 10, 60))}
+        onZoomOut={() => setCanvasZoom((value) => Math.max(value - 10, 50))}
         onResetZoom={() => setCanvasZoom(100)}
+        onSetZoom={(value) => setCanvasZoom(Math.max(50, Math.min(value, 150)))}
+        onFitZoom={() => setCanvasZoom(viewport === "desktop" ? 80 : viewport === "tablet" ? 95 : 110)}
       />
 
       <ResizablePanelGroup direction="horizontal" className="flex-1">
@@ -127,7 +132,7 @@ function EditorInner() {
         )}
 
         <ResizablePanel defaultSize={leftPanelOpen && rightPanelOpen ? 56 : 72} minSize={30} className="min-w-0">
-          <EditorCanvas zoom={canvasZoom} />
+          <EditorCanvas zoom={canvasZoom} previewMode={previewMode} />
         </ResizablePanel>
 
         {rightPanelOpen && (

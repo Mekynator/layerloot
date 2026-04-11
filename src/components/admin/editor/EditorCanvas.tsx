@@ -3,7 +3,7 @@ import { tr } from "@/lib/translate";
 import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
 import EditorErrorBoundary from "@/components/admin/EditorErrorBoundary";
 import { useVisualEditor } from "@/contexts/VisualEditorContext";
-import { Plus, Eye, EyeOff, Copy, Trash2, ChevronUp, ChevronDown, GripVertical, Settings2 } from "lucide-react";
+import { AlignCenter, AlignLeft, AlignRight, ChevronDown, ChevronUp, Copy, Eye, EyeOff, GripVertical, Minus, Pencil, Plus, Settings2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBlockSchema, getInlineTextKeys } from "./editable-schema";
 import { buildPreviewList, previewListToLayout, type PreviewItem } from "@/lib/static-page-sections";
@@ -15,7 +15,7 @@ const VIEWPORT_WIDTHS = {
   mobile: "375px",
 };
 
-export default function EditorCanvas({ zoom = 100 }: { zoom?: number }) {
+export default function EditorCanvas({ zoom = 100, previewMode = false }: { zoom?: number; previewMode?: boolean }) {
   const {
     draftBlocks, selectedBlockId, hoveredBlockId,
     selectBlock, hoverBlock, viewport, activePage,
@@ -26,6 +26,9 @@ export default function EditorCanvas({ zoom = 100 }: { zoom?: number }) {
   } = useVisualEditor();
 
   const canvasRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const panState = useRef<{ startX: number; startY: number; scrollLeft: number; scrollTop: number } | null>(null);
+  const [isPanning, setIsPanning] = useState(false);
 
   // Scroll selected block into view
   useEffect(() => {
@@ -39,16 +42,66 @@ export default function EditorCanvas({ zoom = 100 }: { zoom?: number }) {
     [activePage, draftBlocks, layoutOrder],
   );
 
+  useEffect(() => {
+    if (!previewMode) return;
+    selectBlock(null);
+    selectElement(null);
+    selectStaticSection(null);
+    setInlineEditingKey(null);
+  }, [previewMode, selectBlock, selectElement, selectStaticSection, setInlineEditingKey]);
+
   const handleBlockClick = useCallback((e: React.MouseEvent, blockId: string) => {
+    if (previewMode) return;
     e.stopPropagation();
     selectBlock(blockId);
-  }, [selectBlock]);
+  }, [previewMode, selectBlock]);
 
   const handleCanvasClick = useCallback(() => {
+    if (previewMode) return;
     selectBlock(null);
     selectElement(null);
     setInlineEditingKey(null);
-  }, [selectBlock, selectElement, setInlineEditingKey]);
+  }, [previewMode, selectBlock, selectElement, setInlineEditingKey]);
+
+  const handleCanvasDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    if (e.dataTransfer.types.includes("application/x-layerloot-block")) {
+      e.preventDefault();
+    }
+  }, []);
+
+  const handleCanvasDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    const blockType = e.dataTransfer.getData("application/x-layerloot-block");
+    if (!blockType) return;
+    e.preventDefault();
+    const selectedIndex = selectedBlockId ? draftBlocks.findIndex((block) => block.id === selectedBlockId) : draftBlocks.length;
+    addBlock(blockType, selectedIndex === -1 ? undefined : selectedIndex + 1);
+  }, [addBlock, draftBlocks, selectedBlockId]);
+
+  const handlePanStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target.closest("[data-preview-id], [data-editor-toolbar], input, textarea, button, a, select")) return;
+    if (!scrollRef.current) return;
+
+    panState.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      scrollLeft: scrollRef.current.scrollLeft,
+      scrollTop: scrollRef.current.scrollTop,
+    };
+    setIsPanning(true);
+  }, []);
+
+  const handlePanMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!panState.current || !scrollRef.current) return;
+    scrollRef.current.scrollLeft = panState.current.scrollLeft - (e.clientX - panState.current.startX);
+    scrollRef.current.scrollTop = panState.current.scrollTop - (e.clientY - panState.current.startY);
+  }, []);
+
+  const stopPan = useCallback(() => {
+    panState.current = null;
+    setIsPanning(false);
+  }, []);
 
   const viewportWidth = VIEWPORT_WIDTHS[viewport];
 
@@ -71,10 +124,6 @@ export default function EditorCanvas({ zoom = 100 }: { zoom?: number }) {
       // Persist the new layout order
       setLayoutOrder(previewListToLayout(reordered));
 
-      // Sync dynamic block sort_order
-      const dynamicOrder = reordered.filter(i => i.source === "dynamic");
-      const currentDynamic = previewItems.filter(i => i.source === "dynamic");
-      
       // If dynamic order changed, reorder via moveBlock
       const fromItem = previewItems[dragIdx];
       const toItem = previewItems[dropIdx];
@@ -128,18 +177,28 @@ export default function EditorCanvas({ zoom = 100 }: { zoom?: number }) {
   return (
     <div className="flex h-full flex-col bg-[linear-gradient(180deg,rgba(148,163,184,0.08),transparent)]" onClick={handleCanvasClick}>
       <div className="border-b border-border/30 bg-background/70 px-4 py-2 text-[10px] uppercase tracking-[0.18em] text-muted-foreground backdrop-blur">
-        Live canvas · {viewport} preview · {Math.round(zoom)}%
+        {previewMode ? "Preview" : "Edit"} canvas · {viewport} preview · {Math.round(zoom)}% · drag background to pan
       </div>
-      <div className="flex-1 overflow-y-auto">
+      <div
+        ref={scrollRef}
+        className={cn("flex-1 overflow-auto", isPanning ? "cursor-grabbing" : "cursor-grab")}
+        onMouseDown={handlePanStart}
+        onMouseMove={handlePanMove}
+        onMouseUp={stopPan}
+        onMouseLeave={stopPan}
+        onDragOver={handleCanvasDragOver}
+        onDrop={handleCanvasDrop}
+      >
         <div className="flex justify-center p-5 lg:p-7">
           <div
             ref={canvasRef}
             className={cn(
-              "min-h-0 bg-background transition-all duration-300",
-              viewport !== "desktop" && "rounded-xl border border-border/40 shadow-2xl",
+              "relative min-h-0 overflow-hidden rounded-[28px] border border-border/40 bg-background shadow-[0_20px_90px_-35px_rgba(15,23,42,0.85)] transition-all duration-300",
+              viewport === "desktop" && "rounded-[20px]",
             )}
             style={{ width: viewportWidth, maxWidth: "100%", transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}
           >
+            <div className="pointer-events-none absolute inset-0 opacity-40" style={{ backgroundImage: "linear-gradient(rgba(148,163,184,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.08) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
             {previewItems.length === 0 ? (
               <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
                 <div className="mb-4 rounded-2xl bg-card/60 p-6 backdrop-blur-xl" style={{ boxShadow: '0 8px 40px -8px hsl(228 33% 2% / 0.5)' }}>
@@ -171,6 +230,7 @@ export default function EditorCanvas({ zoom = 100 }: { zoom?: number }) {
                           .filter(i => i.source === "dynamic").length;
                         addBlock("text", dynamicInsertIdx);
                       }}
+                      previewMode={previewMode}
                     />
                   );
                 }
@@ -210,9 +270,11 @@ export default function EditorCanvas({ zoom = 100 }: { zoom?: number }) {
                     }}
                     onEndInlineEdit={() => setInlineEditingKey(null)}
                     onSelectElement={(nodeKey, nodeType) => {
+                      if (previewMode) return;
                       selectBlock(block.id);
                       selectElement({ blockId: block.id, nodeKey, nodeType });
                     }}
+                    previewMode={previewMode}
                   />
                 );
               })
@@ -226,7 +288,7 @@ export default function EditorCanvas({ zoom = 100 }: { zoom?: number }) {
 
 /* ─── Static Section Shell — renders real content, now selectable ─── */
 
-function StaticSectionShell({ item, index, totalItems, isSelected, isDragOver, onSelect, onDragStart, onDragOver, onDragEnd, onMoveUp, onMoveDown, onAddAfter }: {
+function StaticSectionShell({ item, index, totalItems, isSelected, isDragOver, onSelect, onDragStart, onDragOver, onDragEnd, onMoveUp, onMoveDown, onAddAfter, previewMode = false }: {
   item: PreviewItem;
   index: number;
   totalItems: number;
@@ -239,10 +301,11 @@ function StaticSectionShell({ item, index, totalItems, isSelected, isDragOver, o
   onMoveUp: () => void;
   onMoveDown: () => void;
   onAddAfter: () => void;
+  previewMode?: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
   const section = item.staticSection!;
-  const showControls = hovered || isSelected;
+  const showControls = !previewMode && (hovered || isSelected);
 
   return (
     <div
@@ -251,7 +314,7 @@ function StaticSectionShell({ item, index, totalItems, isSelected, isDragOver, o
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
-      onClick={(e) => { e.stopPropagation(); onSelect?.(); }}
+      onClick={(e) => { e.stopPropagation(); if (previewMode) return; onSelect?.(); }}
       className={cn(
         "relative cursor-pointer transition-all duration-150",
         isSelected && "ring-2 ring-primary/60 ring-inset z-10",
@@ -300,7 +363,7 @@ function StaticSectionShell({ item, index, totalItems, isSelected, isDragOver, o
       </div>
 
       {/* Insert-after control */}
-      {hovered && (
+      {showControls && hovered && (
         <div
           className="absolute -bottom-px inset-x-0 z-30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity h-4 translate-y-1/2 cursor-pointer pointer-events-auto"
           onClick={(e) => { e.stopPropagation(); onAddAfter(); }}
@@ -344,6 +407,7 @@ interface CanvasBlockWrapperProps {
   onStartInlineEdit: (key: string) => void;
   onEndInlineEdit: () => void;
   onSelectElement: (nodeKey: string, nodeType: "text" | "icon" | "button" | "media" | "layout") => void;
+  previewMode?: boolean;
 }
 
 function CanvasBlockWrapper({
@@ -354,13 +418,15 @@ function CanvasBlockWrapper({
   onDragStart, onDragOver, onDragEnd,
   onUpdateContent,
   inlineEditingKey, onStartInlineEdit, onEndInlineEdit, onSelectElement,
+  previewMode = false,
 }: CanvasBlockWrapperProps) {
   const isInactive = block.is_active === false;
-  const showControls = isSelected || isHovered;
+  const showControls = !previewMode && (isSelected || isHovered);
   const content = (block.content || {}) as Record<string, any>;
   const inlineTextKeys = getInlineTextKeys(block.block_type);
 
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+    if (previewMode) return;
     e.stopPropagation();
     e.preventDefault();
     const target = e.target as HTMLElement;
@@ -373,7 +439,36 @@ function CanvasBlockWrapper({
     if (inlineTextKeys.length > 0) {
       onStartInlineEdit(inlineTextKeys[0]);
     }
-  }, [inlineTextKeys, onStartInlineEdit]);
+  }, [inlineTextKeys, onStartInlineEdit, previewMode]);
+
+  const handleClickCapture = useCallback((e: React.MouseEvent) => {
+    if (previewMode) return;
+    const target = e.target as HTMLElement;
+    if (target.closest("[data-editor-toolbar]")) return;
+    if (target.closest("a, button, input, textarea, select")) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, [previewMode]);
+
+  const hasAlignmentControls = typeof content.alignment === "string";
+  const hasSpacingControls = content.paddingTop !== undefined || content.paddingBottom !== undefined || content.gap !== undefined;
+
+  const setAlignment = useCallback((alignment: "left" | "center" | "right") => {
+    onUpdateContent({ ...content, alignment });
+  }, [content, onUpdateContent]);
+
+  const nudgeSpacing = useCallback((delta: number) => {
+    if (content.paddingTop !== undefined || content.paddingBottom !== undefined) {
+      onUpdateContent({
+        ...content,
+        paddingTop: Math.max(0, Number(content.paddingTop ?? 0) + delta),
+        paddingBottom: Math.max(0, Number(content.paddingBottom ?? 0) + delta),
+      });
+      return;
+    }
+    onUpdateContent({ ...content, gap: Math.max(0, Number(content.gap ?? 0) + delta) });
+  }, [content, onUpdateContent]);
 
   const handleInlineSave = useCallback((key: string, value: string) => {
     onEndInlineEdit();
@@ -397,6 +492,7 @@ function CanvasBlockWrapper({
         isDragOver && "border-t-2 border-t-primary",
       )}
       onClick={(e) => onClick(e, block.id)}
+      onClickCapture={handleClickCapture}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       onDoubleClick={handleDoubleClick}
@@ -415,9 +511,16 @@ function CanvasBlockWrapper({
         </div>
       )}
 
+      {isSelected && !previewMode && (
+        <>
+          <div className="pointer-events-none absolute inset-y-0 left-1/2 z-20 border-l border-dashed border-primary/25" />
+          <div className="pointer-events-none absolute inset-x-0 top-1/2 z-20 border-t border-dashed border-primary/20" />
+        </>
+      )}
+
       {/* Floating label toolbar (left) */}
       {showControls && (
-        <div className="absolute top-1 left-2 z-30 flex items-center gap-1 rounded-lg border border-border/30 bg-card/95 px-1.5 py-0.5 shadow-lg backdrop-blur-xl">
+        <div data-editor-toolbar className="absolute top-1 left-2 z-30 flex items-center gap-1 rounded-lg border border-border/30 bg-card/95 px-1.5 py-0.5 shadow-lg backdrop-blur-xl">
           <GripVertical className="h-3 w-3 text-muted-foreground cursor-grab" />
           <span className="font-display text-[9px] font-semibold uppercase tracking-wider text-primary">
             {block.block_type.replace(/_/g, " ")}
@@ -430,14 +533,32 @@ function CanvasBlockWrapper({
 
       {/* Floating action toolbar (right) */}
       {showControls && (
-        <div className="absolute top-1 right-2 z-30 flex items-center gap-0.5 rounded-lg border border-border/30 bg-card/95 px-1 py-0.5 shadow-lg backdrop-blur-xl">
-          <ToolButton onClick={onMoveUp} title="Move up" disabled={unifiedIndex === 0}>
+        <div data-editor-toolbar className="absolute top-1 right-2 z-30 flex max-w-[calc(100%-1rem)] flex-wrap items-center gap-0.5 rounded-lg border border-border/30 bg-card/95 px-1 py-0.5 shadow-lg backdrop-blur-xl">
+          <ToolButton onClick={onMoveUp} title="Move forward" disabled={unifiedIndex === 0}>
             <ChevronUp className="h-3 w-3" />
           </ToolButton>
-          <ToolButton onClick={onMoveDown} title="Move down" disabled={unifiedIndex === totalItems - 1}>
+          <ToolButton onClick={onMoveDown} title="Move backward" disabled={unifiedIndex === totalItems - 1}>
             <ChevronDown className="h-3 w-3" />
           </ToolButton>
-          <div className="w-px h-3 bg-border/30 mx-0.5" />
+          {inlineTextKeys.length > 0 && (
+            <ToolButton onClick={() => onStartInlineEdit(inlineTextKeys[0])} title="Quick text edit">
+              <Pencil className="h-3 w-3" />
+            </ToolButton>
+          )}
+          {hasAlignmentControls && (
+            <>
+              <ToolButton onClick={() => setAlignment("left")} title="Align left"><AlignLeft className="h-3 w-3" /></ToolButton>
+              <ToolButton onClick={() => setAlignment("center")} title="Align center"><AlignCenter className="h-3 w-3" /></ToolButton>
+              <ToolButton onClick={() => setAlignment("right")} title="Align right"><AlignRight className="h-3 w-3" /></ToolButton>
+            </>
+          )}
+          {hasSpacingControls && (
+            <>
+              <ToolButton onClick={() => nudgeSpacing(-4)} title="Tighter spacing"><Minus className="h-3 w-3" /></ToolButton>
+              <ToolButton onClick={() => nudgeSpacing(4)} title="More spacing"><Plus className="h-3 w-3" /></ToolButton>
+            </>
+          )}
+          <div className="mx-0.5 h-3 w-px bg-border/30" />
           <ToolButton onClick={onToggleActive} title={isInactive ? "Show" : "Hide"}>
             {isInactive ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
           </ToolButton>
@@ -451,9 +572,15 @@ function CanvasBlockWrapper({
       )}
 
       {/* Inline editing hint */}
-      {isSelected && inlineTextKeys.length > 0 && !inlineEditingKey && (
-        <div className="absolute bottom-1 left-2 z-30 flex items-center gap-1 rounded-lg border border-border/30 bg-card/95 px-1.5 py-0.5 shadow-lg backdrop-blur-xl">
+      {isSelected && !previewMode && inlineTextKeys.length > 0 && !inlineEditingKey && (
+        <div data-editor-toolbar className="absolute bottom-1 left-2 z-30 flex items-center gap-1 rounded-lg border border-border/30 bg-card/95 px-1.5 py-0.5 shadow-lg backdrop-blur-xl">
           <span className="text-[9px] text-muted-foreground">Double-click text to edit inline</span>
+        </div>
+      )}
+
+      {isSelected && !previewMode && (content.paddingTop !== undefined || content.paddingBottom !== undefined || content.gap !== undefined) && (
+        <div data-editor-toolbar className="absolute bottom-1 right-2 z-30 rounded-lg border border-border/30 bg-card/95 px-1.5 py-0.5 text-[9px] text-muted-foreground shadow-lg backdrop-blur-xl">
+          spacing · pt {Number(content.paddingTop ?? 0)} · pb {Number(content.paddingBottom ?? 0)} · gap {Number(content.gap ?? 0)}
         </div>
       )}
 
@@ -483,6 +610,7 @@ function ToolButton({ children, onClick, title, destructive, disabled }: {
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       title={title}
       disabled={disabled}
+      data-editor-toolbar
       className={cn(
         "rounded p-1 transition-colors",
         disabled && "opacity-30 cursor-not-allowed",

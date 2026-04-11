@@ -752,7 +752,7 @@ const ChatWidget = () => {
       // If user asked for viewed/saved based recommendations, prefer those sources
       if (viewedIntent && recentProducts && recentProducts.length > 0) {
         const ids = recentProducts.map((r) => r.id).slice(0, 3);
-        const { data } = await supabase.from("products").select("id,name,slug,images,price,short_description").in("id", ids).eq("is_active", true).eq("published", true).limit(3);
+        const { data } = await (supabase.from("products") as any).select("id,name,slug,images,price,short_description").in("id", ids).eq("is_active", true).eq("published", true).limit(3);
         if (data && data.length > 0) {
           const items: ParsedChatProduct[] = data.map((p: any) => ({
             id: p.id,

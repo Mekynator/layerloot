@@ -166,6 +166,17 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
     });
   };
 
+  const duplicateItem = (index: number) => {
+    if (!repeaterKey) return;
+    setContent((prev) => {
+      const items = Array.isArray(prev[repeaterKey]) ? [...(prev[repeaterKey] as RepeaterItem[])] : [];
+      if (index < 0 || index >= items.length) return prev;
+      const clone = { ...items[index], order: items.length + 1 };
+      items.splice(index + 1, 0, clone);
+      return { ...prev, [repeaterKey]: items.map((item, i) => ({ ...item, order: i + 1 })) };
+    });
+  };
+
   const handleSave = async () => {
     if (!block) return;
     setSaving(true);
@@ -283,6 +294,7 @@ const BlockEditorPanel = ({ block, open, onClose, onSave, pages }: BlockEditorPa
               addItem={addItem}
               removeItem={removeItem}
               moveItem={moveItem}
+              duplicateItem={duplicateItem}
               pages={pages}
             />
           </div>

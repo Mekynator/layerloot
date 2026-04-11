@@ -63,7 +63,7 @@ function useExperimentMetrics(experimentId: string | null) {
     queryFn: async () => {
       if (!experimentId) return [] as VariantMetrics[];
 
-      const { data, error } = await (supabase
+      const { data, error }: any = await (supabase
         .from("analytics_events" as any)
         .select("event_name, context")
         .in("event_name", ["ab_variant_shown", "ab_variant_click", "add_to_cart", "checkout_started", "purchase_completed"])

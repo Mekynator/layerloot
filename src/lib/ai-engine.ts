@@ -140,7 +140,6 @@ const PRIORITY_WEIGHTS: Record<AISuggestionPriority, number> = {
 
 const TYPE_BASE_SCORES: Record<AISuggestionType, number> = {
   performance_flag: 90,
-  conversion_drop: 85,
   cta_optimize: 70,
   content_improvement: 60,
   ab_test_create: 55,
@@ -151,9 +150,6 @@ const TYPE_BASE_SCORES: Record<AISuggestionType, number> = {
   campaign_optimize: 50,
   seo_improve: 45,
 };
-
-// Fix: add conversion_drop to the type properly
-(TYPE_BASE_SCORES as Record<string, number>).conversion_drop = 85;
 
 export function scoreSuggestion(suggestion: AISuggestion): number {
   const baseScore = TYPE_BASE_SCORES[suggestion.type] ?? 50;
@@ -178,7 +174,7 @@ export interface AutomationMetrics {
 }
 
 function evaluateCondition(condition: AutomationCondition, metrics: AutomationMetrics): boolean {
-  const metricValue = (metrics as Record<string, number>)[condition.metric];
+  const metricValue = (metrics as unknown as Record<string, number>)[condition.metric];
   if (metricValue === undefined) return false;
 
   switch (condition.operator) {

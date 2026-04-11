@@ -7,9 +7,10 @@ import { ChevronDown, Search } from "lucide-react";
 import {
   Square, Type, Image, Columns, PlayCircle, MousePointer, Link2, Code, Globe, Mail,
   Truck, Star, HelpCircle, ShieldCheck, Layers, Package, FolderTree,
-  Award, Clock, MessageSquare, Eye, Gift, Minus, ThumbsUp,
+  Clock, MessageSquare, Eye, Gift, Minus, Sparkles, Wand2, Store, LayoutTemplate, ThumbsUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface BlockDef {
   value: string;
@@ -22,6 +23,14 @@ interface BlockDef {
 interface Category {
   name: string;
   blocks: BlockDef[];
+}
+
+interface PageTemplateDef {
+  id: string;
+  name: string;
+  desc: string;
+  icon: React.ElementType;
+  blocks: string[];
 }
 
 const CATEGORIES: Category[] = [
@@ -84,7 +93,29 @@ const CATEGORIES: Category[] = [
   },
 ];
 
-const ALL_BLOCKS = CATEGORIES.flatMap(c => c.blocks);
+const PAGE_TEMPLATES: PageTemplateDef[] = [
+  {
+    id: "starter-storefront",
+    name: "Storefront Starter",
+    desc: "Hero, featured products, trust signals, and a CTA-ready finish.",
+    icon: Store,
+    blocks: ["hero", "featured_products", "trust_badges", "testimonials", "cta"],
+  },
+  {
+    id: "brand-story",
+    name: "Brand Story",
+    desc: "Ideal for About or custom landing pages with narrative sections.",
+    icon: LayoutTemplate,
+    blocks: ["hero", "text", "how_it_works", "gallery", "faq"],
+  },
+  {
+    id: "campaign-launch",
+    name: "Campaign Launch",
+    desc: "A conversion-focused sequence for promos, launches, and seasonal offers.",
+    icon: Wand2,
+    blocks: ["banner", "countdown", "entry_cards", "social_proof", "cta"],
+  },
+];
 
 interface AddBlockDialogProps {
   open: boolean;
@@ -98,6 +129,15 @@ export default function AddBlockDialog({ open, onOpenChange, insertAtIndex }: Ad
 
   const handleAdd = (type: string) => {
     addBlock(type, insertAtIndex);
+    onOpenChange(false);
+    setSearch("");
+  };
+
+  const handleAddTemplate = (template: PageTemplateDef) => {
+    template.blocks.forEach((blockType, offset) => {
+      addBlock(blockType, typeof insertAtIndex === "number" ? insertAtIndex + offset : undefined);
+    });
+    toast.success(`Added \"${template.name}\" template`);
     onOpenChange(false);
     setSearch("");
   };
@@ -135,7 +175,32 @@ export default function AddBlockDialog({ open, onOpenChange, insertAtIndex }: Ad
           />
         </div>
 
-        <div className="flex-1 overflow-y-auto space-y-1 pr-1">
+        <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+          {!search.trim() && (
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
+              <div className="mb-2 flex items-center gap-2">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Quick start templates</p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {PAGE_TEMPLATES.map(({ id, name, desc, icon: Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => handleAddTemplate(PAGE_TEMPLATES.find((template) => template.id === id)!)}
+                    className="rounded-xl border border-border/40 bg-background/80 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40"
+                  >
+                    <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                      <Icon className="h-4 w-4 text-primary" />
+                    </div>
+                    <p className="text-xs font-semibold text-foreground">{name}</p>
+                    <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {filtered.length === 0 && (
             <p className="py-8 text-center text-sm text-muted-foreground">No blocks match "{search}"</p>
           )}

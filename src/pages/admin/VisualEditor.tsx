@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 
 function EditorInner() {
   const navigate = useNavigate();
@@ -25,6 +25,9 @@ function EditorInner() {
   const [pageDialogMode, setPageDialogMode] = useState<"create" | "edit">("create");
   const [deletePageOpen, setDeletePageOpen] = useState(false);
   const [bgEditorOpen, setBgEditorOpen] = useState(false);
+  const [leftPanelOpen, setLeftPanelOpen] = useState(true);
+  const [rightPanelOpen, setRightPanelOpen] = useState(true);
+  const [canvasZoom, setCanvasZoom] = useState(100);
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) navigate("/");
@@ -94,7 +97,7 @@ function EditorInner() {
   if (loading || !isAdmin) return null;
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background">
+    <div className="flex h-screen flex-col overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.12),_transparent_40%),linear-gradient(180deg,rgba(2,6,23,0.04),transparent_40%)] bg-background">
       <EditorToolbar
         onAddBlock={() => setAddBlockOpen(true)}
         onPageSettings={() => {
@@ -103,24 +106,38 @@ function EditorInner() {
         }}
         onDeletePage={() => setDeletePageOpen(true)}
         onBackgroundEditor={() => setBgEditorOpen(true)}
+        leftPanelOpen={leftPanelOpen}
+        rightPanelOpen={rightPanelOpen}
+        onToggleLeftPanel={() => setLeftPanelOpen((value) => !value)}
+        onToggleRightPanel={() => setRightPanelOpen((value) => !value)}
+        zoom={canvasZoom}
+        onZoomIn={() => setCanvasZoom((value) => Math.min(value + 10, 150))}
+        onZoomOut={() => setCanvasZoom((value) => Math.max(value - 10, 60))}
+        onResetZoom={() => setCanvasZoom(100)}
       />
 
       <ResizablePanelGroup direction="horizontal" className="flex-1">
-        <ResizablePanel defaultSize={16} minSize={12} maxSize={25} className="min-w-0">
-          <LayersPanel onAddBlock={() => setAddBlockOpen(true)} />
+        {leftPanelOpen && (
+          <>
+            <ResizablePanel defaultSize={18} minSize={12} maxSize={28} className="min-w-0">
+              <LayersPanel onAddBlock={() => setAddBlockOpen(true)} />
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+          </>
+        )}
+
+        <ResizablePanel defaultSize={leftPanelOpen && rightPanelOpen ? 56 : 72} minSize={30} className="min-w-0">
+          <EditorCanvas zoom={canvasZoom} />
         </ResizablePanel>
 
-        <ResizableHandle withHandle />
-
-        <ResizablePanel defaultSize={58} minSize={30} className="min-w-0">
-          <EditorCanvas />
-        </ResizablePanel>
-
-        <ResizableHandle withHandle />
-
-        <ResizablePanel defaultSize={26} minSize={18} maxSize={40} className="min-w-0">
-          <SettingsPanel />
-        </ResizablePanel>
+        {rightPanelOpen && (
+          <>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={26} minSize={18} maxSize={40} className="min-w-0">
+              <SettingsPanel />
+            </ResizablePanel>
+          </>
+        )}
       </ResizablePanelGroup>
 
       <AddBlockDialog open={addBlockOpen} onOpenChange={setAddBlockOpen} />

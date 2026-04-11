@@ -15,7 +15,7 @@ const VIEWPORT_WIDTHS = {
   mobile: "375px",
 };
 
-export default function EditorCanvas() {
+export default function EditorCanvas({ zoom = 100 }: { zoom?: number }) {
   const {
     draftBlocks, selectedBlockId, hoveredBlockId,
     selectBlock, hoverBlock, viewport, activePage,
@@ -126,16 +126,19 @@ export default function EditorCanvas() {
   }, [draftBlocks]);
 
   return (
-    <div className="flex h-full flex-col bg-muted/20" onClick={handleCanvasClick}>
+    <div className="flex h-full flex-col bg-[linear-gradient(180deg,rgba(148,163,184,0.08),transparent)]" onClick={handleCanvasClick}>
+      <div className="border-b border-border/30 bg-background/70 px-4 py-2 text-[10px] uppercase tracking-[0.18em] text-muted-foreground backdrop-blur">
+        Live canvas · {viewport} preview · {Math.round(zoom)}%
+      </div>
       <div className="flex-1 overflow-y-auto">
-        <div className="flex justify-center p-4">
+        <div className="flex justify-center p-5 lg:p-7">
           <div
             ref={canvasRef}
             className={cn(
               "min-h-0 bg-background transition-all duration-300",
               viewport !== "desktop" && "rounded-xl border border-border/40 shadow-2xl",
             )}
-            style={{ width: viewportWidth, maxWidth: "100%" }}
+            style={{ width: viewportWidth, maxWidth: "100%", transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}
           >
             {previewItems.length === 0 ? (
               <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">

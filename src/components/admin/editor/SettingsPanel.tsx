@@ -18,8 +18,9 @@ import BackgroundSlideshowControls from "./controls/BackgroundSlideshowControls"
 import ImageEffectsControls from "./controls/ImageEffectsControls";
 import AnimationControls from "./controls/AnimationControls";
 import VisualEffectsControls from "./controls/VisualEffectsControls";
-import { getBlockSchema } from "./editable-schema";
+import { getBlockSchema, type EditableNode, type BlockEditableSchema } from "./editable-schema";
 import BlockFieldGroups from "./BlockFieldGroups";
+import PageStylePresetsPanel from "./PageStylePresetsPanel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { tr } from "@/lib/translate";
 
@@ -164,6 +165,16 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
   const selectedNodeType = isElementSelected ? selectedElement?.nodeType : null;
 
   const schema = getBlockSchema(block.block_type);
+  const selectedNode = useMemo<EditableNode | null>(() => {
+    if (!selectedNodeKey) return null;
+    return schema.nodes.find((node) => node.key === selectedNodeKey)
+      ?? schema.repeaterItemNodes?.find((node) => node.key === selectedNodeKey)
+      ?? null;
+  }, [schema, selectedNodeKey]);
+  const selectedRepeaterIndex = isElementSelected ? selectedElement?.repeaterIndex : undefined;
+  const selectedRepeaterItem = typeof selectedRepeaterIndex === "number"
+    ? repeaterItems[selectedRepeaterIndex] ?? null
+    : null;
 
   // Page paths for BlockFieldGroups action editor
   const pageList = useMemo(
@@ -212,43 +223,35 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
                 <Input value={title} onChange={(e) => handleTitleChange(e.target.value)} className="mt-1 h-8 text-xs" />
               </div>
 
-              {/* Element-level selection panel */}
-              {isElementSelected && selectedNodeKey && selectedNodeType === "text" && (
-                <div className="rounded-lg border border-primary/30 bg-primary/5 p-2 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <MousePointerClick className="h-3 w-3 text-primary" />
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-primary">
-                        Editing: {schema.nodes.find(n => n.key === selectedNodeKey)?.label || selectedNodeKey}
-                      </span>
-                    </div>
-                    <button onClick={() => onSelectElement(null)} className="text-[9px] text-muted-foreground hover:text-foreground underline">
-                      Back to block
-                    </button>
-                  </div>
-                  {schema.nodes.find(n => n.key === selectedNodeKey && n.type === "text") && (
-                    <div>
-                      <Label className="text-[10px]">Text</Label>
-                      {(schema.nodes.find(n => n.key === selectedNodeKey) as { multiline?: boolean })?.multiline ? (
-                        <Textarea
-                          value={String(localContent[selectedNodeKey] || "")}
-                          onChange={(e) => patchContent(selectedNodeKey, e.target.value)}
-                          rows={4} className="text-xs"
-                        />
-                      ) : (
-                        <Input
-                          value={String(localContent[selectedNodeKey] || "")}
-                          onChange={(e) => patchContent(selectedNodeKey, e.target.value)}
-                          className="h-8 text-xs"
-                        />
-                      )}
-                    </div>
+              <ElementNavigator
+                blockId={block.id}
+                schema={schema}
+                repeaterItems={repeaterItems}
+                selectedElement={isElementSelected ? selectedElement : null}
+                onSelectElement={onSelectElement}
+              />
+
+              {isElementSelected && selectedNodeKey && selectedNode && (
+                <ElementInspector
+                  node={selectedNode}
+                  value={selectedRepeaterItem?.[selectedNodeKey] ?? localContent[selectedNodeKey]}
+                  repeaterLabel={typeof selectedRepeaterIndex === "number" ? `${selectedRepeaterIndex + 1}` : null}
+                  onBack={() => onSelectElement(null)}
+                  onChange={(value) => {
+                    if (typeof selectedRepeaterIndex === "number") {
+                      patchItem(selectedRepeaterIndex, { [selectedNodeKey]: value });
+                      return;
+                    }
+                    patchContent(selectedNodeKey, value);
+                  }}
+                >
+                  {selectedNode.type === "text" && (
+                    <TypographyControls
+                      typography={getTypography(selectedNodeKey)}
+                      onChange={(key, val) => handleTypographyChange(selectedNodeKey, key, val)}
+                    />
                   )}
-                  <TypographyControls
-                    typography={getTypography(selectedNodeKey)}
-                    onChange={(key, val) => handleTypographyChange(selectedNodeKey, key, val)}
-                  />
-                </div>
+                </ElementInspector>
               )}
 
               {/* Unified BlockFieldGroups — replaces the old per-block ContentEditor */}
@@ -267,6 +270,7 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
             </TabsContent>
 
             <TabsContent value="style" className="space-y-3 mt-3">
+              <PageStylePresetsPanel blockType={block.block_type} content={localContent} onApplyPatch={(patch) => commitContent({ ...localContent, ...patch })} />
               <AdvancedStyleEditor content={localContent} patchContent={patchContent} />
               <ImageEffectsControls content={localContent} patchContent={patchContent} />
               <BackgroundSlideshowControls content={localContent} patchContent={patchContent} />
@@ -333,6 +337,152 @@ function BlockSettings({ block, selectedElement, onSelectElement }: { block: Sit
           </Tabs>
         </div>
       </ScrollArea>
+    </div>
+  );
+}
+
+function ElementNavigator({
+  blockId,
+  schema,
+  repeaterItems,
+  selectedElement,
+  onSelectElement,
+}: {
+  blockId: string;
+  schema: BlockEditableSchema;
+  repeaterItems: Record<string, unknown>[];
+  selectedElement: SelectedElement | null;
+  onSelectElement: (element: SelectedElement | null) => void;
+}) {
+  const hasPrimaryNodes = schema.nodes.length > 0;
+  const hasRepeaterNodes = !!schema.repeaterKey && !!schema.repeaterItemNodes?.length && repeaterItems.length > 0;
+
+  if (!hasPrimaryNodes && !hasRepeaterNodes) return null;
+
+  const isActive = (nodeKey: string, repeaterIndex?: number) => (
+    selectedElement?.nodeKey === nodeKey && selectedElement?.repeaterIndex === repeaterIndex
+  );
+
+  return (
+    <div className="space-y-2 rounded-lg border border-border/30 bg-background/40 p-2">
+      <div className="flex items-center gap-1.5">
+        <MousePointerClick className="h-3 w-3 text-primary" />
+        <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Element map</span>
+      </div>
+
+      {hasPrimaryNodes && (
+        <div className="space-y-1">
+          <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Block elements</p>
+          <div className="flex flex-wrap gap-1">
+            {schema.nodes.map((node) => (
+              <button
+                key={node.key}
+                type="button"
+                onClick={() => onSelectElement({ blockId, nodeKey: node.key, nodeType: node.type })}
+                className={`rounded-full border px-2 py-1 text-[10px] transition-colors ${isActive(node.key) ? "border-primary/50 bg-primary/10 text-primary" : "border-border/40 text-muted-foreground hover:text-foreground"}`}
+              >
+                {node.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {hasRepeaterNodes && schema.repeaterItemNodes && (
+        <div className="space-y-2">
+          <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Nested items</p>
+          {repeaterItems.map((item, index) => (
+            <div key={`${schema.repeaterKey}-${index}`} className="rounded-lg border border-border/30 p-2">
+              <div className="mb-1 flex items-center justify-between">
+                <p className="text-[10px] font-medium text-foreground">{schema.repeaterKey?.replace(/_/g, " ")} {index + 1}</p>
+                <span className="truncate text-[9px] text-muted-foreground">{String(item.title || item.question || item.name || item.label || "Item")}</span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {schema.repeaterItemNodes.map((node) => (
+                  <button
+                    key={`${schema.repeaterKey}-${index}-${node.key}`}
+                    type="button"
+                    onClick={() => onSelectElement({ blockId, nodeKey: node.key, nodeType: node.type, repeaterIndex: index })}
+                    className={`rounded-full border px-2 py-1 text-[10px] transition-colors ${isActive(node.key, index) ? "border-primary/50 bg-primary/10 text-primary" : "border-border/40 text-muted-foreground hover:text-foreground"}`}
+                  >
+                    {node.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ElementInspector({
+  node,
+  value,
+  repeaterLabel,
+  onBack,
+  onChange,
+  children,
+}: {
+  node: EditableNode;
+  value: unknown;
+  repeaterLabel: string | null;
+  onBack: () => void;
+  onChange: (value: unknown) => void;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border border-primary/30 bg-primary/5 p-2 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <MousePointerClick className="h-3 w-3 text-primary" />
+          <span className="text-[10px] font-bold uppercase tracking-wider text-primary">
+            Editing: {node.label}{repeaterLabel ? ` · item ${repeaterLabel}` : ""}
+          </span>
+        </div>
+        <button type="button" onClick={onBack} className="text-[9px] text-muted-foreground hover:text-foreground underline">
+          Back to block
+        </button>
+      </div>
+
+      {node.type === "text" && (
+        <div>
+          <Label className="text-[10px]">Text</Label>
+          {node.multiline ? (
+            <Textarea value={String(value || "")} onChange={(e) => onChange(e.target.value)} rows={4} className="text-xs" />
+          ) : (
+            <Input value={String(value || "")} onChange={(e) => onChange(e.target.value)} className="h-8 text-xs" />
+          )}
+        </div>
+      )}
+
+      {node.type === "layout" && (
+        <div>
+          <Label className="text-[10px]">Layout</Label>
+          <Select value={String(value || node.options[0]?.value || "")} onValueChange={onChange}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {node.options.map((option) => (
+                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {node.type === "icon" && (
+        <div>
+          <Label className="text-[10px]">Icon name</Label>
+          <Input value={String(value || "")} onChange={(e) => onChange(e.target.value)} className="h-8 text-xs" placeholder="e.g. Star" />
+        </div>
+      )}
+
+      {node.type === "media" && (
+        <ImageUploadField label={node.label} value={String(value || "")} onChange={onChange} />
+      )}
+
+      {children}
     </div>
   );
 }

@@ -104,6 +104,7 @@ const AppShell = () => {
           <Route path="/creations" element={<Creations />} />
           <Route path="/creations/:slug" element={<CreationDetail />} />
           <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/visual-editor" element={<AdminRoute requiredPermission="content.edit"><VisualEditor /></AdminRoute>} />
           <Route path="/admin" element={<AdminRoute><AdminShell /></AdminRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="products" element={<AdminRoute requiredPermission="products.manage"><AdminProducts /></AdminRoute>} />
@@ -128,7 +129,6 @@ const AppShell = () => {
             <Route path="chat-analytics" element={<AdminRoute requiredPermission="settings.view"><Navigate to="/admin/chat?section=analytics" replace /></AdminRoute>} />
             <Route path="personalization" element={<AdminRoute requiredPermission="settings.view"><Navigate to="/admin/chat?section=personalization" replace /></AdminRoute>} />
             <Route path="editor" element={<AdminRoute requiredPermission="content.edit"><EditorWorkspace /></AdminRoute>} />
-            <Route path="visual-editor" element={<AdminRoute requiredPermission="content.edit"><VisualEditor /></AdminRoute>} />
             <Route path="content" element={<AdminRoute requiredPermission="content.edit"><Navigate to="/admin/editor?section=blocks" replace /></AdminRoute>} />
             <Route path="backgrounds" element={<AdminRoute requiredPermission="backgrounds.manage"><AdminBackgrounds /></AdminRoute>} />
             <Route path="media" element={<AdminRoute requiredPermission="media.manage"><AdminMedia /></AdminRoute>} />

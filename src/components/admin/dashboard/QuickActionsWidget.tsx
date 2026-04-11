@@ -11,7 +11,7 @@ interface Shortcut {
 }
 
 const ALL_SHORTCUTS: Shortcut[] = [
-  { id: "editor", label: "Content & Layout", icon: FileText, to: "/admin/editor", permissions: ["content.edit"] },
+  { id: "editor", label: "Page Editor", icon: FileText, to: "/admin/visual-editor", permissions: ["content.edit"] },
   { id: "translations", label: "Translations", icon: Globe, to: "/admin/translations", permissions: ["translations.manage"] },
   { id: "media", label: "Media", icon: ImageIcon, to: "/admin/media", permissions: ["media.manage"] },
   { id: "discounts", label: "Discounts", icon: TicketPercent, to: "/admin/discounts", permissions: ["products.manage"] },

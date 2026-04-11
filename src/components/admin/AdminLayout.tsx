@@ -49,7 +49,7 @@ const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
         { id: "translations", to: "/admin/translations", label: "Translations", icon: "Globe", visible: true, permission: "translations.manage" },
         { id: "backgrounds", to: "/admin/backgrounds", label: "Backgrounds", icon: "ImageIcon", visible: true, permission: "backgrounds.manage" },
         // Hide old editor/content/policies/settings links
-        { id: "editor", to: "/admin/editor?section=pages", label: "Page Editor", icon: "FileText", visible: false, permission: "content.edit" },
+        { id: "editor", to: "/admin/visual-editor", label: "Page Editor", icon: "FileText", visible: false, permission: "content.edit" },
         { id: "content", to: "/admin/editor?section=blocks", label: "Blocks & Content", icon: "Layers", visible: false, permission: "content.edit" },
         { id: "policies", to: "/admin/policies", label: "Policies", icon: "Shield", visible: false, permission: "settings.view" },
         { id: "settings", to: "/admin/settings", label: "Site Settings", icon: "Settings", visible: false, permission: "settings.view" },

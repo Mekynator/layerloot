@@ -217,7 +217,7 @@ const DEFAULT_SHORTCUTS: DashboardShortcut[] = [
   { id: "products", label: "Products", icon: "Package", to: "/admin/products", visible: true },
   { id: "orders", label: "Orders", icon: "ShoppingCart", to: "/admin/orders", visible: true },
   { id: "custom-orders", label: "Custom Orders", icon: "Box", to: "/admin/custom-orders", visible: true },
-  { id: "editor", label: "Page Editor", icon: "FileText", to: "/admin/editor", visible: true },
+  { id: "editor", label: "Page Editor", icon: "FileText", to: "/admin/visual-editor", visible: true },
   { id: "reviews", label: "Reviews", icon: "Star", to: "/admin/reviews", visible: true },
   { id: "clients", label: "Users", icon: "Users", to: "/admin/clients", visible: true },
   { id: "settings", label: "Settings", icon: "Settings", to: "/admin/settings", visible: true },

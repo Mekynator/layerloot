@@ -17,8 +17,8 @@ const ICON_MAP: Record<string, typeof Package> = {
   LayoutDashboard, Package, ShoppingCart, Users, Truck, Star, FileText,
   Settings, Box, TicketPercent, Calculator, Megaphone, BarChart3,
   ImageIcon, Activity, Globe, MessageCircle, Instagram, Brain,
-  FlaskConical, DollarSign, Sparkles, Layers, Tags, Palette, Shield, Calendar,
-  Crown,
+  FlaskConical, DollarSign, Sparkles, Layers, Tags, Palette, Shield,
+  Crown, Gift, Wrench,
 };
 
 interface SidebarItem {
@@ -64,6 +64,7 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
     name: "Users & Roles",
     items: [
       { id: "users", to: "/users", label: "Users & Admins", icon: "Users", permission: "*" },
+      { id: "admin-roles", to: "/admin-roles", label: "Admin Roles", icon: "Shield", permission: "*" },
       { id: "reviews", to: "/reviews", label: "Reviews", icon: "Star", permission: "reviews.manage" },
     ],
   },

@@ -11,16 +11,16 @@ interface Shortcut {
 }
 
 const ALL_SHORTCUTS: Shortcut[] = [
-  { id: "editor", label: "Page Editor", icon: FileText, to: "/admin/visual-editor", permissions: ["content.edit"] },
-  { id: "translations", label: "Translations", icon: Globe, to: "/admin/translations", permissions: ["translations.manage"] },
-  { id: "media", label: "Media", icon: ImageIcon, to: "/admin/media", permissions: ["media.manage"] },
-  { id: "discounts", label: "Discounts", icon: TicketPercent, to: "/admin/discounts", permissions: ["products.manage"] },
-  { id: "categories", label: "Categories", icon: Tags, to: "/admin/categories", permissions: ["products.manage"] },
-  { id: "shipping", label: "Shipping", icon: Truck, to: "/admin/shipping" },
-  { id: "reviews", label: "Reviews", icon: Star, to: "/admin/reviews" },
-  { id: "pricing", label: "Pricing", icon: Calculator, to: "/admin/pricing" },
-  { id: "campaigns", label: "Campaigns", icon: Megaphone, to: "/admin/campaigns" },
-  { id: "backgrounds", label: "Backgrounds", icon: ImageIcon, to: "/admin/backgrounds" },
+  { id: "editor", label: "Page Editor", icon: FileText, to: "/visual-editor", permissions: ["content.edit"] },
+  { id: "translations", label: "Translations", icon: Globe, to: "/translations", permissions: ["translations.manage"] },
+  { id: "media", label: "Media", icon: ImageIcon, to: "/media", permissions: ["media.manage"] },
+  { id: "discounts", label: "Discounts", icon: TicketPercent, to: "/discounts", permissions: ["products.manage"] },
+  { id: "categories", label: "Categories", icon: Tags, to: "/categories", permissions: ["products.manage"] },
+  { id: "shipping", label: "Shipping", icon: Truck, to: "/shipping" },
+  { id: "reviews", label: "Reviews", icon: Star, to: "/reviews" },
+  { id: "pricing", label: "Pricing", icon: Calculator, to: "/pricing" },
+  { id: "campaigns", label: "Campaigns", icon: Megaphone, to: "/campaigns" },
+  { id: "backgrounds", label: "Backgrounds", icon: ImageIcon, to: "/backgrounds" },
 ];
 
 interface Props {

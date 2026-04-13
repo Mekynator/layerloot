@@ -98,7 +98,7 @@ const ReferralStatsWidget = () => {
                 <SelectItem value="all">All time</SelectItem>
               </SelectContent>
             </Select>
-            <Link to="/admin/referrals">
+            <Link to="/referrals">
               <Button variant="ghost" size="sm" className="h-7 text-[11px]">
                 View all <ArrowRight className="ml-1 h-3 w-3" />
               </Button>

@@ -16,10 +16,10 @@ const Row = ({ icon: Icon, label, count, to, accent }: { icon: typeof Truck; lab
 const OperationsWidget = ({ data }: Props) => (
   <DashboardWidget title="Operations Queue" icon={Truck} linkTo="/admin/orders" linkLabel="Orders">
     <div className="space-y-1">
-      <Row icon={Truck} label="Awaiting shipment" count={data.ordersAwaitingShipment ?? 0} to="/admin/orders" />
-      <Row icon={PauseCircle} label="On hold" count={data.ordersOnHold ?? 0} to="/admin/orders" accent="text-red-400" />
-      <Row icon={Package} label="Custom orders needing quote" count={data.quotesAwaiting} to="/admin/custom-orders" />
-      <Row icon={MessageSquareMore} label="Unanswered messages" count={data.unansweredCustomMessages ?? 0} to="/admin/custom-orders" />
+      <Row icon={Truck} label="Awaiting shipment" count={data.ordersAwaitingShipment ?? 0} to="/orders" />
+      <Row icon={PauseCircle} label="On hold" count={data.ordersOnHold ?? 0} to="/orders" accent="text-red-400" />
+      <Row icon={Package} label="Custom orders needing quote" count={data.quotesAwaiting} to="/custom-orders" />
+      <Row icon={MessageSquareMore} label="Unanswered messages" count={data.unansweredCustomMessages ?? 0} to="/custom-orders" />
     </div>
   </DashboardWidget>
 );

@@ -16,9 +16,9 @@ const Row = ({ icon: Icon, label, count, to }: { icon: typeof FileText; label: s
 const ContentStatusWidget = ({ data }: Props) => (
   <DashboardWidget title="Content & Publishing" icon={FileText} linkTo="/admin/editor" linkLabel="Content & Layout">
     <div className="space-y-1">
-      <Row icon={Clock} label="Drafts pending publish" count={data.draftBlocksCount ?? 0} to="/admin/editor" />
-      <Row icon={Calendar} label="Scheduled publishes" count={data.scheduledPublishCount ?? 0} to="/admin/editor" />
-      <Row icon={Package} label="Draft products" count={data.draftProductsCount ?? 0} to="/admin/products" />
+      <Row icon={Clock} label="Drafts pending publish" count={data.draftBlocksCount ?? 0} to="/editor" />
+      <Row icon={Calendar} label="Scheduled publishes" count={data.scheduledPublishCount ?? 0} to="/editor" />
+      <Row icon={Package} label="Draft products" count={data.draftProductsCount ?? 0} to="/products" />
     </div>
   </DashboardWidget>
 );

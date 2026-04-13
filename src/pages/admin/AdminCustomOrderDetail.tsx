@@ -21,7 +21,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { logAdminActivity } from "@/lib/activity-log";
 import { useAdminNotes } from "@/hooks/use-admin-notes";
-import AdminLayout from "@/components/admin/AdminLayout";
 import ModelViewer from "@/components/ModelViewer";
 import { formatPrice } from "@/lib/currency";
 import { executeAutomation, trackSlaStage, DEFAULT_SLA_HOURS } from "@/hooks/use-custom-order-automation";
@@ -372,9 +371,9 @@ const AdminCustomOrderDetail = () => {
 
   if (!order) {
     return (
-      <AdminLayout>
+      
         <div className="flex items-center gap-2 py-12 text-muted-foreground">Loading custom order…</div>
-      </AdminLayout>
+      
     );
   }
 
@@ -384,11 +383,11 @@ const AdminCustomOrderDetail = () => {
   const isClosed = conversationStatus === "closed";
 
   return (
-    <AdminLayout>
+    
       <div className="space-y-5">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/admin/custom-orders")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/custom-orders")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex-1 min-w-0">
@@ -854,7 +853,7 @@ const AdminCustomOrderDetail = () => {
           </div>
         </div>
       </div>
-    </AdminLayout>
+    
   );
 };
 

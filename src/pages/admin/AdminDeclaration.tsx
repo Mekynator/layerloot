@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import AdminLayout from "@/components/admin/AdminLayout";
 import DeclarationPreview from "@/components/admin/declaration/DeclarationPreview";
 import ExpenseManager from "@/components/admin/declaration/ExpenseManager";
 import RecurringExpenseManager from "@/components/admin/declaration/RecurringExpenseManager";
@@ -44,7 +43,7 @@ const AdminDeclaration = () => {
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i);
 
   return (
-    <AdminLayout>
+    
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -162,7 +161,7 @@ const AdminDeclaration = () => {
           </Tabs>
         )}
       </div>
-    </AdminLayout>
+    
   );
 };
 

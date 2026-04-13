@@ -7,7 +7,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import AdminLayout from "@/components/admin/AdminLayout";
 import StatTile from "@/components/admin/dashboard/StatTile";
 import ChartCard from "@/components/admin/dashboard/ChartCard";
 import InsightCard from "@/components/admin/dashboard/InsightCard";
@@ -32,7 +31,7 @@ const AdminGrowth = () => {
   const revenuePerUser = data.clientsCount > 0 ? data.revenue / data.clientsCount : 0;
 
   return (
-    <AdminLayout>
+    
       <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-bold uppercase tracking-tight text-foreground">
@@ -217,7 +216,7 @@ const AdminGrowth = () => {
           </div>
         </>
       )}
-    </AdminLayout>
+    
   );
 };
 

@@ -12,7 +12,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import AdminLayout from "@/components/admin/AdminLayout";
 import { DEFAULT_SIDEBAR_CONFIG, SIDEBAR_ICON_MAP, type SidebarConfig } from "@/components/admin/AdminLayout";
 import { DEFAULT_SHORTCUTS, ICON_MAP, type DashboardShortcut } from "@/pages/admin/Dashboard";
 
@@ -347,14 +346,14 @@ const AdminSettings = () => {
 
   if (loading) {
     return (
-      <AdminLayout>
+      
         <div className="flex items-center justify-center py-12 text-muted-foreground">Loading settings...</div>
-      </AdminLayout>
+      
     );
   }
 
   return (
-    <AdminLayout>
+    
       <div className="mb-6 space-y-3">
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -873,7 +872,7 @@ const AdminSettings = () => {
           </Suspense>
         </TabsContent>
       </Tabs>
-    </AdminLayout>
+    
   );
 };
 

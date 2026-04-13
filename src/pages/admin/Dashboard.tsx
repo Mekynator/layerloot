@@ -6,7 +6,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import AdminLayout from "@/components/admin/AdminLayout";
 import { useAdminDashboard, Period } from "@/hooks/use-admin-dashboard";
 import { useAdminPermissions } from "@/hooks/use-admin-permissions";
 import type { AdminRole } from "@/hooks/use-admin-permissions";
@@ -116,7 +115,7 @@ const Dashboard = () => {
     : "Dashboard";
 
   return (
-    <AdminLayout>
+    
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -161,26 +160,26 @@ const Dashboard = () => {
           <div className="mb-2">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 pl-1">Operations</h2>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <DashboardTile label="Orders" icon={ShoppingCart} to="/admin/orders" count={data.ordersCount} showDot={data.pendingOrders > 0} sub={data.pendingOrders > 0 ? `${data.pendingOrders} pending` : undefined} />
-              <DashboardTile label="Custom Orders" icon={Box} to="/admin/custom-orders" count={data.customOrdersActive} showDot={data.quotesAwaiting > 0 || data.unansweredCustomMessages > 0} sub={data.quotesAwaiting > 0 ? `${data.quotesAwaiting} awaiting reply` : undefined} accent="purple" />
-              <DashboardTile label="Showcases" icon={FolderOpen} to="/admin/showcases" showDot={data.pendingShowcases > 0} count={data.pendingShowcases} />
-              <DashboardTile label="Fulfillment" icon={Package} to="/admin/orders" count={data.ordersAwaitingShipment} sub={data.ordersAwaitingShipment > 0 ? "Awaiting shipment" : undefined} accent="amber" />
+              <DashboardTile label="Orders" icon={ShoppingCart} to="/orders" count={data.ordersCount} showDot={data.pendingOrders > 0} sub={data.pendingOrders > 0 ? `${data.pendingOrders} pending` : undefined} />
+              <DashboardTile label="Custom Orders" icon={Box} to="/custom-orders" count={data.customOrdersActive} showDot={data.quotesAwaiting > 0 || data.unansweredCustomMessages > 0} sub={data.quotesAwaiting > 0 ? `${data.quotesAwaiting} awaiting reply` : undefined} accent="purple" />
+              <DashboardTile label="Showcases" icon={FolderOpen} to="/showcases" showDot={data.pendingShowcases > 0} count={data.pendingShowcases} />
+              <DashboardTile label="Fulfillment" icon={Package} to="/orders" count={data.ordersAwaitingShipment} sub={data.ordersAwaitingShipment > 0 ? "Awaiting shipment" : undefined} accent="amber" />
             </div>
           </div>
 
           {/* Users & AI */}
           <div className="mb-2">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <DashboardTile label="Users" icon={Users} to="/admin/clients" count={data.clientsCount} />
-              <DashboardTile label="AI Chat" icon={MessageCircle} to="/admin/chat" />
+              <DashboardTile label="Users" icon={Users} to="/clients" count={data.clientsCount} />
+              <DashboardTile label="AI Chat" icon={MessageCircle} to="/chat" />
             </div>
           </div>
 
           {/* Business / Financial */}
           <div className="mb-2">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <DashboardTile label="Products" icon={Package} to="/admin/products" count={data.productsCount} sub={data.draftProductsCount > 0 ? `${data.draftProductsCount} drafts` : undefined} />
-              <DashboardTile label="Adjustments / Financial" icon={DollarSign} to="/admin/financial" />
+              <DashboardTile label="Products" icon={Package} to="/products" count={data.productsCount} sub={data.draftProductsCount > 0 ? `${data.draftProductsCount} drafts` : undefined} />
+              <DashboardTile label="Adjustments / Financial" icon={DollarSign} to="/financial" />
             </div>
           </div>
 
@@ -188,7 +187,7 @@ const Dashboard = () => {
           <div className="mb-2">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 pl-1">Admin Tools</h2>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <DashboardTile label="Email Logs" icon={Mail} to="/admin/email-logs" />
+              <DashboardTile label="Email Logs" icon={Mail} to="/email-logs" />
             </div>
           </div>
 
@@ -196,7 +195,7 @@ const Dashboard = () => {
           <QuickActionsWidget hasPermission={hasPermission} />
         </div>
       )}
-    </AdminLayout>
+    
   );
 };
 

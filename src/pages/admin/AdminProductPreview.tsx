@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import AdminLayout from "@/components/admin/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPrice } from "@/lib/currency";
 
@@ -28,19 +27,19 @@ const AdminProductPreview = () => {
 
   if (isLoading) {
     return (
-      <AdminLayout>
+      
         <div className="flex items-center justify-center py-20">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         </div>
-      </AdminLayout>
+      
     );
   }
 
   if (!product) {
     return (
-      <AdminLayout>
+      
         <p className="py-20 text-center text-muted-foreground">Product not found.</p>
-      </AdminLayout>
+      
     );
   }
 
@@ -54,9 +53,9 @@ const AdminProductPreview = () => {
   const hasDraft = !!product.has_draft;
 
   return (
-    <AdminLayout>
+    
       <div className="mb-6 flex items-center gap-4">
-        <Link to="/admin/products">
+        <Link to="/products">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -175,7 +174,7 @@ const AdminProductPreview = () => {
           </div>
         </div>
       </div>
-    </AdminLayout>
+    
   );
 };
 

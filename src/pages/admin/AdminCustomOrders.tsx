@@ -9,7 +9,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import AdminLayout from "@/components/admin/AdminLayout";
 
 interface CustomOrder {
   id: string;
@@ -109,7 +108,7 @@ const AdminCustomOrders = () => {
   };
 
   return (
-    <AdminLayout>
+    
       <div className="mb-6 space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -196,7 +195,7 @@ const AdminCustomOrders = () => {
                 <TableRow
                   key={order.id}
                   className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => navigate(`/admin/custom-orders/${order.id}`)}
+                  onClick={() => navigate(`/custom-orders/${order.id}`)}
                 >
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -262,7 +261,7 @@ const AdminCustomOrders = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={(e) => { e.stopPropagation(); navigate(`/admin/custom-orders/${order.id}`); }}
+                      onClick={(e) => { e.stopPropagation(); navigate(`/custom-orders/${order.id}`); }}
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
@@ -280,7 +279,7 @@ const AdminCustomOrders = () => {
           </Table>
         </CardContent>
       </Card>
-    </AdminLayout>
+    
   );
 };
 

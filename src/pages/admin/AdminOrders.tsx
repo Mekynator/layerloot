@@ -11,7 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { logAdminActivity } from "@/lib/activity-log";
-import AdminLayout from "@/components/admin/AdminLayout";
 import { formatPrice } from "@/lib/currency";
 
 interface StoreOrder {
@@ -124,7 +123,7 @@ const AdminOrders = () => {
   }
 
   return (
-    <AdminLayout>
+    
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="font-display text-3xl font-bold uppercase text-foreground">Orders</h1>
         <div className="flex gap-2">
@@ -167,7 +166,7 @@ const AdminOrders = () => {
             </TableHeader>
             <TableBody>
               {filtered.map((o) => (
-                <TableRow key={o.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/admin/orders/${o.id}`)}>
+                <TableRow key={o.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/orders/${o.id}`)}>
                   <TableCell className="font-display text-sm font-semibold uppercase">#{o.id.slice(0, 8)}</TableCell>
                   <TableCell className="text-sm">{(o.profiles as any)?.full_name || "Guest"}</TableCell>
                   <TableCell className="font-display font-bold text-primary">{formatPrice(o.total)}</TableCell>
@@ -194,7 +193,7 @@ const AdminOrders = () => {
                     {new Date(o.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" className="text-xs" onClick={(e) => { e.stopPropagation(); navigate(`/admin/orders/${o.id}`); }}>
+                    <Button variant="ghost" size="sm" className="text-xs" onClick={(e) => { e.stopPropagation(); navigate(`/orders/${o.id}`); }}>
                       Details
                     </Button>
                   </TableCell>
@@ -209,7 +208,7 @@ const AdminOrders = () => {
           </Table>
         </CardContent>
       </Card>
-    </AdminLayout>
+    
   );
 };
 

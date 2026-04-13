@@ -14,7 +14,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import AdminLayout from "@/components/admin/AdminLayout";
 import RewardsStoreEditor from "@/components/admin/RewardsStoreEditor";
 
 type TargetMode = "all" | "specific_user" | "specific_users" | "rules_based";
@@ -461,7 +460,7 @@ const AdminDiscounts = () => {
   const showUserPicker = form.target_mode === "specific_user" || form.target_mode === "specific_users";
 
   return (
-    <AdminLayout>
+    
       <div className="mb-6">
         <h1 className="font-display text-3xl font-bold uppercase text-foreground">Discounts & Rewards</h1>
         <p className="text-sm text-muted-foreground">Manage discount codes and the rewards store catalog.</p>
@@ -837,7 +836,7 @@ const AdminDiscounts = () => {
           <RewardsStoreEditor />
         </TabsContent>
       </Tabs>
-    </AdminLayout>
+    
   );
 };
 

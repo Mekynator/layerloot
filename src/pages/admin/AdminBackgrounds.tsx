@@ -8,7 +8,6 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import AdminLayout from "@/components/admin/AdminLayout";
 import {
   type PageBackgroundSettings, type PageBackgroundOverride, type PageOverrideMode,
   type BackgroundSizeMode, type TransitionType, type MotionEffect, type BlendMode, type AttachmentMode,
@@ -280,7 +279,7 @@ export default function AdminBackgrounds() {
   const currentPreviewImage = form.images[previewIndex % Math.max(1, form.images.length)] || "";
 
   return (
-    <AdminLayout>
+    
       <div className="mx-auto max-w-4xl space-y-6">
         <div>
           <h1 className="font-display text-2xl font-bold uppercase tracking-wider text-foreground">Website Backgrounds</h1>
@@ -594,7 +593,7 @@ export default function AdminBackgrounds() {
           </div>
         )}
       </div>
-    </AdminLayout>
+    
   );
 }
 

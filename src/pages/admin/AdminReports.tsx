@@ -11,7 +11,6 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import AdminLayout from "@/components/admin/AdminLayout";
 import ChartCard from "@/components/admin/dashboard/ChartCard";
 import InsightCard from "@/components/admin/dashboard/InsightCard";
 
@@ -151,7 +150,7 @@ const AdminReports = () => {
   };
 
   return (
-    <AdminLayout>
+    
       <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-bold uppercase tracking-tight text-foreground">
@@ -411,7 +410,7 @@ const AdminReports = () => {
           </Tabs>
         </>
       )}
-    </AdminLayout>
+    
   );
 };
 

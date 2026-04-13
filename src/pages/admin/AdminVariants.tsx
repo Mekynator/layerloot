@@ -10,7 +10,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import AdminLayout from "@/components/admin/AdminLayout";
 
 interface Variant {
   id: string;
@@ -93,9 +92,9 @@ const AdminVariants = () => {
   };
 
   return (
-    <AdminLayout>
+    
       <div className="mb-2">
-        <Link to="/admin/products" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
+        <Link to="/products" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
           <ArrowLeft className="h-4 w-4" /> Back to Products
         </Link>
       </div>
@@ -174,7 +173,7 @@ const AdminVariants = () => {
           </Table>
         </CardContent>
       </Card>
-    </AdminLayout>
+    
   );
 };
 

@@ -1,5 +1,4 @@
 import { useEffect, useState, useMemo } from "react";
-import AdminLayout from "@/components/admin/AdminLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -655,7 +654,7 @@ import { useRef } from "react";
 /* ─── Main Page ─── */
 export default function AdminChatAnalytics() {
   return (
-    <AdminLayout>
+    
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2"><Brain className="h-6 w-6 text-primary" /> AI Chat Analytics & Training</h1>
@@ -678,6 +677,6 @@ export default function AdminChatAnalytics() {
           <TabsContent value="sandbox"><SandboxTab /></TabsContent>
         </Tabs>
       </div>
-    </AdminLayout>
+    
   );
 }

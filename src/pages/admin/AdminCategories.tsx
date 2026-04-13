@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
-import AdminLayout from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -228,7 +227,7 @@ const AdminCategories = () => {
   );
 
   return (
-    <AdminLayout>
+    
       <div className="space-y-6">
         <div>
           <h1 className="font-display text-3xl font-bold uppercase text-foreground">Categories & Gift Finder Tags</h1>
@@ -372,7 +371,7 @@ const AdminCategories = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </AdminLayout>
+    
   );
 };
 

@@ -1,6 +1,5 @@
 import { Suspense, lazy, useCallback, useState, useTransition } from "react";
 import { useNavigate } from "react-router-dom";
-import AdminLayout from "@/components/admin/AdminLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,10 +32,10 @@ function PageEditorLaunchpad() {
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">
-            <Button onClick={() => navigate("/admin/visual-editor")} className="font-display uppercase tracking-wider">
+            <Button onClick={() => navigate("/visual-editor")} className="font-display uppercase tracking-wider">
               Open Page Editor <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-            <Button variant="outline" onClick={() => navigate("/admin/visual-editor")}>Edit Header / Footer</Button>
+            <Button variant="outline" onClick={() => navigate("/visual-editor")}>Edit Header / Footer</Button>
           </div>
         </div>
 
@@ -72,7 +71,7 @@ export default function EditorWorkspace() {
   const handleTabChange = useCallback((value: string) => startTransition(() => setActiveTab(value)), []);
 
   return (
-    <AdminLayout>
+    
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 font-display text-2xl font-bold uppercase text-foreground">
@@ -103,6 +102,6 @@ export default function EditorWorkspace() {
           </TabsContent>
         ))}
       </Tabs>
-    </AdminLayout>
+    
   );
 }

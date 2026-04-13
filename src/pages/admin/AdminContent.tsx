@@ -11,7 +11,6 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import AdminLayout from "@/components/admin/AdminLayout";
 import { tr } from "@/lib/translate";
 
 interface SiteBlock {
@@ -350,7 +349,7 @@ const AdminContent = () => {
   };
 
   return (
-    <AdminLayout>
+    
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-bold uppercase text-foreground">Blocks & Content</h1>
@@ -484,7 +483,7 @@ const AdminContent = () => {
           </div>
         </DialogContent>
       </Dialog>
-    </AdminLayout>
+    
   );
 };
 

@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
-import AdminLayout from "@/components/admin/AdminLayout";
 
 interface ReferralRow {
   id: string;
@@ -115,7 +114,7 @@ const AdminReferrals = () => {
   };
 
   return (
-    <AdminLayout>
+    
       <div className="mb-6">
         <h1 className="font-display text-3xl font-bold uppercase text-foreground">Referrals</h1>
         <p className="text-sm text-muted-foreground">Track all invites, conversions, and reward payouts.</p>
@@ -240,7 +239,7 @@ const AdminReferrals = () => {
           </Table>
         </CardContent>
       </Card>
-    </AdminLayout>
+    
   );
 };
 

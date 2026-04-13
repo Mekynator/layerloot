@@ -5,7 +5,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import AdminLayout from "@/components/admin/AdminLayout";
 import PricingCalculator from "@/components/admin/PricingCalculator";
 import ChartCard from "@/components/admin/dashboard/ChartCard";
 import InsightCard from "@/components/admin/dashboard/InsightCard";
@@ -91,7 +90,7 @@ const AdminPricing = () => {
   }
 
   return (
-    <AdminLayout>
+    
       <h1 className="mb-6 font-display text-3xl font-bold uppercase text-foreground">
         Pricing Intelligence
       </h1>
@@ -262,7 +261,7 @@ const AdminPricing = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </AdminLayout>
+    
   );
 };
 

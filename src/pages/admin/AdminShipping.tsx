@@ -8,7 +8,6 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import AdminLayout from "@/components/admin/AdminLayout";
 
 interface ShippingProvider {
   id: string;
@@ -102,7 +101,7 @@ const AdminShipping = () => {
   };
 
   return (
-    <AdminLayout>
+    
       <h1 className="mb-6 font-display text-3xl font-bold uppercase text-foreground">Shipping Settings</h1>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -193,7 +192,7 @@ const AdminShipping = () => {
           </div>
         </DialogContent>
       </Dialog>
-    </AdminLayout>
+    
   );
 };
 

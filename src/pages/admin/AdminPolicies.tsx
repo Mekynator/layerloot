@@ -9,7 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import AdminLayout from "@/components/admin/AdminLayout";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -176,14 +175,14 @@ const AdminPolicies = () => {
 
   if (loading) {
     return (
-      <AdminLayout>
+      
         <div className="flex items-center justify-center py-12 text-muted-foreground">Loading policies...</div>
-      </AdminLayout>
+      
     );
   }
 
   return (
-    <AdminLayout>
+    
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold uppercase text-foreground">Policies</h1>
@@ -391,7 +390,7 @@ const AdminPolicies = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </AdminLayout>
+    
   );
 };
 

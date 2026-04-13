@@ -29,7 +29,6 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import AdminLayout from "@/components/admin/AdminLayout";
 import { DEFAULT_CHAT_CONFIG, BUILT_IN_PRESETS, type ChatConfig, type ChatQuickReply, type ChatPageRule, type ChatPreset } from "@/hooks/use-chat-settings";
 import { format } from "date-fns";
 
@@ -870,10 +869,10 @@ export default function AdminChat() {
   const removePageRule = (idx: number) => set("pageRules", config.pageRules.filter((_, i) => i !== idx));
   const updatePageRule = (idx: number, field: keyof ChatPageRule, value: any) => set("pageRules", config.pageRules.map((r, i) => i === idx ? { ...r, [field]: value } : r));
 
-  if (loading) return <AdminLayout><div className="flex items-center justify-center py-12 text-muted-foreground">Loading chat settings...</div></AdminLayout>;
+  if (loading) return <div className="flex items-center justify-center py-12 text-muted-foreground">Loading chat settings...</div>;
 
   return (
-    <AdminLayout>
+    
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold uppercase text-foreground flex items-center gap-2">
@@ -1219,6 +1218,6 @@ export default function AdminChat() {
         {/* ─── SANDBOX ─── */}
         <TabsContent value="sandbox"><SandboxTab /></TabsContent>
       </Tabs>
-    </AdminLayout>
+    
   );
 }

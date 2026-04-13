@@ -72,7 +72,8 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
     name: "Marketing",
     items: [
       { id: "campaigns", to: "/campaigns", label: "Campaigns", icon: "Megaphone", permission: "campaigns.manage" },
-      { id: "discounts", to: "/discounts", label: "Discounts & Vouchers", icon: "TicketPercent", permission: "discounts.manage" },
+      { id: "discounts", to: "/discounts", label: "Discounts", icon: "TicketPercent", permission: "discounts.manage" },
+      { id: "rewards", to: "/rewards", label: "Rewards & Vouchers", icon: "Gift", permission: "discounts.manage" },
       { id: "automations", to: "/automations", label: "Automations", icon: "Sparkles", permission: "campaigns.manage" },
       { id: "instagram", to: "/instagram", label: "Instagram", icon: "Instagram", permission: "settings.view" },
     ],
@@ -103,6 +104,7 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
     items: [
       { id: "financial", to: "/financial", label: "Financial", icon: "DollarSign", permission: "settings.view" },
       { id: "email-logs", to: "/email-logs", label: "Email Logs", icon: "FileText", permission: "reports.view" },
+      { id: "system", to: "/system", label: "System & Maintenance", icon: "Wrench", permission: "*" },
     ],
   },
 ];

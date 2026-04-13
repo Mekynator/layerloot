@@ -5,7 +5,7 @@ import {
   FileText, Settings, Box, TicketPercent, Calculator, Megaphone,
   BarChart3, ImageIcon, Activity, Globe, MessageCircle, Instagram,
   Brain, FlaskConical, DollarSign, Sparkles, Menu, X, Layers,
-  Tags, Crown, ArrowLeft, Palette, Shield, Calendar,
+  Tags, Crown, Palette, Shield, Gift, Wrench,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminPermissions } from "@/hooks/use-admin-permissions";

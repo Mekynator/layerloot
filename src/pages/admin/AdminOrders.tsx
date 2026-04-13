@@ -123,7 +123,7 @@ const AdminOrders = () => {
   }
 
   return (
-    
+    <>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="font-display text-3xl font-bold uppercase text-foreground">Orders</h1>
         <div className="flex gap-2">
@@ -208,7 +208,7 @@ const AdminOrders = () => {
           </Table>
         </CardContent>
       </Card>
-    
+    </>
   );
 };
 

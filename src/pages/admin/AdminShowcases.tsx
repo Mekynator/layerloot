@@ -78,7 +78,7 @@ export default function AdminShowcases() {
   });
 
   return (
-    
+    <>
       <div className="mb-6">
         <h1 className="font-display text-3xl font-bold uppercase text-foreground">Community Showcases</h1>
         <p className="text-sm text-muted-foreground mt-1">Approve, reject, and manage user-submitted creations</p>
@@ -188,6 +188,6 @@ export default function AdminShowcases() {
           </TabsContent>
         ))}
       </Tabs>
-    
+    </>
   );
 }

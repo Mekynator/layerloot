@@ -108,7 +108,7 @@ const AdminCustomOrders = () => {
   };
 
   return (
-    
+    <>
       <div className="mb-6 space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -279,7 +279,7 @@ const AdminCustomOrders = () => {
           </Table>
         </CardContent>
       </Card>
-    
+    </>
   );
 };
 

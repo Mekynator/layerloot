@@ -27,19 +27,19 @@ const AdminProductPreview = () => {
 
   if (isLoading) {
     return (
-      
+      <>
         <div className="flex items-center justify-center py-20">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         </div>
-      
+      </>
     );
   }
 
   if (!product) {
     return (
-      
+      <>
         <p className="py-20 text-center text-muted-foreground">Product not found.</p>
-      
+      </>
     );
   }
 
@@ -53,7 +53,7 @@ const AdminProductPreview = () => {
   const hasDraft = !!product.has_draft;
 
   return (
-    
+    <>
       <div className="mb-6 flex items-center gap-4">
         <Link to="/products">
           <Button variant="ghost" size="icon">
@@ -174,7 +174,7 @@ const AdminProductPreview = () => {
           </div>
         </div>
       </div>
-    
+    </>
   );
 };
 

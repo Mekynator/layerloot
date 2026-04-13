@@ -71,7 +71,7 @@ export default function EditorWorkspace() {
   const handleTabChange = useCallback((value: string) => startTransition(() => setActiveTab(value)), []);
 
   return (
-    
+    <>
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 font-display text-2xl font-bold uppercase text-foreground">
@@ -102,6 +102,6 @@ export default function EditorWorkspace() {
           </TabsContent>
         ))}
       </Tabs>
-    
+    </>
   );
 }

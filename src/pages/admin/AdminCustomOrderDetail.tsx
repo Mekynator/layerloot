@@ -371,9 +371,9 @@ const AdminCustomOrderDetail = () => {
 
   if (!order) {
     return (
-      
+      <>
         <div className="flex items-center gap-2 py-12 text-muted-foreground">Loading custom order…</div>
-      
+      </>
     );
   }
 
@@ -383,7 +383,7 @@ const AdminCustomOrderDetail = () => {
   const isClosed = conversationStatus === "closed";
 
   return (
-    
+    <>
       <div className="space-y-5">
         {/* Header */}
         <div className="flex items-center gap-4">
@@ -853,7 +853,7 @@ const AdminCustomOrderDetail = () => {
           </div>
         </div>
       </div>
-    
+    </>
   );
 };
 

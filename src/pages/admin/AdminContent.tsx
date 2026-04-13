@@ -349,7 +349,7 @@ const AdminContent = () => {
   };
 
   return (
-    
+    <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-bold uppercase text-foreground">Blocks & Content</h1>
@@ -483,7 +483,7 @@ const AdminContent = () => {
           </div>
         </DialogContent>
       </Dialog>
-    
+    </>
   );
 };
 

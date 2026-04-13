@@ -220,7 +220,7 @@ const AdminCampaigns = () => {
   };
 
   return (
-    
+    <>
       <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-bold uppercase tracking-tight text-foreground">
@@ -598,7 +598,7 @@ const AdminCampaigns = () => {
           </Button>
         </DialogContent>
       </Dialog>
-    
+    </>
   );
 };
 

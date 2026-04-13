@@ -506,7 +506,7 @@ const AdminClients = () => {
   const selectedUser = useMemo(() => (editUser ? users.find((user) => user.id === editUser.id) ?? editUser : null), [editUser, users]);
 
   return (
-    
+    <>
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold uppercase text-foreground">Users</h1>
@@ -1046,7 +1046,7 @@ const AdminClients = () => {
           )}
         </DialogContent>
       </Dialog>
-    
+    </>
   );
 };
 

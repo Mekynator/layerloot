@@ -175,14 +175,14 @@ const AdminPolicies = () => {
 
   if (loading) {
     return (
-      
+      <>
         <div className="flex items-center justify-center py-12 text-muted-foreground">Loading policies...</div>
-      
+      </>
     );
   }
 
   return (
-    
+    <>
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold uppercase text-foreground">Policies</h1>
@@ -390,7 +390,7 @@ const AdminPolicies = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    
+    </>
   );
 };
 

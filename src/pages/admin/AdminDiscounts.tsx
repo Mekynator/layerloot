@@ -460,7 +460,7 @@ const AdminDiscounts = () => {
   const showUserPicker = form.target_mode === "specific_user" || form.target_mode === "specific_users";
 
   return (
-    
+    <>
       <div className="mb-6">
         <h1 className="font-display text-3xl font-bold uppercase text-foreground">Discounts & Rewards</h1>
         <p className="text-sm text-muted-foreground">Manage discount codes and the rewards store catalog.</p>
@@ -836,7 +836,7 @@ const AdminDiscounts = () => {
           <RewardsStoreEditor />
         </TabsContent>
       </Tabs>
-    
+    </>
   );
 };
 

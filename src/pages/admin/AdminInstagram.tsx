@@ -197,16 +197,16 @@ export default function AdminInstagram() {
 
   if (loading) {
     return (
-      
+      <>
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
-      
+      </>
     );
   }
 
   return (
-    
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -541,6 +541,6 @@ export default function AdminInstagram() {
           </TabsContent>
         </Tabs>
       </div>
-    
+    </>
   );
 }

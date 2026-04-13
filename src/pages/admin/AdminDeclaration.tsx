@@ -43,7 +43,7 @@ const AdminDeclaration = () => {
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i);
 
   return (
-    
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -161,7 +161,7 @@ const AdminDeclaration = () => {
           </Tabs>
         )}
       </div>
-    
+    </>
   );
 };
 

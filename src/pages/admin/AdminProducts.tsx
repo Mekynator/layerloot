@@ -1249,7 +1249,7 @@ const AdminProducts = () => {
           setForm((prev) => ({ ...prev, ...data }));
         }}
       />
-    
+    </>
   );
 };
 

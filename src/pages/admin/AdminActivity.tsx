@@ -66,7 +66,7 @@ export default function AdminActivity() {
   useEffect(() => { load(0); }, [actionFilter, searchTerm]);
 
   return (
-    
+    <>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
@@ -185,6 +185,6 @@ export default function AdminActivity() {
           </Button>
         </div>
       </div>
-    
+    </>
   );
 }

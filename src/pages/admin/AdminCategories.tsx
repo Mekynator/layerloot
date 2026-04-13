@@ -227,7 +227,7 @@ const AdminCategories = () => {
   );
 
   return (
-    
+    <>
       <div className="space-y-6">
         <div>
           <h1 className="font-display text-3xl font-bold uppercase text-foreground">Categories & Gift Finder Tags</h1>
@@ -371,7 +371,7 @@ const AdminCategories = () => {
           </TabsContent>
         </Tabs>
       </div>
-    
+    </>
   );
 };
 

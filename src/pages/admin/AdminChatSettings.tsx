@@ -98,7 +98,7 @@ const AdminChatSettings = () => {
   }
 
   return (
-    
+    <>
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold uppercase text-foreground">AI Chat Settings</h1>
@@ -574,7 +574,7 @@ const AdminChatSettings = () => {
           </div>
         </TabsContent>
       </Tabs>
-    
+    </>
   );
 };
 

@@ -92,7 +92,7 @@ const AdminVariants = () => {
   };
 
   return (
-    
+    <>
       <div className="mb-2">
         <Link to="/products" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
           <ArrowLeft className="h-4 w-4" /> Back to Products
@@ -173,7 +173,7 @@ const AdminVariants = () => {
           </Table>
         </CardContent>
       </Card>
-    
+    </>
   );
 };
 

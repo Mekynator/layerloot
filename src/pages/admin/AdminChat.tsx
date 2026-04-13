@@ -872,7 +872,7 @@ export default function AdminChat() {
   if (loading) return <div className="flex items-center justify-center py-12 text-muted-foreground">Loading chat settings...</div>;
 
   return (
-    
+    <>
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold uppercase text-foreground flex items-center gap-2">
@@ -1218,6 +1218,6 @@ export default function AdminChat() {
         {/* ─── SANDBOX ─── */}
         <TabsContent value="sandbox"><SandboxTab /></TabsContent>
       </Tabs>
-    
+    </>
   );
 }

@@ -110,7 +110,7 @@ export default function AdminAnalytics() {
   const editorStats = useMemo(() => current?.editorStats.slice(0, 8) ?? [], [current?.editorStats]);
 
   return (
-    
+    <>
       <div className="space-y-6">
         <div className="flex flex-col gap-4 rounded-2xl border border-border/30 bg-card/50 p-4 backdrop-blur-xl lg:flex-row lg:items-start lg:justify-between">
           <div>
@@ -321,6 +321,6 @@ export default function AdminAnalytics() {
           </>
         )}
       </div>
-    
+    </>
   );
 }

@@ -2,8 +2,8 @@ import ReusableBlocksLibrary from "@/components/admin/reusable/ReusableBlocksLib
 
 export default function AdminComponents() {
   return (
-    
+    <>
       <ReusableBlocksLibrary />
-    
+    </>
   );
 }

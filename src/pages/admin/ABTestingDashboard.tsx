@@ -139,7 +139,7 @@ export default function ABTestingDashboard() {
   const selectedExp = experiments.find((e) => e.id === selectedExpId) ?? null;
 
   return (
-    
+    <>
       <div className="space-y-6 p-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -234,7 +234,7 @@ export default function ABTestingDashboard() {
           </TabsContent>
         </Tabs>
       </div>
-    
+    </>
   );
 }
 

@@ -126,7 +126,7 @@ const AdminReviews = () => {
   const approvedCount = reviews.filter((r) => r.is_approved).length;
 
   return (
-    
+    <>
       <div className="mb-6 flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="font-display text-3xl font-bold uppercase text-foreground">Reviews</h1>
@@ -363,7 +363,7 @@ const AdminReviews = () => {
           </CardContent>
         </Card>
       )}
-    
+    </>
   );
 };
 

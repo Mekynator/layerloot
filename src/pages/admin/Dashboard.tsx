@@ -195,7 +195,7 @@ const Dashboard = () => {
           <QuickActionsWidget hasPermission={hasPermission} />
         </div>
       )}
-    
+    </>
   );
 };
 

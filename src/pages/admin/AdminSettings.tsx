@@ -346,14 +346,14 @@ const AdminSettings = () => {
 
   if (loading) {
     return (
-      
+      <>
         <div className="flex items-center justify-center py-12 text-muted-foreground">Loading settings...</div>
-      
+      </>
     );
   }
 
   return (
-    
+    <>
       <div className="mb-6 space-y-3">
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -872,7 +872,7 @@ const AdminSettings = () => {
           </Suspense>
         </TabsContent>
       </Tabs>
-    
+    </>
   );
 };
 

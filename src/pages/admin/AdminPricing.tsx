@@ -90,7 +90,7 @@ const AdminPricing = () => {
   }
 
   return (
-    
+    <>
       <h1 className="mb-6 font-display text-3xl font-bold uppercase text-foreground">
         Pricing Intelligence
       </h1>
@@ -261,7 +261,7 @@ const AdminPricing = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    
+    </>
   );
 };
 

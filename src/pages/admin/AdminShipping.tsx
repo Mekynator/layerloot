@@ -101,7 +101,7 @@ const AdminShipping = () => {
   };
 
   return (
-    
+    <>
       <h1 className="mb-6 font-display text-3xl font-bold uppercase text-foreground">Shipping Settings</h1>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -192,7 +192,7 @@ const AdminShipping = () => {
           </div>
         </DialogContent>
       </Dialog>
-    
+    </>
   );
 };
 

@@ -52,7 +52,7 @@ const AdminRevenue = () => {
     .map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1).replace("_", " "), value }));
 
   return (
-    
+    <>
       <div className="mb-8">
         <h1 className="font-display text-3xl font-bold uppercase tracking-tight text-foreground">
           Revenue Engine
@@ -254,7 +254,7 @@ const AdminRevenue = () => {
           </div>
         </>
       )}
-    
+    </>
   );
 };
 

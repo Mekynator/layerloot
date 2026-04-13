@@ -18,7 +18,6 @@ import AdminOrders from "./pages/admin/AdminOrders";
 import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
 import AdminCustomOrders from "./pages/admin/AdminCustomOrders";
 import AdminCustomOrderDetail from "./pages/admin/AdminCustomOrderDetail";
-import AdminClients from "./pages/admin/AdminClients";
 import AdminShipping from "./pages/admin/AdminShipping";
 import AdminReviews from "./pages/admin/AdminReviews";
 import AdminDiscounts from "./pages/admin/AdminDiscounts";
@@ -44,6 +43,9 @@ import AdminDesignSystem from "./pages/admin/AdminDesignSystem";
 import AdminPersonalization from "./pages/admin/AdminPersonalization";
 import ABTestingDashboard from "./pages/admin/ABTestingDashboard";
 import AIInsightsDashboard from "./pages/admin/AIInsightsDashboard";
+import AdminRewards from "./pages/admin/AdminRewards";
+import AdminRoles from "./pages/admin/AdminRoles";
+import AdminSystem from "./pages/admin/AdminSystem";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -70,28 +72,47 @@ const App = () => (
               {/* All admin routes behind guard + shell */}
               <Route path="/" element={<AdminRoute><AdminStudioShell /></AdminRoute>}>
                 <Route index element={<Dashboard />} />
+
+                {/* Overview */}
                 <Route path="analytics" element={<AdminRoute requiredPermission="reports.view"><AdminAnalytics /></AdminRoute>} />
+                <Route path="activity" element={<AdminRoute requiredPermission="reports.view"><AdminActivity /></AdminRoute>} />
+
+                {/* Orders */}
                 <Route path="orders" element={<AdminRoute requiredPermission="orders.manage"><AdminOrders /></AdminRoute>} />
                 <Route path="orders/:orderId" element={<AdminRoute requiredPermission="orders.manage"><AdminOrderDetail /></AdminRoute>} />
                 <Route path="custom-orders" element={<AdminRoute requiredPermission="custom_orders.manage"><AdminCustomOrders /></AdminRoute>} />
                 <Route path="custom-orders/:orderId" element={<AdminRoute requiredPermission="custom_orders.manage"><AdminCustomOrderDetail /></AdminRoute>} />
+                <Route path="shipping" element={<AdminRoute requiredPermission="shipping.manage"><AdminShipping /></AdminRoute>} />
+
+                {/* Catalog */}
                 <Route path="products" element={<AdminRoute requiredPermission="products.manage"><AdminProducts /></AdminRoute>} />
                 <Route path="products/:productId/variants" element={<AdminRoute requiredPermission="products.manage"><AdminVariants /></AdminRoute>} />
                 <Route path="products/:productId/preview" element={<AdminRoute requiredPermission="products.manage"><AdminProductPreview /></AdminRoute>} />
                 <Route path="categories" element={<AdminRoute requiredPermission="categories.manage"><AdminCategories /></AdminRoute>} />
+                <Route path="pricing" element={<AdminRoute requiredPermission="pricing.manage"><AdminPricing /></AdminRoute>} />
+                <Route path="showcases" element={<AdminRoute requiredPermission="showcases.manage"><AdminShowcases /></AdminRoute>} />
+
+                {/* Users & Roles */}
                 <Route path="users" element={<AdminRoute requiredPermission="*"><UsersWorkspace /></AdminRoute>} />
                 <Route path="clients" element={<AdminRoute requiredPermission="customers.view"><Navigate to="/users?section=customers" replace /></AdminRoute>} />
                 <Route path="referrals" element={<AdminRoute requiredPermission="campaigns.manage"><Navigate to="/users?section=referrals" replace /></AdminRoute>} />
+                <Route path="admin-roles" element={<AdminRoute requiredPermission="*"><AdminRoles /></AdminRoute>} />
                 <Route path="reviews" element={<AdminRoute requiredPermission="reviews.manage"><AdminReviews /></AdminRoute>} />
+
+                {/* Marketing */}
                 <Route path="campaigns" element={<AdminRoute requiredPermission="campaigns.manage"><AdminCampaigns /></AdminRoute>} />
                 <Route path="discounts" element={<AdminRoute requiredPermission="discounts.manage"><AdminDiscounts /></AdminRoute>} />
-                <Route path="showcases" element={<AdminRoute requiredPermission="showcases.manage"><AdminShowcases /></AdminRoute>} />
-                <Route path="pricing" element={<AdminRoute requiredPermission="pricing.manage"><AdminPricing /></AdminRoute>} />
-                <Route path="shipping" element={<AdminRoute requiredPermission="shipping.manage"><AdminShipping /></AdminRoute>} />
+                <Route path="rewards" element={<AdminRoute requiredPermission="discounts.manage"><AdminRewards /></AdminRoute>} />
+                <Route path="automations" element={<AdminRoute requiredPermission="campaigns.manage"><AdminAutomations /></AdminRoute>} />
+                <Route path="instagram" element={<AdminRoute requiredPermission="settings.view"><AdminInstagram /></AdminRoute>} />
+
+                {/* AI Tools */}
                 <Route path="chat" element={<AdminRoute requiredPermission="settings.view"><AdminChat /></AdminRoute>} />
                 <Route path="personalization" element={<AdminRoute requiredPermission="settings.view"><AdminPersonalization /></AdminRoute>} />
                 <Route path="ab-testing" element={<AdminRoute requiredPermission="settings.view"><ABTestingDashboard /></AdminRoute>} />
                 <Route path="ai-insights" element={<AdminRoute requiredPermission="settings.view"><AIInsightsDashboard /></AdminRoute>} />
+
+                {/* Content */}
                 <Route path="editor" element={<AdminRoute requiredPermission="content.edit"><EditorWorkspace /></AdminRoute>} />
                 <Route path="visual-editor" element={<AdminRoute requiredPermission="content.edit"><VisualEditor /></AdminRoute>} />
                 <Route path="design-system" element={<AdminRoute requiredPermission="content.edit"><AdminDesignSystem /></AdminRoute>} />
@@ -99,11 +120,11 @@ const App = () => (
                 <Route path="components" element={<AdminRoute requiredPermission="content.edit"><AdminComponents /></AdminRoute>} />
                 <Route path="translations" element={<AdminRoute requiredPermission="translations.manage"><AdminTranslations /></AdminRoute>} />
                 <Route path="backgrounds" element={<AdminRoute requiredPermission="backgrounds.manage"><AdminBackgrounds /></AdminRoute>} />
-                <Route path="automations" element={<AdminRoute requiredPermission="campaigns.manage"><AdminAutomations /></AdminRoute>} />
-                <Route path="instagram" element={<AdminRoute requiredPermission="settings.view"><AdminInstagram /></AdminRoute>} />
-                <Route path="email-logs" element={<AdminRoute requiredPermission="reports.view"><AdminEmailLogs /></AdminRoute>} />
+
+                {/* Settings & System */}
                 <Route path="financial" element={<AdminRoute requiredPermission="settings.view"><FinancialWorkspace /></AdminRoute>} />
-                <Route path="activity" element={<AdminRoute requiredPermission="reports.view"><AdminActivity /></AdminRoute>} />
+                <Route path="email-logs" element={<AdminRoute requiredPermission="reports.view"><AdminEmailLogs /></AdminRoute>} />
+                <Route path="system" element={<AdminRoute requiredPermission="*"><AdminSystem /></AdminRoute>} />
               </Route>
 
               {/* Legacy /admin routes redirect */}

@@ -26,7 +26,7 @@ export default function AdminRoute({ children, requiredPermission }: AdminRouteP
   }
 
   if (!user || !isAdmin) {
-    return <Navigate to="/admin/login" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   if (requiredPermission && !hasPermission(requiredPermission)) {

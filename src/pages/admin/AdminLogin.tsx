@@ -17,7 +17,7 @@ export default function AdminLogin() {
   // If already logged in as admin, redirect to dashboard
   useEffect(() => {
     if (!loading && user && isAdmin) {
-      navigate("/admin", { replace: true });
+      navigate("/", { replace: true });
     }
   }, [loading, user, isAdmin, navigate]);
 
@@ -72,7 +72,7 @@ export default function AdminLogin() {
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/5">
             <Shield className="h-7 w-7 text-primary" />
           </div>
-          <h1 className="font-display text-xl font-bold uppercase tracking-wider text-foreground">Admin Login</h1>
+          <h1 className="font-display text-xl font-bold uppercase tracking-wider text-foreground">LayerLoot Admin Studio</h1>
           <p className="mt-1 text-sm text-muted-foreground">Sign in with your admin credentials</p>
         </div>
 

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -79,7 +78,7 @@ export default function AdminShowcases() {
   });
 
   return (
-    <AdminLayout>
+    <>
       <div className="mb-6">
         <h1 className="font-display text-3xl font-bold uppercase text-foreground">Community Showcases</h1>
         <p className="text-sm text-muted-foreground mt-1">Approve, reject, and manage user-submitted creations</p>
@@ -189,6 +188,6 @@ export default function AdminShowcases() {
           </TabsContent>
         ))}
       </Tabs>
-    </AdminLayout>
+    </>
   );
 }

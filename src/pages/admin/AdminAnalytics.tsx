@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Activity, BarChart3, Box, LayoutTemplate, MousePointerClick, Package, ShoppingCart, TrendingUp } from "lucide-react";
-import AdminLayout from "@/components/admin/AdminLayout";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -111,7 +110,7 @@ export default function AdminAnalytics() {
   const editorStats = useMemo(() => current?.editorStats.slice(0, 8) ?? [], [current?.editorStats]);
 
   return (
-    <AdminLayout>
+    <>
       <div className="space-y-6">
         <div className="flex flex-col gap-4 rounded-2xl border border-border/30 bg-card/50 p-4 backdrop-blur-xl lg:flex-row lg:items-start lg:justify-between">
           <div>
@@ -322,6 +321,6 @@ export default function AdminAnalytics() {
           </>
         )}
       </div>
-    </AdminLayout>
+    </>
   );
 }

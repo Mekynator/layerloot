@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import AdminLayout from "@/components/admin/AdminLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,7 +66,7 @@ export default function AdminActivity() {
   useEffect(() => { load(0); }, [actionFilter, searchTerm]);
 
   return (
-    <AdminLayout>
+    <>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
@@ -186,6 +185,6 @@ export default function AdminActivity() {
           </Button>
         </div>
       </div>
-    </AdminLayout>
+    </>
   );
 }

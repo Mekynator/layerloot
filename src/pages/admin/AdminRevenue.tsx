@@ -6,7 +6,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
-import AdminLayout from "@/components/admin/AdminLayout";
 import StatTile from "@/components/admin/dashboard/StatTile";
 import ChartCard from "@/components/admin/dashboard/ChartCard";
 import InsightCard from "@/components/admin/dashboard/InsightCard";
@@ -53,7 +52,7 @@ const AdminRevenue = () => {
     .map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1).replace("_", " "), value }));
 
   return (
-    <AdminLayout>
+    <>
       <div className="mb-8">
         <h1 className="font-display text-3xl font-bold uppercase tracking-tight text-foreground">
           Revenue Engine
@@ -255,7 +254,7 @@ const AdminRevenue = () => {
           </div>
         </>
       )}
-    </AdminLayout>
+    </>
   );
 };
 

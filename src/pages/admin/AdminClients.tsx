@@ -12,7 +12,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import AdminLayout from "@/components/admin/AdminLayout";
 
 interface AuthUser {
   id: string;
@@ -507,7 +506,7 @@ const AdminClients = () => {
   const selectedUser = useMemo(() => (editUser ? users.find((user) => user.id === editUser.id) ?? editUser : null), [editUser, users]);
 
   return (
-    <AdminLayout>
+    <>
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold uppercase text-foreground">Users</h1>
@@ -790,14 +789,14 @@ const AdminClients = () => {
                         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Quick Actions</p>
                         <div className="flex flex-wrap gap-2">
                           <Button size="sm" variant="outline" className="h-7 text-xs" asChild>
-                            <Link to="/admin/discounts">Create Offer</Link>
+                            <Link to="/discounts">Create Offer</Link>
                           </Button>
                           <Button size="sm" variant="outline" className="h-7 text-xs" asChild>
-                            <Link to="/admin/campaigns">Start Campaign</Link>
+                            <Link to="/campaigns">Start Campaign</Link>
                           </Button>
                           {selectedUser.custom_order_count > 0 && (
                             <Button size="sm" variant="outline" className="h-7 text-xs" asChild>
-                              <Link to="/admin/custom-orders">View Custom Orders</Link>
+                              <Link to="/custom-orders">View Custom Orders</Link>
                             </Button>
                           )}
                         </div>
@@ -1047,7 +1046,7 @@ const AdminClients = () => {
           )}
         </DialogContent>
       </Dialog>
-    </AdminLayout>
+    </>
   );
 };
 

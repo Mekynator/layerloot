@@ -17,7 +17,6 @@ import {
   CreditCard,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -140,7 +139,7 @@ export default function ABTestingDashboard() {
   const selectedExp = experiments.find((e) => e.id === selectedExpId) ?? null;
 
   return (
-    <AdminLayout>
+    <>
       <div className="space-y-6 p-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -235,7 +234,7 @@ export default function ABTestingDashboard() {
           </TabsContent>
         </Tabs>
       </div>
-    </AdminLayout>
+    </>
   );
 }
 

@@ -20,7 +20,6 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import AdminLayout from "@/components/admin/AdminLayout";
 import PricingCalculator from "@/components/admin/PricingCalculator";
 import RevisionHistoryPanel from "@/components/admin/RevisionHistoryPanel";
 import SchedulePublishDialog from "@/components/admin/SchedulePublishDialog";
@@ -516,7 +515,8 @@ const AdminProducts = () => {
   };
 
   return (
-    <AdminLayout>
+    
+      <>
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -1250,7 +1250,7 @@ const AdminProducts = () => {
           setForm((prev) => ({ ...prev, ...data }));
         }}
       />
-    </AdminLayout>
+    </>
   );
 };
 

@@ -13,7 +13,6 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import AdminLayout from "@/components/admin/AdminLayout";
 import PersonalizationDashboard from "@/components/admin/dashboard/PersonalizationDashboard";
 
 type EventStat = { event_type: string; count: number };
@@ -143,7 +142,7 @@ const AdminPersonalization = () => {
   const segments = profileData?.segments ?? { new: 0, casual: 0, engaged: 0, loyal: 0 };
 
   return (
-    <AdminLayout>
+    <>
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
           <div>
@@ -321,7 +320,7 @@ const AdminPersonalization = () => {
         {/* Block-level personalization performance */}
         <PersonalizationDashboard />
       </div>
-    </AdminLayout>
+    </>
   );
 };
 

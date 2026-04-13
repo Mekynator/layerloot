@@ -36,12 +36,12 @@ const ActionCenterWidget = ({ data }: Props) => {
   return (
     <DashboardWidget title="Needs Your Attention" icon={Bell}>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        <QueueItem icon={ShoppingCart} label="Pending orders" count={data.pendingOrders} to="/admin/orders" severity={data.pendingOrders > 3 ? "urgent" : "warning"} />
-        <QueueItem icon={MessageSquareMore} label="Quotes awaiting reply" count={data.quotesAwaiting} to="/admin/custom-orders" severity="warning" />
-        <QueueItem icon={Star} label="Reviews pending" count={data.pendingReviews} to="/admin/reviews" severity="info" />
-        <QueueItem icon={Palette} label="Showcases pending" count={data.pendingShowcases} to="/admin/showcases" severity="info" />
-        <QueueItem icon={Package} label="Low stock products" count={data.lowStockProducts.length} to="/admin/products" severity="warning" />
-        <QueueItem icon={PauseCircle} label="Orders on hold" count={data.ordersOnHold ?? 0} to="/admin/orders" severity="urgent" />
+        <QueueItem icon={ShoppingCart} label="Pending orders" count={data.pendingOrders} to="/orders" severity={data.pendingOrders > 3 ? "urgent" : "warning"} />
+        <QueueItem icon={MessageSquareMore} label="Quotes awaiting reply" count={data.quotesAwaiting} to="/custom-orders" severity="warning" />
+        <QueueItem icon={Star} label="Reviews pending" count={data.pendingReviews} to="/reviews" severity="info" />
+        <QueueItem icon={Palette} label="Showcases pending" count={data.pendingShowcases} to="/showcases" severity="info" />
+        <QueueItem icon={Package} label="Low stock products" count={data.lowStockProducts.length} to="/products" severity="warning" />
+        <QueueItem icon={PauseCircle} label="Orders on hold" count={data.ordersOnHold ?? 0} to="/orders" severity="urgent" />
       </div>
     </DashboardWidget>
   );

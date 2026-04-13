@@ -14,7 +14,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { logAdminActivity } from "@/lib/activity-log";
 import { useAdminNotes } from "@/hooks/use-admin-notes";
-import AdminLayout from "@/components/admin/AdminLayout";
 import OrderTimeline from "@/components/orders/OrderTimeline";
 import { formatPrice } from "@/lib/currency";
 
@@ -179,9 +178,9 @@ const AdminOrderDetail = () => {
 
   if (!order) {
     return (
-      <AdminLayout>
+      <>
         <div className="flex items-center gap-2 py-12 text-muted-foreground">Loading order…</div>
-      </AdminLayout>
+      </>
     );
   }
 
@@ -190,11 +189,11 @@ const AdminOrderDetail = () => {
   const shippingAddr = order.shipping_address as any;
 
   return (
-    <AdminLayout>
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/admin/orders")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/orders")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex-1">
@@ -412,7 +411,7 @@ const AdminOrderDetail = () => {
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </>
   );
 };
 

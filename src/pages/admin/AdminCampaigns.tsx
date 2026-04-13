@@ -16,7 +16,6 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import AdminLayout from "@/components/admin/AdminLayout";
 import AdminColorPicker from "@/components/admin/AdminColorPicker";
 import PromotionPopupBuilder from "@/components/admin/campaigns/PromotionPopupBuilder";
 import { supabase } from "@/integrations/supabase/client";
@@ -221,7 +220,7 @@ const AdminCampaigns = () => {
   };
 
   return (
-    <AdminLayout>
+    <>
       <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-bold uppercase tracking-tight text-foreground">
@@ -599,7 +598,7 @@ const AdminCampaigns = () => {
           </Button>
         </DialogContent>
       </Dialog>
-    </AdminLayout>
+    </>
   );
 };
 

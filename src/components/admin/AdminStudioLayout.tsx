@@ -5,7 +5,7 @@ import {
   FileText, Settings, Box, TicketPercent, Calculator, Megaphone,
   BarChart3, ImageIcon, Activity, Globe, MessageCircle, Instagram,
   Brain, FlaskConical, DollarSign, Sparkles, Menu, X, Layers,
-  Tags, Crown, ArrowLeft, Palette, Shield, Calendar,
+  Tags, Crown, Palette, Shield, Gift, Wrench,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminPermissions } from "@/hooks/use-admin-permissions";
@@ -17,8 +17,8 @@ const ICON_MAP: Record<string, typeof Package> = {
   LayoutDashboard, Package, ShoppingCart, Users, Truck, Star, FileText,
   Settings, Box, TicketPercent, Calculator, Megaphone, BarChart3,
   ImageIcon, Activity, Globe, MessageCircle, Instagram, Brain,
-  FlaskConical, DollarSign, Sparkles, Layers, Tags, Palette, Shield, Calendar,
-  Crown,
+  FlaskConical, DollarSign, Sparkles, Layers, Tags, Palette, Shield,
+  Crown, Gift, Wrench,
 };
 
 interface SidebarItem {
@@ -64,6 +64,7 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
     name: "Users & Roles",
     items: [
       { id: "users", to: "/users", label: "Users & Admins", icon: "Users", permission: "*" },
+      { id: "admin-roles", to: "/admin-roles", label: "Admin Roles", icon: "Shield", permission: "*" },
       { id: "reviews", to: "/reviews", label: "Reviews", icon: "Star", permission: "reviews.manage" },
     ],
   },
@@ -71,7 +72,8 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
     name: "Marketing",
     items: [
       { id: "campaigns", to: "/campaigns", label: "Campaigns", icon: "Megaphone", permission: "campaigns.manage" },
-      { id: "discounts", to: "/discounts", label: "Discounts & Vouchers", icon: "TicketPercent", permission: "discounts.manage" },
+      { id: "discounts", to: "/discounts", label: "Discounts", icon: "TicketPercent", permission: "discounts.manage" },
+      { id: "rewards", to: "/rewards", label: "Rewards & Vouchers", icon: "Gift", permission: "discounts.manage" },
       { id: "automations", to: "/automations", label: "Automations", icon: "Sparkles", permission: "campaigns.manage" },
       { id: "instagram", to: "/instagram", label: "Instagram", icon: "Instagram", permission: "settings.view" },
     ],
@@ -102,6 +104,7 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
     items: [
       { id: "financial", to: "/financial", label: "Financial", icon: "DollarSign", permission: "settings.view" },
       { id: "email-logs", to: "/email-logs", label: "Email Logs", icon: "FileText", permission: "reports.view" },
+      { id: "system", to: "/system", label: "System & Maintenance", icon: "Wrench", permission: "*" },
     ],
   },
 ];

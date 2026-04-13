@@ -12,7 +12,7 @@ const ProductAttentionWidget = ({ data }: Props) => {
   return (
     <DashboardWidget title="Product Attention" icon={Package} linkTo="/admin/products" linkLabel="Products">
       {drafts > 0 && (
-        <Link to="/admin/products" className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-background/40">
+        <Link to="/products" className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-background/40">
           <EyeOff className="h-4 w-4 text-amber-400" />
           <span className="flex-1 text-sm text-foreground">Draft / unpublished products</span>
           <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-bold text-amber-400">{drafts}</span>

@@ -14,7 +14,6 @@ import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import AdminLayout from "@/components/admin/AdminLayout";
 import { DEFAULT_CHAT_CONFIG, type ChatConfig, type ChatQuickReply, type ChatPageRule } from "@/hooks/use-chat-settings";
 
 function uid() { return Math.random().toString(36).slice(2, 10); }
@@ -95,11 +94,11 @@ const AdminChatSettings = () => {
   };
 
   if (loading) {
-    return <AdminLayout><div className="flex items-center justify-center py-12 text-muted-foreground">Loading chat settings...</div></AdminLayout>;
+    return <div className="flex items-center justify-center py-12 text-muted-foreground">Loading chat settings...</div>;
   }
 
   return (
-    <AdminLayout>
+    <>
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold uppercase text-foreground">AI Chat Settings</h1>
@@ -575,7 +574,7 @@ const AdminChatSettings = () => {
           </div>
         </TabsContent>
       </Tabs>
-    </AdminLayout>
+    </>
   );
 };
 

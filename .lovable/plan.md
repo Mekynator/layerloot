@@ -1,100 +1,41 @@
 
 
-# LayerLoot Public Storefront — Performance Cleanup & Optimization
+# Route Hardening — Public LayerLoot Storefront
 
-## Summary
+## Current State
 
-Remove dead code, add lazy loading for all routes, clean up stale imports and unreachable logic. No feature changes — pure weight reduction and speed improvement.
+The storefront is already in strong shape:
+- **No admin routes** exist in `App.tsx` — the catch-all `<Route path="*" element={<NotFound />} />` already handles every guessed path
+- **No admin navigation/links** remain in the UI (cleaned in the prior pass)
+- **No redirect logic** sends users toward admin destinations
+- **NotFound page** is clean and customer-facing with no admin wording
 
----
+## Remaining Items (minor)
 
-## Changes
+### 1. Analytics surface check (`src/lib/analytics.ts` line 162)
+`getAnalyticsSurface()` still checks `path.startsWith("/admin")` and returns `"admin"` as a surface type. No admin paths exist in this app, so this branch is dead code. Simplify to always return `"storefront"` (or keep `"editor-preview"` check only). Also clean the `AnalyticsSurface` type to remove `"admin"`.
 
-### 1. Lazy-load all page routes in App.tsx
+### 2. Console log in NotFound leaks attempted path
+Line 13: `console.error("404 Error: User attempted to access non-existent route:", location.pathname)` — this is fine for debugging but logs the exact path attempted. Change to a generic message that doesn't echo back the path to avoid path-probing information in console.
 
-Currently all 18 page components are eagerly imported. Convert to `React.lazy()` with a `Suspense` fallback. This is the single biggest bundle-size win.
+### 3. `admin-permissions-map.ts` — keep but confirm isolation
+This file is imported only by `AuthContext.tsx` for internal role-checking. It never surfaces in UI or routes. No changes needed — just confirmation it stays isolated.
 
-**Before:** 18 static `import` statements
-**After:** 18 `React.lazy(() => import(...))` calls wrapped in `<Suspense fallback={<PageSkeleton />}>`
-
-### 2. Remove dead imports and code from Layout.tsx
-
-- **Remove** `FloatingCartSummary` import — it's imported but never rendered (line 50 always evaluates to `null`)
-- **Remove** the dead expression `{!isCartPage && !isEditorPreview && null}` on line 50
-- **Remove** `isCartPage` variable (no longer used after above)
-
-### 3. Delete unused files — admin-only hooks and utilities
-
-These files exist but are **never imported** by any page or component in the storefront:
-
-**Hooks (admin-only, zero imports in storefront UI):**
-- `src/hooks/use-admin-dashboard.ts`
-- `src/hooks/use-admin-growth.ts`
-- `src/hooks/use-admin-notes.ts`
-- `src/hooks/use-admin-permissions.ts`
-- `src/hooks/use-experiment-admin.ts`
-- `src/hooks/use-analytics-dashboard.ts`
-- `src/hooks/use-monthly-declaration.ts`
-- `src/hooks/use-monthly-reports.ts`
-- `src/hooks/use-recurring-expenses.ts`
-- `src/hooks/use-expense-categories.ts`
-- `src/hooks/use-custom-order-automation.ts`
-- `src/hooks/use-automation-rules.ts`
-- `src/hooks/use-translation-manager.ts`
-- `src/hooks/use-media-library.ts`
-- `src/hooks/use-product-admin.ts`
-
-**Utilities (admin-only, zero imports in storefront UI):**
-- `src/lib/generate-declaration-pdf.ts`
-- `src/lib/activity-log.ts`
-
-**Editor-only components (never imported from pages):**
-- `src/components/shared/AlignmentGuidesOverlay.tsx`
-- `src/components/shared/AlignmentToolbar.tsx`
-- `src/components/shared/GridOverlay.tsx`
-- `src/components/shared/SnappingSettingsPanel.tsx`
-- `src/components/shared/DeviceVisibilityControl.tsx`
-- `src/components/shared/OverrideSummary.tsx`
-- `src/components/shared/ResponsivePropertyControls.tsx`
-- `src/components/shared/ResponsiveShortcuts.tsx`
-- `src/components/editor/EditorPreviewGuard.tsx`
-
-**Duplicate file:**
-- `src/pages/GlobalSectionRenderer.tsx` — duplicate of `src/components/layout/GlobalSectionRenderer.tsx`, never imported anywhere
-
-### 4. Clean up snap/editor utilities (admin-only, zero storefront imports)
-
-- `src/lib/snap-engine.ts`
-- `src/hooks/use-snap-settings.ts`
-- `src/hooks/use-device-override.ts`
-
-### 5. Create a lightweight PageSkeleton for Suspense fallback
-
-A simple full-width skeleton component for the lazy-load boundary — reuses existing `Skeleton` component.
-
-### 6. Remove dead ChatWidget/PromotionPopup/GiftClaimPopup awareness
-
-These components exist but are **never imported or rendered** in the current app. They are kept as files (may be rendered via dynamic block system), but we confirm no stale imports reference them.
-
-- No action needed — they are already tree-shaken since nothing imports them.
-
----
+## What does NOT need changing
+- `CustomOrdersModule.tsx` — `sender_role === "admin"` is correct customer-facing chat styling (shows "Team" label)
+- `use-showcases.ts` — `approved_by_admin` is a database column name, not UI text
+- `use-published-settings.ts` — comment-only reference
+- `MegaMenuDropdown.tsx` — comment "admin-selected" is code documentation
+- `ChatWidget.tsx` — `chatSettings.quickReplies` labeled "adminReplies" in variable name only
+- `AuthContext.tsx` — `isAdmin`/`adminRole` kept for internal data-gating, never surfaced in UI
 
 ## Files changed
 
 | File | Action |
 |------|--------|
-| `src/App.tsx` | Convert 18 imports to `React.lazy`, add `Suspense` |
-| `src/components/layout/Layout.tsx` | Remove `FloatingCartSummary` import, dead line 50, `isCartPage` |
-| `src/components/shared/PageSkeleton.tsx` | New — lightweight loading skeleton |
-| 28+ admin-only hook/utility/component files | Delete |
+| `src/lib/analytics.ts` | Remove `"admin"` from `AnalyticsSurface` type; simplify `getAnalyticsSurface` to remove `/admin` path check |
+| `src/pages/NotFound.tsx` | Change console.error to generic message without echoing the attempted path |
 
-## What is NOT touched
-
-- Cart, checkout, product pages, account, AI chat, saved items — all preserved
-- `AuthContext.tsx` — kept as-is (internal role checking still needed)
-- `admin-permissions-map.ts` — kept (imported by AuthContext)
-- `VisualEditorContext.tsx` — kept (imported by BlockRenderer for safe editor detection)
-- All storefront-facing components and hooks
-- Database integration unchanged
+## Impact
+Two small edits. Everything else is already clean. After this, the storefront has zero admin path awareness at both the UI and code level.
 

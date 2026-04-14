@@ -29,7 +29,7 @@ import { ProductGridSkeleton } from "@/components/shared/loading-states";
 import { cn } from "@/lib/utils";
 import i18n from "@/lib/i18n";
 import { useTranslation } from "react-i18next";
-import BlockBackgroundSlideshow from "@/components/admin/BlockBackgroundSlideshow";
+import BlockBackgroundSlideshow from "@/components/blocks/BlockBackgroundSlideshow";
 import {
   buildEntranceAnimation,
   buildHoverAnimation,

@@ -8,7 +8,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Search, ChevronRight, Calendar, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { renderBlock } from "@/components/admin/BlockRenderer";
+import { renderBlock } from "@/components/blocks/BlockRenderer";
 import { usePageBlocks } from "@/hooks/use-page-blocks";
 import { useSearchParams } from "react-router-dom";
 

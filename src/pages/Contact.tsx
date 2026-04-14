@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
+import { renderBlock, type SiteBlock } from "@/components/blocks/BlockRenderer";
 import { usePageBlocks } from "@/hooks/use-page-blocks";
 import { useStaticSectionSettings } from "@/hooks/use-static-section-settings";
 

@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import type { SiteBlock } from "@/components/admin/BlockRenderer";
+import type { SiteBlock } from "@/components/blocks/BlockRenderer";
 
 export type ReusableLibraryKind = "section" | "component" | "template";
 export type ReusableSyncMode = "copy" | "global" | "override" | "detached";

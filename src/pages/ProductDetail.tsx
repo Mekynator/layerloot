@@ -38,7 +38,7 @@ import ProductColorSummary from "@/components/product/ProductColorSummary";
 import ProductMediaLightbox from "@/components/product/ProductMediaLightbox";
 import { ProductImage } from "@/components/product/ProductImage";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { renderBlock } from "@/components/admin/BlockRenderer";
+import { renderBlock } from "@/components/blocks/BlockRenderer";
 import { usePageBlocks } from "@/hooks/use-page-blocks";
 import { useSearchParams } from "react-router-dom";
 

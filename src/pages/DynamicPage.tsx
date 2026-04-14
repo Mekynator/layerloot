@@ -1,7 +1,7 @@
 import { useMemo, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
+import { renderBlock, type SiteBlock } from "@/components/blocks/BlockRenderer";
 import { PageSkeleton } from "@/components/shared/loading-states";
 import NotFound from "./NotFound";
 import { usePageBlocks, useSitePage } from "@/hooks/use-page-blocks";

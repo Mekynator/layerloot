@@ -10,7 +10,7 @@ import logoImg from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavLinks, type NavItem } from "@/components/admin/NavLinkEditor";
+import { useNavLinks, type NavItem } from "@/hooks/use-nav-links";
 import MegaMenuDropdown from "@/components/layout/MegaMenuDropdown";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchPublishedSettings } from "@/hooks/use-published-settings";

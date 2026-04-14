@@ -8,7 +8,7 @@ import i18n from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchPublishedSettings } from "@/hooks/use-published-settings";
 import logoImg from "@/assets/logo.png";
-import { useFooterNavLinks } from "@/components/admin/NavLinkEditor";
+import { useFooterNavLinks } from "@/hooks/use-nav-links";
 import GlobalSectionRenderer from "@/components/layout/GlobalSectionRenderer";
 
 type LocalizedText = string | Record<string, string>;

@@ -51,7 +51,7 @@ import { useAnalyticsSafe } from "@/contexts/AnalyticsContext";
 import { useToast } from "@/hooks/use-toast";
 import ModelViewer from "@/components/ModelViewer";
 import Lithophane, { type LithophaneSubmitPayload } from "@/components/Lithophane";
-import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
+import { renderBlock, type SiteBlock } from "@/components/blocks/BlockRenderer";
 import { ReviewCardSkeleton, SectionCardSkeleton } from "@/components/shared/loading-states";
 import GiftFinderSection from "@/components/gift-finder/GiftFinderSection";
 import { usePageBlocks } from "@/hooks/use-page-blocks";

@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ModelViewer from "@/components/ModelViewer";
 import { motion } from "framer-motion";
-import { renderBlock } from "@/components/admin/BlockRenderer";
+import { renderBlock } from "@/components/blocks/BlockRenderer";
 import { usePageBlocks } from "@/hooks/use-page-blocks";
 import { useStaticSectionSettings } from "@/hooks/use-static-section-settings";
 

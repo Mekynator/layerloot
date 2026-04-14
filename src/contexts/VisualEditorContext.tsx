@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { type LayoutEntry, type StaticSection, getStaticSections as getStaticSectionsFromLib } from "@/lib/static-page-sections";
 import { supabase } from "@/integrations/supabase/client";
-import type { SiteBlock } from "@/components/admin/BlockRenderer";
+import type { SiteBlock } from "@/components/blocks/BlockRenderer";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import {

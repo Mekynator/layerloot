@@ -9,7 +9,7 @@ import ShowcaseGallery from "@/components/creations/ShowcaseGallery";
 import MyShowcases from "@/components/creations/MyShowcases";
 import SavedShowcases from "@/components/creations/SavedShowcases";
 import CreateShowcaseForm from "@/components/creations/CreateShowcaseForm";
-import { renderBlock } from "@/components/admin/BlockRenderer";
+import { renderBlock } from "@/components/blocks/BlockRenderer";
 import { usePageBlocks } from "@/hooks/use-page-blocks";
 import { useStaticSectionSettings } from "@/hooks/use-static-section-settings";
 

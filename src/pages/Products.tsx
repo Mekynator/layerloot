@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ProductCard from "@/components/ProductCard";
-import { renderBlock } from "@/components/admin/BlockRenderer";
+import { renderBlock } from "@/components/blocks/BlockRenderer";
 import { ProductGridSkeleton, SectionCardSkeleton } from "@/components/shared/loading-states";
 import { useStorefrontCatalog } from "@/hooks/use-storefront";
 import { useStaticSectionSettings } from "@/hooks/use-static-section-settings";

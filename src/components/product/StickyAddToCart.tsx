@@ -67,10 +67,10 @@ const StickyAddToCart = ({
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 80, opacity: 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="fixed inset-x-0 bottom-0 z-40 md:hidden border-t border-border/20 bg-secondary/90 shadow-[0_-4px_30px_hsl(var(--primary)/0.1)] backdrop-blur-2xl"
+          className="fixed inset-x-0 bottom-0 z-40 border-t border-border/20 bg-secondary/90 shadow-[0_-4px_30px_hsl(var(--primary)/0.1)] backdrop-blur-2xl"
         >
           <div
-            className="container flex items-center gap-3 pt-3"
+            className="container flex items-center gap-3 pt-3 md:justify-center md:gap-5"
             style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0.75rem))' }}
           >
             <img
@@ -78,12 +78,12 @@ const StickyAddToCart = ({
               alt={product.name}
               className="h-10 w-10 shrink-0 rounded-lg border border-border object-cover"
             />
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-display text-xs font-semibold uppercase text-foreground">
+            <div className="min-w-0 flex-1 md:flex-none">
+              <p className="truncate font-display text-xs font-semibold uppercase text-foreground md:text-sm">
                 {product.name}
               </p>
               <div className="flex items-center gap-2">
-                <span className="font-display text-sm font-bold text-primary">
+                <span className="font-display text-sm font-bold text-primary md:text-base">
                   {formatPrice(price)}
                 </span>
                 {variantLabel && (

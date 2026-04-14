@@ -12,17 +12,12 @@ import ScrollProgress from "@/components/ui/scroll-progress";
 const Layout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
   const { isEditorPreview } = useEditorPreview();
-  const isAdminRoute = location.pathname.startsWith("/admin");
   const isCartPage = location.pathname === "/cart";
   const { currentAchievement, dismiss } = useAchievements();
 
   useEffect(() => {
     document.documentElement.classList.add("dark");
   }, []);
-
-  if (isAdminRoute) {
-    return <div className="min-h-screen bg-background">{children}</div>;
-  }
 
   return (
     <div

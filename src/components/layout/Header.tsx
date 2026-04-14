@@ -35,7 +35,6 @@ type HeaderSettings = {
   show_logo_text?: boolean;
   show_cart_icon?: boolean;
   show_account_icon?: boolean;
-  show_admin_icon?: boolean;
   show_mobile_menu?: boolean;
   desktop_nav_enabled?: boolean;
   mobile_nav_enabled?: boolean;
@@ -43,10 +42,8 @@ type HeaderSettings = {
   logo_text_class?: string;
   account_label?: string | Record<string, string>;
   auth_label?: string | Record<string, string>;
-  admin_label?: string | Record<string, string>;
   sign_out_label?: string | Record<string, string>;
   mobile_account_label?: string | Record<string, string>;
-  mobile_admin_label?: string | Record<string, string>;
 };
 
 type SeenState = {
@@ -78,7 +75,6 @@ const defaultHeaderSettings: HeaderSettings = {
   show_logo_text: true,
   show_cart_icon: true,
   show_account_icon: true,
-  show_admin_icon: true,
   show_mobile_menu: true,
   desktop_nav_enabled: true,
   mobile_nav_enabled: true,
@@ -86,10 +82,8 @@ const defaultHeaderSettings: HeaderSettings = {
   logo_text_class: "font-display text-2xl font-bold uppercase tracking-wider text-foreground",
   account_label: "My Account",
   auth_label: "Login / Register",
-  admin_label: "Admin Dashboard",
   sign_out_label: "Sign Out",
   mobile_account_label: "My Account",
-  mobile_admin_label: "Admin",
 };
 
 const getNotificationsStorageKey = (userId: string) => `layerloot_account_notifications_${userId}`;
@@ -422,7 +416,7 @@ const Header = () => {
                   <Link to="/account" className="block py-3.5 font-display text-sm uppercase tracking-widest text-muted-foreground border-b border-border/5">
                     {getLocalizedValue(headerSettings.mobile_account_label, getLocalizedValue(headerSettings.account_label, t("nav.account", "My Account")))}
                   </Link>
-                  {/* Mobile admin link removed — admin access is via /admin/login */}
+                  
                 </>
               ) : (
                 <Link to="/auth" className="block py-3.5 font-display text-sm uppercase tracking-widest text-muted-foreground">

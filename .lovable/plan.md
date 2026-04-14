@@ -1,118 +1,115 @@
 
 
-# LayerLoot Admin Studio — Private Access & Identity Setup
+# LayerLoot Admin Studio — RBAC & Permissions System
 
-## Problem
+## Current State
 
-The Admin Studio project (`layerloot-forge`) is still structured as a storefront clone with admin routes bolted on:
-- `App.tsx` still includes all public storefront routes (Index, Products, Cart, Gallery, etc.)
-- Uses storefront `Layout.tsx` with Header, Footer, FloatingCartSummary, ChatWidget, PromotionPopup
-- `index.html` still says "Lovable App" with no admin identity
-- Auth page redirects to `/account` (customer flow) instead of admin dashboard
-- `AdminLayout.tsx` has a "Back to Store" link and lives inside the storefront Layout
-- `AuthContext` only checks for a single `admin` role, not the full RBAC system
-- No route protection — all admin pages are accessible without guards
-- All storefront pages (Cart, Gallery, About, etc.) are still routable
+- **Database**: Already has 11 roles in `app_role` enum (owner, super_admin, admin, editor, support, content_admin, orders_admin, support_admin, marketing_admin, custom, user)
+- **Database**: Already has `admin_permissions`, `admin_invitations`, `user_roles` tables with proper RLS
+- **Database**: Already has `has_role()` and `has_permission()` security definer functions
+- **Admin Studio code**: Only checks `role === "admin"` — no RBAC, no route guards, no permission hooks
+- **Admin Studio types**: `app_role` enum is outdated (only "admin" | "user") — needs regeneration
 
 ## Plan
 
-### 1. Update `index.html` — Admin Identity
+### 1. Create `src/lib/admin-permissions-map.ts`
 
-Set title to "LayerLoot Admin Studio", add `noindex/nofollow`, remove storefront OG tags. Professional private app metadata.
+Port the permission map from the public app with:
+- `OWNER_EMAIL` constant
+- `AdminRoleKey` type covering all 10 admin roles
+- `ADMIN_ROLE_SET` for quick membership checks
+- `ALL_PERMISSIONS` array with module-level permissions
+- `PERMISSION_GROUPS` for UI display
+- `ROLE_LABELS`, `ROLE_COLORS` for admin management UI
+- `isOwnerEmail()`, `canManageRole()` helpers
 
-### 2. Rewrite `App.tsx` — Admin-Only Routing
+### 2. Create `src/hooks/use-admin-permissions.ts`
 
-Strip all storefront routes and providers. New structure:
+Permission hook that:
+- Fetches user's role from `user_roles` table (checks all admin roles, not just "admin")
+- Fetches granular permissions from `admin_permissions` table
+- Owner email gets automatic owner role + wildcard permissions
+- Exposes `adminRole`, `permissions`, `hasPermission()`, `isOwner`
 
-```text
-/login          → AdminLogin (public)
-/               → AdminGuard → AdminShell (layout with sidebar)
-  /             → Dashboard
-  /analytics    → AdminAnalytics (placeholder)
-  /orders       → AdminOrders
-  /custom-orders→ AdminCustomOrders
-  /products     → AdminProducts
-  /products/:id/variants → AdminVariants
-  /categories   → AdminCategories
-  /users        → AdminClients
-  /admin-roles  → AdminRoles (placeholder)
-  /reviews      → AdminReviews
-  /campaigns    → placeholder
-  /rewards      → AdminDiscounts
-  /ai-tools     → placeholder
-  /content      → AdminContent
-  /editor       → PageEditor
-  /showcases    → AdminShowcases
-  /shipping     → AdminShipping
-  /settings     → AdminSettings
-  /system       → placeholder
-```
+### 3. Upgrade `src/contexts/AuthContext.tsx`
 
-Remove: CartProvider, ChatWidget, PromotionPopup, GiftClaimPopup, storefront Layout wrapper.
+- Add `adminRole: string | null` to context
+- Replace simple `eq("role", "admin")` with check against full `ADMIN_ROLE_SET`
+- Keep `isAdmin` as convenience boolean (true if any admin role)
+- Fix race condition (add `initialised` flag pattern from public app)
 
-### 3. Create `AdminLogin.tsx` — Dedicated Admin Login
+### 4. Create `src/components/admin/AdminGuard.tsx`
 
-Replace the customer Auth page with a clean admin-focused login:
-- No signup option (admins are invited, not self-registered)
-- Login-only form with email/password
-- On success: check admin role → redirect to `/` (dashboard) or show "Access Denied"
-- Professional branding: "LayerLoot Admin Studio" title, no storefront logo
-- Dark, minimal design
-
-### 4. Create `AdminGuard.tsx` — Route Protection
-
-A wrapper component that:
-- Shows loading spinner while auth state resolves
+Route protection wrapper:
+- Shows loading spinner during auth resolution
 - Redirects to `/login` if not authenticated
-- Shows "Access Denied" screen if authenticated but not admin
-- Renders children (the admin shell) only for valid admins
-- No flicker — blocks rendering until role is confirmed
+- Shows "Access Denied" screen if authenticated but no admin role
+- Accepts optional `requiredPermission` prop for granular checks
+- Renders children only when authorized
 
-### 5. Upgrade `AuthContext.tsx` — Full RBAC Support
+### 5. Create `src/pages/admin/AdminLogin.tsx`
 
-Update from simple `isAdmin: boolean` to match the public app's richer system:
-- Add `adminRole: string | null` field
-- Check `user_roles` table for any admin-level role (owner, super_admin, admin, editor, support, content_admin, etc.)
-- Use the `ADMIN_ROLE_SET` pattern from the public app's existing `admin-permissions-map.ts`
-- Keep `isAdmin` as a convenience boolean
+Dedicated admin login page:
+- Email + password only (no signup)
+- After login: checks admin role → dashboard or "Access Denied"
+- "LayerLoot Admin Studio" branding
+- Professional minimal design
 
-### 6. Create `AdminShell.tsx` — Private Studio Layout
+### 6. Rewrite `src/App.tsx`
 
-Replace the storefront Layout with a dedicated admin shell:
-- Full-height sidebar with grouped navigation (same groups as the memory: Overview, Orders, Catalog, Marketing, Users, AI, Content, Settings, System)
-- Top bar with user info, sign-out button
-- No Header/Footer/storefront components
-- Uses `<Outlet />` for nested routing
-- Professional dark admin aesthetic
+- Remove all storefront routes and providers (CartProvider, ChatWidget, PromotionPopup, etc.)
+- Structure: `/login` → public, everything else → `AdminGuard` → `AdminShell`
+- Flat admin routes: `/`, `/orders`, `/products`, `/settings`, `/admin-roles`, etc.
 
-### 7. Clean Up / Delete Storefront Files
+### 7. Create `src/components/admin/AdminShell.tsx`
 
-Remove or isolate storefront pages that have no admin purpose:
-- Delete from routing: Index, Products, ProductDetail, Cart, Contact, Gallery, About, CreateYourOwn, Creations, CreationDetail, SubmitDesign, DynamicPage, OrderTracking, Account
-- Delete storefront layout components: `Layout.tsx` (storefront), `Header.tsx`, `Footer.tsx`, `FloatingCartSummary`, `ChatWidget`, `PromotionPopup`, `GiftClaimPopup`, `GlobalSectionRenderer`, `PageBackgroundSlideshow`, `ThemeRuntime`
-- The page files can remain on disk for now but must not be routed
+Replace `AdminLayout.tsx` with a proper studio shell:
+- Full sidebar with grouped navigation (Overview, Orders, Catalog, Marketing, Users, AI, Content, Settings, System)
+- Permission-aware: hide nav items user can't access
+- Top bar with user info + sign out
+- No storefront components
 
-### 8. Create Placeholder Pages
+### 8. Create `src/pages/admin/AdminRoles.tsx`
 
-For sections not yet migrated, create minimal placeholder components:
-- AdminAnalytics, AdminRoles, AdminCampaigns, AdminAITools, AdminSystem
-- Each shows the page title and "Coming soon — module migration in progress"
+Admin management page:
+- List all users with admin roles (via `admin-users` edge function)
+- Show role badges with labels/colors
+- Owner can change roles, invite new admins
+- Uses `admin_invitations` table for invites
+- Role hierarchy enforcement via `canManageRole()`
 
-### Files Modified (in Admin Studio project)
+### 9. Create placeholder pages
+
+For modules not yet migrated:
+- `AdminAnalytics.tsx`, `AdminCampaigns.tsx`, `AdminRewards.tsx`, `AdminAITools.tsx`, `AdminSystem.tsx`
+- Each shows title + "Module migration in progress"
+
+### Files to create/modify (all in Admin Studio)
 
 | File | Action |
 |---|---|
-| `index.html` | Update metadata/title |
-| `src/App.tsx` | Complete rewrite — admin-only routing |
-| `src/contexts/AuthContext.tsx` | Add `adminRole`, full RBAC check |
-| `src/pages/admin/AdminLogin.tsx` | New — admin login page |
-| `src/components/admin/AdminGuard.tsx` | New — route protection wrapper |
-| `src/components/admin/AdminShell.tsx` | New — private studio layout with sidebar |
-| `src/pages/admin/AdminAnalytics.tsx` | New — placeholder |
-| `src/pages/admin/AdminRoles.tsx` | New — placeholder |
-| `src/pages/admin/AdminCampaigns.tsx` | New — placeholder |
-| `src/pages/admin/AdminAITools.tsx` | New — placeholder |
-| `src/pages/admin/AdminSystem.tsx` | New — placeholder |
+| `index.html` | Update title + noindex |
+| `src/lib/admin-permissions-map.ts` | Create — permission constants |
+| `src/hooks/use-admin-permissions.ts` | Create — permission hook |
+| `src/contexts/AuthContext.tsx` | Upgrade — full RBAC |
+| `src/components/admin/AdminGuard.tsx` | Create — route protection |
+| `src/components/admin/AdminShell.tsx` | Create — studio layout |
+| `src/pages/admin/AdminLogin.tsx` | Create — admin login |
+| `src/pages/admin/AdminRoles.tsx` | Create — role management |
+| `src/App.tsx` | Rewrite — admin-only routing |
+| `src/pages/admin/AdminAnalytics.tsx` | Create — placeholder |
+| `src/pages/admin/AdminCampaigns.tsx` | Create — placeholder |
+| `src/pages/admin/AdminRewards.tsx` | Create — placeholder |
+| `src/pages/admin/AdminAITools.tsx` | Create — placeholder |
+| `src/pages/admin/AdminSystem.tsx` | Create — placeholder |
 
 No changes to the public LayerLoot project.
+
+### Permission enforcement summary
+
+- **Route level**: `AdminGuard` wraps all admin routes, checks `ADMIN_ROLE_SET` membership
+- **Module level**: Individual routes can pass `requiredPermission` to guard
+- **Action level**: `useAdminPermissions().hasPermission("orders.manage")` for button/action checks
+- **Owner**: Always has wildcard `*` permission, cannot be demoted by lower roles
+- **Hierarchy**: `canManageRole()` prevents privilege escalation
 

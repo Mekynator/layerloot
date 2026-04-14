@@ -5,7 +5,7 @@ import {
   normalizeSettings, pageKeyFromPath,
   type PageBackgroundSettings, type BackgroundSizeMode, type PageOverrideMode,
   SETTING_KEY,
-} from "@/components/admin/PageBackgroundEditor";
+} from "@/lib/page-background-types";
 
 function sizeToCSS(mode: BackgroundSizeMode) {
   switch (mode) {

@@ -1,79 +1,118 @@
 
 
-## LayerLoot: Final Admin Migration & Public App Cleanup
+# LayerLoot Admin Studio — Private Access & Identity Setup
 
-### Current State Assessment
+## Problem
 
-**Public LayerLoot app (this project):**
-- `App.tsx` is already clean — only storefront routes, no admin routes
-- However, ~50 admin page files remain in `src/pages/admin/`
-- ~40+ admin component files remain in `src/components/admin/`
-- Some admin components are **legitimately used by the storefront** (shared rendering utilities):
-  - `BlockRenderer.tsx` — used by 10+ storefront pages/components for CMS block rendering
-  - `NavLinkEditor.tsx` — exports `useNavLinks` and `useFooterNavLinks` used by Header/Footer
-  - `PageBackgroundEditor.tsx` — exports type definitions used by `PageBackgroundSlideshow`
-- The admin pages/routes are already unreachable (not in `App.tsx`), but the files still exist
+The Admin Studio project (`layerloot-forge`) is still structured as a storefront clone with admin routes bolted on:
+- `App.tsx` still includes all public storefront routes (Index, Products, Cart, Gallery, etc.)
+- Uses storefront `Layout.tsx` with Header, Footer, FloatingCartSummary, ChatWidget, PromotionPopup
+- `index.html` still says "Lovable App" with no admin identity
+- Auth page redirects to `/account` (customer flow) instead of admin dashboard
+- `AdminLayout.tsx` has a "Back to Store" link and lives inside the storefront Layout
+- `AuthContext` only checks for a single `admin` role, not the full RBAC system
+- No route protection — all admin pages are accessible without guards
+- All storefront pages (Cart, Gallery, About, etc.) are still routable
 
-**Admin Studio ([Admin Layerloot](/projects/4e63a586-cdcf-4507-a677-b399efb6e145)):**
-- Has basic admin routes but is still using an older/simpler set of admin pages (16 pages vs 50+ in this project)
-- Missing many modules that exist in this public project: Analytics, AI Tools, Campaigns, Rewards, Backgrounds, Automations, Design System, Financial, etc.
+## Plan
 
-### Plan
+### 1. Update `index.html` — Admin Identity
 
-#### Phase 1: Extract shared storefront utilities from `src/components/admin/`
+Set title to "LayerLoot Admin Studio", add `noindex/nofollow`, remove storefront OG tags. Professional private app metadata.
 
-Move the storefront-consumed exports out of the `admin` directory so the public app no longer imports from `@/components/admin/`:
+### 2. Rewrite `App.tsx` — Admin-Only Routing
 
-1. **Create `src/lib/block-renderer.ts`** — Move the `SiteBlock` type and `renderBlock` function from `BlockRenderer.tsx` into a dedicated storefront-safe module. Update all 10+ storefront imports.
+Strip all storefront routes and providers. New structure:
 
-2. **Create `src/hooks/use-nav-links.ts`** — Extract `useNavLinks`, `useFooterNavLinks`, and related types/defaults from `NavLinkEditor.tsx`. Update Header and Footer imports.
+```text
+/login          → AdminLogin (public)
+/               → AdminGuard → AdminShell (layout with sidebar)
+  /             → Dashboard
+  /analytics    → AdminAnalytics (placeholder)
+  /orders       → AdminOrders
+  /custom-orders→ AdminCustomOrders
+  /products     → AdminProducts
+  /products/:id/variants → AdminVariants
+  /categories   → AdminCategories
+  /users        → AdminClients
+  /admin-roles  → AdminRoles (placeholder)
+  /reviews      → AdminReviews
+  /campaigns    → placeholder
+  /rewards      → AdminDiscounts
+  /ai-tools     → placeholder
+  /content      → AdminContent
+  /editor       → PageEditor
+  /showcases    → AdminShowcases
+  /shipping     → AdminShipping
+  /settings     → AdminSettings
+  /system       → placeholder
+```
 
-3. **Create `src/lib/page-background-types.ts`** — Extract the type exports (`PageBackgroundSettings`, `BackgroundSizeMode`, etc.) from `PageBackgroundEditor.tsx`. Update `PageBackgroundSlideshow` import.
+Remove: CartProvider, ChatWidget, PromotionPopup, GiftClaimPopup, storefront Layout wrapper.
 
-#### Phase 2: Remove dead admin files from the public app
+### 3. Create `AdminLogin.tsx` — Dedicated Admin Login
 
-After Phase 1 decouples storefront code from admin components:
+Replace the customer Auth page with a clean admin-focused login:
+- No signup option (admins are invited, not self-registered)
+- Login-only form with email/password
+- On success: check admin role → redirect to `/` (dashboard) or show "Access Denied"
+- Professional branding: "LayerLoot Admin Studio" title, no storefront logo
+- Dark, minimal design
 
-1. **Delete all files in `src/pages/admin/`** — These are unreachable (no routes point to them). All 50+ files.
+### 4. Create `AdminGuard.tsx` — Route Protection
 
-2. **Delete admin-only components from `src/components/admin/`** — Remove everything except the files that still export storefront-consumed code (which will be empty after Phase 1). This includes:
-   - `AdminLayout.tsx`, `AdminStudioLayout.tsx`, `AdminStudioShell.tsx`, `AdminShell.tsx`
-   - `AdminRoute.tsx`, `AdminPageShell.tsx`, `AdminColorPicker.tsx`
-   - `AdminPageSelect.tsx`, `AdminPageMultiSelect.tsx`
-   - All editor/, dashboard/, campaigns/, declaration/, media/, reusable/, translations/, funnel/, shared/ subdirectories
-   - All remaining admin-only components (DraftActionBar, InlineEditor, RevisionHistoryPanel, etc.)
+A wrapper component that:
+- Shows loading spinner while auth state resolves
+- Redirects to `/login` if not authenticated
+- Shows "Access Denied" screen if authenticated but not admin
+- Renders children (the admin shell) only for valid admins
+- No flicker — blocks rendering until role is confirmed
 
-3. **Clean up orphaned imports** in hooks like `use-draft-publish.ts` — redirect `SiteBlock` type import to the new location.
+### 5. Upgrade `AuthContext.tsx` — Full RBAC Support
 
-#### Phase 3: Copy critical missing modules to Admin Studio
+Update from simple `isAdmin: boolean` to match the public app's richer system:
+- Add `adminRole: string | null` field
+- Check `user_roles` table for any admin-level role (owner, super_admin, admin, editor, support, content_admin, etc.)
+- Use the `ADMIN_ROLE_SET` pattern from the public app's existing `admin-permissions-map.ts`
+- Keep `isAdmin` as a convenience boolean
 
-Use `cross_project--copy_project_asset` to copy the 30+ admin pages and components that don't exist yet in the Admin Studio, including:
+### 6. Create `AdminShell.tsx` — Private Studio Layout
 
-- Pages: `AdminAnalytics`, `AdminAutomations`, `AdminBackgrounds`, `AdminCampaigns`, `AdminChat`, `AdminChatAnalytics`, `AdminChatSettings`, `AdminDeclaration`, `AdminDesignSystem`, `AdminEmailLogs`, `AdminGrowth`, `AdminInstagram`, `AdminMedia`, `AdminPersonalization`, `AdminPricing`, `AdminReferrals`, `AdminReports`, `AdminRevenue`, `AdminTranslations`, `FinancialWorkspace`, `VisualEditor`, `EditorWorkspace`, `ABTestingDashboard`, `AIInsightsDashboard`, `UsersWorkspace`
-- Components: `dashboard/*`, `editor/*`, `campaigns/*`, `declaration/*`, `media/*`, `reusable/*`, `translations/*`, `shared/*`
-- Supporting files: `AdminPageShell.tsx`, `DraftActionBar.tsx`, `RevisionHistoryPanel.tsx`, `AdminColorPicker.tsx`, etc.
+Replace the storefront Layout with a dedicated admin shell:
+- Full-height sidebar with grouped navigation (same groups as the memory: Overview, Orders, Catalog, Marketing, Users, AI, Content, Settings, System)
+- Top bar with user info, sign-out button
+- No Header/Footer/storefront components
+- Uses `<Outlet />` for nested routing
+- Professional dark admin aesthetic
 
-#### Phase 4: Verify build stability
+### 7. Clean Up / Delete Storefront Files
 
-- Run TypeScript compilation check on the public app after all removals
-- Fix any broken references
-- Ensure no admin imports remain in storefront code
+Remove or isolate storefront pages that have no admin purpose:
+- Delete from routing: Index, Products, ProductDetail, Cart, Contact, Gallery, About, CreateYourOwn, Creations, CreationDetail, SubmitDesign, DynamicPage, OrderTracking, Account
+- Delete storefront layout components: `Layout.tsx` (storefront), `Header.tsx`, `Footer.tsx`, `FloatingCartSummary`, `ChatWidget`, `PromotionPopup`, `GiftClaimPopup`, `GlobalSectionRenderer`, `PageBackgroundSlideshow`, `ThemeRuntime`
+- The page files can remain on disk for now but must not be routed
 
-### Summary of Changes
+### 8. Create Placeholder Pages
 
-| Area | Action |
+For sections not yet migrated, create minimal placeholder components:
+- AdminAnalytics, AdminRoles, AdminCampaigns, AdminAITools, AdminSystem
+- Each shows the page title and "Coming soon — module migration in progress"
+
+### Files Modified (in Admin Studio project)
+
+| File | Action |
 |---|---|
-| `src/lib/block-renderer.ts` | New — storefront block rendering extracted from admin |
-| `src/hooks/use-nav-links.ts` | New — nav link hooks extracted from NavLinkEditor |
-| `src/lib/page-background-types.ts` | New — type exports extracted from PageBackgroundEditor |
-| `src/pages/admin/*` (50 files) | Delete — unreachable from public routes |
-| `src/components/admin/*` (40+ files) | Delete — admin-only, no longer needed |
-| 10+ storefront files | Update imports to use new extracted locations |
-| Admin Studio project | Receive ~30 missing admin modules via copy |
+| `index.html` | Update metadata/title |
+| `src/App.tsx` | Complete rewrite — admin-only routing |
+| `src/contexts/AuthContext.tsx` | Add `adminRole`, full RBAC check |
+| `src/pages/admin/AdminLogin.tsx` | New — admin login page |
+| `src/components/admin/AdminGuard.tsx` | New — route protection wrapper |
+| `src/components/admin/AdminShell.tsx` | New — private studio layout with sidebar |
+| `src/pages/admin/AdminAnalytics.tsx` | New — placeholder |
+| `src/pages/admin/AdminRoles.tsx` | New — placeholder |
+| `src/pages/admin/AdminCampaigns.tsx` | New — placeholder |
+| `src/pages/admin/AdminAITools.tsx` | New — placeholder |
+| `src/pages/admin/AdminSystem.tsx` | New — placeholder |
 
-### Risks & Mitigations
-
-- **BlockRenderer is 2845 lines** — extracting only the `SiteBlock` type and `renderBlock` export keeps it in the public app initially; the full file stays until we confirm no storefront code uses admin-only parts of it. If storefront rendering depends on the full file, we keep `BlockRenderer.tsx` in place but move it to `src/components/blocks/` instead.
-- **NavLinkEditor** has both storefront hooks and admin UI — clean split into two files.
-- **Draft/publish hooks** (`use-draft-publish.ts`) are admin-side but exist in `src/hooks/` — these stay for now since Admin Studio will need equivalent logic, and they don't affect storefront weight if tree-shaken.
+No changes to the public LayerLoot project.
 

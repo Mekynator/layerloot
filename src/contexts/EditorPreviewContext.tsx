@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useMemo } from "react";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 
 type EditorPreviewState = {
   isEditorPreview: boolean;
@@ -16,7 +16,6 @@ export function useEditorPreview() {
 }
 
 export function EditorPreviewProvider({ children }: { children: React.ReactNode }) {
-  const location = useLocation();
   const [searchParams] = useSearchParams();
 
   // Editor preview is active only when:

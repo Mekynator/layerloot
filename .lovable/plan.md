@@ -1,117 +1,79 @@
 
 
-# Finance System Expansion Plan
+## LayerLoot: Final Admin Migration & Public App Cleanup
 
-## What Already Exists
-- `business_expenses` table with basic CRUD
-- 2-tab admin page (Preview + Expenses)
-- Aggregation hook pulling from orders, custom_orders, business_expenses
-- HTML-based print/PDF and CSV export
-- DeclarationPreview and ExpenseManager components
+### Current State Assessment
 
-## What Needs to Be Built
+**Public LayerLoot app (this project):**
+- `App.tsx` is already clean — only storefront routes, no admin routes
+- However, ~50 admin page files remain in `src/pages/admin/`
+- ~40+ admin component files remain in `src/components/admin/`
+- Some admin components are **legitimately used by the storefront** (shared rendering utilities):
+  - `BlockRenderer.tsx` — used by 10+ storefront pages/components for CMS block rendering
+  - `NavLinkEditor.tsx` — exports `useNavLinks` and `useFooterNavLinks` used by Header/Footer
+  - `PageBackgroundEditor.tsx` — exports type definitions used by `PageBackgroundSlideshow`
+- The admin pages/routes are already unreachable (not in `App.tsx`), but the files still exist
 
-### 1. Database Changes (Migration)
+**Admin Studio ([Admin Layerloot](/projects/4e63a586-cdcf-4507-a677-b399efb6e145)):**
+- Has basic admin routes but is still using an older/simpler set of admin pages (16 pages vs 50+ in this project)
+- Missing many modules that exist in this public project: Analytics, AI Tools, Campaigns, Rewards, Backgrounds, Automations, Design System, Financial, etc.
 
-**Enhance `business_expenses`** — add missing columns rather than creating a parallel `monthly_expenses` table (avoids data migration complexity):
-- `month_key` (text, computed from expense_date, e.g. "2026-04")
-- `subcategory` (text, nullable)
-- `currency` (text, default "DKK")
-- `payment_method` (text, nullable)
-- `receipt_file_name` (text, nullable)
-- `no_receipt_required` (boolean, default false)
-- `source` (text, default "manual" — values: manual/recurring/system)
+### Plan
 
-**New table: `recurring_expenses`**
-- id, title, vendor_name, category, subcategory, default_net_amount, default_vat_amount, default_gross_amount, billing_day, is_active, created_at, updated_at
-- RLS: admin/super_admin/owner only
+#### Phase 1: Extract shared storefront utilities from `src/components/admin/`
 
-**New table: `monthly_reports`**
-- id, month_key, year, month, generated_at, pdf_file_url, csv_file_url, snapshot_json (jsonb), notes, created_at
-- RLS: admin/super_admin/owner only
+Move the storefront-consumed exports out of the `admin` directory so the public app no longer imports from `@/components/admin/`:
 
-**New table: `expense_categories`**
-- id, name, sort_order, is_active, created_at
-- RLS: admin read/write, public read active
-- Seed with: Electricity, Internet, Software, Marketing, Shipping, Packaging, Materials, Tools, Accounting, Office, Misc
+1. **Create `src/lib/block-renderer.ts`** — Move the `SiteBlock` type and `renderBlock` function from `BlockRenderer.tsx` into a dedicated storefront-safe module. Update all 10+ storefront imports.
 
-### 2. Hooks (Data Layer)
+2. **Create `src/hooks/use-nav-links.ts`** — Extract `useNavLinks`, `useFooterNavLinks`, and related types/defaults from `NavLinkEditor.tsx`. Update Header and Footer imports.
 
-**`use-recurring-expenses.ts`** — CRUD for recurring expenses + "apply to month" function that inserts entries into business_expenses with source="recurring" (with duplicate prevention check).
+3. **Create `src/lib/page-background-types.ts`** — Extract the type exports (`PageBackgroundSettings`, `BackgroundSizeMode`, etc.) from `PageBackgroundEditor.tsx`. Update `PageBackgroundSlideshow` import.
 
-**`use-monthly-reports.ts`** — CRUD for monthly_reports + generate snapshot function that captures current aggregated data as JSON.
+#### Phase 2: Remove dead admin files from the public app
 
-**`use-expense-categories.ts`** — fetch/manage dynamic categories (replaces hardcoded EXPENSE_CATEGORIES).
+After Phase 1 decouples storefront code from admin components:
 
-**Enhance `use-monthly-declaration.ts`** — use dynamic categories from expense_categories table instead of hardcoded list.
+1. **Delete all files in `src/pages/admin/`** — These are unreachable (no routes point to them). All 50+ files.
 
-### 3. Admin UI — 4 Tabs
+2. **Delete admin-only components from `src/components/admin/`** — Remove everything except the files that still export storefront-consumed code (which will be empty after Phase 1). This includes:
+   - `AdminLayout.tsx`, `AdminStudioLayout.tsx`, `AdminStudioShell.tsx`, `AdminShell.tsx`
+   - `AdminRoute.tsx`, `AdminPageShell.tsx`, `AdminColorPicker.tsx`
+   - `AdminPageSelect.tsx`, `AdminPageMultiSelect.tsx`
+   - All editor/, dashboard/, campaigns/, declaration/, media/, reusable/, translations/, funnel/, shared/ subdirectories
+   - All remaining admin-only components (DraftActionBar, InlineEditor, RevisionHistoryPanel, etc.)
 
-Refactor `AdminDeclaration.tsx` from 2 tabs to 4:
+3. **Clean up orphaned imports** in hooks like `use-draft-publish.ts` — redirect `SiteBlock` type import to the new location.
 
-**Tab 1: Overview** (existing DeclarationPreview, enhanced)
-- Summary cards (Income, Expenses, VAT In, VAT Out, Result)
-- YTD totals
-- Previous month comparison
-- Warnings panel
+#### Phase 3: Copy critical missing modules to Admin Studio
 
-**Tab 2: Expenses** (existing ExpenseManager, enhanced)
-- Add subcategory, payment_method, no_receipt_required fields to form
-- Category filter dropdown
-- Status badges (missing receipt, categorized)
-- Use dynamic categories from expense_categories
+Use `cross_project--copy_project_asset` to copy the 30+ admin pages and components that don't exist yet in the Admin Studio, including:
 
-**Tab 3: Recurring** (new component)
-- `RecurringExpenseManager.tsx`
-- List recurring expenses with activate/deactivate toggle
-- Add/edit/delete recurring entries
-- "Apply to [month]" button that copies recurring entries into business_expenses for selected month
-- Duplicate prevention indicator
+- Pages: `AdminAnalytics`, `AdminAutomations`, `AdminBackgrounds`, `AdminCampaigns`, `AdminChat`, `AdminChatAnalytics`, `AdminChatSettings`, `AdminDeclaration`, `AdminDesignSystem`, `AdminEmailLogs`, `AdminGrowth`, `AdminInstagram`, `AdminMedia`, `AdminPersonalization`, `AdminPricing`, `AdminReferrals`, `AdminReports`, `AdminRevenue`, `AdminTranslations`, `FinancialWorkspace`, `VisualEditor`, `EditorWorkspace`, `ABTestingDashboard`, `AIInsightsDashboard`, `UsersWorkspace`
+- Components: `dashboard/*`, `editor/*`, `campaigns/*`, `declaration/*`, `media/*`, `reusable/*`, `translations/*`, `shared/*`
+- Supporting files: `AdminPageShell.tsx`, `DraftActionBar.tsx`, `RevisionHistoryPanel.tsx`, `AdminColorPicker.tsx`, etc.
 
-**Tab 4: Reports** (new component)
-- `ReportsManager.tsx`
-- List of previously generated monthly reports
-- "Generate Report" button → saves snapshot_json to monthly_reports
-- Download PDF / CSV from saved report
-- Regenerate option
-- View snapshot summary inline
+#### Phase 4: Verify build stability
 
-### 4. PDF Generator Enhancement
+- Run TypeScript compilation check on the public app after all removals
+- Fix any broken references
+- Ensure no admin imports remain in storefront code
 
-Update `generate-declaration-pdf.ts`:
-- Black/white professional print layout (remove dark theme for PDF)
-- Numbers right-aligned with DKK currency
-- Section C shows Net | VAT | Gross columns per category
-- Receipt Index shows vendor column + status checkmark/missing icon
-- Add source column to CSV (system/manual/recurring)
+### Summary of Changes
 
-### 5. Snapshot System
+| Area | Action |
+|---|---|
+| `src/lib/block-renderer.ts` | New — storefront block rendering extracted from admin |
+| `src/hooks/use-nav-links.ts` | New — nav link hooks extracted from NavLinkEditor |
+| `src/lib/page-background-types.ts` | New — type exports extracted from PageBackgroundEditor |
+| `src/pages/admin/*` (50 files) | Delete — unreachable from public routes |
+| `src/components/admin/*` (40+ files) | Delete — admin-only, no longer needed |
+| 10+ storefront files | Update imports to use new extracted locations |
+| Admin Studio project | Receive ~30 missing admin modules via copy |
 
-When "Generate Report" is clicked:
-- Aggregate all current month data
-- Store as `snapshot_json` in `monthly_reports`
-- Optionally store PDF/CSV file URLs if uploaded to storage
-- Historical reports remain stable even if underlying data changes
+### Risks & Mitigations
 
-### 6. Files to Create/Modify
-
-| File | Action |
-|------|--------|
-| Migration SQL | Create (alter business_expenses + 3 new tables + seed) |
-| `src/hooks/use-recurring-expenses.ts` | Create |
-| `src/hooks/use-monthly-reports.ts` | Create |
-| `src/hooks/use-expense-categories.ts` | Create |
-| `src/hooks/use-monthly-declaration.ts` | Modify (dynamic categories) |
-| `src/components/admin/declaration/RecurringExpenseManager.tsx` | Create |
-| `src/components/admin/declaration/ReportsManager.tsx` | Create |
-| `src/components/admin/declaration/ExpenseManager.tsx` | Modify (new fields + filters) |
-| `src/pages/admin/AdminDeclaration.tsx` | Modify (4 tabs) |
-| `src/lib/generate-declaration-pdf.ts` | Modify (B&W layout, 3-col expenses) |
-
-### 7. Validation Rules
-- gross = net + vat (auto-calculated in form)
-- Category required (enforced in form)
-- month_key auto-derived from expense_date
-- Warn if missing receipt (unless no_receipt_required)
-- Prevent duplicate recurring insert per month
+- **BlockRenderer is 2845 lines** — extracting only the `SiteBlock` type and `renderBlock` export keeps it in the public app initially; the full file stays until we confirm no storefront code uses admin-only parts of it. If storefront rendering depends on the full file, we keep `BlockRenderer.tsx` in place but move it to `src/components/blocks/` instead.
+- **NavLinkEditor** has both storefront hooks and admin UI — clean split into two files.
+- **Draft/publish hooks** (`use-draft-publish.ts`) are admin-side but exist in `src/hooks/` — these stay for now since Admin Studio will need equivalent logic, and they don't affect storefront weight if tree-shaken.
 

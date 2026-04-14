@@ -39,7 +39,7 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
   const isMobile = useIsMobile();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
-  const [isActive, setIsActive] = useState(false); // mobile tap-activated interaction state
+  const [justAdded, setJustAdded] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
 
   const cardRef = useRef<HTMLDivElement | null>(null);

@@ -3,7 +3,7 @@ import { Layers3, Link2, Save } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAnalyticsSafe } from "@/contexts/AnalyticsContext";
 import { upsertReusableFromBlock, REUSABLE_SECTION_CATEGORIES } from "@/lib/reusable-blocks";
-import type { SiteBlock } from "@/components/admin/BlockRenderer";
+import type { SiteBlock } from "@/components/blocks/BlockRenderer";
 import {
   Dialog,
   DialogContent,

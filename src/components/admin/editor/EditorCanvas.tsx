@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { tr } from "@/lib/translate";
-import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
+import { renderBlock, type SiteBlock } from "@/components/blocks/BlockRenderer";
 import { supabase } from "@/integrations/supabase/client";
 import { buildReusableInstanceContent, getReusableKind } from "@/lib/reusable-blocks";
 import EditorErrorBoundary from "@/components/admin/EditorErrorBoundary";

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import type { SiteBlock } from "@/components/admin/BlockRenderer";
+import type { SiteBlock } from "@/components/blocks/BlockRenderer";
 import { prepareReusableContentForSave, resolveReusableSiteBlocks } from "@/lib/reusable-blocks";
 
 /* ------------------------------------------------------------------ */

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ExternalLink, MonitorSmartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { SiteBlock } from "@/components/admin/BlockRenderer";
+import type { SiteBlock } from "@/components/blocks/BlockRenderer";
 import InlineEditor from "@/components/admin/InlineEditor";
 import EditorPreviewOverlay, { type PreviewBlockRect } from "@/components/admin/EditorPreviewOverlay";
 import { useVisualEditor } from "@/contexts/VisualEditorContext";

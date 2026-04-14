@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useVisualEditor, type SelectedElement } from "@/contexts/VisualEditorContext";
 import { useDesignSystemSafe } from "@/contexts/DesignSystemContext";
 import { useAuth } from "@/contexts/AuthContext";
-import type { SiteBlock } from "@/components/admin/BlockRenderer";
+import type { SiteBlock } from "@/components/blocks/BlockRenderer";
 import SliderField from "./controls/SliderField";
 import ColorPickerField from "./controls/ColorPickerField";
 import ImageUploadField from "./controls/ImageUploadField";

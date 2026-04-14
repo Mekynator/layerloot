@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { renderBlock } from "@/components/admin/BlockRenderer";
+import { renderBlock } from "@/components/blocks/BlockRenderer";
 import { usePageBlocks } from "@/hooks/use-page-blocks";
 import { useStaticSectionSettings } from "@/hooks/use-static-section-settings";
 

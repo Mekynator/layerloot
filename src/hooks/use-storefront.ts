@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { SiteBlock } from "@/components/admin/BlockRenderer";
+import type { SiteBlock } from "@/components/blocks/BlockRenderer";
 import { buildProductSocialProofMap, type ProductSocialProof } from "@/lib/social-proof";
 import { resolveReusableSiteBlocks } from "@/lib/reusable-blocks";
 

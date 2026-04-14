@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
+import { renderBlock, type SiteBlock } from "@/components/blocks/BlockRenderer";
 import {
   Archive,
   Box,

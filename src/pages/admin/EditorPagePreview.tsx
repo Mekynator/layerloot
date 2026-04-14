@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { renderBlock, type SiteBlock } from "@/components/admin/BlockRenderer";
+import { renderBlock, type SiteBlock } from "@/components/blocks/BlockRenderer";
 import EditorErrorBoundary from "@/components/admin/EditorErrorBoundary";
 
 function normalizePageParam(pageParam?: string) {

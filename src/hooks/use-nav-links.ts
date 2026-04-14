@@ -101,7 +101,7 @@ const toEditorItem = (item: NavItem): NavEditorItem => ({
 const defaultHeaderNav: NavEditorItem[] = [
   { label: makeLabel("Home", "Hjem", "Startseite", "Inicio", "Acasă"), to: "/", source: "manual", openInNewTab: false, visible: true },
   { label: makeLabel("Products", "Produkter", "Produkte", "Productos", "Produse"), to: "/products", source: "manual", openInNewTab: false, visible: true },
-  { label: makeLabel("Create Your Own", "Skab Din Egen", "Erstelle Dein Eigenes", "Crea el Tuyo", "Creează Al Tău"), to: "/create", source: "manual", openInNewTab: false, visible: true },
+  { label: makeLabel("Create Your Own", "Skab Din Egen", "Erstelle Dein Eigenes", "Crea el Tuyo", "Creează Al Tău"), to: "/create-your-own", source: "manual", openInNewTab: false, visible: true },
   { label: makeLabel("Creations", "Kreationer", "Kreationen", "Creaciones", "Creații"), to: "/creations", source: "manual", openInNewTab: false, visible: true },
   { label: makeLabel("About", "Om Os", "Über Uns", "Acerca de", "Despre"), to: "/about", source: "manual", openInNewTab: false, visible: true },
 ];

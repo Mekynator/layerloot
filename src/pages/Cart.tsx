@@ -853,8 +853,6 @@ export default function CartPage() {
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-          </div>
-        </div>
       </div>
     </div>
   );

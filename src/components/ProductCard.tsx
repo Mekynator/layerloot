@@ -58,13 +58,12 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
     : 0;
 
   useEffect(() => {
-    // Only auto-slide while intentionally interacting: hovered (desktop) or activated (mobile)
-    if (images.length <= 1 || !(isHovered || isActive)) return;
+    if (images.length <= 1 || !isHovered) return;
     const timer = window.setInterval(() => {
       setCurrentImageIndex((prev) => (prev + 1) % images.length);
     }, AUTO_SLIDE_MS);
     return () => window.clearInterval(timer);
-  }, [images.length, isHovered, isActive]);
+  }, [images.length, isHovered]);
 
   useEffect(() => {
     if (!justAdded) return;

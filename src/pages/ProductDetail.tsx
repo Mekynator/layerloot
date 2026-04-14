@@ -68,7 +68,7 @@ const ProductDetail = () => {
   const [searchParams] = useSearchParams();
   const isEditorQuery = searchParams.get("editorPreview") === "1";
   const sessionFlag = typeof window !== "undefined" && sessionStorage.getItem("layerloot.editorPreview") === "1";
-  const isEditorPreview = isEditorQuery || sessionFlag || window.location.pathname.startsWith("/admin/visual-editor") || window.location.pathname.startsWith("/admin/editor");
+  const isEditorPreview = isEditorQuery || sessionFlag;
   const blocksQuery = usePageBlocks("product_detail", true, isEditorPreview);
   const pageBlocks: any[] = blocksQuery.data ?? [];
   

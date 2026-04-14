@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import {
-  Package, Gift, LogOut, Shield, Star, CreditCard,
+  Package, Gift, LogOut, Star, CreditCard,
   MessageSquare, FileText, Heart, Settings, UserPlus,
   ChevronRight, Sparkles, Eye,
 } from "lucide-react";
@@ -151,11 +151,6 @@ const Account = () => {
             <p className="text-sm text-muted-foreground mt-0.5">{user.email}</p>
           </div>
           <div className="flex gap-2 shrink-0">
-            {isAdmin && (
-              <Link to="/admin">
-                <Button variant="ghost" size="sm" className="text-xs"><Shield className="mr-1 h-3.5 w-3.5" /> {tt("nav.admin", "Admin")}</Button>
-              </Link>
-            )}
             <Button variant="ghost" size="sm" onClick={signOut} className="text-xs text-muted-foreground"><LogOut className="mr-1 h-3.5 w-3.5" /> {tt("nav.signOut", "Sign Out")}</Button>
           </div>
         </div>

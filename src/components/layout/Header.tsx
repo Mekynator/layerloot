@@ -198,12 +198,9 @@ const Header = () => {
   }, [user]);
 
   useEffect(() => {
-    Promise.all([
-      supabase.from("site_settings").select("value").eq("key", "branding").maybeSingle(),
-      supabase.from("site_settings").select("value").eq("key", "header_settings").maybeSingle(),
-    ]).then(([brandingRes, headerRes]) => {
-      if (brandingRes.data?.value) setBranding({ ...defaultBranding, ...(brandingRes.data.value as BrandingSettings) });
-      if (headerRes.data?.value) setHeaderSettings({ ...defaultHeaderSettings, ...(headerRes.data.value as HeaderSettings) });
+    fetchPublishedSettings(["branding", "header_settings"]).then((settings) => {
+      if (settings.branding) setBranding({ ...defaultBranding, ...(settings.branding as BrandingSettings) });
+      if (settings.header_settings) setHeaderSettings({ ...defaultHeaderSettings, ...(settings.header_settings as HeaderSettings) });
     });
   }, []);
 

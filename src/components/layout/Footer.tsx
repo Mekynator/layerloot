@@ -107,14 +107,12 @@ const Footer = () => {
 
   useEffect(() => {
     Promise.all([
-      supabase.from("site_settings").select("value").eq("key", "branding").maybeSingle(),
-      supabase.from("site_settings").select("value").eq("key", "footer_settings").maybeSingle(),
-      supabase.from("site_settings").select("value").eq("key", "contact").maybeSingle(),
+      fetchPublishedSettings(["branding", "footer_settings", "contact"]),
       supabase.from("policies").select("id").eq("is_visible", true).limit(1),
-    ]).then(([brandingRes, footerRes, contactRes, policiesRes]) => {
-      if (brandingRes.data?.value) setBranding((prev) => ({ ...prev, ...(brandingRes.data.value as BrandingSettings) }));
-      if (footerRes.data?.value) setFooterSettings(footerRes.data.value as FooterSettings);
-      if (contactRes.data?.value) setLegacyContact(contactRes.data.value as ContactSettings);
+    ]).then(([settings, policiesRes]) => {
+      if (settings.branding) setBranding((prev) => ({ ...prev, ...(settings.branding as BrandingSettings) }));
+      if (settings.footer_settings) setFooterSettings(settings.footer_settings as FooterSettings);
+      if (settings.contact) setLegacyContact(settings.contact as ContactSettings);
       setHasPolicies((policiesRes.data?.length ?? 0) > 0);
     });
   }, []);

@@ -1,18 +1,14 @@
 import { ReactNode, useEffect } from "react";
-import { useLocation } from "react-router-dom";
 import { useEditorPreview } from "@/contexts/EditorPreviewContext";
 import Header from "./Header";
 import Footer from "./Footer";
 import GlobalSectionRenderer from "./GlobalSectionRenderer";
 import PageBackgroundSlideshow from "./PageBackgroundSlideshow";
-import FloatingCartSummary from "@/components/cart/FloatingCartSummary";
 import AchievementToast, { useAchievements } from "@/components/smart/AchievementToast";
 import ScrollProgress from "@/components/ui/scroll-progress";
 
 const Layout = ({ children }: { children: ReactNode }) => {
-  const location = useLocation();
   const { isEditorPreview } = useEditorPreview();
-  const isCartPage = location.pathname === "/cart";
   const { currentAchievement, dismiss } = useAchievements();
 
   useEffect(() => {
@@ -24,20 +20,15 @@ const Layout = ({ children }: { children: ReactNode }) => {
       className="relative isolate flex min-h-screen flex-col overflow-x-clip"
       data-editor-preview={isEditorPreview ? "true" : "false"}
     >
-      {/* Ambient gradient blobs */}
       <div className="ambient-bg layer-decorative" aria-hidden="true">
         <div className="ambient-blob ambient-blob--1" />
         <div className="ambient-blob ambient-blob--2" />
         <div className="ambient-blob ambient-blob--3" />
       </div>
 
-      {/* Page background slideshow (behind all content, not header/footer/tiles) */}
       <PageBackgroundSlideshow />
 
-      {/* Subtle grid */}
       <div className="bg-grid-overlay layer-decorative" aria-hidden="true" />
-
-      {/* Noise texture */}
       <div className="noise-overlay layer-decorative" aria-hidden="true" />
 
       <div className="relative z-10 flex min-h-screen flex-col">
@@ -47,7 +38,6 @@ const Layout = ({ children }: { children: ReactNode }) => {
         <GlobalSectionRenderer page="global_after_main" />
         <Footer />
       </div>
-      {!isCartPage && !isEditorPreview && null}
       <AchievementToast achievement={currentAchievement} onDismiss={dismiss} />
       {!isEditorPreview && <ScrollProgress />}
     </div>

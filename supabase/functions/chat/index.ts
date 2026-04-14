@@ -535,7 +535,8 @@ serve(async (req) => {
 
     Object.keys(routeMap).forEach((r) => {
       // replace bare mentions like 'Go to /create' or ' /create ' (avoid replacing inside markdown links)
-      const rx = new RegExp(`(?<!\])\\b${r}\\b(?!\()`, 'g');
+      const escaped = r.replace(/[.*+?^${}()|[\]\\\/\-]/g, '\\$&');
+      const rx = new RegExp(`(?<!\\])${escaped}(?!\\()`, 'g');
       sanitized = sanitized.replace(rx, routeMap[r]);
     });
 

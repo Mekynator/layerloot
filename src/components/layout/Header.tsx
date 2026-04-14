@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavLinks, type NavItem } from "@/components/admin/NavLinkEditor";
 import MegaMenuDropdown from "@/components/layout/MegaMenuDropdown";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchPublishedSettings } from "@/hooks/use-published-settings";
 import GlobalSectionRenderer from "@/components/layout/GlobalSectionRenderer";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useTranslation } from "react-i18next";
@@ -198,12 +199,9 @@ const Header = () => {
   }, [user]);
 
   useEffect(() => {
-    Promise.all([
-      supabase.from("site_settings").select("value").eq("key", "branding").maybeSingle(),
-      supabase.from("site_settings").select("value").eq("key", "header_settings").maybeSingle(),
-    ]).then(([brandingRes, headerRes]) => {
-      if (brandingRes.data?.value) setBranding({ ...defaultBranding, ...(brandingRes.data.value as BrandingSettings) });
-      if (headerRes.data?.value) setHeaderSettings({ ...defaultHeaderSettings, ...(headerRes.data.value as HeaderSettings) });
+    fetchPublishedSettings(["branding", "header_settings"]).then((settings) => {
+      if (settings.branding) setBranding({ ...defaultBranding, ...(settings.branding as BrandingSettings) });
+      if (settings.header_settings) setHeaderSettings({ ...defaultHeaderSettings, ...(settings.header_settings as HeaderSettings) });
     });
   }, []);
 

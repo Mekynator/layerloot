@@ -1,5 +1,5 @@
 export type AnalyticsDeviceType = "desktop" | "tablet" | "mobile";
-export type AnalyticsSurface = "storefront" | "admin" | "editor-preview";
+export type AnalyticsSurface = "storefront" | "editor-preview";
 
 export type AnalyticsEventName =
   | "page_view"
@@ -156,10 +156,9 @@ export const getAnalyticsDeviceType = (): AnalyticsDeviceType => {
   return "desktop";
 };
 
-export const getAnalyticsSurface = (pathName?: string, search = ""): AnalyticsSurface => {
-  const path = pathName || (typeof window !== "undefined" ? window.location.pathname : "/");
+export const getAnalyticsSurface = (_pathName?: string, search = ""): AnalyticsSurface => {
   if (search.includes("editorPreview=1")) return "editor-preview";
-  return path.startsWith("/admin") ? "admin" : "storefront";
+  return "storefront";
 };
 
 export const isAnalyticsEnabled = () => {

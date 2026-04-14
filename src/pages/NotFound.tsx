@@ -10,7 +10,7 @@ const NotFound = () => {
   const [blocks, setBlocks] = useState<SiteBlock[]>([]);
 
   useEffect(() => {
-    console.error("404 Error: User attempted to access non-existent route:", location.pathname);
+    console.error("404 — page not found");
   }, [location.pathname]);
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from "react";
+import { ReactNode, Suspense, lazy, useEffect } from "react";
 import { useEditorPreview } from "@/contexts/EditorPreviewContext";
 import Header from "./Header";
 import Footer from "./Footer";
@@ -7,6 +7,7 @@ import PageBackgroundSlideshow from "./PageBackgroundSlideshow";
 import AchievementToast, { useAchievements } from "@/components/smart/AchievementToast";
 import ScrollProgress from "@/components/ui/scroll-progress";
 
+const ChatWidget = lazy(() => import("@/components/ChatWidget"));
 const Layout = ({ children }: { children: ReactNode }) => {
   const { isEditorPreview } = useEditorPreview();
   const { currentAchievement, dismiss } = useAchievements();

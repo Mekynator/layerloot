@@ -41,6 +41,11 @@ const Layout = ({ children }: { children: ReactNode }) => {
       </div>
       <AchievementToast achievement={currentAchievement} onDismiss={dismiss} />
       {!isEditorPreview && <ScrollProgress />}
+      {!isEditorPreview && (
+        <Suspense fallback={null}>
+          <ChatWidget />
+        </Suspense>
+      )}
     </div>
   );
 };

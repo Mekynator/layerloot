@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useMemo } from "react";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 
 type EditorPreviewState = {
   isEditorPreview: boolean;
@@ -16,7 +16,6 @@ export function useEditorPreview() {
 }
 
 export function EditorPreviewProvider({ children }: { children: React.ReactNode }) {
-  const location = useLocation();
   const [searchParams] = useSearchParams();
 
   // Editor preview is active only when:
@@ -30,13 +29,11 @@ export function EditorPreviewProvider({ children }: { children: React.ReactNode 
   // click interceptor that blocks ALL anchor navigation on the live storefront.
   // The EditorPreviewFrame already injects its own click-blocking script into the preview
   // iframe via postMessage, so sessionStorage cross-page persistence is redundant.
+  // Editor preview is only active when the URL carries ?editorPreview=1
+  // (injected by the Admin Studio's preview iframe).
   const isEditorPreview = useMemo(() => {
-    const param = searchParams.get("editorPreview") === "1";
-    const inAdminEditor =
-      location.pathname.startsWith("/admin/visual-editor") ||
-      location.pathname.startsWith("/admin/editor");
-    return param || inAdminEditor;
-  }, [searchParams, location.pathname]);
+    return searchParams.get("editorPreview") === "1";
+  }, [searchParams]);
 
   // Kept for API compatibility; no longer persists to sessionStorage.
   const setEditorPreview = (_v: boolean) => {};

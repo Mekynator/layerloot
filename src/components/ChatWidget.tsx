@@ -61,7 +61,7 @@ function getPageSuggestions(pathname: string, loggedIn: boolean): string[] {
   if (pathname.startsWith("/account")) {
     return ["Show my latest order", "How many points do I have?", "When can I redeem rewards?", "Track my order"];
   }
-  if (pathname.startsWith("/create")) {
+  if (pathname.startsWith("/create-your-own")) {
     return ["What materials work best?", "How does pricing work?", "Can I preview before ordering?", "Upload tips"];
   }
   if (pathname === "/") {
@@ -767,7 +767,7 @@ const ChatWidget = () => {
             }
 
             if (r.startsWith("/create")) {
-              actions.push({ label: "Create Your Own", to: "/create" });
+              actions.push({ label: "Create Your Own", to: "/create-your-own" });
               continue;
             }
 
@@ -844,7 +844,7 @@ const ChatWidget = () => {
           if (!catCount || catCount.length === 0) {
             // empty category — do not recommend
             setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, content: (m.content ? m.content + "\n\n" : "") + `We don't have active products in that category right now.` } : m)));
-            setAssistantActionMap((s) => ({ ...s, [messageId]: [{ label: "Browse Products", to: "/products" }, { label: "Create Your Own", to: "/create" }] }));
+            setAssistantActionMap((s) => ({ ...s, [messageId]: [{ label: "Browse Products", to: "/products" }, { label: "Create Your Own", to: "/create-your-own" }] }));
             return;
           }
         } catch (e) {
@@ -931,7 +931,7 @@ const ChatWidget = () => {
 
     // 4) Fallback: honest message and action buttons
     setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, content: (m.content ? m.content + "\n\n" : "") + "I couldn't find matching products right now. You can browse all products or create your own." } : m)));
-    setAssistantActionMap((s) => ({ ...s, [messageId]: [{ label: "Browse Products", to: "/products" }, { label: "Create Your Own", to: "/create" }] }));
+    setAssistantActionMap((s) => ({ ...s, [messageId]: [{ label: "Browse Products", to: "/products" }, { label: "Create Your Own", to: "/create-your-own" }] }));
   }
 
   function titleCase(slug: string) {
@@ -940,7 +940,7 @@ const ChatWidget = () => {
 
   function mapRouteToAction(route: string) {
     try {
-      if (route.startsWith("/create")) return { label: "Create Your Own", to: "/create" };
+      if (route.startsWith("/create")) return { label: "Create Your Own", to: "/create-your-own" };
       const cat = /category=([^&]+)/.exec(route);
       if (cat) return { label: `View all ${titleCase(decodeURIComponent(cat[1]))}`, to: `/products?category=${cat[1]}` };
       if (route.startsWith("/products")) return { label: "Browse Products", to: "/products" };

@@ -135,7 +135,7 @@ export default function QuickViewModal({ showcase, open, onClose }: QuickViewMod
                   className="w-full gap-2 font-semibold"
                   onClick={() => {
                     const param = isLithophane ? "reorderLithophane" : "reorderShowcase";
-                    navigate(`/create?${param}=${showcase.id}`);
+                    navigate(`/create-your-own?${param}=${showcase.id}`);
                     onClose();
                   }}
                 >

@@ -263,7 +263,7 @@ Adapt response accordingly.
 
 ## Site Navigation
 - Home: / | Products: /products | Product: /products/[slug]
-- Create Your Own: /create | Gallery: /gallery | Contact: /contact
+- Create Your Own: /create-your-own | Contact: /contact
 - Account: /account | Cart: /cart | Rewards: Account → Rewards Store
 - Auth: /auth | Order Tracking: /order-tracking
 
@@ -500,13 +500,13 @@ serve(async (req) => {
 
     // Replace raw route mentions with friendly buttons for known routes
     const routeMap: Record<string, string> = {
-      '/create': '[Create Your Own](/create)',
+      '/create-your-own': '[Create Your Own](/create-your-own)',
+      '/create': '[Create Your Own](/create-your-own)',
       '/products': '[Browse Products](/products)',
       '/cart': '[View Cart](/cart)',
       '/contact': '[Contact Us](/contact)',
       '/account': '[Account](/account)',
       '/shipping': '[Shipping Info](/shipping)',
-      '/gallery': '[Gallery](/gallery)',
       '/order-tracking': '[Order Tracking](/order-tracking)',
       '/reviews': '[Reviews](/reviews)',
       '/help': '[Help](/help)',

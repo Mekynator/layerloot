@@ -313,7 +313,7 @@ export default function CartPage() {
                   {t("cart.browseProducts")}
                 </Button>
               </Link>
-              <Link to="/create">
+              <Link to="/create-your-own">
                 <Button size="lg" variant="outline" className="font-display uppercase tracking-wider">
                   {t("cart.createYourOwn")}
                 </Button>

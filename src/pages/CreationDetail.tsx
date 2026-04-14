@@ -170,12 +170,12 @@ export default function CreationDetail() {
 
   const handleReorder = () => {
     const param = isLithophane ? "reorderLithophane" : "reorderShowcase";
-    navigate(`/create?${param}=${showcase.id}`);
+    navigate(`/create-your-own?${param}=${showcase.id}`);
   };
 
   const handleModify = () => {
     const param = isLithophane ? "modifyLithophane" : "modifyShowcase";
-    navigate(`/create?${param}=${showcase.id}`);
+    navigate(`/create-your-own?${param}=${showcase.id}`);
   };
 
   // Similar creations

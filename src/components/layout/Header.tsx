@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavLinks, type NavItem } from "@/components/admin/NavLinkEditor";
 import MegaMenuDropdown from "@/components/layout/MegaMenuDropdown";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchPublishedSettings } from "@/hooks/use-published-settings";
 import GlobalSectionRenderer from "@/components/layout/GlobalSectionRenderer";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useTranslation } from "react-i18next";

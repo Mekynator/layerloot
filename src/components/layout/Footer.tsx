@@ -6,6 +6,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchPublishedSettings } from "@/hooks/use-published-settings";
 import logoImg from "@/assets/logo.png";
 import { useFooterNavLinks } from "@/components/admin/NavLinkEditor";
 import GlobalSectionRenderer from "@/components/layout/GlobalSectionRenderer";

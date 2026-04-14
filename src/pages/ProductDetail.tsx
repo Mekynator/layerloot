@@ -713,7 +713,7 @@ function EditorBlockWrapper({ block }: { block: any }) {
   const [searchParams] = useSearchParams();
   const isEditorQuery = searchParams.get("editorPreview") === "1";
   const sessionFlag = typeof window !== "undefined" && sessionStorage.getItem("layerloot.editorPreview") === "1";
-  const isEditorPreview = isEditorQuery || sessionFlag || window.location.pathname.startsWith("/admin/visual-editor") || window.location.pathname.startsWith("/admin/editor");
+  const isEditorPreview = isEditorQuery || sessionFlag;
 
   const label = block?.title && typeof block.title === "string" ? block.title : block?.block_type || "Block";
 

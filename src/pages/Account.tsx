@@ -32,7 +32,7 @@ import { motion } from "framer-motion";
 const VALID_SECTIONS: AccountSection[] = ["orders", "custom-requests", "invoices", "rewards", "vouchers", "referrals", "preferences", "settings"];
 
 const Account = () => {
-  const { user, isAdmin, signOut, loading } = useAuth();
+  const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useTranslation();

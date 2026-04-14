@@ -39,7 +39,6 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
   const isMobile = useIsMobile();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
-  const [isActive, setIsActive] = useState(false); // mobile tap-activated interaction state
   const [justAdded, setJustAdded] = useState(false);
 
   const cardRef = useRef<HTMLDivElement | null>(null);
@@ -59,13 +58,12 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
     : 0;
 
   useEffect(() => {
-    // Only auto-slide while intentionally interacting: hovered (desktop) or activated (mobile)
-    if (images.length <= 1 || !(isHovered || isActive)) return;
+    if (images.length <= 1 || !isHovered) return;
     const timer = window.setInterval(() => {
       setCurrentImageIndex((prev) => (prev + 1) % images.length);
     }, AUTO_SLIDE_MS);
     return () => window.clearInterval(timer);
-  }, [images.length, isHovered, isActive]);
+  }, [images.length, isHovered]);
 
   useEffect(() => {
     if (!justAdded) return;
@@ -166,14 +164,7 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
     setCurrentImageIndex((i) => (i + 1) % images.length);
   };
 
-  const handleImageAreaClick = (e: React.MouseEvent) => {
-    // On mobile, first tap activates image controls; second tap should navigate
-    if (isMobile && images.length > 1 && !isActive) {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsActive(true);
-    }
-  };
+  // Removed first-tap-gate — mobile users navigate directly to product on tap
 
   return (
     <motion.div
@@ -218,7 +209,7 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
         }}
       >
         {/* Image area */}
-        <div onClick={handleImageAreaClick} className="relative aspect-[4/5] overflow-hidden">
+        <div className="relative aspect-[4/5] overflow-hidden">
                     {/* Save/Heart icon button */}
                     <button
                       type="button"
@@ -265,8 +256,8 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
           {/* Soft bottom gradient for text readability / unify with lower tile */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />
 
-          {/* Prev/Next arrows — shown only on hover (desktop) or when mobile-activated */}
-          {images.length > 1 && ((isHovered && !isMobile) || isActive) && (
+          {/* Prev/Next arrows — shown on hover (desktop) or always on mobile */}
+          {images.length > 1 && ((isHovered && !isMobile) || isMobile) && (
             <>
               <button
                 type="button"
@@ -332,24 +323,24 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
             <div className="min-w-0 flex items-baseline gap-2">
               <span className="font-display text-base font-bold text-foreground md:text-xl">{formatPrice(Number(product.price))}</span>
               {hasSale && (
-                <span className="text-xs text-muted-foreground line-through">
-                  {formatPrice(Number(product.compare_at_price))}
-                </span>
+                <>
+                  <span className="text-xs text-muted-foreground line-through">
+                    {formatPrice(Number(product.compare_at_price))}
+                  </span>
+                  <span className="text-[10px] font-semibold text-primary">
+                    {t("products.save", "Save")} {formatPrice(Number(product.compare_at_price) - Number(product.price))}
+                  </span>
+                </>
               )}
             </div>
 
-            <motion.div
-              initial={false}
-              animate={{ opacity: isMobile || isHovered ? 1 : 0, x: isMobile || isHovered ? 0 : 10 }}
-              transition={{ duration: 0.25 }}
-              className="pointer-events-auto shrink-0"
-            >
+            {isMobile ? (
               <Button
                 ref={addButtonRef}
                 type="button"
                 size="sm"
                 onClick={handleAddToCart}
-                className="min-h-[40px] rounded-full bg-primary px-3 text-xs font-medium uppercase tracking-[0.12em] text-primary-foreground transition-all duration-300 md:px-4"
+                className="min-h-[44px] rounded-full bg-primary px-3 text-xs font-medium uppercase tracking-[0.12em] text-primary-foreground transition-all duration-300"
               >
                 {justAdded ? (
                   <>
@@ -363,7 +354,34 @@ const ProductCard = ({ product, socialProof, index = 0 }: ProductCardProps) => {
                   </>
                 )}
               </Button>
-            </motion.div>
+            ) : (
+              <motion.div
+                initial={false}
+                animate={{ opacity: isHovered ? 1 : 0, x: isHovered ? 0 : 10 }}
+                transition={{ duration: 0.25 }}
+                className="pointer-events-auto shrink-0"
+              >
+                <Button
+                  ref={addButtonRef}
+                  type="button"
+                  size="sm"
+                  onClick={handleAddToCart}
+                  className="min-h-[40px] rounded-full bg-primary px-3 text-xs font-medium uppercase tracking-[0.12em] text-primary-foreground transition-all duration-300 md:px-4"
+                >
+                  {justAdded ? (
+                    <>
+                      <Check className="mr-1 h-3.5 w-3.5" />
+                      {t("products.added")}
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingBag className="mr-1 h-3.5 w-3.5" />
+                      {t("products.addToCart")}
+                    </>
+                  )}
+                </Button>
+              </motion.div>
+            )}
           </div>
         </div>
       </Link>

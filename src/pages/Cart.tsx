@@ -789,6 +789,21 @@ export default function CartPage() {
                   </div>
                 </div>
 
+                <div className="space-y-2 pt-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-primary" />
+                    <span>{t("cart.secureCheckout")}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Truck className="h-4 w-4 text-primary" />
+                    <span>{t("cart.fastProduction")}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-primary" />
+                    <span>{t("cart.carefullyPacked")}</span>
+                  </div>
+                </div>
+
                 <div className="relative">
                   <Button
                     ref={checkoutButtonRef}
@@ -823,32 +838,20 @@ export default function CartPage() {
                     )}
                   </AnimatePresence>
                 </div>
-
-                <div className="space-y-2 pt-2 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 text-primary" />
-                    <span>{t("cart.secureCheckout")}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Truck className="h-4 w-4 text-primary" />
-                    <span>{t("cart.fastProduction")}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 text-primary" />
-                    <span>{t("cart.carefullyPacked")}</span>
-                  </div>
-                </div>
               </div>
             </motion.div>
 
-            <Link
-              to="/products"
-              className="inline-flex items-center gap-2 text-sm font-medium text-primary transition-opacity hover:opacity-80"
-            >
-              {t("cart.continueShopping")}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
           </div>
+        </div>
+
+        <div className="mt-4 flex justify-center">
+          <Link
+            to="/products"
+            className="inline-flex items-center gap-2 text-sm font-medium text-primary transition-opacity hover:opacity-80"
+          >
+            {t("cart.continueShopping")}
+            <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
       </div>
     </div>

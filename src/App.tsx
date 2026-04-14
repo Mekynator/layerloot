@@ -19,7 +19,7 @@ const Auth = lazy(() => import("./pages/Auth"));
 const Account = lazy(() => import("./pages/Account"));
 const Contact = lazy(() => import("./pages/Contact"));
 const About = lazy(() => import("./pages/About"));
-const Gallery = lazy(() => import("./pages/Gallery"));
+
 const CreateYourOwn = lazy(() => import("./pages/CreateYourOwn"));
 const Creations = lazy(() => import("./pages/Creations"));
 const CreationDetail = lazy(() => import("./pages/CreationDetail"));
@@ -62,7 +62,7 @@ const App = () => (
                       <Route path="/account" element={<Account />} />
                       <Route path="/contact" element={<Contact />} />
                       <Route path="/about" element={<About />} />
-                      <Route path="/gallery" element={<Gallery />} />
+                      
                       <Route path="/create-your-own" element={<CreateYourOwn />} />
                       <Route path="/creations" element={<Creations />} />
                       <Route path="/creations/:slug" element={<CreationDetail />} />

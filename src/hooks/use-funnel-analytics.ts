@@ -48,7 +48,7 @@ function classifyPath(path: string | null | undefined): FunnelStage {
     p.startsWith("/products") ||
     p.startsWith("/categories") ||
     p.startsWith("/gift-finder") ||
-    p.startsWith("/create")
+    p.startsWith("/create-your-own")
   )
     return "discovery";
   return "awareness";

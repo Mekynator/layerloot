@@ -263,7 +263,7 @@ Adapt response accordingly.
 
 ## Site Navigation
 - Home: / | Products: /products | Product: /products/[slug]
-- Create Your Own: /create | Gallery: /gallery | Contact: /contact
+- Create Your Own: /create-your-own | Contact: /contact
 - Account: /account | Cart: /cart | Rewards: Account → Rewards Store
 - Auth: /auth | Order Tracking: /order-tracking
 

@@ -40,7 +40,7 @@ function classifyPathname(pathname: string): FunnelStage {
     pathname.startsWith("/products") ||
     pathname.startsWith("/categories") ||
     pathname.startsWith("/gift-finder") ||
-    pathname.startsWith("/create")
+    pathname.startsWith("/create-your-own")
   )
     return "discovery";
   return "awareness";

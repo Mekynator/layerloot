@@ -345,7 +345,7 @@ export const DEFAULT_CHAT_CONFIG: ChatConfig = {
     { page: "/products/*", enabled: true, focusArea: "product_help" },
     { page: "/cart", enabled: true, focusArea: "checkout_assist" },
     { page: "/account", enabled: true, focusArea: "account_support" },
-    { page: "/create*", enabled: true, focusArea: "custom_order_help" },
+    { page: "/create-your-own*", enabled: true, focusArea: "custom_order_help" },
   ],
   campaignOverrides: {},
   responsive: {

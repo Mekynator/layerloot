@@ -1,6 +1,6 @@
 import { GripVertical, Pencil, Trash2, Eye, EyeOff, ArrowUp, ArrowDown, Copy, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import type { SiteBlock } from "./BlockRenderer";
+import type { SiteBlock } from "@/components/blocks/BlockRenderer";
 import { tr } from "@/lib/translate";
 
 interface EditableBlockWrapperProps {

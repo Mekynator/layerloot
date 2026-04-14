@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import type { SiteBlock } from "./BlockRenderer";
+import type { SiteBlock } from "@/components/blocks/BlockRenderer";
 import type { Json } from "@/integrations/supabase/types";
 import BlockFieldGroups from "./editor/BlockFieldGroups";
 import { tr } from "@/lib/translate";

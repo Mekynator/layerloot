@@ -5,6 +5,20 @@ export interface CampaignTheme {
   id: string;
   name: string;
   campaign_type: string;
+  status?: string;
+  is_active?: boolean;
+  priority?: number;
+  homepage_placement?: boolean;
+  start_date?: string | null;
+  end_date?: string | null;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  banner_title?: string | null;
+  banner_subtitle?: string | null;
+  banner_image_url?: string | null;
+  linked_product_ids?: string[] | null;
+  linked_category_ids?: string[] | null;
+  linked_discount_id?: string | null;
   theme_overrides: {
     primaryColor?: string;
     accentColor?: string;
@@ -36,7 +50,15 @@ export interface CampaignTheme {
   };
 }
 
-const POLL_INTERVAL = 60_000; // check every 60s
+const POLL_INTERVAL = 60_000;
+
+function isWithinSchedule(c: any, now: number): boolean {
+  const start = c.starts_at ?? c.start_date ?? null;
+  const end = c.ends_at ?? c.end_date ?? null;
+  if (start && new Date(start).getTime() > now) return false;
+  if (end && new Date(end).getTime() < now) return false;
+  return true;
+}
 
 export function useActiveCampaign() {
   const [campaign, setCampaign] = useState<CampaignTheme | null>(null);
@@ -44,23 +66,31 @@ export function useActiveCampaign() {
 
   const fetchActive = async () => {
     try {
-      const now = new Date().toISOString();
+      // Fetch all active campaigns and filter the schedule window in JS so we
+      // robustly handle Admin's dual schema (start_date/end_date + starts_at/ends_at).
       const { data, error } = await supabase
         .from("campaigns" as any)
         .select("*")
         .eq("status", "active")
-        .or(`start_date.is.null,start_date.lte.${now}`)
-        .or(`end_date.is.null,end_date.gte.${now}`)
         .order("priority", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order("updated_at", { ascending: false });
 
-      if (!error && data) {
-        setCampaign(data as any);
-      } else {
+      if (error) {
+        if (import.meta.env.DEV) console.warn("[campaigns] fetch failed:", error.message);
         setCampaign(null);
+        return;
       }
-    } catch {
+
+      const now = Date.now();
+      const match = (data ?? []).find((c: any) => isWithinSchedule(c, now)) ?? null;
+
+      if (!match && import.meta.env.DEV) {
+        console.warn("[campaigns] no active campaign within schedule window");
+      }
+
+      setCampaign(match as unknown as CampaignTheme | null);
+    } catch (err) {
+      if (import.meta.env.DEV) console.warn("[campaigns] unexpected error:", err);
       setCampaign(null);
     } finally {
       setLoading(false);

@@ -64,7 +64,9 @@ export function CampaignThemeProvider({ children }: { children: ReactNode }) {
   return (
     <CampaignContext.Provider value={{ campaign }}>
       {children}
-      {campaign?.banner_config?.enabled && <CampaignBanner config={campaign.banner_config} />}
+      {(campaign?.banner_config?.enabled || campaign?.banner_title || campaign?.banner_image_url) && (
+        <CampaignBanner campaign={campaign} />
+      )}
       {campaign?.effects?.particles && campaign.effects.particles !== "none" && (
         <CampaignParticles type={campaign.effects.particles} density={campaign.effects.particleDensity} />
       )}
@@ -73,19 +75,31 @@ export function CampaignThemeProvider({ children }: { children: ReactNode }) {
 }
 
 /* ─── Campaign promo banner ─── */
-function CampaignBanner({ config }: { config: CampaignTheme["banner_config"] }) {
-  if (!config.text) return null;
+function CampaignBanner({ campaign }: { campaign: CampaignTheme }) {
+  const config = campaign.banner_config ?? {};
+  const title = campaign.banner_title?.trim();
+  const subtitle = campaign.banner_subtitle?.trim();
+  const text = config.text?.trim();
+  const image = campaign.banner_image_url?.trim();
+
+  if (!title && !text && !image) return null;
 
   return (
     <div
-      className="fixed left-0 right-0 top-0 z-[70] flex items-center justify-center gap-2 px-4 py-2 text-center text-sm font-medium"
+      className="fixed left-0 right-0 top-0 z-[70] flex items-center justify-center gap-3 px-4 py-2 text-center text-sm font-medium"
       style={{
         background: config.bgColor || "hsl(var(--primary))",
         color: config.textColor || "hsl(var(--primary-foreground))",
       }}
     >
-      {config.icon && <span>{config.icon}</span>}
-      <span>{config.text}</span>
+      {image && (
+        <img src={image} alt="" className="h-6 w-6 rounded object-cover" loading="lazy" />
+      )}
+      {config.icon && !image && <span>{config.icon}</span>}
+      <span className="flex flex-wrap items-baseline justify-center gap-x-2">
+        {title && <span className="font-semibold">{title}</span>}
+        {(subtitle || text) && <span className="opacity-90">{subtitle ?? text}</span>}
+      </span>
       {config.link && (
         <a href={config.link} className="ml-2 underline underline-offset-2 opacity-90 hover:opacity-100">
           Learn more →

@@ -59,7 +59,7 @@ const RewardsModule = ({ user, overview, refetchOverview, tt, vouchers, overview
       {overviewLoading && !overview ? <RewardsGridSkeleton count={4} /> : null}
       {overview && (
         <div className="mb-6">
-          <LoyaltyProgressCard progress={computeLoyaltyProgress(overview.pointsBalance, overview.pointsEarned, overview.pointsSpent)} variant="full" />
+          <LoyaltyProgressCard progress={computeLoyaltyProgress(overview.pointsBalance, overview.pointsEarned, overview.pointsSpent, overview.vouchers)} variant="full" />
         </div>
       )}
       {vouchers.length === 0 && !overviewLoading ? (

@@ -9,16 +9,6 @@ export type RewardTier = {
   discountValue: number;
 };
 
-const REWARD_TIERS: RewardTier[] = [
-  { key: "25-discount", name: "25 KR DISCOUNT", pointsCost: 200, discountType: "fixed_discount", discountValue: 25 },
-  { key: "50-discount", name: "50 KR DISCOUNT", pointsCost: 400, discountType: "fixed_discount", discountValue: 50 },
-  { key: "free-delivery", name: "FREE DELIVERY", pointsCost: 800, discountType: "free_shipping", discountValue: 0 },
-  { key: "100-discount", name: "100 KR DISCOUNT", pointsCost: 800, discountType: "fixed_discount", discountValue: 100 },
-  { key: "150-discount", name: "150 KR DISCOUNT", pointsCost: 1200, discountType: "fixed_discount", discountValue: 150 },
-  { key: "250-discount", name: "250 KR DISCOUNT", pointsCost: 2000, discountType: "fixed_discount", discountValue: 250 },
-  { key: "500-gift-card", name: "500 KR GIFT CARD", pointsCost: 5000, discountType: "gift_card", discountValue: 500 },
-];
-
 export type LoyaltyProgressData = {
   balance: number;
   earned: number;
@@ -32,20 +22,54 @@ export type LoyaltyProgressData = {
   allTiers: RewardTier[];
 };
 
-export function getNextReward(balance: number): RewardTier | null {
-  return REWARD_TIERS.find((tier) => tier.pointsCost > balance) ?? null;
+/**
+ * Fallback tiers used only when no vouchers have been loaded from the backend yet
+ * (e.g. anonymous cart preview). Admin-managed `vouchers` rows always take precedence.
+ */
+const FALLBACK_TIERS: RewardTier[] = [
+  { key: "25-discount", name: "25 KR DISCOUNT", pointsCost: 200, discountType: "fixed_discount", discountValue: 25 },
+  { key: "50-discount", name: "50 KR DISCOUNT", pointsCost: 400, discountType: "fixed_discount", discountValue: 50 },
+  { key: "free-delivery", name: "FREE DELIVERY", pointsCost: 800, discountType: "free_shipping", discountValue: 0 },
+  { key: "100-discount", name: "100 KR DISCOUNT", pointsCost: 800, discountType: "fixed_discount", discountValue: 100 },
+  { key: "150-discount", name: "150 KR DISCOUNT", pointsCost: 1200, discountType: "fixed_discount", discountValue: 150 },
+  { key: "250-discount", name: "250 KR DISCOUNT", pointsCost: 2000, discountType: "fixed_discount", discountValue: 250 },
+  { key: "500-gift-card", name: "500 KR GIFT CARD", pointsCost: 5000, discountType: "gift_card", discountValue: 500 },
+];
+
+function tiersFromVouchers(vouchers?: any[] | null): RewardTier[] {
+  if (!vouchers || vouchers.length === 0) return FALLBACK_TIERS;
+  return vouchers
+    .filter((v) => v?.is_active !== false && typeof v?.points_cost === "number")
+    .map((v) => ({
+      key: String(v.id ?? v.name),
+      name: String(v.name ?? "Reward").toUpperCase(),
+      pointsCost: Number(v.points_cost) || 0,
+      discountType: String(v.discount_type ?? "fixed_discount"),
+      discountValue: Number(v.discount_value ?? 0),
+    }))
+    .sort((a, b) => a.pointsCost - b.pointsCost);
 }
 
-export function computeLoyaltyProgress(balance: number, earned: number, spent: number): LoyaltyProgressData {
-  const redeemableRewards = REWARD_TIERS.filter((t) => t.pointsCost <= balance);
+export function getNextReward(balance: number, vouchers?: any[] | null): RewardTier | null {
+  const tiers = tiersFromVouchers(vouchers);
+  return tiers.find((tier) => tier.pointsCost > balance) ?? null;
+}
+
+export function computeLoyaltyProgress(
+  balance: number,
+  earned: number,
+  spent: number,
+  vouchers?: any[] | null,
+): LoyaltyProgressData {
+  const allTiers = tiersFromVouchers(vouchers);
+  const redeemableRewards = allTiers.filter((t) => t.pointsCost <= balance);
   const canRedeem = redeemableRewards.length > 0;
-  const nextReward = getNextReward(balance);
+  const nextReward = allTiers.find((tier) => tier.pointsCost > balance) ?? null;
 
   let progressPercent = 0;
   let pointsToNext = 0;
 
   if (nextReward) {
-    // Progress from last achieved tier (or 0) to next tier
     const prevThreshold = redeemableRewards.length > 0
       ? redeemableRewards[redeemableRewards.length - 1].pointsCost
       : 0;
@@ -78,7 +102,7 @@ export function computeLoyaltyProgress(balance: number, earned: number, spent: n
     canRedeem,
     redeemableRewards,
     message,
-    allTiers: REWARD_TIERS,
+    allTiers,
   };
 }
 
@@ -91,6 +115,7 @@ export function useLoyaltyProgress(userId?: string) {
       overview.pointsBalance,
       overview.pointsEarned,
       overview.pointsSpent,
+      overview.vouchers,
     );
   }, [overview]);
 

@@ -2843,7 +2843,7 @@ const DividerBlock = ({ block }: { block: SiteBlock }) => {
   ));
 };
 
-import { diagError } from "@/lib/storefront-diagnostics";
+import { diag, diagError } from "@/lib/storefront-diagnostics";
 
 /**
  * Public renderBlock — wraps the inner renderer with per-block error isolation

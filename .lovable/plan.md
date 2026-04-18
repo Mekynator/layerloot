@@ -1,97 +1,53 @@
 
 
-## Investigation summary
+## Contract Mismatches Found
 
-From the network logs and code review, the storefront is correctly fetching shared backend data (campaigns, blocks, products), but several reliability gaps exist that cause stale content or silent failures after Admin publishes:
-
-### Root issues found
-
-| # | Issue | Location | Impact |
+| # | Area | Mismatch | Impact |
 |---|---|---|---|
-| 1 | React Query `staleTime: 5min` on `useStorefrontCatalog` and `useProductDetailQuery`; no `refetchOnWindowFocus`. After Admin publishes, storefront keeps showing old products/blocks for up to 5 min. | `src/hooks/use-storefront.ts` | Stale products/blocks |
-| 2 | `usePageBlocks` likely has similar staleness; no realtime invalidation. | `src/hooks/use-page-blocks.ts` (need to verify) | Stale blocks |
-| 3 | `useActiveCampaign` polls every 60s but uses `useState` (not React Query) → no shared cache, no cross-tab/component sync, no manual invalidation hook. Also fully swallows errors → silent failure. | `src/hooks/use-active-campaign.ts` | Hard to debug; stale campaigns |
-| 4 | `CampaignBanner` renders even when content is empty/whitespace; no defensive guards on missing `banner_image_url` (broken `<img>`), no `onError` fallback. | `src/components/campaign/CampaignThemeProvider.tsx` | Broken images, empty bars |
-| 5 | No global focus/visibility-based refetch → returning to tab shows old data indefinitely. | React Query default config (likely in `App.tsx` or `main.tsx`) | Stale everything |
-| 6 | No realtime subscription on `site_blocks`, `campaigns`, `site_settings` → publishes never push to active sessions. | Cross-cutting | "Why didn't it update?" |
-| 7 | Errors in fetches are swallowed (e.g. `catch {}` in campaign hook); no dev-mode visibility. | Multiple hooks | Silent failure |
-| 8 | Loyalty/voucher hooks may render nothing when data missing instead of showing empty state. | `use-loyalty-progress.ts`, `RewardsModule.tsx` | Confusing blank UI |
+| 1 | **Theme** | Storefront reads `site_settings.key='global_design_system'` (doesn't exist). Admin actually publishes to `key='theme'` with fields like `primary`, `accent`, `background`, `card`, `border`, `foreground`, `background_image_url`, `overlay_tint`, `pattern_opacity`, etc. | Theme changes from Admin **never apply** |
+| 2 | **Loyalty tiers** | `use-loyalty-progress.ts` has hardcoded `FALLBACK_TIERS` that *exactly* mirror the real `vouchers` table — confusing and risks divergence; voucher catalog already loads from DB via `useAccountOverview` | Stale "rewards" if vouchers query fails silently; obscures real Admin content |
+| 3 | **Rewards Store config** | `site_settings.rewards_store_config` (title, subtitle, columns, ctaText, emptyStateText, hoverAnimation) exists but is **never read** by storefront | Admin-edited rewards copy ignored |
+| 4 | **Campaign banner** | Working correctly per prior phase, but `theme_overrides`, `effects`, `chat_overrides` are direct hex strings — already handled defensively. No new mismatch. | OK |
+| 5 | **Site blocks** | `usePageBlocks` shape OK; matches real rows | OK |
+| 6 | **Vouchers** | Already aligned (id, name, points_cost, discount_type, discount_value, is_active) | OK |
 
----
+## Proposed Changes (4 files)
 
-## Proposed changes
+### 1. `src/contexts/DesignSystemContext.tsx`
+- Read from **`site_settings.key='theme'`** (the real Admin payload), not the non-existent `global_design_system` key.
+- Pass raw theme JSON through `normalizeGlobalDesignSystem()` — the existing normalizer is already defensive (uses `asString`/`asNumber` fallbacks), so unknown fields are safely ignored.
+- Add a `diag()` log when the row is missing so the gap is visible in dev.
+- Keep `saveTokens`/`resetTokens` writing to `theme` for symmetry (admin tooling not present here, but keep contract aligned).
 
-### 1. `src/main.tsx` (or wherever `QueryClient` is created)
-Configure QueryClient with sensible storefront defaults:
-- `refetchOnWindowFocus: true`
-- `refetchOnReconnect: true`
-- `staleTime: 30s` (down from 5min)
-- Keep `gcTime` reasonable
+### 2. `src/lib/design-system.ts` — `normalizeGlobalDesignSystem`
+- Extend the normalizer to map Admin's flat field names (`primary`, `accent`, `background`, `card`, `border`, `foreground`, `secondary`, `muted`, `card_foreground`) into the `GlobalDesignSystem` shape so colors actually apply when published.
+- No new fields invented; only mapping real Admin keys → existing token slots.
 
-### 2. `src/hooks/use-storefront.ts`
-- Lower `staleTime` from `5min` → `30s` for `useStorefrontCatalog` and `useProductDetailQuery`.
-- Add `refetchOnWindowFocus: true`.
+### 3. `src/hooks/use-loyalty-progress.ts`
+- Remove `FALLBACK_TIERS` constant entirely.
+- Return empty tier list when `vouchers` is empty so UI shows the proper empty state instead of fake hardcoded tiers.
+- Add `diag('loyalty', 'no vouchers loaded')` dev signal.
 
-### 3. `src/hooks/use-page-blocks.ts` (verify + adjust)
-- Apply same staleTime/refetch policy.
+### 4. `src/components/account/RewardsModule.tsx` + new `src/hooks/use-rewards-store-config.ts`
+- New small hook `useRewardsStoreConfig()` that reads `site_settings.rewards_store_config` via existing `usePublishedSetting`.
+- `RewardsModule` consumes title/subtitle/ctaText/emptyStateText/columns from this config (with safe fallbacks to the existing translated strings).
 
-### 4. `src/hooks/use-active-campaign.ts` — REWRITE to React Query
-- Replace `useState` + `setInterval` with `useQuery`:
-  - `queryKey: ['active-campaign']`
-  - `staleTime: 30s`, `refetchInterval: 60s`, `refetchOnWindowFocus: true`
-- Surface fetch errors via React Query's `error` (still log warn in dev).
-- Add defensive parse: ensure `theme_overrides`, `effects`, `chat_overrides`, `banner_config` always exist as objects (not null) so consumers don't crash.
-- Export `refetch` so other components can trigger a manual refresh.
+## Diagnostic Improvements
+- All four files use the existing `diag()` helper from `@/lib/storefront-diagnostics` for dev-only visibility into missing/invalid payloads.
 
-### 5. `src/components/campaign/CampaignThemeProvider.tsx`
-- `CampaignBanner`: bail out cleanly if no displayable content (trim + check); add `onError` on `<img>` to hide broken images; wrap render in try/catch in dev mode log.
-- `CampaignParticles`: clamp density; guard against invalid `type`.
-- Theme variable application: wrap `hexToHslString` calls; if invalid hex returned, skip override (don't poison CSS vars).
+## Files Touched
+1. `src/contexts/DesignSystemContext.tsx` — switch key + log
+2. `src/lib/design-system.ts` — extend normalizer to map flat Admin fields
+3. `src/hooks/use-loyalty-progress.ts` — drop fallback tiers
+4. `src/hooks/use-rewards-store-config.ts` (NEW) — published config hook
+5. `src/components/account/RewardsModule.tsx` — consume rewards store config
 
-### 6. NEW `src/hooks/use-storefront-realtime.ts`
-Lightweight hook that subscribes to `postgres_changes` on `site_blocks`, `campaigns`, `site_settings` tables and invalidates the matching React Query keys. Mount once in `App.tsx`.
-
-This makes Admin publishes appear in active storefront sessions within ~1s instead of waiting for poll/window-focus.
-
-### 7. `src/hooks/use-loyalty-progress.ts` & `src/components/account/RewardsModule.tsx`
-- Add empty-state handling: if `vouchers` array is empty, render a friendly "No rewards available yet" rather than nothing.
-- Defensive null-checks on `points_cost`, `discount_value`.
-
-### 8. NEW `src/lib/storefront-diagnostics.ts`
-Tiny dev-only logger:
-```ts
-export const diag = (area: string, msg: string, data?: unknown) => {
-  if (import.meta.env.DEV) console.warn(`[storefront:${area}]`, msg, data ?? '');
-};
-```
-Replace scattered `console.warn` strings with this consistent helper. Production is silent.
-
-### 9. `src/components/blocks/BlockRenderer.tsx` (light touch)
-Wrap `renderBlock` in error boundary or try/catch so a single malformed block doesn't crash the whole page; log via `diag('blocks', ...)` and render `null` for the broken one.
-
----
-
-## Files changed (8)
-
-| File | Change |
-|---|---|
-| `src/main.tsx` | QueryClient defaults: focus refetch + 30s staleTime |
-| `src/hooks/use-storefront.ts` | Lower staleTime, focus refetch |
-| `src/hooks/use-page-blocks.ts` | Lower staleTime, focus refetch |
-| `src/hooks/use-active-campaign.ts` | Rewrite using React Query + defensive parse |
-| `src/components/campaign/CampaignThemeProvider.tsx` | Defensive banner/particles/theme guards |
-| `src/hooks/use-storefront-realtime.ts` (NEW) | Realtime invalidation on publish |
-| `src/App.tsx` | Mount `useStorefrontRealtime()` |
-| `src/lib/storefront-diagnostics.ts` (NEW) | Dev-only `diag()` helper |
-| `src/components/blocks/BlockRenderer.tsx` | Per-block error isolation |
-| `src/hooks/use-loyalty-progress.ts` + `RewardsModule.tsx` | Empty-state guards |
-
-## Not touched
-- Supabase client (already correct)
-- `usePublishedSetting` (already published-only)
-- Auth, cart, checkout (out of scope)
-- Static fallback removal (already done in prior phase)
+## Not Touched (already aligned)
+- `useActiveCampaign` (phase already hardened)
+- `usePageBlocks`, `useStorefrontCatalog`, `usePublishedSetting`
+- `CampaignThemeProvider` defensive guards
+- Vouchers/user_vouchers reads in `useAccountOverview`
 
 ## Risk
-Low. Changes lower cache windows, add realtime + error isolation, and harden defensive parsing. No schema or business-logic changes.
+Low. Single key rename for theme, additive normalizer mapping, removal of one hardcoded constant, one new read-only hook.
 

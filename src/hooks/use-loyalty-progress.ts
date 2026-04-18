@@ -52,6 +52,23 @@ export function computeLoyaltyProgress(
   vouchers?: any[] | null,
 ): LoyaltyProgressData {
   const allTiers = tiersFromVouchers(vouchers);
+
+  // Defensive: no tiers configured at all → return clean empty state
+  if (allTiers.length === 0) {
+    return {
+      balance,
+      earned,
+      spent,
+      nextReward: null,
+      pointsToNext: 0,
+      progressPercent: 0,
+      canRedeem: false,
+      redeemableRewards: [],
+      message: "",
+      allTiers: [],
+    };
+  }
+
   const redeemableRewards = allTiers.filter((t) => t.pointsCost <= balance);
   const canRedeem = redeemableRewards.length > 0;
   const nextReward = allTiers.find((tier) => tier.pointsCost > balance) ?? null;

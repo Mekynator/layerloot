@@ -40,6 +40,8 @@ export function useStorefrontRealtime() {
           diag("realtime", "site_settings change", payload.eventType);
           qc.invalidateQueries({ queryKey: ["published-setting"] });
           qc.invalidateQueries({ queryKey: ["site-page"] });
+          qc.invalidateQueries({ queryKey: ["nav-links"] });
+          qc.invalidateQueries({ queryKey: ["static-section-settings"] });
         },
       )
       .on(
@@ -48,6 +50,7 @@ export function useStorefrontRealtime() {
         () => {
           qc.invalidateQueries({ queryKey: ["site-page"] });
           qc.invalidateQueries({ queryKey: ["site-blocks"] });
+          qc.invalidateQueries({ queryKey: ["nav-links"] });
         },
       )
       .on(
@@ -56,6 +59,58 @@ export function useStorefrontRealtime() {
         () => {
           qc.invalidateQueries({ queryKey: ["storefront-catalog"] });
           qc.invalidateQueries({ queryKey: ["product-detail"] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "categories" },
+        () => {
+          diag("realtime", "categories change");
+          qc.invalidateQueries({ queryKey: ["storefront-catalog"] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "reusable_blocks" },
+        () => {
+          diag("realtime", "reusable_blocks change");
+          qc.invalidateQueries({ queryKey: ["site-blocks"] });
+          qc.invalidateQueries({ queryKey: ["storefront-catalog"] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "discount_codes" },
+        () => {
+          diag("realtime", "discount_codes change");
+          qc.invalidateQueries({ queryKey: ["published-setting"] });
+          qc.invalidateQueries({ queryKey: ["checkout-savings"] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "vouchers" },
+        () => {
+          diag("realtime", "vouchers change");
+          qc.invalidateQueries({ queryKey: ["account-overview"] });
+          qc.invalidateQueries({ queryKey: ["rewards-store-config"] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_vouchers" },
+        () => {
+          diag("realtime", "user_vouchers change");
+          qc.invalidateQueries({ queryKey: ["account-overview"] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "loyalty_points" },
+        () => {
+          diag("realtime", "loyalty_points change");
+          qc.invalidateQueries({ queryKey: ["loyalty-progress"] });
+          qc.invalidateQueries({ queryKey: ["account-overview"] });
         },
       )
       .subscribe();

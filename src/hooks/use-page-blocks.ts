@@ -109,6 +109,7 @@ export function usePageBlocks(page: string, enabled = true, includeUnpublished =
     enabled: enabled && Boolean(page),
     staleTime: 30 * 1000,
     refetchOnWindowFocus: true,
+    placeholderData: (prev) => prev,
   });
 }
 
@@ -119,5 +120,6 @@ export function useSitePage(page: string, enabled = true) {
     enabled: enabled && Boolean(page),
     staleTime: 30 * 1000,
     refetchOnWindowFocus: true,
+    placeholderData: (prev) => prev,
   });
 }

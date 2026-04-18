@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { SUPPORTED_LANGUAGES, type SupportedLanguage } from "@/lib/i18n";
-import i18n from "@/lib/i18n";
 
 type NavSource = "manual" | "site_page";
 type LocalizedText = string | Partial<Record<SupportedLanguage, string>>;
@@ -27,16 +27,6 @@ export interface NavItem {
   visible?: boolean;
   megaMenu?: MegaMenuConfig;
 }
-
-const currentLang = () => (i18n.resolvedLanguage || i18n.language || "en").split("-")[0] as SupportedLanguage;
-
-const getLocalizedValue = (value: unknown, fallback = ""): string => {
-  if (typeof value === "string") return value;
-  if (!value || typeof value !== "object" || Array.isArray(value)) return fallback;
-  const lang = currentLang();
-  const map = value as Partial<Record<SupportedLanguage, string>>;
-  return map[lang] || map.en || fallback;
-};
 
 const sanitizeLocalizedLabel = (value: unknown): Partial<Record<SupportedLanguage, string>> => {
   if (typeof value === "string") return { en: value };
@@ -71,6 +61,7 @@ const asNavItems = (value: unknown): NavItem[] => {
     pageId: item.pageId,
     openInNewTab: Boolean(item.openInNewTab),
     visible: item.visible !== false,
+    megaMenu: (item as { megaMenu?: MegaMenuConfig }).megaMenu,
   }));
 };
 
@@ -113,26 +104,25 @@ const defaultFooterNav: NavEditorItem[] = [
   { label: makeLabel("Contact", "Kontakt", "Kontakt", "Contacto", "Contact"), to: "/contact", source: "manual", openInNewTab: false, visible: true },
 ];
 
+async function fetchNavLinks(key: "nav_links" | "footer_nav_links"): Promise<NavItem[]> {
+  const { data } = await supabase.from("site_settings").select("value").eq("key", key).maybeSingle();
+  return asNavItems(data?.value);
+}
+
 function useStoredNavLinks(key: "nav_links" | "footer_nav_links", fallback: NavEditorItem[]) {
-  const [links, setLinks] = useState<NavItem[]>(fallback);
+  const { data } = useQuery({
+    queryKey: ["nav-links", key],
+    queryFn: () => fetchNavLinks(key),
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
+    placeholderData: (prev) => prev,
+  });
 
-  useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      const { data } = await supabase.from("site_settings").select("value").eq("key", key).maybeSingle();
-      if (!mounted) return;
-      const storedItems = asNavItems(data?.value);
-      if (storedItems.length > 0) {
-        setLinks(storedItems.map(toEditorItem).filter((item) => item.visible !== false));
-      } else {
-        setLinks(fallback.filter((item) => item.visible !== false));
-      }
-    };
-    void load();
-    return () => { mounted = false; };
-  }, [key, fallback]);
-
-  return links;
+  return useMemo(() => {
+    const stored = data ?? [];
+    const items = stored.length > 0 ? stored.map(toEditorItem) : fallback;
+    return items.filter((item) => item.visible !== false);
+  }, [data, fallback]);
 }
 
 export const useNavLinks = () => useStoredNavLinks("nav_links", defaultHeaderNav);

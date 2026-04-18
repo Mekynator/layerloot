@@ -2842,4 +2842,19 @@ const DividerBlock = ({ block }: { block: SiteBlock }) => {
   ));
 };
 
+import { diagError } from "@/lib/storefront-diagnostics";
+
+/**
+ * Public renderBlock — wraps the inner renderer with per-block error isolation
+ * so a single malformed block can't crash the whole page tree.
+ */
+export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
+  try {
+    return renderBlockInner(block, disableAnimations);
+  } catch (err) {
+    diagError("blocks", `block ${block?.id} (${block?.block_type}) render failed`, err);
+    return null;
+  }
+};
+
 export default renderBlock;

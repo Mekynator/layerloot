@@ -18,6 +18,9 @@ function tierIcon(tier: RewardTier) {
 export default function LoyaltyProgressCard({ progress, variant = "full" }: LoyaltyProgressCardProps) {
   const { balance, nextReward, pointsToNext, progressPercent, canRedeem, message, allTiers } = progress;
 
+  // Hide entirely when no rewards configured AND no balance to display
+  if (allTiers.length === 0 && balance === 0) return null;
+
   if (variant === "compact") {
     if (balance === 0) return null;
     return (

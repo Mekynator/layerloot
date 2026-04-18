@@ -8,6 +8,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { CampaignThemeProvider } from "@/components/campaign/CampaignThemeProvider";
+import { DesignSystemProvider } from "@/contexts/DesignSystemContext";
 import Layout from "@/components/layout/Layout";
 import PageSkeleton from "@/components/shared/PageSkeleton";
 
@@ -50,6 +51,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <EditorPreviewProvider>
+              <DesignSystemProvider>
               <CampaignThemeProvider>
                 <Layout>
                   <Suspense fallback={<PageSkeleton />}>
@@ -78,6 +80,7 @@ const App = () => (
                   </Suspense>
                 </Layout>
               </CampaignThemeProvider>
+              </DesignSystemProvider>
             </EditorPreviewProvider>
           </BrowserRouter>
         </CartProvider>

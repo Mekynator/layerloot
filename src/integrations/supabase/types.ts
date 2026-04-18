@@ -358,54 +358,90 @@ export type Database = {
       campaigns: {
         Row: {
           banner_config: Json
+          banner_image_url: string | null
+          banner_subtitle: string | null
+          banner_title: string | null
           campaign_type: string
           chat_overrides: Json
+          content: Json
           created_at: string
           created_by: string | null
           description: string | null
           effects: Json
           end_date: string | null
+          ends_at: string | null
+          homepage_placement: boolean
+          homepage_sort_order: number
           id: string
+          is_active: boolean
           is_recurring: boolean
+          linked_category_ids: string[] | null
+          linked_discount_id: string | null
+          linked_product_ids: string[] | null
           name: string
           priority: number
           start_date: string | null
+          starts_at: string | null
           status: string
           theme_overrides: Json
           updated_at: string
         }
         Insert: {
           banner_config?: Json
+          banner_image_url?: string | null
+          banner_subtitle?: string | null
+          banner_title?: string | null
           campaign_type?: string
           chat_overrides?: Json
+          content?: Json
           created_at?: string
           created_by?: string | null
           description?: string | null
           effects?: Json
           end_date?: string | null
+          ends_at?: string | null
+          homepage_placement?: boolean
+          homepage_sort_order?: number
           id?: string
+          is_active?: boolean
           is_recurring?: boolean
+          linked_category_ids?: string[] | null
+          linked_discount_id?: string | null
+          linked_product_ids?: string[] | null
           name: string
           priority?: number
           start_date?: string | null
+          starts_at?: string | null
           status?: string
           theme_overrides?: Json
           updated_at?: string
         }
         Update: {
           banner_config?: Json
+          banner_image_url?: string | null
+          banner_subtitle?: string | null
+          banner_title?: string | null
           campaign_type?: string
           chat_overrides?: Json
+          content?: Json
           created_at?: string
           created_by?: string | null
           description?: string | null
           effects?: Json
           end_date?: string | null
+          ends_at?: string | null
+          homepage_placement?: boolean
+          homepage_sort_order?: number
           id?: string
+          is_active?: boolean
           is_recurring?: boolean
+          linked_category_ids?: string[] | null
+          linked_discount_id?: string | null
+          linked_product_ids?: string[] | null
           name?: string
           priority?: number
           start_date?: string | null
+          starts_at?: string | null
           status?: string
           theme_overrides?: Json
           updated_at?: string
@@ -1375,6 +1411,36 @@ export type Database = {
           },
         ]
       }
+      gift_config: {
+        Row: {
+          allow_custom_message: boolean
+          base_price_per_item: number
+          bundle_price_per_item: number
+          bundle_price_threshold: number
+          id: string
+          is_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          allow_custom_message?: boolean
+          base_price_per_item?: number
+          bundle_price_per_item?: number
+          bundle_price_threshold?: number
+          id?: string
+          is_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          allow_custom_message?: boolean
+          base_price_per_item?: number
+          bundle_price_per_item?: number
+          bundle_price_threshold?: number
+          id?: string
+          is_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       gift_finder_tags: {
         Row: {
           created_at: string
@@ -1579,6 +1645,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      loyalty_rewards: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          points_cost: number
+          reward_type: string
+          reward_value: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          points_cost?: number
+          reward_type?: string
+          reward_value?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          points_cost?: number
+          reward_type?: string
+          reward_value?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       media_asset_versions: {
         Row: {

@@ -1289,6 +1289,7 @@ const renderBlockInner = (block: SiteBlock, disableAnimations = false) => {
     case "divider":
       return <DividerBlock block={block} />;
     default:
+      diag("blocks", `unknown block_type "${block.block_type}" — no renderer registered`, { id: block.id, page: block.page });
       return (
         <div
           data-editor-block-id={block.id}

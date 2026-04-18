@@ -52,7 +52,8 @@ export function usePublishedSettings<T extends Record<string, unknown> = Record<
       return result as T;
     },
     enabled: enabled && keys.length > 0,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
   });
 }
 

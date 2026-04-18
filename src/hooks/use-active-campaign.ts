@@ -73,6 +73,9 @@ function normalizeCampaign(raw: any): CampaignTheme {
   const safeObj = (v: any) => (v && typeof v === "object" && !Array.isArray(v) ? v : {});
   return {
     ...raw,
+    homepage_placement: raw.homepage_placement === true,
+    homepage_sort_order: Number(raw.homepage_sort_order) || 0,
+    content: safeObj(raw.content),
     theme_overrides: safeObj(raw.theme_overrides),
     effects: safeObj(raw.effects),
     chat_overrides: safeObj(raw.chat_overrides),

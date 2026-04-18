@@ -107,7 +107,8 @@ export function usePageBlocks(page: string, enabled = true, includeUnpublished =
     queryKey: ["site-blocks", page, includeUnpublished],
     queryFn: () => fetchPageBlocks(page, includeUnpublished),
     enabled: enabled && Boolean(page),
-    staleTime: 1000 * 60 * 5,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -116,6 +117,7 @@ export function useSitePage(page: string, enabled = true) {
     queryKey: ["site-page", page],
     queryFn: () => fetchPageMeta(page),
     enabled: enabled && Boolean(page),
-    staleTime: 1000 * 60 * 5,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
   });
 }

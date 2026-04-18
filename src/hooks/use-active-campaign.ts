@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { diag } from "@/lib/storefront-diagnostics";
 
 export interface CampaignTheme {
   id: string;
@@ -50,8 +51,6 @@ export interface CampaignTheme {
   };
 }
 
-const POLL_INTERVAL = 60_000;
-
 function isWithinSchedule(c: any, now: number): boolean {
   const start = c.starts_at ?? c.start_date ?? null;
   const end = c.ends_at ?? c.end_date ?? null;
@@ -60,48 +59,56 @@ function isWithinSchedule(c: any, now: number): boolean {
   return true;
 }
 
+/** Ensure JSON config fields are always objects so consumers can safely read .x */
+function normalizeCampaign(raw: any): CampaignTheme {
+  const safeObj = (v: any) => (v && typeof v === "object" && !Array.isArray(v) ? v : {});
+  return {
+    ...raw,
+    theme_overrides: safeObj(raw.theme_overrides),
+    effects: safeObj(raw.effects),
+    chat_overrides: safeObj(raw.chat_overrides),
+    banner_config: safeObj(raw.banner_config),
+  } as CampaignTheme;
+}
+
+async function fetchActiveCampaign(): Promise<CampaignTheme | null> {
+  const { data, error } = await supabase
+    .from("campaigns" as any)
+    .select("*")
+    .eq("status", "active")
+    .order("priority", { ascending: false })
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    diag("campaigns", "fetch failed", error.message);
+    throw error;
+  }
+
+  const now = Date.now();
+  const match = (data ?? []).find((c: any) => isWithinSchedule(c, now)) ?? null;
+
+  if (!match) {
+    diag("campaigns", "no active campaign within schedule window", { count: data?.length ?? 0 });
+    return null;
+  }
+
+  return normalizeCampaign(match);
+}
+
 export function useActiveCampaign() {
-  const [campaign, setCampaign] = useState<CampaignTheme | null>(null);
-  const [loading, setLoading] = useState(true);
+  const query = useQuery({
+    queryKey: ["active-campaign"],
+    queryFn: fetchActiveCampaign,
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
+    refetchOnWindowFocus: true,
+    retry: 1,
+  });
 
-  const fetchActive = async () => {
-    try {
-      // Fetch all active campaigns and filter the schedule window in JS so we
-      // robustly handle Admin's dual schema (start_date/end_date + starts_at/ends_at).
-      const { data, error } = await supabase
-        .from("campaigns" as any)
-        .select("*")
-        .eq("status", "active")
-        .order("priority", { ascending: false })
-        .order("updated_at", { ascending: false });
-
-      if (error) {
-        if (import.meta.env.DEV) console.warn("[campaigns] fetch failed:", error.message);
-        setCampaign(null);
-        return;
-      }
-
-      const now = Date.now();
-      const match = (data ?? []).find((c: any) => isWithinSchedule(c, now)) ?? null;
-
-      if (!match && import.meta.env.DEV) {
-        console.warn("[campaigns] no active campaign within schedule window");
-      }
-
-      setCampaign(match as unknown as CampaignTheme | null);
-    } catch (err) {
-      if (import.meta.env.DEV) console.warn("[campaigns] unexpected error:", err);
-      setCampaign(null);
-    } finally {
-      setLoading(false);
-    }
+  return {
+    campaign: query.data ?? null,
+    loading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
   };
-
-  useEffect(() => {
-    fetchActive();
-    const interval = setInterval(fetchActive, POLL_INTERVAL);
-    return () => clearInterval(interval);
-  }, []);
-
-  return { campaign, loading };
 }

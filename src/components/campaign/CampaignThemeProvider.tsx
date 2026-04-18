@@ -1,6 +1,22 @@
-import { createContext, useContext, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useActiveCampaign, type CampaignTheme } from "@/hooks/use-active-campaign";
 import { hexToHslString } from "@/lib/design-system";
+import { diag, diagError } from "@/lib/storefront-diagnostics";
+
+const safeHexToHsl = (hex?: string): string | null => {
+  if (!hex || typeof hex !== "string") return null;
+  try {
+    const result = hexToHslString(hex);
+    if (!result) {
+      diag("theme", "invalid hex skipped", hex);
+      return null;
+    }
+    return result;
+  } catch (err) {
+    diagError("theme", "hexToHslString threw", err);
+    return null;
+  }
+};
 
 const CampaignContext = createContext<{ campaign: CampaignTheme | null }>({ campaign: null });
 
@@ -34,20 +50,14 @@ export function CampaignThemeProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (overrides.primaryColor) {
-      const primaryHsl = hexToHslString(overrides.primaryColor);
-      if (primaryHsl) root.style.setProperty("--campaign-primary-hsl", primaryHsl);
-    }
+    const primaryHsl = safeHexToHsl(overrides.primaryColor);
+    if (primaryHsl) root.style.setProperty("--campaign-primary-hsl", primaryHsl);
 
-    if (overrides.accentColor) {
-      const accentHsl = hexToHslString(overrides.accentColor);
-      if (accentHsl) root.style.setProperty("--campaign-accent-hsl", accentHsl);
-    }
+    const accentHsl = safeHexToHsl(overrides.accentColor);
+    if (accentHsl) root.style.setProperty("--campaign-accent-hsl", accentHsl);
 
-    if (overrides.borderColor) {
-      const borderHsl = hexToHslString(overrides.borderColor);
-      if (borderHsl) root.style.setProperty("--campaign-border-hsl", borderHsl);
-    }
+    const borderHsl = safeHexToHsl(overrides.borderColor);
+    if (borderHsl) root.style.setProperty("--campaign-border-hsl", borderHsl);
 
     if (overrides.fontAccent) {
       root.style.setProperty("--campaign-font-display", overrides.fontAccent);
@@ -77,41 +87,65 @@ export function CampaignThemeProvider({ children }: { children: ReactNode }) {
 /* ─── Campaign promo banner ─── */
 function CampaignBanner({ campaign }: { campaign: CampaignTheme }) {
   const config = campaign.banner_config ?? {};
-  const title = campaign.banner_title?.trim();
-  const subtitle = campaign.banner_subtitle?.trim();
-  const text = config.text?.trim();
-  const image = campaign.banner_image_url?.trim();
+  const title = (campaign.banner_title ?? "").trim();
+  const subtitle = (campaign.banner_subtitle ?? "").trim();
+  const text = (config.text ?? "").trim();
+  const rawImage = (campaign.banner_image_url ?? "").trim();
+  const [imageBroken, setImageBroken] = useState(false);
+  const image = !imageBroken && rawImage ? rawImage : "";
 
-  if (!title && !text && !image) return null;
+  if (!title && !text && !image && !subtitle) {
+    diag("campaign-banner", "skipped: no displayable content", campaign.id);
+    return null;
+  }
 
-  return (
-    <div
-      className="fixed left-0 right-0 top-0 z-[70] flex items-center justify-center gap-3 px-4 py-2 text-center text-sm font-medium"
-      style={{
-        background: config.bgColor || "hsl(var(--primary))",
-        color: config.textColor || "hsl(var(--primary-foreground))",
-      }}
-    >
-      {image && (
-        <img src={image} alt="" className="h-6 w-6 rounded object-cover" loading="lazy" />
-      )}
-      {config.icon && !image && <span>{config.icon}</span>}
-      <span className="flex flex-wrap items-baseline justify-center gap-x-2">
-        {title && <span className="font-semibold">{title}</span>}
-        {(subtitle || text) && <span className="opacity-90">{subtitle ?? text}</span>}
-      </span>
-      {config.link && (
-        <a href={config.link} className="ml-2 underline underline-offset-2 opacity-90 hover:opacity-100">
-          Learn more →
-        </a>
-      )}
-    </div>
-  );
+  try {
+    return (
+      <div
+        className="fixed left-0 right-0 top-0 z-[70] flex items-center justify-center gap-3 px-4 py-2 text-center text-sm font-medium"
+        style={{
+          background: config.bgColor || "hsl(var(--primary))",
+          color: config.textColor || "hsl(var(--primary-foreground))",
+        }}
+      >
+        {image && (
+          <img
+            src={image}
+            alt=""
+            className="h-6 w-6 rounded object-cover"
+            loading="lazy"
+            onError={() => {
+              diag("campaign-banner", "image failed, hiding", rawImage);
+              setImageBroken(true);
+            }}
+          />
+        )}
+        {config.icon && !image && <span>{config.icon}</span>}
+        <span className="flex flex-wrap items-baseline justify-center gap-x-2">
+          {title && <span className="font-semibold">{title}</span>}
+          {(subtitle || text) && <span className="opacity-90">{subtitle || text}</span>}
+        </span>
+        {config.link && (
+          <a href={config.link} className="ml-2 underline underline-offset-2 opacity-90 hover:opacity-100">
+            Learn more →
+          </a>
+        )}
+      </div>
+    );
+  } catch (err) {
+    diagError("campaign-banner", "render failed", err);
+    return null;
+  }
 }
 
 /* ─── Particle effects ─── */
 function CampaignParticles({ type, density = 30 }: { type: string; density?: number }) {
-  const count = Math.min(density, 60);
+  const safeDensity = Math.max(0, Math.min(Number(density) || 30, 60));
+  const count = safeDensity;
+  const validTypes = ["snow", "leaves", "sparkles", "hearts", "confetti"] as const;
+  const safeType = (validTypes as readonly string[]).includes(type) ? type : "sparkles";
+
+  if (count === 0) return null;
 
   const particleChar = {
     snow: "❄",
@@ -119,13 +153,13 @@ function CampaignParticles({ type, density = 30 }: { type: string; density?: num
     sparkles: "✦",
     hearts: "♥",
     confetti: "●",
-  }[type] || "✦";
+  }[safeType] || "✦";
 
   const particles = Array.from({ length: count }, (_, i) => {
     const left = Math.random() * 100;
     const delay = Math.random() * 8;
     const duration = 6 + Math.random() * 8;
-    const size = type === "snow" ? 10 + Math.random() * 14 : 8 + Math.random() * 10;
+    const size = safeType === "snow" ? 10 + Math.random() * 14 : 8 + Math.random() * 10;
     const opacity = 0.15 + Math.random() * 0.35;
     const drift = (Math.random() - 0.5) * 40;
 
@@ -141,11 +175,11 @@ function CampaignParticles({ type, density = 30 }: { type: string; density?: num
           opacity,
           ["--drift" as any]: `${drift}px`,
           color:
-            type === "confetti"
+            safeType === "confetti"
               ? `hsl(${Math.random() * 360} 70% 60%)`
-              : type === "sparkles"
+              : safeType === "sparkles"
               ? "hsl(var(--primary))"
-              : type === "hearts"
+              : safeType === "hearts"
               ? "hsl(350 80% 60%)"
               : undefined,
         }}

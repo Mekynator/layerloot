@@ -1106,7 +1106,7 @@ const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNo
   <Section block={block} defaultClasses={defaultClasses}>{children}</Section>
 );
 
-export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
+const renderBlockInner = (block: SiteBlock, disableAnimations = false) => {
   const c = block.content || {};
   if (block.is_active === false || c.visibility === false) return null;
 
@@ -2840,6 +2840,21 @@ const DividerBlock = ({ block }: { block: SiteBlock }) => {
       {style === "space" && <div className="h-8" />}
     </>
   ));
+};
+
+import { diagError } from "@/lib/storefront-diagnostics";
+
+/**
+ * Public renderBlock — wraps the inner renderer with per-block error isolation
+ * so a single malformed block can't crash the whole page tree.
+ */
+export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
+  try {
+    return renderBlockInner(block, disableAnimations);
+  } catch (err) {
+    diagError("blocks", `block ${block?.id} (${block?.block_type}) render failed`, err);
+    return null;
+  }
 };
 
 export default renderBlock;

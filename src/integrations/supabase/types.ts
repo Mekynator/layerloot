@@ -122,6 +122,48 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_notifications: {
+        Row: {
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          is_dismissed: boolean
+          is_read: boolean
+          message: string | null
+          module: string | null
+          recipient_id: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_dismissed?: boolean
+          is_read?: boolean
+          message?: string | null
+          module?: string | null
+          recipient_id?: string | null
+          title: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_dismissed?: boolean
+          is_read?: boolean
+          message?: string | null
+          module?: string | null
+          recipient_id?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: []
+      }
       admin_permissions: {
         Row: {
           created_at: string
@@ -140,6 +182,84 @@ export type Database = {
           id?: string
           permission?: string
           role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: []
+      }
+      ai_personalization_config: {
+        Row: {
+          enable_bundle_suggestions: boolean
+          enable_cart_upsell: boolean
+          enable_chat_sales: boolean
+          enable_checkout_upsell: boolean
+          enable_homepage_personalization: boolean
+          enable_product_page_recs: boolean
+          enable_re_engagement: boolean
+          enable_saved_item_reminders: boolean
+          excluded_category_ids: string[]
+          excluded_product_ids: string[]
+          fallback_strategy: string
+          hide_out_of_stock_recs: boolean
+          id: string
+          is_enabled: boolean
+          max_recommendations: number
+          personalization_intensity: string
+          priority_category_ids: string[]
+          priority_product_ids: string[]
+          recommendation_mode: string
+          rules: Json
+          sales_behavior_rules: Json
+          sales_style: string
+          updated_at: string
+        }
+        Insert: {
+          enable_bundle_suggestions?: boolean
+          enable_cart_upsell?: boolean
+          enable_chat_sales?: boolean
+          enable_checkout_upsell?: boolean
+          enable_homepage_personalization?: boolean
+          enable_product_page_recs?: boolean
+          enable_re_engagement?: boolean
+          enable_saved_item_reminders?: boolean
+          excluded_category_ids?: string[]
+          excluded_product_ids?: string[]
+          fallback_strategy?: string
+          hide_out_of_stock_recs?: boolean
+          id?: string
+          is_enabled?: boolean
+          max_recommendations?: number
+          personalization_intensity?: string
+          priority_category_ids?: string[]
+          priority_product_ids?: string[]
+          recommendation_mode?: string
+          rules?: Json
+          sales_behavior_rules?: Json
+          sales_style?: string
+          updated_at?: string
+        }
+        Update: {
+          enable_bundle_suggestions?: boolean
+          enable_cart_upsell?: boolean
+          enable_chat_sales?: boolean
+          enable_checkout_upsell?: boolean
+          enable_homepage_personalization?: boolean
+          enable_product_page_recs?: boolean
+          enable_re_engagement?: boolean
+          enable_saved_item_reminders?: boolean
+          excluded_category_ids?: string[]
+          excluded_product_ids?: string[]
+          fallback_strategy?: string
+          hide_out_of_stock_recs?: boolean
+          id?: string
+          is_enabled?: boolean
+          max_recommendations?: number
+          personalization_intensity?: string
+          priority_category_ids?: string[]
+          priority_product_ids?: string[]
+          recommendation_mode?: string
+          rules?: Json
+          sales_behavior_rules?: Json
+          sales_style?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -280,6 +400,42 @@ export type Database = {
         }
         Relationships: []
       }
+      block_templates: {
+        Row: {
+          block_type: string
+          category: string
+          content: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          thumbnail_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          block_type: string
+          category?: string
+          content?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          block_type?: string
+          category?: string
+          content?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       business_expenses: {
         Row: {
           category: string
@@ -352,6 +508,33 @@ export type Database = {
           supplier?: string | null
           updated_at?: string
           vat_amount?: number
+        }
+        Relationships: []
+      }
+      campaign_events: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          session_id: string | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          session_id?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          session_id?: string | null
         }
         Relationships: []
       }
@@ -773,6 +956,72 @@ export type Database = {
         }
         Relationships: []
       }
+      content_versions: {
+        Row: {
+          archived_at: string | null
+          block_type: string | null
+          content: Json
+          content_id: string
+          content_type: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          notes: string | null
+          page: string | null
+          published_at: string | null
+          published_by: string | null
+          scheduled_at: string | null
+          sort_order: number
+          status: string
+          title: string | null
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          archived_at?: string | null
+          block_type?: string | null
+          content?: Json
+          content_id: string
+          content_type: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          page?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          scheduled_at?: string | null
+          sort_order?: number
+          status?: string
+          title?: string | null
+          updated_at?: string
+          version_number?: number
+        }
+        Update: {
+          archived_at?: string | null
+          block_type?: string | null
+          content?: Json
+          content_id?: string
+          content_type?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          page?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          scheduled_at?: string | null
+          sort_order?: number
+          status?: string
+          title?: string | null
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: []
+      }
       creator_submissions: {
         Row: {
           admin_notes: string | null
@@ -815,6 +1064,36 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      currency_config: {
+        Row: {
+          country_code: string
+          currency: string
+          exchange_rate: number
+          id: string
+          is_active: boolean
+          rounding_rule: string
+          updated_at: string
+        }
+        Insert: {
+          country_code: string
+          currency?: string
+          exchange_rate?: number
+          id?: string
+          is_active?: boolean
+          rounding_rule?: string
+          updated_at?: string
+        }
+        Update: {
+          country_code?: string
+          currency?: string
+          exchange_rate?: number
+          id?: string
+          is_active?: boolean
+          rounding_rule?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1181,6 +1460,33 @@ export type Database = {
           unread_by_user?: boolean
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      design_system_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          snapshot: Json
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          snapshot?: Json
+          version_number?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          snapshot?: Json
+          version_number?: number
         }
         Relationships: []
       }
@@ -2774,6 +3080,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      seasonal_presets: {
+        Row: {
+          animation_effect: string
+          background_image_url: string | null
+          colors: Json
+          created_at: string
+          ends_at: string | null
+          id: string
+          is_active: boolean
+          name: string
+          preset_key: string
+          sort_order: number
+          starts_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          animation_effect?: string
+          background_image_url?: string | null
+          colors?: Json
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          preset_key?: string
+          sort_order?: number
+          starts_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          animation_effect?: string
+          background_image_url?: string | null
+          colors?: Json
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          preset_key?: string
+          sort_order?: number
+          starts_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       shipping_config: {
         Row: {

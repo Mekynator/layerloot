@@ -91,6 +91,14 @@ export default function CheckoutSavingsPanel({
 
   const displayError = manualCodeError || localError;
 
+  const expiryHint = (expiresAt?: string | null) => {
+    if (!expiresAt) return null;
+    const days = Math.ceil((new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    if (days < 0) return null;
+    if (days <= 7) return t("cart.expiresInDays", `Expires in ${days}d`).replace("{days}", String(days));
+    return null;
+  };
+
   return (
     <div className="rounded-2xl border border-border/40 bg-card/70 backdrop-blur-xl overflow-hidden">
       {/* Header */}
@@ -193,6 +201,12 @@ export default function CheckoutSavingsPanel({
                             <p className="truncate text-xs text-muted-foreground">
                               {v.type === "percent" ? `${v.value}% off` : formatPrice(v.value) + " off"}
                             </p>
+                            {expiryHint(v.expiresAt) && (
+                              <p className="truncate text-[11px] font-medium text-amber-600">{expiryHint(v.expiresAt)}</p>
+                            )}
+                            {!allowed && reason && !isApplied && (
+                              <p className="truncate text-[11px] text-muted-foreground/70">{reason}</p>
+                            )}
                           </div>
                           {isApplied && (
                             <X className="h-4 w-4 shrink-0 text-muted-foreground hover:text-destructive" />
@@ -263,7 +277,15 @@ export default function CheckoutSavingsPanel({
                             <p className="text-sm font-medium text-foreground">{gc.code}</p>
                             <p className="text-xs text-muted-foreground">
                               {t("cart.balance", "Balance:")} {formatPrice(gc.value)}
+                              {gc.originalValue && gc.originalValue > gc.value && (
+                                <span className="ml-1 text-muted-foreground/60">
+                                  / {formatPrice(gc.originalValue)}
+                                </span>
+                              )}
                             </p>
+                            {expiryHint(gc.expiresAt) && (
+                              <p className="text-[11px] font-medium text-amber-600">{expiryHint(gc.expiresAt)}</p>
+                            )}
                           </div>
                           {isApplied ? (
                             <Button size="sm" variant="ghost" onClick={() => onRemove(gc.code)}>

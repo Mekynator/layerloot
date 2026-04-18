@@ -2,6 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { supabase } from "@/integrations/supabase/client";
 import { applyDesignSystemToRoot, normalizeGlobalDesignSystem } from "@/lib/design-system";
 import { DEFAULT_GLOBAL_DESIGN_SYSTEM, type GlobalDesignSystem } from "@/types/design-system";
+import { diag } from "@/lib/storefront-diagnostics";
+
+const THEME_SETTING_KEY = "theme";
 
 interface DesignSystemContextValue {
   tokens: GlobalDesignSystem;
@@ -44,7 +47,13 @@ export function DesignSystemProvider({ children }: { children: ReactNode }) {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await supabase.from("site_settings").select("value").eq("key", "global_design_system").maybeSingle();
+      const { data, error } = await supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", THEME_SETTING_KEY)
+        .maybeSingle();
+      if (error) diag("theme", "failed to load theme setting", error);
+      if (!data?.value) diag("theme", `no published '${THEME_SETTING_KEY}' row found; using defaults`);
       const normalized = normalizeGlobalDesignSystem(data?.value ?? DEFAULT_GLOBAL_DESIGN_SYSTEM);
       setTokens(normalized);
       applyTokens(normalized);
@@ -68,7 +77,7 @@ export function DesignSystemProvider({ children }: { children: ReactNode }) {
   const saveTokens = useCallback(async (next: GlobalDesignSystem) => {
     const normalized = normalizeGlobalDesignSystem(next);
     applyTokens(normalized);
-    const result = await upsertSetting("global_design_system", normalized);
+    const result = await upsertSetting(THEME_SETTING_KEY, normalized);
     if (!result.error) {
       setTokens(normalized);
     }
@@ -78,7 +87,7 @@ export function DesignSystemProvider({ children }: { children: ReactNode }) {
   const resetTokens = useCallback(async () => {
     const normalized = normalizeGlobalDesignSystem(DEFAULT_GLOBAL_DESIGN_SYSTEM);
     applyTokens(normalized);
-    const result = await upsertSetting("global_design_system", normalized);
+    const result = await upsertSetting(THEME_SETTING_KEY, normalized);
     if (!result.error) {
       setTokens(normalized);
     }

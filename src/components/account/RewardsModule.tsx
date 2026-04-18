@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { computeLoyaltyProgress } from "@/hooks/use-loyalty-progress";
+import { useRewardsStoreConfig } from "@/hooks/use-rewards-store-config";
 import LoyaltyProgressCard from "@/components/social/LoyaltyProgressCard";
 import { RewardsGridSkeleton } from "@/components/shared/loading-states";
 import type { AccountModuleProps, Voucher, RewardCatalogItem } from "./types";
@@ -20,6 +21,12 @@ const RewardsModule = ({ user, overview, refetchOverview, tt, vouchers, overview
   const { toast } = useToast();
   const [redeemingKey, setRedeemingKey] = useState<string | null>(null);
   const pointsBalance = overview?.pointsBalance ?? 0;
+  const { config: rewardsConfig } = useRewardsStoreConfig();
+  const gridColsClass =
+    rewardsConfig.columns >= 4 ? "sm:grid-cols-2 lg:grid-cols-4"
+    : rewardsConfig.columns === 3 ? "sm:grid-cols-2 lg:grid-cols-3"
+    : rewardsConfig.columns === 1 ? "grid-cols-1"
+    : "sm:grid-cols-2";
 
   const redeemReward = async (reward: RewardCatalogItem) => {
     if (!user) return;
@@ -63,9 +70,9 @@ const RewardsModule = ({ user, overview, refetchOverview, tt, vouchers, overview
         </div>
       )}
       {vouchers.length === 0 && !overviewLoading ? (
-        <Card><CardContent className="p-8 text-center text-muted-foreground">{tt("account.rewards.empty", "No rewards available right now.")}</CardContent></Card>
+        <Card><CardContent className="p-8 text-center text-muted-foreground">{tt("account.rewards.empty", rewardsConfig.emptyStateText)}</CardContent></Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className={`grid gap-4 ${gridColsClass}`}>
           {vouchers.filter(v => v.is_active).sort((a, b) => ((a as any).sort_order ?? 0) - ((b as any).sort_order ?? 0)).map(reward => {
             const canRedeem = pointsBalance >= reward.points_cost;
             const neededPoints = reward.points_cost - pointsBalance;
@@ -100,7 +107,7 @@ const RewardsModule = ({ user, overview, refetchOverview, tt, vouchers, overview
                       </div>
                       <Button size="sm" onClick={() => redeemReward(reward as unknown as RewardCatalogItem)} disabled={!canRedeem || redeemingKey === reward.id} className="font-display uppercase tracking-wider">
                         <Star className="mr-1 h-3 w-3" />
-                        {redeemingKey === reward.id ? tt("account.rewards.redeeming", "Redeeming...") : `${reward.points_cost} ${tt("account.rewards.pointsShort", "pts")}`}
+                        {redeemingKey === reward.id ? tt("account.rewards.redeeming", "Redeeming...") : `${tt("account.rewards.cta", rewardsConfig.ctaText)} · ${reward.points_cost} ${tt("account.rewards.pointsShort", "pts")}`}
                       </Button>
                     </div>
                   </CardContent>

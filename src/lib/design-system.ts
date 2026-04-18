@@ -100,18 +100,49 @@ export const hexToHslString = (color: string) => {
   return rgbToHsl(r, g, b);
 };
 
+/**
+ * Map Admin's flat theme payload (e.g. { primary, accent, background, card, border, foreground, ... })
+ * into our nested GlobalDesignSystem.colors slot. Only used when the legacy nested
+ * `colors` object isn't present (i.e. the row was published from the Admin theme editor).
+ */
+const mapFlatColors = (raw: Record<string, unknown>) => {
+  const pick = (key: string): string | undefined => {
+    const v = raw[key];
+    return typeof v === "string" && v.trim() ? v : undefined;
+  };
+  const result: Partial<GlobalDesignSystem["colors"]> = {};
+  const primary = pick("primary");
+  const accent = pick("accent") ?? pick("secondary");
+  const background = pick("background");
+  const surface = pick("card") ?? pick("surface") ?? pick("muted");
+  const text = pick("foreground") ?? pick("card_foreground") ?? pick("text");
+  const mutedText = pick("muted_foreground") ?? pick("mutedText");
+  const border = pick("border");
+  if (primary) result.primary = primary;
+  if (accent) result.accent = accent;
+  if (background) result.background = background;
+  if (surface) result.surface = surface;
+  if (text) result.text = text;
+  if (mutedText) result.mutedText = mutedText;
+  if (border) result.border = border;
+  return result;
+};
+
 export const normalizeGlobalDesignSystem = (value: unknown): GlobalDesignSystem => {
-  const raw = value && typeof value === "object" ? (value as Partial<GlobalDesignSystem>) : {};
+  const raw = value && typeof value === "object" ? (value as Partial<GlobalDesignSystem> & Record<string, unknown>) : {};
   const typographyPresets = (raw.typography?.presets ?? {}) as Record<string, any>;
   const animationPresets = (raw.animations?.presets ?? {}) as Record<string, any>;
 
   const defaultVariant = raw.buttons?.defaultVariant;
   const radiusToken = raw.buttons?.radiusToken;
 
+  const flatColors = raw.colors ? {} : mapFlatColors(raw as Record<string, unknown>);
+
   return {
     ...DEFAULT_GLOBAL_DESIGN_SYSTEM,
     colors: {
       ...DEFAULT_GLOBAL_DESIGN_SYSTEM.colors,
+      ...flatColors,
       ...(raw.colors ?? {}),
     },
     typography: {

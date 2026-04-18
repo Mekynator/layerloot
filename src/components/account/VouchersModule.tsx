@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { SectionCardSkeleton } from "@/components/shared/loading-states";
+import { formatPrice } from "@/lib/currency";
 import type { AccountModuleProps, UserVoucher, VoucherCategory } from "./types";
 import { classifyVoucher, groupVouchersByDefinition } from "./types";
 
@@ -142,7 +143,7 @@ const VouchersModule = ({ user, tt, userVouchers, overviewLoading, overview, ref
                     {isGiftCard && <Badge variant="outline" className="text-xs">{tt("account.rewards.giftCard", "Gift Card")}</Badge>}
                   </div>
                   {isGiftCard && voucherView === "active" && (
-                    <p className="mt-1 text-sm text-muted-foreground">{tt("account.vouchers.balance", "Balance")}: <span className="font-bold text-foreground">{giftCardBalance.toFixed(2)} kr</span></p>
+                    <p className="mt-1 text-sm text-muted-foreground">{tt("account.vouchers.balance", "Balance")}: <span className="font-bold text-foreground">{formatPrice(giftCardBalance)}</span></p>
                   )}
                 </div>
                 <div className="flex items-center gap-3">
@@ -168,12 +169,12 @@ const VouchersModule = ({ user, tt, userVouchers, overviewLoading, overview, ref
 
                             {/* Balance — active tab */}
                             {voucherView === "active" && uv.balance !== null && (
-                              <p className="text-sm text-muted-foreground">{tt("account.vouchers.balance", "Balance")}: <span className="font-bold text-foreground">{Number(uv.balance).toFixed(2)} kr</span></p>
+                              <p className="text-sm text-muted-foreground">{tt("account.vouchers.balance", "Balance")}: <span className="font-bold text-foreground">{formatPrice(Number(uv.balance))}</span></p>
                             )}
 
                             {/* Original value — used/expired/gifted */}
                             {voucherView !== "active" && uv.vouchers?.discount_value && (
-                              <p className="text-sm text-muted-foreground">{tt("account.vouchers.originalValue", "Original value")}: <span className="font-semibold text-foreground">{uv.vouchers.discount_value} kr</span></p>
+                              <p className="text-sm text-muted-foreground">{tt("account.vouchers.originalValue", "Original value")}: <span className="font-semibold text-foreground">{formatPrice(Number(uv.vouchers.discount_value))}</span></p>
                             )}
 
                             {/* Gifted tab: recipient info */}

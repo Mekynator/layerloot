@@ -10,6 +10,7 @@ import { computeLoyaltyProgress } from "@/hooks/use-loyalty-progress";
 import { useRewardsStoreConfig } from "@/hooks/use-rewards-store-config";
 import LoyaltyProgressCard from "@/components/social/LoyaltyProgressCard";
 import { RewardsGridSkeleton } from "@/components/shared/loading-states";
+import { formatPrice } from "@/lib/currency";
 import type { AccountModuleProps, Voucher, RewardCatalogItem } from "./types";
 
 interface Props extends AccountModuleProps {
@@ -98,7 +99,11 @@ const RewardsModule = ({ user, overview, refetchOverview, tt, vouchers, overview
                           <span className="font-display text-2xl font-bold text-primary">{tt("account.rewards.freeGiftWrap", "Free gift wrap")}</span>
                         ) : (
                           <>
-                            <span className="font-display text-2xl font-bold text-primary">{reward.discount_value} kr</span>
+                            <span className="font-display text-2xl font-bold text-primary">
+                              {reward.discount_type === "percent_discount"
+                                ? `${reward.discount_value}%`
+                                : formatPrice(reward.discount_value)}
+                            </span>
                             <span className="ml-1 text-sm text-muted-foreground">
                               {reward.discount_type === "gift_card" ? tt("account.rewards.giftCard", "gift card") : tt("account.rewards.discount", "discount")}
                             </span>

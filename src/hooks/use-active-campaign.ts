@@ -88,7 +88,7 @@ export function useActiveCampaign() {
         console.warn("[campaigns] no active campaign within schedule window");
       }
 
-      setCampaign(match as CampaignTheme | null);
+      setCampaign(match as unknown as CampaignTheme | null);
     } catch (err) {
       if (import.meta.env.DEV) console.warn("[campaigns] unexpected error:", err);
       setCampaign(null);

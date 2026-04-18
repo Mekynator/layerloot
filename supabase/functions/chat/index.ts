@@ -12,8 +12,6 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
-const FREE_SHIPPING_THRESHOLD = 500;
-
 const serviceSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
@@ -58,7 +56,12 @@ async function fetchContext(userId: string | null) {
   const ctx: Record<string, any> = {};
 
   try {
-    const { data } = await serviceSupabase.from("products").select("id,name,slug,price,category_id,is_featured,images,stock,is_made_to_order").eq("is_active", true).eq("published", true).order("created_at", { ascending: false }).limit(20);
+    const { data } = await serviceSupabase
+      .from("products")
+      .select("id,name,slug,price,category_id,is_featured,images,stock")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(20);
     ctx.products = (data ?? []).map((p: any) => ({ ...p, url: `/products/${p.slug}`, images: p.images ?? [] }));
   } catch { ctx.products = []; }
 
@@ -78,6 +81,7 @@ async function fetchContext(userId: string | null) {
     const { data } = await serviceSupabase.from("profiles").select("full_name").eq("user_id", userId).maybeSingle();
     ctx.profile = data;
   } catch { ctx.profile = null; }
+
 
   try {
     const { data } = await serviceSupabase.from("loyalty_points").select("points,reason,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(5);
@@ -133,7 +137,8 @@ function buildSystemPrompt(user: any, ctx: Record<string, any>, cart: any, page:
   const name = ctx.profile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "there";
   const cartTotal = Number(cart?.total ?? 0);
   const cartCount = Number(cart?.item_count ?? 0);
-  const freeShipGap = Math.max(0, (ctx.shipping?.free_shipping_threshold ?? FREE_SHIPPING_THRESHOLD) - cartTotal);
+  const freeShipThreshold = Number(ctx.shipping?.free_shipping_threshold) || null;
+  const freeShipGap = freeShipThreshold ? Math.max(0, freeShipThreshold - cartTotal) : null;
 
   const productList = (ctx.products ?? []).slice(0, 12).map((p: any) => {
     const img = p.images?.[0] || "";
@@ -312,7 +317,7 @@ User has ${cartCount} items (${cartTotal} kr) in cart.
 - Mention: "You left items in your cart 👇"
 - Show max 2 cart items
 - Push: → "Checkout now"
-${freeShipGap > 0 ? `- "${freeShipGap} kr more for free shipping"` : "- Qualifies for free shipping!"}` : ""}
+${freeShipGap === null ? "" : freeShipGap > 0 ? `- "${freeShipGap} kr more for free shipping"` : "- Qualifies for free shipping!"}` : ""}
 ${aiConfig.enable_reengagement ? `
 ## Re-engagement
 If user seems idle or returns: → "Still looking? I found something for you 👇" then show product.` : ""}
@@ -334,11 +339,13 @@ If user says "gift": simplify options, suggest safe popular products, avoid comp
 If user asks about order: show status + timeline from their order data.
 
 ## Shipping
-- Free shipping: ${ctx.shipping?.free_shipping_threshold ?? FREE_SHIPPING_THRESHOLD} kr | Flat rate: ${ctx.shipping?.flat_rate ?? 49} kr | Currency: DKK
+${ctx.shipping?.free_shipping_threshold || ctx.shipping?.flat_rate
+  ? `- ${ctx.shipping?.free_shipping_threshold ? `Free shipping: ${ctx.shipping.free_shipping_threshold} kr` : ""}${ctx.shipping?.free_shipping_threshold && ctx.shipping?.flat_rate ? " | " : ""}${ctx.shipping?.flat_rate ? `Flat rate: ${ctx.shipping.flat_rate} kr` : ""} | Currency: DKK`
+  : "- Shipping rates: see /shipping page"}
 
 ## Cart Status
 - Items: ${cartCount} | Total: ${cartTotal} kr
-${freeShipGap > 0 ? `- ${freeShipGap} kr away from free shipping` : "- ✅ Free shipping!"}
+${freeShipGap === null ? "" : freeShipGap > 0 ? `- ${freeShipGap} kr away from free shipping` : "- ✅ Free shipping!"}
 
 ${userSection}
 
@@ -346,7 +353,7 @@ ${userSection}
 - PLA: biodegradable, decorative | PETG: strong, food-safe | Resin: ultra-detail | TPU: flexible
 
 ## Custom Orders
-Upload 3D model at /create → pay 100 kr fee → get quote → accept → production → shipping
+Upload 3D model at /create → pay request fee → get quote → accept → production → shipping
 
 ## Rewards
 Points from orders/invites → redeem for shipping, discounts, vouchers → Account → Rewards Store

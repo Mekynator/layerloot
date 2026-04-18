@@ -25,7 +25,9 @@ export function useStaticSectionSettings(page: string) {
   const { data: settings = {}, isLoading } = useQuery({
     queryKey: ["static-section-settings", page],
     queryFn: () => fetchStaticSectionSettings(page),
-    staleTime: 1000 * 60 * 5,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
+    placeholderData: (prev) => prev,
     enabled: Boolean(page),
   });
 

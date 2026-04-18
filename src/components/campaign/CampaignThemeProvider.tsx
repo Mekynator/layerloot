@@ -29,46 +29,41 @@ export const useCampaign = () => useContext(CampaignContext);
 export function CampaignThemeProvider({ children }: { children: ReactNode }) {
   const { campaign } = useActiveCampaign();
 
-  // Apply CSS variable overrides when campaign is active
+  // Apply CSS variable overrides when campaign is active.
+  // Always cleans up previously-set vars on change/unmount so old campaign theme doesn't leak.
   useEffect(() => {
     const root = document.documentElement;
     const overrides = campaign?.theme_overrides;
+    const appliedVars: string[] = [];
 
-    const cleanup = () => {
-      [
-        "--campaign-primary-hsl",
-        "--campaign-accent-hsl",
-        "--campaign-border-hsl",
-        "--campaign-font-display",
-        "--glow-primary",
-        "--glow-primary-strong",
-      ].forEach((name) => root.style.removeProperty(name));
+    const setVar = (name: string, value: string) => {
+      root.style.setProperty(name, value);
+      appliedVars.push(name);
     };
 
-    if (!overrides) {
-      cleanup();
-      return;
+    if (overrides) {
+      const primaryHsl = safeHexToHsl(overrides.primaryColor);
+      if (primaryHsl) setVar("--campaign-primary-hsl", primaryHsl);
+
+      const accentHsl = safeHexToHsl(overrides.accentColor);
+      if (accentHsl) setVar("--campaign-accent-hsl", accentHsl);
+
+      const borderHsl = safeHexToHsl(overrides.borderColor);
+      if (borderHsl) setVar("--campaign-border-hsl", borderHsl);
+
+      if (overrides.fontAccent) {
+        setVar("--campaign-font-display", overrides.fontAccent);
+      }
+
+      if (overrides.buttonGlow && overrides.primaryColor) {
+        setVar("--glow-primary", `0 0 28px color-mix(in srgb, ${overrides.primaryColor} 32%, transparent)`);
+        setVar("--glow-primary-strong", `0 0 52px color-mix(in srgb, ${overrides.primaryColor} 48%, transparent)`);
+      }
     }
 
-    const primaryHsl = safeHexToHsl(overrides.primaryColor);
-    if (primaryHsl) root.style.setProperty("--campaign-primary-hsl", primaryHsl);
-
-    const accentHsl = safeHexToHsl(overrides.accentColor);
-    if (accentHsl) root.style.setProperty("--campaign-accent-hsl", accentHsl);
-
-    const borderHsl = safeHexToHsl(overrides.borderColor);
-    if (borderHsl) root.style.setProperty("--campaign-border-hsl", borderHsl);
-
-    if (overrides.fontAccent) {
-      root.style.setProperty("--campaign-font-display", overrides.fontAccent);
-    }
-
-    if (overrides.buttonGlow && overrides.primaryColor) {
-      root.style.setProperty("--glow-primary", `0 0 28px color-mix(in srgb, ${overrides.primaryColor} 32%, transparent)`);
-      root.style.setProperty("--glow-primary-strong", `0 0 52px color-mix(in srgb, ${overrides.primaryColor} 48%, transparent)`);
-    }
-
-    return cleanup;
+    return () => {
+      appliedVars.forEach((name) => root.style.removeProperty(name));
+    };
   }, [campaign]);
 
   return (

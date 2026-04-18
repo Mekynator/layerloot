@@ -132,6 +132,7 @@ export function useStorefrontCatalog(page?: string) {
     queryFn: () => fetchStorefrontCatalog(page),
     staleTime: 30 * 1000,
     refetchOnWindowFocus: true,
+    placeholderData: (prev) => prev,
   });
 }
 
@@ -252,5 +253,6 @@ export function useProductDetailQuery(slug?: string) {
     enabled: Boolean(slug),
     staleTime: 30 * 1000,
     refetchOnWindowFocus: true,
+    placeholderData: (prev) => prev,
   });
 }

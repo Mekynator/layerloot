@@ -130,7 +130,8 @@ export function useStorefrontCatalog(page?: string) {
   return useQuery({
     queryKey: ["storefront-catalog", page ?? "none"],
     queryFn: () => fetchStorefrontCatalog(page),
-    staleTime: 1000 * 60 * 5,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -249,6 +250,7 @@ export function useProductDetailQuery(slug?: string) {
     queryKey: ["product-detail", slug],
     queryFn: () => fetchProductDetail(slug as string),
     enabled: Boolean(slug),
-    staleTime: 1000 * 60 * 5,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
   });
 }

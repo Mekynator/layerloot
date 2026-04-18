@@ -35,12 +35,21 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 3,
-      refetchOnWindowFocus: false,
+      staleTime: 30 * 1000,
+      gcTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
       retry: 1,
     },
   },
 });
+
+import { useStorefrontRealtime } from "@/hooks/use-storefront-realtime";
+
+const RealtimeSync = () => {
+  useStorefrontRealtime();
+  return null;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -53,6 +62,7 @@ const App = () => (
             <EditorPreviewProvider>
               <DesignSystemProvider>
               <CampaignThemeProvider>
+                <RealtimeSync />
                 <Layout>
                   <Suspense fallback={<PageSkeleton />}>
                     <Routes>

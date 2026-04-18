@@ -159,7 +159,7 @@ function CampaignParticles({ type, density = 30 }: { type: string; density?: num
     const left = Math.random() * 100;
     const delay = Math.random() * 8;
     const duration = 6 + Math.random() * 8;
-    const size = type === "snow" ? 10 + Math.random() * 14 : 8 + Math.random() * 10;
+    const size = safeType === "snow" ? 10 + Math.random() * 14 : 8 + Math.random() * 10;
     const opacity = 0.15 + Math.random() * 0.35;
     const drift = (Math.random() - 0.5) * 40;
 
@@ -175,11 +175,11 @@ function CampaignParticles({ type, density = 30 }: { type: string; density?: num
           opacity,
           ["--drift" as any]: `${drift}px`,
           color:
-            type === "confetti"
+            safeType === "confetti"
               ? `hsl(${Math.random() * 360} 70% 60%)`
-              : type === "sparkles"
+              : safeType === "sparkles"
               ? "hsl(var(--primary))"
-              : type === "hearts"
+              : safeType === "hearts"
               ? "hsl(350 80% 60%)"
               : undefined,
         }}

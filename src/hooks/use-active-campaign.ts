@@ -2,6 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { diag } from "@/lib/storefront-diagnostics";
 
+export interface CampaignCTA {
+  label?: string;
+  href?: string;
+  variant?: string;
+}
+
 export interface CampaignTheme {
   id: string;
   name: string;
@@ -10,6 +16,7 @@ export interface CampaignTheme {
   is_active?: boolean;
   priority?: number;
   homepage_placement?: boolean;
+  homepage_sort_order?: number;
   start_date?: string | null;
   end_date?: string | null;
   starts_at?: string | null;
@@ -20,6 +27,8 @@ export interface CampaignTheme {
   linked_product_ids?: string[] | null;
   linked_category_ids?: string[] | null;
   linked_discount_id?: string | null;
+  /** Free-form Admin content payload (CTAs, body text, media, etc.) */
+  content?: Record<string, unknown> & { cta?: CampaignCTA; ctas?: CampaignCTA[] };
   theme_overrides: {
     primaryColor?: string;
     accentColor?: string;

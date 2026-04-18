@@ -39,9 +39,11 @@ export function DesignSystemProvider({ children }: { children: ReactNode }) {
   const [tokens, setTokens] = useState<GlobalDesignSystem>(DEFAULT_GLOBAL_DESIGN_SYSTEM);
   const [loading, setLoading] = useState(true);
 
-  const applyTokens = useCallback((next: GlobalDesignSystem) => {
+  const [rawValue, setRawValue] = useState<Record<string, unknown> | null>(null);
+
+  const applyTokens = useCallback((next: GlobalDesignSystem, raw?: Record<string, unknown> | null) => {
     if (typeof document === "undefined") return;
-    applyDesignSystemToRoot(next, document.documentElement);
+    applyDesignSystemToRoot(next, document.documentElement, raw ?? null);
   }, []);
 
   const reload = useCallback(async () => {
@@ -54,9 +56,13 @@ export function DesignSystemProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
       if (error) diag("theme", "failed to load theme setting", error);
       if (!data?.value) diag("theme", `no published '${THEME_SETTING_KEY}' row found; using defaults`);
-      const normalized = normalizeGlobalDesignSystem(data?.value ?? DEFAULT_GLOBAL_DESIGN_SYSTEM);
+      const raw = (data?.value && typeof data.value === "object" && !Array.isArray(data.value))
+        ? (data.value as Record<string, unknown>)
+        : null;
+      setRawValue(raw);
+      const normalized = normalizeGlobalDesignSystem(raw ?? DEFAULT_GLOBAL_DESIGN_SYSTEM);
       setTokens(normalized);
-      applyTokens(normalized);
+      applyTokens(normalized, raw);
     } finally {
       setLoading(false);
     }

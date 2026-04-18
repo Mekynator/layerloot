@@ -317,7 +317,7 @@ User has ${cartCount} items (${cartTotal} kr) in cart.
 - Mention: "You left items in your cart 👇"
 - Show max 2 cart items
 - Push: → "Checkout now"
-${freeShipGap > 0 ? `- "${freeShipGap} kr more for free shipping"` : "- Qualifies for free shipping!"}` : ""}
+${freeShipGap === null ? "" : freeShipGap > 0 ? `- "${freeShipGap} kr more for free shipping"` : "- Qualifies for free shipping!"}` : ""}
 ${aiConfig.enable_reengagement ? `
 ## Re-engagement
 If user seems idle or returns: → "Still looking? I found something for you 👇" then show product.` : ""}
@@ -339,11 +339,13 @@ If user says "gift": simplify options, suggest safe popular products, avoid comp
 If user asks about order: show status + timeline from their order data.
 
 ## Shipping
-- Free shipping: ${ctx.shipping?.free_shipping_threshold ?? FREE_SHIPPING_THRESHOLD} kr | Flat rate: ${ctx.shipping?.flat_rate ?? 49} kr | Currency: DKK
+${ctx.shipping?.free_shipping_threshold || ctx.shipping?.flat_rate
+  ? `- ${ctx.shipping?.free_shipping_threshold ? `Free shipping: ${ctx.shipping.free_shipping_threshold} kr` : ""}${ctx.shipping?.free_shipping_threshold && ctx.shipping?.flat_rate ? " | " : ""}${ctx.shipping?.flat_rate ? `Flat rate: ${ctx.shipping.flat_rate} kr` : ""} | Currency: DKK`
+  : "- Shipping rates: see /shipping page"}
 
 ## Cart Status
 - Items: ${cartCount} | Total: ${cartTotal} kr
-${freeShipGap > 0 ? `- ${freeShipGap} kr away from free shipping` : "- ✅ Free shipping!"}
+${freeShipGap === null ? "" : freeShipGap > 0 ? `- ${freeShipGap} kr away from free shipping` : "- ✅ Free shipping!"}
 
 ${userSection}
 
@@ -351,7 +353,7 @@ ${userSection}
 - PLA: biodegradable, decorative | PETG: strong, food-safe | Resin: ultra-detail | TPU: flexible
 
 ## Custom Orders
-Upload 3D model at /create → pay 100 kr fee → get quote → accept → production → shipping
+Upload 3D model at /create → pay request fee → get quote → accept → production → shipping
 
 ## Rewards
 Points from orders/invites → redeem for shipping, discounts, vouchers → Account → Rewards Store

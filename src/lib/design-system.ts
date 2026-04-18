@@ -204,7 +204,11 @@ export const normalizeGlobalDesignSystem = (value: unknown): GlobalDesignSystem 
   };
 };
 
-export const applyDesignSystemToRoot = (tokens: GlobalDesignSystem, root: HTMLElement = document.documentElement) => {
+export const applyDesignSystemToRoot = (
+  tokens: GlobalDesignSystem,
+  root: HTMLElement = document.documentElement,
+  raw?: Record<string, unknown> | null,
+) => {
   const normalized = normalizeGlobalDesignSystem(tokens);
   const shadowOpacity = normalized.shadows.opacity / 100;
   const shadowBlur = normalized.shadows.blur;
@@ -261,4 +265,37 @@ export const applyDesignSystemToRoot = (tokens: GlobalDesignSystem, root: HTMLEl
   setVar("--ll-button-shadow", `0 12px ${shadowBlur + 4}px -12px ${toAlphaColor(buttonPrimary, 0.4)}`);
   setVar("--ll-button-shadow-strong", `0 18px ${shadowBlur + 18}px -12px ${toAlphaColor(buttonPrimary, 0.55)}`);
   setVar("--ll-button-glow", `0 0 32px ${toAlphaColor(buttonAccent, 0.3)}`);
+
+  // ── Apply Admin theme background fields (background_image_url, overlay_tint, pattern_opacity, image_fit) ──
+  // These are surfaced as CSS custom properties so other components / global styles can consume them.
+  if (raw && typeof raw === "object") {
+    const pickStr = (k: string): string | undefined => {
+      const v = (raw as Record<string, unknown>)[k];
+      return typeof v === "string" && v.trim() ? v : undefined;
+    };
+    const pickNum = (k: string): number | undefined => {
+      const v = (raw as Record<string, unknown>)[k];
+      const n = Number(v);
+      return Number.isFinite(n) ? n : undefined;
+    };
+
+    const bgImage = pickStr("background_image_url");
+    const overlayTint = pickStr("overlay_tint");
+    const overlayStrength = pickNum("overlay_strength");
+    const patternOpacity = pickNum("pattern_opacity");
+    const imageOpacity = pickNum("image_opacity");
+    const imageFit = pickStr("image_fit");
+
+    if (bgImage) setVar("--ll-theme-bg-image", `url("${bgImage}")`);
+    else root.style.removeProperty("--ll-theme-bg-image");
+
+    if (overlayTint) {
+      const tintHsl = hexToHslString(overlayTint);
+      if (tintHsl) setVar("--ll-theme-overlay-hsl", tintHsl);
+    }
+    if (overlayStrength !== undefined) setVar("--ll-theme-overlay-strength", String(overlayStrength));
+    if (patternOpacity !== undefined) setVar("--ll-theme-pattern-opacity", String(patternOpacity));
+    if (imageOpacity !== undefined) setVar("--ll-theme-image-opacity", String(imageOpacity));
+    if (imageFit) setVar("--ll-theme-image-fit", imageFit);
+  }
 };

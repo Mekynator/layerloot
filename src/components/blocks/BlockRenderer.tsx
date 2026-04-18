@@ -1106,7 +1106,7 @@ const withSection = (block: SiteBlock, defaultClasses: string, children: ReactNo
   <Section block={block} defaultClasses={defaultClasses}>{children}</Section>
 );
 
-export const renderBlock = (block: SiteBlock, disableAnimations = false) => {
+const renderBlockInner = (block: SiteBlock, disableAnimations = false) => {
   const c = block.content || {};
   if (block.is_active === false || c.visibility === false) return null;
 

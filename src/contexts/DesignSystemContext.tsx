@@ -73,8 +73,8 @@ export function DesignSystemProvider({ children }: { children: ReactNode }) {
   }, [reload]);
 
   useEffect(() => {
-    applyTokens(tokens);
-  }, [tokens, applyTokens]);
+    applyTokens(tokens, rawValue);
+  }, [tokens, rawValue, applyTokens]);
 
   const previewTokens = useCallback((next: GlobalDesignSystem) => {
     applyTokens(normalizeGlobalDesignSystem(next));

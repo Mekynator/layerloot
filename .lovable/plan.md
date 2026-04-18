@@ -1,62 +1,45 @@
 
 
-## Audit Plan: Per-Feature Parity Sweep
+## Investigation findings
 
-I need to read the current state of several key files to verify what's still aligned vs. what drifted after the prior 4 phases. Let me investigate before producing the fix list.
+Building on the prior 5 phases, the remaining stale-data risks live in **per-feature hooks** that don't share the global `QueryClient` defaults or aren't tied into the realtime invalidation channel.
 
-Files to inspect:
-- `src/components/blocks/BlockRenderer.tsx` — verify block-type coverage matches Admin-saved shapes
-- `src/lib/reusable-blocks.ts` — verify reusable block hydration
-- `src/components/layout/Footer.tsx` & `Header.tsx` — check if hardcoded sections override published `footer_settings` / nav
-- `src/hooks/use-nav-links.ts` — verify it reads published nav from `site_pages`
-- `supabase/functions/chat-context/index.ts` — verify AI context reads live catalog
-- `src/lib/personalization.ts` — verify personalization uses live signals, not hardcoded defaults
-- DB inspection: confirm published payloads exist for `theme`, `rewards_store_config`, `footer_settings`, `header_settings`, active `campaigns`
+### Stale sources still present
 
-After reading I will produce a focused fix plan. Likely findings (based on prior audits):
+| # | Issue | File | Symptom |
+|---|---|---|---|
+| 1 | `useNavLinks` / `useStaticSectionSettings` likely have long staleTime + no realtime invalidation. After Admin publishes nav/section changes, header/footer stays old until full reload. | `src/hooks/use-nav-links.ts`, `src/hooks/use-static-section-settings.ts` | Stale header/footer |
+| 2 | `useChatSettings`, `useRewardsStoreConfig`, `useLoyaltyProgress` use `usePublishedSetting` (already fixed in last phase to 30s + focus) — OK, but realtime channel doesn't invalidate `["published-setting"]` for the *specific* keys → relies on poll. | `use-storefront-realtime.ts` | Up to 30s stale on chat/rewards copy |
+| 3 | `useShowcases`, `useRecentlyViewed`, `useSavedItemsCount` use `useState` + one-time `useEffect` fetch → never refresh after Admin moderates a showcase or user activity changes. | hook files | Stale community content |
+| 4 | `CampaignThemeProvider` applies `theme_overrides` to `<html>` CSS vars but doesn't *clear* them when campaign ends/changes → old campaign colors leak after switch. | `src/components/campaign/CampaignThemeProvider.tsx` | Sticky campaign theme |
+| 5 | Loading transitions: hooks render `null` while refetching → sections briefly disappear on focus refetch. Should keep `previousData` (React Query `placeholderData: keepPreviousData`). | multiple query hooks | Flicker on focus |
+| 6 | Realtime channel only invalidates 5 tables. `vouchers`, `user_vouchers`, `loyalty_points`, `discount_codes`, `categories` not subscribed → reward/discount publishes need poll. | `src/hooks/use-storefront-realtime.ts` | Slow reward/voucher updates |
 
-### Anticipated findings
+### Files to update
 
-| Group | Likely issue | File(s) |
-|---|---|---|
-| **Campaigns** | `homepage_placement` / `homepage_sort_order` / `linked_*` fields fetched but not used to gate where banner/list renders. CTA from `content` JSON not surfaced. | `use-active-campaign.ts`, `CampaignThemeProvider.tsx` |
-| **Themes** | Background image URL, overlay tint, pattern opacity from Admin payload not applied (only colors mapped in last phase). | `lib/design-system.ts`, `DesignSystemContext.tsx` |
-| **Blocks** | `BlockRenderer` may not handle every Admin block type → silent fallback to nothing. Need to add `diag()` for unknown types so missing renderers are visible. | `BlockRenderer.tsx` |
-| **Footer/Header** | Hardcoded footer columns/links overriding `footer_settings` published row. | `Footer.tsx`, `Header.tsx` |
-| **Rewards** | `RewardsModule` shows backend rewards but `LoyaltyProgressCard` may still not consume `vouchers`. Discount eligibility not surfaced for guest users on storefront. | `LoyaltyProgressCard`, `useCheckoutSavings` |
-| **AI** | `chat-context` edge function may use outdated category/product field names. | `supabase/functions/chat-context/index.ts` |
-| **Published reliability** | Some hooks still missing `refetchOnWindowFocus` (e.g. `usePublishedSetting` has 5min staleTime). | `use-published-settings.ts` |
+| File | Change |
+|---|---|
+| `src/hooks/use-storefront-realtime.ts` | Add subscriptions for `vouchers`, `user_vouchers`, `loyalty_points`, `discount_codes`, `categories`, `reusable_blocks`. Invalidate matching query keys. |
+| `src/hooks/use-nav-links.ts` | Convert to `useQuery` if not already; 30s staleTime + focus refetch. |
+| `src/hooks/use-static-section-settings.ts` | Same: 30s staleTime + focus refetch. |
+| `src/components/campaign/CampaignThemeProvider.tsx` | On campaign change/unmount, **clear** previously-set CSS vars instead of leaving stale values on `<html>`. |
+| `src/hooks/use-storefront.ts` (light) | Add `placeholderData: keepPreviousData` to catalog/product queries to prevent flicker. |
+| `src/hooks/use-page-blocks.ts` (light) | Same `keepPreviousData` for smoother focus refetch. |
+| `src/hooks/use-showcases.ts` | Convert `useState`+`useEffect` fetch to `useQuery` with 30s stale + focus refetch (read-only audit; only convert if currently stateful). |
 
-## Plan structure
+### Approach
 
-After reading, I'll output:
-1. Concrete root causes per feature group
-2. Exact files to update
-3. Minimal, typed, contract-aligned fixes
-4. No new mock data, no schema changes
+1. **Realtime**: extend the single subscription to cover the 6 additional content tables. One channel, multiple `.on()` filters — minimal overhead.
+2. **CampaignThemeProvider cleanup**: track which CSS vars were set, return cleanup that removes them so theme reverts cleanly when campaign deactivates.
+3. **`keepPreviousData`**: prevents UI flicker — the old block keeps rendering while the refetch resolves, then swaps in.
+4. **Hook normalization**: any remaining `useState`+`useEffect` fetch in published-data hooks → `useQuery` with project-standard 30s/focus config.
 
-## Investigation steps (read-only) before final implementation plan
+### Not changed
+- `usePublishedSetting`, `useActiveCampaign`, `useStorefrontCatalog`, `useProductDetailQuery` (already aligned)
+- QueryClient defaults (already 30s + focus)
+- BlockRenderer (already has `diag()` + per-block error isolation)
+- Auth/cart/checkout (out of scope)
 
-1. View `src/components/blocks/BlockRenderer.tsx`
-2. View `src/components/layout/Footer.tsx` + `src/hooks/use-nav-links.ts`
-3. View `supabase/functions/chat-context/index.ts`
-4. View `src/lib/design-system.ts` (current state after last phase)
-5. View `src/components/social/LoyaltyProgressCard.tsx`
-6. View `src/hooks/use-published-settings.ts` cache config
-7. DB: list published `site_settings` keys + count active campaigns/blocks
-
-Once those are read I will produce the concrete per-file fix plan in a follow-up plan block. Approving this plan switches me to default mode where I can both inspect and edit; the inspection above will run first, then fixes will be implemented in the same loop.
-
-## Files expected to be touched (estimate, will be confirmed after inspection)
-
-1. `src/hooks/use-active-campaign.ts` — surface `homepage_placement` gating + CTA from content
-2. `src/components/campaign/CampaignThemeProvider.tsx` — apply background_image_url / overlay_tint / pattern_opacity from theme
-3. `src/lib/design-system.ts` — extend normalizer to map Admin background/overlay/pattern fields
-4. `src/components/blocks/BlockRenderer.tsx` — `diag()` warning for unknown block types
-5. `src/components/layout/Footer.tsx` — consume `footer_settings` from published settings (remove hardcoded columns if found)
-6. `src/hooks/use-published-settings.ts` — lower staleTime to 30s + `refetchOnWindowFocus: true`
-7. `supabase/functions/chat-context/index.ts` — verify field names match current `products`/`categories` schema (only if drift found)
-
-## Risk
-Low. All changes are additive parsing/rendering corrections matching the real Admin payload contract. No schema changes, no mock data, no new business logic.
+### Risk
+Low. All changes are additive cache hints, additional realtime subscriptions, and a CSS cleanup return. No schema, no business logic, no mock data.
 

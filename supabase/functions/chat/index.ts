@@ -12,8 +12,6 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
-const FREE_SHIPPING_THRESHOLD = 500;
-
 const serviceSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
@@ -58,7 +56,12 @@ async function fetchContext(userId: string | null) {
   const ctx: Record<string, any> = {};
 
   try {
-    const { data } = await serviceSupabase.from("products").select("id,name,slug,price,category_id,is_featured,images,stock,is_made_to_order").eq("is_active", true).eq("published", true).order("created_at", { ascending: false }).limit(20);
+    const { data } = await serviceSupabase
+      .from("products")
+      .select("id,name,slug,price,category_id,is_featured,images,stock")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(20);
     ctx.products = (data ?? []).map((p: any) => ({ ...p, url: `/products/${p.slug}`, images: p.images ?? [] }));
   } catch { ctx.products = []; }
 
@@ -78,6 +81,11 @@ async function fetchContext(userId: string | null) {
     const { data } = await serviceSupabase.from("profiles").select("full_name").eq("user_id", userId).maybeSingle();
     ctx.profile = data;
   } catch { ctx.profile = null; }
+
+  try {
+    const { data } = await serviceSupabase.from("shipping_config").select("free_shipping_threshold,flat_rate").limit(1).maybeSingle();
+    if (data) ctx.shipping = data;
+  } catch { /* keep ctx.shipping as previously set */ }
 
   try {
     const { data } = await serviceSupabase.from("loyalty_points").select("points,reason,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(5);

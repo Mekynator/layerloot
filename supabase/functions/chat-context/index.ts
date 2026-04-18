@@ -7,6 +7,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// Returns a real, defensive context for the AI chat.
+// Every source is queried independently; a failure in one source never breaks the rest.
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -38,17 +40,11 @@ serve(async (req) => {
 
     const userId = user.id;
 
-    const [
-      profileRes,
-      pointsRes,
-      lastOrderRes,
-      lastViewedRes,
-      recommendedRes,
-    ] = await Promise.all([
+    const results = await Promise.allSettled([
       adminClient
         .from("profiles")
-        .select("full_name, display_name, last_login_at")
-        .eq("id", userId)
+        .select("full_name")
+        .eq("user_id", userId)
         .maybeSingle(),
 
       adminClient
@@ -58,7 +54,7 @@ serve(async (req) => {
 
       adminClient
         .from("orders")
-        .select("id, status, total_amount, created_at")
+        .select("id, status, total, created_at")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -69,53 +65,61 @@ serve(async (req) => {
         .select(`
           viewed_at,
           product:products (
-            id, name, slug, price, image_url
+            id, name, slug, price, images
           )
         `)
         .eq("user_id", userId)
         .order("viewed_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
-
-      adminClient
-        .from("products")
-        .select("id, name, slug, price, image_url, category")
-        .eq("is_active", true)
-        .order("created_at", { ascending: false })
-        .limit(4),
     ]);
 
-    const profile = profileRes.data;
-    const pointsRows = pointsRes.data ?? [];
-    const pointsBalance = pointsRows.reduce((sum: number, r: any) => sum + (r.points ?? 0), 0);
-    const lastOrder = lastOrderRes.data;
-    const lastViewed = lastViewedRes.data?.product ?? null;
-    const recommendedProducts = recommendedRes.data ?? [];
+    const pickValue = <T>(idx: number): T | null => {
+      const r = results[idx];
+      if (r.status !== "fulfilled") return null;
+      const data = (r.value as { data?: T | null })?.data ?? null;
+      return data;
+    };
+
+    const profile = pickValue<{ full_name: string | null }>(0);
+
+    const pointsRows = pickValue<Array<{ points: number | null }>>(1) ?? [];
+    const pointsBalance = Array.isArray(pointsRows)
+      ? pointsRows.reduce((sum, r) => sum + (Number(r?.points) || 0), 0)
+      : 0;
+
+    const lastOrder = pickValue<{
+      id: string;
+      status: string;
+      total: number;
+      created_at: string;
+    }>(2);
+
+    const lastViewedRow = pickValue<{
+      viewed_at: string;
+      product: { id: string; name: string; slug: string; price: number; images: string[] | null } | null;
+    }>(3);
+    const lastViewed = lastViewedRow?.product ?? null;
 
     const safeContext = {
       user: {
         id: user.id,
         email: user.email,
         name:
-          profile?.display_name ||
           profile?.full_name ||
-          user.user_metadata?.full_name ||
+          (user.user_metadata as Record<string, unknown> | null)?.full_name ||
           "there",
-        last_login_at: profile?.last_login_at ?? null,
       },
-      points: {
-        balance: pointsBalance,
-      },
+      points: { balance: pointsBalance },
       last_order: lastOrder
         ? {
             id: lastOrder.id,
             status: lastOrder.status,
-            total_amount: lastOrder.total_amount,
+            total: lastOrder.total,
             created_at: lastOrder.created_at,
           }
         : null,
       last_viewed_product: lastViewed,
-      recommended_products: recommendedProducts,
     };
 
     return new Response(JSON.stringify(safeContext), {

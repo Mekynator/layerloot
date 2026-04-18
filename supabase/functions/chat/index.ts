@@ -82,10 +82,6 @@ async function fetchContext(userId: string | null) {
     ctx.profile = data;
   } catch { ctx.profile = null; }
 
-  try {
-    const { data } = await serviceSupabase.from("shipping_config").select("free_shipping_threshold,flat_rate").limit(1).maybeSingle();
-    if (data) ctx.shipping = data;
-  } catch { /* keep ctx.shipping as previously set */ }
 
   try {
     const { data } = await serviceSupabase.from("loyalty_points").select("points,reason,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(5);
@@ -141,7 +137,8 @@ function buildSystemPrompt(user: any, ctx: Record<string, any>, cart: any, page:
   const name = ctx.profile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "there";
   const cartTotal = Number(cart?.total ?? 0);
   const cartCount = Number(cart?.item_count ?? 0);
-  const freeShipGap = Math.max(0, (ctx.shipping?.free_shipping_threshold ?? FREE_SHIPPING_THRESHOLD) - cartTotal);
+  const freeShipThreshold = Number(ctx.shipping?.free_shipping_threshold) || null;
+  const freeShipGap = freeShipThreshold ? Math.max(0, freeShipThreshold - cartTotal) : null;
 
   const productList = (ctx.products ?? []).slice(0, 12).map((p: any) => {
     const img = p.images?.[0] || "";

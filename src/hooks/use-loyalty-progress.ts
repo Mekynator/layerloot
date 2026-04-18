@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useAccountOverview } from "@/hooks/use-account-overview";
+import { diag } from "@/lib/storefront-diagnostics";
 
 export type RewardTier = {
   key: string;
@@ -22,22 +23,11 @@ export type LoyaltyProgressData = {
   allTiers: RewardTier[];
 };
 
-/**
- * Fallback tiers used only when no vouchers have been loaded from the backend yet
- * (e.g. anonymous cart preview). Admin-managed `vouchers` rows always take precedence.
- */
-const FALLBACK_TIERS: RewardTier[] = [
-  { key: "25-discount", name: "25 KR DISCOUNT", pointsCost: 200, discountType: "fixed_discount", discountValue: 25 },
-  { key: "50-discount", name: "50 KR DISCOUNT", pointsCost: 400, discountType: "fixed_discount", discountValue: 50 },
-  { key: "free-delivery", name: "FREE DELIVERY", pointsCost: 800, discountType: "free_shipping", discountValue: 0 },
-  { key: "100-discount", name: "100 KR DISCOUNT", pointsCost: 800, discountType: "fixed_discount", discountValue: 100 },
-  { key: "150-discount", name: "150 KR DISCOUNT", pointsCost: 1200, discountType: "fixed_discount", discountValue: 150 },
-  { key: "250-discount", name: "250 KR DISCOUNT", pointsCost: 2000, discountType: "fixed_discount", discountValue: 250 },
-  { key: "500-gift-card", name: "500 KR GIFT CARD", pointsCost: 5000, discountType: "gift_card", discountValue: 500 },
-];
-
 function tiersFromVouchers(vouchers?: any[] | null): RewardTier[] {
-  if (!vouchers || vouchers.length === 0) return FALLBACK_TIERS;
+  if (!vouchers || vouchers.length === 0) {
+    diag("loyalty", "no vouchers loaded from Admin; tier list will be empty");
+    return [];
+  }
   return vouchers
     .filter((v) => v?.is_active !== false && typeof v?.points_cost === "number")
     .map((v) => ({

@@ -204,7 +204,11 @@ export const normalizeGlobalDesignSystem = (value: unknown): GlobalDesignSystem 
   };
 };
 
-export const applyDesignSystemToRoot = (tokens: GlobalDesignSystem, root: HTMLElement = document.documentElement) => {
+export const applyDesignSystemToRoot = (
+  tokens: GlobalDesignSystem,
+  root: HTMLElement = document.documentElement,
+  raw?: Record<string, unknown> | null,
+) => {
   const normalized = normalizeGlobalDesignSystem(tokens);
   const shadowOpacity = normalized.shadows.opacity / 100;
   const shadowBlur = normalized.shadows.blur;

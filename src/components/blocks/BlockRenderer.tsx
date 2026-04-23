@@ -2665,14 +2665,17 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
     <div className="container">
       <div className="rounded-3xl bg-card/60 p-5 backdrop-blur-md md:p-6" style={{ boxShadow: '0 8px 40px -8px hsl(var(--primary) / 0.1)' }}>
         <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="text-2xl font-bold">
-              {getLocalizedValue(c.title, tr("blocks.instagram.title", "Follow us on Instagram"))}
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {getLocalizedValue(c.subtitle, tr("blocks.instagram.subtitle", "Latest posts and reels"))}
-            </p>
-          </div>
+          {(() => {
+            const igTitle = (getLocalizedValue(c.title, "") || "").trim();
+            const igSubtitle = (getLocalizedValue(c.subtitle, "") || "").trim();
+            if (!igTitle && !igSubtitle) return <div />;
+            return (
+              <div>
+                {igTitle && <h2 className="text-2xl font-bold">{igTitle}</h2>}
+                {igSubtitle && <p className="text-sm text-muted-foreground">{igSubtitle}</p>}
+              </div>
+            );
+          })()}
 
           {showProfileButton && (
             <Button asChild={!isEditorPreviewMode()}>

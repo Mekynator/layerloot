@@ -1114,6 +1114,8 @@ const renderBlockInner = (block: SiteBlock, disableAnimations = false) => {
     case "hero":
       return <HeroBlock block={block} />;
     case "shipping_banner": {
+      const bannerText = (getLocalizedValue(c.text, "") || "").trim();
+      if (!bannerText) return null;
       const BannerIcon = iconForName(c.icon, Truck);
       const bannerIconSize = c.iconSize ? `h-[${c.iconSize}px] w-[${c.iconSize}px]` : "h-4 w-4";
       return withSection(
@@ -1124,7 +1126,7 @@ const renderBlockInner = (block: SiteBlock, disableAnimations = false) => {
             <BannerIcon className={`${bannerIconSize} text-primary`} style={c.iconColor ? { color: c.iconColor } : undefined} />
           </div>
           <span className="font-display text-sm uppercase tracking-widest text-foreground/90">
-            {getLocalizedValue(c.text, tr("blocks.shippingBanner.text", "Free shipping on orders over 500 kr"))}
+            {bannerText}
           </span>
         </div>,
       );
@@ -1194,9 +1196,15 @@ const renderBlockInner = (block: SiteBlock, disableAnimations = false) => {
       return <VideoBlock block={block} />;
     case "banner": {
       const BnrIcon = c.icon ? iconForName(c.icon, null) : null;
+      const bannerHeading = (getLocalizedValue(c.heading || c.title, "") || "").trim();
+      const bannerBadge = (getLocalizedValue(c.badge, "") || "").trim();
       const bannerButtons = resolveButtons(c, [
         ...(c.button_text ? [{ text: getLocalizedValue(c.button_text), link: c.button_link || "", icon: "", variant: "outline" }] : []),
       ]);
+
+      // If admin gave us nothing visible, render nothing
+      if (!bannerHeading && !bannerBadge && !BnrIcon && bannerButtons.length === 0) return null;
+
       return withSection(
         block,
         "py-3 border-y border-border/20",
@@ -1206,14 +1214,16 @@ const renderBlockInner = (block: SiteBlock, disableAnimations = false) => {
               <BnrIcon className="h-4 w-4 text-primary" style={c.iconColor ? { color: c.iconColor } : undefined} />
             </div>
           )}
-          {c.badge && (
+          {bannerBadge && (
             <span className="rounded-lg bg-primary/15 px-2.5 py-0.5 font-display text-[10px] uppercase tracking-wider text-primary">
-              {getLocalizedValue(c.badge)}
+              {bannerBadge}
             </span>
           )}
-          <span className="font-display text-sm uppercase tracking-widest text-foreground/90">
-            {getLocalizedValue(c.heading || c.title, tr("blocks.banner.title", "Banner"))}
-          </span>
+          {bannerHeading && (
+            <span className="font-display text-sm uppercase tracking-widest text-foreground/90">
+              {bannerHeading}
+            </span>
+          )}
           {bannerButtons.map((button, index) => (
             <ActionButton
               key={`banner-btn-${index}`}
@@ -1327,39 +1337,42 @@ const SmartFunnelBlock = ({ block }: { block: SiteBlock }) => {
 const HeroBlock = ({ block }: { block: SiteBlock }) => {
   useTranslation();
   const c = block.content || {};
-  const buttons = resolveButtons(c, [
-    {
-      text: getLocalizedValue(c.button_text, tr("blocks.hero.buttonPrimary", "Shop Now")),
-      link: c.button_link || "/products",
-      icon: "ArrowRight",
-      variant: "default",
-    },
-    {
-      text: getLocalizedValue(c.secondary_button_text, tr("blocks.hero.buttonSecondary", "Custom Order")),
-      link: c.secondary_button_link || "/create",
-      variant: "outline",
-    },
-  ]);
+  // Only build legacy buttons if admin actually provided text — never inject default fallback labels
+  const legacyButtons = [
+    ...(getLocalizedValue(c.button_text, "")
+      ? [{
+          text: getLocalizedValue(c.button_text, ""),
+          link: c.button_link || "",
+          icon: "ArrowRight",
+          variant: "default",
+        }]
+      : []),
+    ...(getLocalizedValue(c.secondary_button_text, "")
+      ? [{
+          text: getLocalizedValue(c.secondary_button_text, ""),
+          link: c.secondary_button_link || "",
+          variant: "outline",
+        }]
+      : []),
+  ];
+  const buttons = resolveButtons(c, legacyButtons);
 
   const align = c.alignment || c.contentAlignment || "left";
   const buttonAlignment = c.buttonAlignment || align;
+
+  const eyebrowText = (getLocalizedValue(c.eyebrow || c.badge, "") || "").trim();
+  const headingText = (getLocalizedValue(c.heading, "") || "").trim();
+  const subheadingText = (getLocalizedValue(c.subheading, "") || "").trim();
+  const hasContent = Boolean(eyebrowText || headingText || subheadingText || buttons.length > 0);
+
+  // If admin produced no content at all, render nothing (no ghost wrapper)
+  if (!hasContent) return null;
 
   return withSection(
     block,
     "relative overflow-hidden py-20 lg:py-32",
     <>
-      {c.bg_image && (
-        <motion.div
-          initial={{ scale: 1.04, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.7 }}
-          className="absolute inset-0"
-        >
-          <img src={c.bg_image} alt="" className="h-full w-full object-contain opacity-30" />
-        </motion.div>
-      )}
-
-      {/* Ambient glow behind hero */}
+      {/* Ambient glow behind hero (decorative only) */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
         <div className="absolute -top-1/4 -left-1/4 h-[600px] w-[600px] rounded-full bg-primary/10 blur-[120px]" />
         <div className="absolute -bottom-1/4 -right-1/4 h-[500px] w-[500px] rounded-full bg-accent/8 blur-[100px]" />
@@ -1369,68 +1382,65 @@ const HeroBlock = ({ block }: { block: SiteBlock }) => {
         <div
           className={`max-w-2xl ${align === "center" ? "mx-auto" : align === "right" ? "ml-auto" : ""} ${alignmentClass(align)}`}
         >
-          {(() => {
-            const eyebrowText = getLocalizedValue(c.eyebrow || c.badge, "");
-            if (!eyebrowText || !eyebrowText.trim()) return null;
-            return (
-              <motion.div
-                initial={{ opacity: 0, y: 14 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className={`mb-4 flex items-center gap-2 ${justifyClass(align)}`}
-              >
-                {(() => {
-                  const Icon = iconForName(c.icon || "Printer", Printer);
-                  const iconSizePx = c.iconSize || 20;
-                  return <Icon style={{ width: iconSizePx, height: iconSizePx, color: c.iconColor || undefined }} className="text-primary" />;
-                })()}
-                <span className="font-display text-sm uppercase tracking-widest text-primary">
-                  {eyebrowText}
-                </span>
-              </motion.div>
-            );
-          })()}
+          {eyebrowText && (
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className={`mb-4 flex items-center gap-2 ${justifyClass(align)}`}
+            >
+              {(() => {
+                const Icon = iconForName(c.icon || "Printer", Printer);
+                const iconSizePx = c.iconSize || 20;
+                return <Icon style={{ width: iconSizePx, height: iconSizePx, color: c.iconColor || undefined }} className="text-primary" />;
+              })()}
+              <span className="font-display text-sm uppercase tracking-widest text-primary">
+                {eyebrowText}
+              </span>
+            </motion.div>
+          )}
 
-          <motion.h1
-            initial={{ opacity: 0, y: 18 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.04 }}
-            className="mb-6 font-display text-3xl font-bold uppercase leading-tight text-foreground md:text-5xl lg:text-7xl"
-          >
-            {getLocalizedValue(c.heading, tr("blocks.hero.heading", "Gear Up Your Print Lab"))}
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 18 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.08 }}
-            className="mb-8 max-w-lg text-lg text-muted-foreground"
-          >
-            {getLocalizedValue(
-              c.subheading,
-              tr(
-                "blocks.hero.subheading",
-                "Premium filaments, tools, miniatures, and custom prints. Everything a maker needs, delivered to your workshop.",
-              ),
-            )}
-          </motion.p>
+          {headingText && (
+            <motion.h1
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.04 }}
+              className="mb-6 font-display text-3xl font-bold uppercase leading-tight text-foreground md:text-5xl lg:text-7xl"
+            >
+              {headingText}
+            </motion.h1>
+          )}
 
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.12 }}
-            className={`flex flex-wrap gap-4 ${justifyClass(buttonAlignment)}`}
-          >
-            {buttons.map((button, index) => (
-              <ActionButton
-                key={`${button.text}-${index}`}
-                button={button}
-                className={`font-display uppercase tracking-wider ${button.variant === "outline" ? "border-foreground/20 text-foreground hover:border-primary hover:text-primary" : ""}`}
-              />
-            ))}
-          </motion.div>
+          {subheadingText && (
+            <motion.p
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.08 }}
+              className="mb-8 max-w-lg text-lg text-muted-foreground"
+            >
+              {subheadingText}
+            </motion.p>
+          )}
+
+          {buttons.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.12 }}
+              className={`flex flex-wrap gap-4 ${justifyClass(buttonAlignment)}`}
+            >
+              {buttons.map((button, index) => (
+                <ActionButton
+                  key={`${button.text}-${index}`}
+                  button={button}
+                  className={`font-display uppercase tracking-wider ${button.variant === "outline" ? "border-foreground/20 text-foreground hover:border-primary hover:text-primary" : ""}`}
+                />
+              ))}
+            </motion.div>
+          )}
         </div>
       </div>
     </>,
@@ -1586,10 +1596,10 @@ const CategoriesBlock = ({ block, disableAnimations = false }: { block: SiteBloc
   }, [c.limit, c.categorySource, c.selectedCategories]);
 
   const align = c.alignment || "center";
-  const heading = getLocalizedValue(c.heading, tr("blocks.categories.heading", "Shop by Category"));
-  const subheading = getLocalizedValue(c.subheading, tr("blocks.categories.subheading", "Find exactly what you need"));
-  const showTitle = c.tileShowTitle !== false;
-  const showSubtitle = c.tileShowSubtitle !== false;
+  const heading = (getLocalizedValue(c.heading, "") || "").trim();
+  const subheading = (getLocalizedValue(c.subheading, "") || "").trim();
+  const showTitle = c.tileShowTitle !== false && Boolean(heading);
+  const showSubtitle = c.tileShowSubtitle !== false && Boolean(subheading);
 
   const layoutMode = (c.tileLayoutMode as string) || "grid";
   const gridColumns = Math.max(1, Math.min(6, Number(c.tileGridColumns) || 3));
@@ -1714,20 +1724,16 @@ const FeaturedProductsBlock = ({
   const align = c.alignment || "left";
   const headingAlignClass = alignmentClass(align);
   const viewAllAction = resolveItemAction(c.view_all_button || {}, c.view_all_link || "/products");
-  const heading = getLocalizedValue(c.heading, tr("blocks.featuredProducts.heading", "Best Sellers"));
-  const subheading = getLocalizedValue(
-    c.subheading,
-    tr("blocks.featuredProducts.subheading", "Our most popular 3D printed items"),
-  );
+  const heading = (getLocalizedValue(c.heading, "") || "").trim();
+  const subheading = (getLocalizedValue(c.subheading, "") || "").trim();
 
   const layoutMode = c.tileLayoutMode || "grid";
   const gridColumns = Math.max(1, Math.min(6, Number(c.tileGridColumns) || 4));
   const spacing = c.tileSpacing ?? 16;
-  const showTitle = c.tileShowTitle !== false;
-  const showSubtitle = c.tileShowSubtitle !== false;
+  const showTitle = c.tileShowTitle !== false && Boolean(heading);
+  const showSubtitle = c.tileShowSubtitle !== false && Boolean(subheading);
   const showArrows = c.tileShowArrows !== false;
   const cardMinWidth = c.tileCardMinWidth ?? 260;
-
   const colClass =
     gridColumns === 1 ? "grid-cols-1"
     : gridColumns === 2 ? "sm:grid-cols-2"
@@ -2351,32 +2357,46 @@ const CtaBlock = ({ block }: { block: SiteBlock }) => {
   useTranslation();
   const c = block.content || {};
   const align = c.alignment || "center";
-  const buttons = resolveButtons(c, [
-    {
-      text: getLocalizedValue(c.button_text, tr("blocks.cta.button", "Learn more")),
-      link: c.button_link || "/products",
-      icon: "ArrowRight",
-      variant: c.button_variant || "default",
-    },
-  ]);
+
+  const headingText = (getLocalizedValue(c.heading, "") || "").trim();
+  const subheadingText = (getLocalizedValue(c.subheading, "") || "").trim();
+  const legacyButtonText = (getLocalizedValue(c.button_text, "") || "").trim();
+
+  const buttons = resolveButtons(
+    c,
+    legacyButtonText
+      ? [{
+          text: legacyButtonText,
+          link: c.button_link || "",
+          icon: "ArrowRight",
+          variant: c.button_variant || "default",
+        }]
+      : [],
+  );
+
+  if (!headingText && !subheadingText && buttons.length === 0) return null;
 
   return withSection(
     block,
     "py-16 lg:py-24",
     <div className={`container ${alignmentClass(align)}`}>
-      <h2 className="mb-4 font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
-        {getLocalizedValue(c.heading, tr("blocks.cta.heading", "Ready to get started?"))}
-      </h2>
-      {c.subheading && <p className="mb-8 text-lg text-muted-foreground">{getLocalizedValue(c.subheading)}</p>}
-      <div className={`flex flex-wrap gap-4 ${justifyClass(c.buttonAlignment || align)}`}>
-        {buttons.map((button, index) => (
-          <ActionButton
-            key={`${button.text}-${index}`}
-            button={button}
-            className="font-display uppercase tracking-wider"
-          />
-        ))}
-      </div>
+      {headingText && (
+        <h2 className="mb-4 font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
+          {headingText}
+        </h2>
+      )}
+      {subheadingText && <p className="mb-8 text-lg text-muted-foreground">{subheadingText}</p>}
+      {buttons.length > 0 && (
+        <div className={`flex flex-wrap gap-4 ${justifyClass(c.buttonAlignment || align)}`}>
+          {buttons.map((button, index) => (
+            <ActionButton
+              key={`${button.text}-${index}`}
+              button={button}
+              className="font-display uppercase tracking-wider"
+            />
+          ))}
+        </div>
+      )}
     </div>,
   );
 };
@@ -2384,14 +2404,20 @@ const CtaBlock = ({ block }: { block: SiteBlock }) => {
 const SingleButtonBlock = ({ block }: { block: SiteBlock }) => {
   useTranslation();
   const c = block.content || {};
-  const buttons = resolveButtons(c, [
-    {
-      text: getLocalizedValue(c.button_text, tr("blocks.button.default", "Click Me")),
-      link: c.button_link || "#",
-      variant: c.style === "outline" ? "outline" : c.style === "ghost" ? "ghost" : "default",
-      icon: c.button_icon || "",
-    },
-  ]);
+  const legacyText = (getLocalizedValue(c.button_text, "") || "").trim();
+  const buttons = resolveButtons(
+    c,
+    legacyText
+      ? [{
+          text: legacyText,
+          link: c.button_link || "",
+          variant: c.style === "outline" ? "outline" : c.style === "ghost" ? "ghost" : "default",
+          icon: c.button_icon || "",
+        }]
+      : [],
+  );
+
+  if (buttons.length === 0) return null;
 
   return withSection(
     block,
@@ -2439,20 +2465,23 @@ const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
   };
 
   const align = c.alignment || "center";
+  const headingText = (getLocalizedValue(c.heading, "") || "").trim();
+  const subheadingText = (getLocalizedValue(c.subheading, "") || "").trim();
 
   return withSection(
     block,
     "py-16",
     <div className={`container max-w-xl ${alignmentClass(align)}`}>
-      <h2 className="mb-2 font-display text-2xl font-bold uppercase text-foreground">
-        {getLocalizedValue(c.heading, tr("blocks.newsletter.heading", "Stay Updated"))}
-      </h2>
-      <p className="mb-6 text-muted-foreground">
-        {getLocalizedValue(
-          c.subheading,
-          tr("blocks.newsletter.subheading", "Subscribe to our newsletter for the latest updates."),
-        )}
-      </p>
+      {headingText && (
+        <h2 className="mb-2 font-display text-2xl font-bold uppercase text-foreground">
+          {headingText}
+        </h2>
+      )}
+      {subheadingText && (
+        <p className="mb-6 text-muted-foreground">
+          {subheadingText}
+        </p>
+      )}
 
       {status === "success" ? (
         <p className="font-display text-primary">{tr("blocks.newsletter.success", "Thanks for subscribing!")}</p>
@@ -2636,14 +2665,17 @@ const InstagramAutoFeedBlock = ({ block }: { block: SiteBlock }) => {
     <div className="container">
       <div className="rounded-3xl bg-card/60 p-5 backdrop-blur-md md:p-6" style={{ boxShadow: '0 8px 40px -8px hsl(var(--primary) / 0.1)' }}>
         <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="text-2xl font-bold">
-              {getLocalizedValue(c.title, tr("blocks.instagram.title", "Follow us on Instagram"))}
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {getLocalizedValue(c.subtitle, tr("blocks.instagram.subtitle", "Latest posts and reels"))}
-            </p>
-          </div>
+          {(() => {
+            const igTitle = (getLocalizedValue(c.title, "") || "").trim();
+            const igSubtitle = (getLocalizedValue(c.subtitle, "") || "").trim();
+            if (!igTitle && !igSubtitle) return <div />;
+            return (
+              <div>
+                {igTitle && <h2 className="text-2xl font-bold">{igTitle}</h2>}
+                {igSubtitle && <p className="text-sm text-muted-foreground">{igSubtitle}</p>}
+              </div>
+            );
+          })()}
 
           {showProfileButton && (
             <Button asChild={!isEditorPreviewMode()}>

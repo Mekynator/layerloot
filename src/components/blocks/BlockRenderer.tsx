@@ -2398,14 +2398,20 @@ const CtaBlock = ({ block }: { block: SiteBlock }) => {
 const SingleButtonBlock = ({ block }: { block: SiteBlock }) => {
   useTranslation();
   const c = block.content || {};
-  const buttons = resolveButtons(c, [
-    {
-      text: getLocalizedValue(c.button_text, tr("blocks.button.default", "Click Me")),
-      link: c.button_link || "#",
-      variant: c.style === "outline" ? "outline" : c.style === "ghost" ? "ghost" : "default",
-      icon: c.button_icon || "",
-    },
-  ]);
+  const legacyText = (getLocalizedValue(c.button_text, "") || "").trim();
+  const buttons = resolveButtons(
+    c,
+    legacyText
+      ? [{
+          text: legacyText,
+          link: c.button_link || "",
+          variant: c.style === "outline" ? "outline" : c.style === "ghost" ? "ghost" : "default",
+          icon: c.button_icon || "",
+        }]
+      : [],
+  );
+
+  if (buttons.length === 0) return null;
 
   return withSection(
     block,

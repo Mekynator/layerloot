@@ -2469,20 +2469,23 @@ const NewsletterBlock = ({ block }: { block: SiteBlock }) => {
   };
 
   const align = c.alignment || "center";
+  const headingText = (getLocalizedValue(c.heading, "") || "").trim();
+  const subheadingText = (getLocalizedValue(c.subheading, "") || "").trim();
 
   return withSection(
     block,
     "py-16",
     <div className={`container max-w-xl ${alignmentClass(align)}`}>
-      <h2 className="mb-2 font-display text-2xl font-bold uppercase text-foreground">
-        {getLocalizedValue(c.heading, tr("blocks.newsletter.heading", "Stay Updated"))}
-      </h2>
-      <p className="mb-6 text-muted-foreground">
-        {getLocalizedValue(
-          c.subheading,
-          tr("blocks.newsletter.subheading", "Subscribe to our newsletter for the latest updates."),
-        )}
-      </p>
+      {headingText && (
+        <h2 className="mb-2 font-display text-2xl font-bold uppercase text-foreground">
+          {headingText}
+        </h2>
+      )}
+      {subheadingText && (
+        <p className="mb-6 text-muted-foreground">
+          {subheadingText}
+        </p>
+      )}
 
       {status === "success" ? (
         <p className="font-display text-primary">{tr("blocks.newsletter.success", "Thanks for subscribing!")}</p>

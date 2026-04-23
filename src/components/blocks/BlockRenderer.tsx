@@ -1114,6 +1114,8 @@ const renderBlockInner = (block: SiteBlock, disableAnimations = false) => {
     case "hero":
       return <HeroBlock block={block} />;
     case "shipping_banner": {
+      const bannerText = (getLocalizedValue(c.text, "") || "").trim();
+      if (!bannerText) return null;
       const BannerIcon = iconForName(c.icon, Truck);
       const bannerIconSize = c.iconSize ? `h-[${c.iconSize}px] w-[${c.iconSize}px]` : "h-4 w-4";
       return withSection(
@@ -1124,7 +1126,7 @@ const renderBlockInner = (block: SiteBlock, disableAnimations = false) => {
             <BannerIcon className={`${bannerIconSize} text-primary`} style={c.iconColor ? { color: c.iconColor } : undefined} />
           </div>
           <span className="font-display text-sm uppercase tracking-widest text-foreground/90">
-            {getLocalizedValue(c.text, tr("blocks.shippingBanner.text", "Free shipping on orders over 500 kr"))}
+            {bannerText}
           </span>
         </div>,
       );

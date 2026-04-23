@@ -2351,32 +2351,46 @@ const CtaBlock = ({ block }: { block: SiteBlock }) => {
   useTranslation();
   const c = block.content || {};
   const align = c.alignment || "center";
-  const buttons = resolveButtons(c, [
-    {
-      text: getLocalizedValue(c.button_text, tr("blocks.cta.button", "Learn more")),
-      link: c.button_link || "/products",
-      icon: "ArrowRight",
-      variant: c.button_variant || "default",
-    },
-  ]);
+
+  const headingText = (getLocalizedValue(c.heading, "") || "").trim();
+  const subheadingText = (getLocalizedValue(c.subheading, "") || "").trim();
+  const legacyButtonText = (getLocalizedValue(c.button_text, "") || "").trim();
+
+  const buttons = resolveButtons(
+    c,
+    legacyButtonText
+      ? [{
+          text: legacyButtonText,
+          link: c.button_link || "",
+          icon: "ArrowRight",
+          variant: c.button_variant || "default",
+        }]
+      : [],
+  );
+
+  if (!headingText && !subheadingText && buttons.length === 0) return null;
 
   return withSection(
     block,
     "py-16 lg:py-24",
     <div className={`container ${alignmentClass(align)}`}>
-      <h2 className="mb-4 font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
-        {getLocalizedValue(c.heading, tr("blocks.cta.heading", "Ready to get started?"))}
-      </h2>
-      {c.subheading && <p className="mb-8 text-lg text-muted-foreground">{getLocalizedValue(c.subheading)}</p>}
-      <div className={`flex flex-wrap gap-4 ${justifyClass(c.buttonAlignment || align)}`}>
-        {buttons.map((button, index) => (
-          <ActionButton
-            key={`${button.text}-${index}`}
-            button={button}
-            className="font-display uppercase tracking-wider"
-          />
-        ))}
-      </div>
+      {headingText && (
+        <h2 className="mb-4 font-display text-3xl font-bold uppercase text-foreground lg:text-4xl">
+          {headingText}
+        </h2>
+      )}
+      {subheadingText && <p className="mb-8 text-lg text-muted-foreground">{subheadingText}</p>}
+      {buttons.length > 0 && (
+        <div className={`flex flex-wrap gap-4 ${justifyClass(c.buttonAlignment || align)}`}>
+          {buttons.map((button, index) => (
+            <ActionButton
+              key={`${button.text}-${index}`}
+              button={button}
+              className="font-display uppercase tracking-wider"
+            />
+          ))}
+        </div>
+      )}
     </div>,
   );
 };

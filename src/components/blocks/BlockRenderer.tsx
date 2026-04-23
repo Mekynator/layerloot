@@ -1734,9 +1734,6 @@ const FeaturedProductsBlock = ({
   const showSubtitle = c.tileShowSubtitle !== false && Boolean(subheading);
   const showArrows = c.tileShowArrows !== false;
   const cardMinWidth = c.tileCardMinWidth ?? 260;
-  const showArrows = c.tileShowArrows !== false;
-  const cardMinWidth = c.tileCardMinWidth ?? 260;
-
   const colClass =
     gridColumns === 1 ? "grid-cols-1"
     : gridColumns === 2 ? "sm:grid-cols-2"

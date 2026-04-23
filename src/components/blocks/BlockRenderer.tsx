@@ -1596,10 +1596,10 @@ const CategoriesBlock = ({ block, disableAnimations = false }: { block: SiteBloc
   }, [c.limit, c.categorySource, c.selectedCategories]);
 
   const align = c.alignment || "center";
-  const heading = getLocalizedValue(c.heading, tr("blocks.categories.heading", "Shop by Category"));
-  const subheading = getLocalizedValue(c.subheading, tr("blocks.categories.subheading", "Find exactly what you need"));
-  const showTitle = c.tileShowTitle !== false;
-  const showSubtitle = c.tileShowSubtitle !== false;
+  const heading = (getLocalizedValue(c.heading, "") || "").trim();
+  const subheading = (getLocalizedValue(c.subheading, "") || "").trim();
+  const showTitle = c.tileShowTitle !== false && Boolean(heading);
+  const showSubtitle = c.tileShowSubtitle !== false && Boolean(subheading);
 
   const layoutMode = (c.tileLayoutMode as string) || "grid";
   const gridColumns = Math.max(1, Math.min(6, Number(c.tileGridColumns) || 3));
@@ -1724,17 +1724,16 @@ const FeaturedProductsBlock = ({
   const align = c.alignment || "left";
   const headingAlignClass = alignmentClass(align);
   const viewAllAction = resolveItemAction(c.view_all_button || {}, c.view_all_link || "/products");
-  const heading = getLocalizedValue(c.heading, tr("blocks.featuredProducts.heading", "Best Sellers"));
-  const subheading = getLocalizedValue(
-    c.subheading,
-    tr("blocks.featuredProducts.subheading", "Our most popular 3D printed items"),
-  );
+  const heading = (getLocalizedValue(c.heading, "") || "").trim();
+  const subheading = (getLocalizedValue(c.subheading, "") || "").trim();
 
   const layoutMode = c.tileLayoutMode || "grid";
   const gridColumns = Math.max(1, Math.min(6, Number(c.tileGridColumns) || 4));
   const spacing = c.tileSpacing ?? 16;
-  const showTitle = c.tileShowTitle !== false;
-  const showSubtitle = c.tileShowSubtitle !== false;
+  const showTitle = c.tileShowTitle !== false && Boolean(heading);
+  const showSubtitle = c.tileShowSubtitle !== false && Boolean(subheading);
+  const showArrows = c.tileShowArrows !== false;
+  const cardMinWidth = c.tileCardMinWidth ?? 260;
   const showArrows = c.tileShowArrows !== false;
   const cardMinWidth = c.tileCardMinWidth ?? 260;
 

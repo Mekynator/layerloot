@@ -1196,9 +1196,15 @@ const renderBlockInner = (block: SiteBlock, disableAnimations = false) => {
       return <VideoBlock block={block} />;
     case "banner": {
       const BnrIcon = c.icon ? iconForName(c.icon, null) : null;
+      const bannerHeading = (getLocalizedValue(c.heading || c.title, "") || "").trim();
+      const bannerBadge = (getLocalizedValue(c.badge, "") || "").trim();
       const bannerButtons = resolveButtons(c, [
         ...(c.button_text ? [{ text: getLocalizedValue(c.button_text), link: c.button_link || "", icon: "", variant: "outline" }] : []),
       ]);
+
+      // If admin gave us nothing visible, render nothing
+      if (!bannerHeading && !bannerBadge && !BnrIcon && bannerButtons.length === 0) return null;
+
       return withSection(
         block,
         "py-3 border-y border-border/20",
@@ -1208,14 +1214,16 @@ const renderBlockInner = (block: SiteBlock, disableAnimations = false) => {
               <BnrIcon className="h-4 w-4 text-primary" style={c.iconColor ? { color: c.iconColor } : undefined} />
             </div>
           )}
-          {c.badge && (
+          {bannerBadge && (
             <span className="rounded-lg bg-primary/15 px-2.5 py-0.5 font-display text-[10px] uppercase tracking-wider text-primary">
-              {getLocalizedValue(c.badge)}
+              {bannerBadge}
             </span>
           )}
-          <span className="font-display text-sm uppercase tracking-widest text-foreground/90">
-            {getLocalizedValue(c.heading || c.title, tr("blocks.banner.title", "Banner"))}
-          </span>
+          {bannerHeading && (
+            <span className="font-display text-sm uppercase tracking-widest text-foreground/90">
+              {bannerHeading}
+            </span>
+          )}
           {bannerButtons.map((button, index) => (
             <ActionButton
               key={`banner-btn-${index}`}

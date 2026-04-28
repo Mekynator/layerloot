@@ -24,7 +24,7 @@ const GlobalSectionRenderer = ({ page }: GlobalSectionRendererProps) => {
   const [searchParams] = useSearchParams();
   const isEditorPreview = searchParams.get("editorPreview") === "1";
 
-  const { data: blocks = [], isLoading } = usePageBlocks(page, true, isEditorPreview);
+  const { data: blocks = [], isLoading } = usePageBlocks(page, true, isEditorPreview, false);
 
   useEffect(() => {
     if (!isEditorPreview) return;

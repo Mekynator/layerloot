@@ -28,6 +28,7 @@ import { parseChatProducts, stripProductBlocks, sanitizeContent, type ParsedChat
 import { useCart } from "@/contexts/CartContext";
 import { useRecentlyViewedProducts } from "@/hooks/use-recently-viewed";
 import { getSavedProducts } from "@/lib/savedItems";
+import logoMarkImg from "@/assets/logo-mark.png";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 const STORAGE_KEY = "layerloot-chat-history";
@@ -101,6 +102,10 @@ function ChatLauncherIcon({ icon, customUrl, iconSize }: { icon: string; customU
   if (icon === "bot") return <Bot style={{ width: iconSize, height: iconSize }} />;
   if (icon === "sparkle") return <Sparkles style={{ width: iconSize, height: iconSize }} />;
   return <MessageCircle style={{ width: iconSize, height: iconSize }} />;
+}
+
+function ChatLogoAvatar({ className = "h-full w-full" }: { className?: string }) {
+  return <img src={logoMarkImg} alt="LayerLoot" className={`${className} rounded-full object-contain p-0.5`} loading="eager" />;
 }
 
 function ChatTypingIndicator({ style }: { style?: string }) {
@@ -1049,11 +1054,15 @@ const ChatWidget = () => {
                 cursor: "pointer",
               }}
             >
-              <ChatLauncherIcon
-                icon={chatSettings.launcher.icon ?? "message"}
-                customUrl={chatSettings.launcher.customIconUrl}
-                iconSize={launcherIconSize}
-              />
+              {chatSettings.launcher.customIconUrl ? (
+                <ChatLauncherIcon
+                  icon={chatSettings.launcher.icon ?? "custom"}
+                  customUrl={chatSettings.launcher.customIconUrl}
+                  iconSize={launcherIconSize}
+                />
+              ) : (
+                <ChatLogoAvatar className="h-[78%] w-[78%]" />
+              )}
               {chatSettings.launcher.showUnreadBadge !== false && (
                 <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-background text-[9px] font-bold text-primary shadow">
                   ✦
@@ -1086,11 +1095,13 @@ const ChatWidget = () => {
               }}
             >
               <div className="flex items-center gap-2">
-                {chatSettings.window.avatarUrl ? (
-                  <img src={chatSettings.window.avatarUrl} alt="" className="h-7 w-7 rounded-full bg-background/15 object-contain p-0.5" />
-                ) : (
-                  <Bot className="h-5 w-5 text-primary-foreground" />
-                )}
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-background/15">
+                  {chatSettings.window.avatarUrl ? (
+                    <img src={chatSettings.window.avatarUrl} alt="" className="h-full w-full rounded-full object-contain p-0.5" />
+                  ) : (
+                    <ChatLogoAvatar />
+                  )}
+                </div>
                 <div
                   className="font-display text-sm font-bold uppercase tracking-wider text-primary-foreground"
                   style={chatSettings.window.headerTextColor ? { color: chatSettings.window.headerTextColor } : undefined}
@@ -1155,7 +1166,7 @@ const ChatWidget = () => {
                       ) : chatSettings.window.avatarUrl ? (
                         <img src={chatSettings.window.avatarUrl} alt="" className="h-full w-full rounded-full object-contain p-0.5" />
                       ) : (
-                        <Bot className="h-3.5 w-3.5" />
+                        <ChatLogoAvatar />
                       )}
                     </div>
                   )}

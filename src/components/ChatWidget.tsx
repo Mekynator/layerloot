@@ -28,6 +28,7 @@ import { parseChatProducts, stripProductBlocks, sanitizeContent, type ParsedChat
 import { useCart } from "@/contexts/CartContext";
 import { useRecentlyViewedProducts } from "@/hooks/use-recently-viewed";
 import { getSavedProducts } from "@/lib/savedItems";
+import logoMarkImg from "@/assets/logo-mark.png";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 const STORAGE_KEY = "layerloot-chat-history";
@@ -101,6 +102,10 @@ function ChatLauncherIcon({ icon, customUrl, iconSize }: { icon: string; customU
   if (icon === "bot") return <Bot style={{ width: iconSize, height: iconSize }} />;
   if (icon === "sparkle") return <Sparkles style={{ width: iconSize, height: iconSize }} />;
   return <MessageCircle style={{ width: iconSize, height: iconSize }} />;
+}
+
+function ChatLogoAvatar({ className = "h-full w-full" }: { className?: string }) {
+  return <img src={logoMarkImg} alt="LayerLoot" className={`${className} rounded-full object-contain p-0.5`} loading="eager" />;
 }
 
 function ChatTypingIndicator({ style }: { style?: string }) {

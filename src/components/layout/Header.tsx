@@ -6,7 +6,6 @@ import MiniCart from "@/components/layout/MiniCart";
 import AccountDropdown from "@/components/layout/AccountDropdown";
 import { CountBadge } from "@/components/ui/count-badge";
 import { useSavedItemsCount } from "@/hooks/use-saved-items-count";
-import logoImg from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,6 +17,7 @@ import GlobalSectionRenderer from "@/components/layout/GlobalSectionRenderer";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
+import logoMarkImg from "@/assets/logo-mark.png";
 // DropdownMenu no longer needed for account — using hover dropdown
 
 type BrandingSettings = {
@@ -78,7 +78,7 @@ const defaultHeaderSettings: HeaderSettings = {
   show_mobile_menu: true,
   desktop_nav_enabled: true,
   mobile_nav_enabled: true,
-  logo_height_px: 36,
+  logo_height_px: 44,
   logo_text_class: "font-display text-2xl font-bold uppercase tracking-wider text-foreground",
   account_label: "My Account",
   auth_label: "Login / Register",
@@ -234,7 +234,7 @@ const Header = () => {
   const logoRight = getLocalizedValue(branding.logo_text_right, branding.brand_accent || "Loot");
   const logoLink = branding.logo_link || "/";
   const logoAlt = getLocalizedValue(branding.logo_alt, branding.brand_name || "Logo");
-  const logoHeight = Math.max(20, Number(headerSettings.logo_height_px || 36));
+  const logoHeight = Math.max(32, Number(headerSettings.logo_height_px || 44));
 
   const desktopLinks = useMemo(
     () =>
@@ -291,12 +291,12 @@ const Header = () => {
             ) : (
               <>
                 {headerSettings.show_logo_icon && (
-                  <img src={logoImg} alt={logoAlt} style={{ height: `${logoHeight}px` }} className="w-auto object-contain transition-transform duration-300 group-hover:scale-105" />
+                  <img src={logoMarkImg} alt={logoAlt} style={{ height: `${logoHeight}px` }} className="w-auto object-contain transition-transform duration-300 group-hover:scale-105" />
                 )}
                 {headerSettings.show_logo_text && (
                   <span className={headerSettings.logo_text_class || defaultHeaderSettings.logo_text_class}>
                     {logoLeft}
-                    <span className="gradient-text">{logoRight}</span>
+                    <span className="text-primary drop-shadow-[0_0_14px_hsl(var(--primary)/0.35)]">{logoRight}</span>
                   </span>
                 )}
               </>

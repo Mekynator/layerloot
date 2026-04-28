@@ -6,7 +6,6 @@ import MiniCart from "@/components/layout/MiniCart";
 import AccountDropdown from "@/components/layout/AccountDropdown";
 import { CountBadge } from "@/components/ui/count-badge";
 import { useSavedItemsCount } from "@/hooks/use-saved-items-count";
-import logoImg from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";

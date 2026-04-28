@@ -35,7 +35,7 @@ const DynamicPage = ({ slug: slugProp, emptyTitle, emptyDescription }: DynamicPa
   const slug = normalizePageSlug(slugProp ?? params.slug ?? "");
   const isEditorPreview = searchParams.get("editorPreview") === "1";
   const { data: pageMeta, isLoading: pageLoading } = useSitePage(slug, Boolean(slug));
-  const { data: blocks = [], isLoading: blocksLoading } = usePageBlocks(slug, Boolean(slug), isEditorPreview);
+  const { data: blocks = [], isLoading: blocksLoading } = usePageBlocks(slug, Boolean(slug), isEditorPreview, false);
 
   const [localBlocks, setLocalBlocks] = useState<typeof blocks | null>(null);
 

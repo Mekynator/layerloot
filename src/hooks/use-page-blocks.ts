@@ -45,7 +45,7 @@ async function fetchPageMeta(page: string) {
   return (data as SitePageRecord | null) ?? null;
 }
 
-async function fetchPageBlocks(page: string, includeUnpublished = false) {
+async function fetchPageBlocks(page: string, includeUnpublished = false, checkPageMeta = true) {
   const normalizedPage = normalizePageSlug(page);
 
   // When previewing unpublished content, include draft fields and do not pre-filter by is_active
@@ -56,7 +56,7 @@ async function fetchPageBlocks(page: string, includeUnpublished = false) {
     .eq("page", normalizedPage)
     .order("sort_order");
 
-  if (!includeUnpublished) {
+  if (!includeUnpublished && checkPageMeta) {
     const pageMeta = await fetchPageMeta(normalizedPage);
     if (!pageMeta || pageMeta.is_published === false) {
       return [];
@@ -102,10 +102,10 @@ async function fetchPageBlocks(page: string, includeUnpublished = false) {
   return resolveReusableSiteBlocks(mapped);
 }
 
-export function usePageBlocks(page: string, enabled = true, includeUnpublished = false) {
+export function usePageBlocks(page: string, enabled = true, includeUnpublished = false, checkPageMeta = true) {
   return useQuery({
-    queryKey: ["site-blocks", page, includeUnpublished],
-    queryFn: () => fetchPageBlocks(page, includeUnpublished),
+    queryKey: ["site-blocks", page, includeUnpublished, checkPageMeta],
+    queryFn: () => fetchPageBlocks(page, includeUnpublished, checkPageMeta),
     enabled: enabled && Boolean(page),
     staleTime: 30 * 1000,
     refetchOnWindowFocus: true,

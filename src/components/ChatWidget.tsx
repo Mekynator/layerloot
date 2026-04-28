@@ -97,7 +97,7 @@ function getLocalizedStr(val: unknown): string {
 }
 
 function ChatLauncherIcon({ icon, customUrl, iconSize }: { icon: string; customUrl?: string; iconSize: number }) {
-  if (icon === "custom" && customUrl) return <img src={customUrl} alt="" className="rounded-full object-cover" style={{ width: iconSize, height: iconSize }} />;
+  if (icon === "custom" && customUrl) return <img src={customUrl} alt="" className="h-full w-full rounded-full object-contain p-1" />;
   if (icon === "bot") return <Bot style={{ width: iconSize, height: iconSize }} />;
   if (icon === "sparkle") return <Sparkles style={{ width: iconSize, height: iconSize }} />;
   return <MessageCircle style={{ width: iconSize, height: iconSize }} />;
@@ -965,7 +965,7 @@ const ChatWidget = () => {
   if (!chatSettingsLoading && !chatSettings.enabled) return null;
 
   const launcherSize = chatSettings.launcher.size ?? 56;
-  const launcherIconSize = Math.round(launcherSize * 0.42);
+  const launcherIconSize = Math.round(launcherSize * 0.48);
   const launcherShadow = chatSettings.launcher.shadow
     ? chatSettings.launcher.glowColor
       ? `0 8px 30px ${chatSettings.launcher.glowColor}40`
@@ -1087,7 +1087,7 @@ const ChatWidget = () => {
             >
               <div className="flex items-center gap-2">
                 {chatSettings.window.avatarUrl ? (
-                  <img src={chatSettings.window.avatarUrl} alt="" className="h-5 w-5 rounded-full object-cover" />
+                  <img src={chatSettings.window.avatarUrl} alt="" className="h-7 w-7 rounded-full bg-background/15 object-contain p-0.5" />
                 ) : (
                   <Bot className="h-5 w-5 text-primary-foreground" />
                 )}
@@ -1150,7 +1150,13 @@ const ChatWidget = () => {
                         msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                       }`}
                     >
-                      {msg.role === "user" ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
+                      {msg.role === "user" ? (
+                        <User className="h-3.5 w-3.5" />
+                      ) : chatSettings.window.avatarUrl ? (
+                        <img src={chatSettings.window.avatarUrl} alt="" className="h-full w-full rounded-full object-contain p-0.5" />
+                      ) : (
+                        <Bot className="h-3.5 w-3.5" />
+                      )}
                     </div>
                   )}
 

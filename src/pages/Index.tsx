@@ -9,6 +9,15 @@ const Index = () => {
   const { t } = useTranslation("common");
   const { data: catalog } = useStorefrontCatalog("home");
   const { isVisible } = useStaticSectionSettings("home");
+  const socialProofData = catalog
+    ? {
+        recentPrints: catalog.recentPrints,
+        popularProducts: catalog.popularProducts.map((product) => ({
+          product,
+          socialProof: catalog.socialProofMap.get(product.id),
+        })),
+      }
+    : null;
 
   // Deduplication: skip static section if a DB block with matching block_type exists
   const blockTypes = new Set((catalog?.pageBlocks ?? []).map((b) => b.block_type));
@@ -34,7 +43,7 @@ const Index = () => {
         </div>
       )}
 
-      {isVisible("static_home_social_proof") && !hasSocialBlockInDb && <HomeSocialProof />}
+      {isVisible("static_home_social_proof") && !hasSocialBlockInDb && <HomeSocialProof data={socialProofData} isLoading={!catalog} />}
     </>
   );
 };

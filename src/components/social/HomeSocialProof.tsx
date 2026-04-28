@@ -3,12 +3,20 @@ import { motion } from "framer-motion";
 import ProductCard from "@/components/ProductCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useHomeSocialProof } from "@/hooks/use-storefront";
+import type { CatalogProduct, GalleryShowcaseItem } from "@/hooks/use-storefront";
 import { ProductGridSkeleton, SectionCardSkeleton } from "@/components/shared/loading-states";
 import { fadeUp, staggerContainer } from "@/lib/motion";
+import type { ProductSocialProof } from "@/lib/social-proof";
 
-export default function HomeSocialProof() {
-  const { data, isLoading } = useHomeSocialProof();
+type HomeSocialProofProps = {
+  data?: {
+    recentPrints: GalleryShowcaseItem[];
+    popularProducts: Array<{ product: CatalogProduct; socialProof?: ProductSocialProof }>;
+  } | null;
+  isLoading?: boolean;
+};
+
+export default function HomeSocialProof({ data, isLoading = false }: HomeSocialProofProps) {
 
   if (isLoading) {
     return (

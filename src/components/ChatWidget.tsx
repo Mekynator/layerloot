@@ -642,7 +642,7 @@ const ChatWidget = () => {
     const readyToBuy = isBuyingIntent(userIntentText) || (page.startsWith("/cart") && Number(cart?.item_count || 0) > 0);
 
     // 1) Remove raw internal routes and markdown links that point to internal paths
-    const routeRegex = /(?:\[[^\]]+\]\((\/[^)]+)\))|((?:\/[a-zA-Z0-9_\-\/\?=&%]+))/g;
+    const routeRegex = /(?:\[[^\]]+\]\((\/[^)]+)\))|((?:\/[a-zA-Z0-9_\-/ ?=&%]+))/g;
     const foundRoutes = new Set<string>();
     const sanitized = content.replace(routeRegex, (match, p1, p2) => {
       const route = p1 || p2;
